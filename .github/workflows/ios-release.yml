@@ -1,0 +1,136 @@
+# iOS 版を App Store Connect（TestFlight）へ送る — Rork も Mac も使わない
+#
+# 使い方（手順の全体は docs/self-managing-ios.md）:
+#   GitHub → Actions → 「iOS release（App Store Connect へ送る）」→ Run workflow
+#   約 15〜25 分で App Store Connect の TestFlight に新しいビルドが届く。
+#   そこから TestFlight で配る／審査に出す、は App Store Connect の画面で行う。
+#
+# 事前に GitHub の Settings → Secrets and variables → Actions に入れておく 4 つ:
+#   APPLE_TEAM_ID        … Apple Developer のチーム ID（10 桁の英数字）
+#   ASC_KEY_ID           … App Store Connect API キーの「キー ID」
+#   ASC_ISSUER_ID        … 同じ画面の「Issuer ID」
+#   ASC_KEY_P8_BASE64    … ダウンロードした AuthKey_XXXX.p8 を base64 にした文字列
+#
+# 署名（証明書・プロファイル）は Apple のクラウド署名に任せる
+# （-allowProvisioningUpdates + API キー）。手元に証明書を持たなくてよい。
+name: iOS release（App Store Connect へ送る）
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_offset:
+        description: "ビルド番号の下駄（Rork で送ったビルドより大きくするため）。通常はそのまま"
+        required: false
+        default: "1000"
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+jobs:
+  archive-and-upload:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 必要な設定がそろっているか確かめる
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          missing=""
+          for v in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::GitHub の Secrets が足りません:$missing（docs/self-managing-ios.md の手順 3）"
+            exit 1
+          fi
+
+      - name: API キーを一時ファイルに置く
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Xcode の版を表示
+        run: xcodebuild -version
+
+      - name: アーカイブ（App Store 用に組み立てて署名する）
+        working-directory: ios
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          BUILD_OFFSET: ${{ inputs.build_offset }}
+        run: |
+          set -o pipefail
+          BUILD_NUMBER=$(( ${BUILD_OFFSET:-1000} + GITHUB_RUN_NUMBER ))
+          echo "build number: $BUILD_NUMBER"
+          xcodebuild archive \
+            -project CatchWords.xcodeproj \
+            -scheme CatchWords \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/CatchWords.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)|Signing Identity|Provisioning Profile" || true
+          test -d "$RUNNER_TEMP/CatchWords.xcarchive" || { echo "::error::アーカイブに失敗しました（archive.log を見てください）"; exit 1; }
+
+      - name: App Store Connect へ送る
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/CatchWords.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            | tee "$RUNNER_TEMP/export.log" | grep -E "error:|EXPORT (SUCCEEDED|FAILED)|Upload|upload" || true
+          grep -q "EXPORT SUCCEEDED" "$RUNNER_TEMP/export.log" || { echo "::error::送信に失敗しました（export.log を見てください）"; exit 1; }
+          echo "::notice::App Store Connect に送りました。処理が終わると TestFlight に表示されます（10〜30 分）。"
+
+      - name: API キーを消す
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: 記録を保存する
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-logs
+          path: |
+            ${{ runner.temp }}/archive.log
+            ${{ runner.temp }}/export.log
+          if-no-files-found: ignore
+          retention-days: 14

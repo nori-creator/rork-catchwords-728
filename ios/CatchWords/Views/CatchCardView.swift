@@ -2,12 +2,17 @@ import SwiftUI
 
 /// capture.tsx card step: peel the sticker (or tap 図鑑に追加), retake, word + meaning + memo.
 /// Never waits for the cutout — it upgrades the sticker in place when ready.
+/// Web `WordCard minimal`: at catch time only the headword (zhuyin to the right), pronunciation and
+/// the meaning. Example, pinyin line and meters belong to the word's detail page, not here
+/// (owner rule: 訳と発音だけ / メーターいらない). The full card keeps generating in the background.
 struct CatchCardView: View {
     @Bindable var vm: CaptureViewModel
     let onCatch: () -> Void
 
     @State private var showSelfie: Bool = false
     @State private var isCatching: Bool = false
+    /// The cut-out animation has played for the current lift.
+    @State private var revealDone: Bool = false
     @FocusState private var captionFocused: Bool
 
     private var stickerImage: UIImage? {
@@ -30,14 +35,6 @@ struct CatchCardView: View {
                     }
                     if let c = vm.picked { headwordCard(c).tourAnchor(.headword) }
                     if let c = vm.picked { meaningCard(c) }
-                    if let d = vm.details, d.extras.hasMeters {
-                        MetersPanel(extras: d.extras).transition(.opacity.combined(with: .move(edge: .bottom)))
-                    } else if vm.isLoadingDetails {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("頻度と使い方を調べています").font(.system(size: 12)).foregroundStyle(Theme.muted)
-                        }
-                    }
                     captionField
                 }
                 .padding(.horizontal, 16)
@@ -45,6 +42,9 @@ struct CatchCardView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        // A failed save or card shows a notice and keeps this card: let the user try again.
+        .onChange(of: vm.toast) { _, notice in if notice != nil { isCatching = false } }
+        .onChange(of: vm.cutoutLift == nil) { _, none in if none { revealDone = false } }
     }
 
     private var stickerStage: some View {
@@ -52,7 +52,13 @@ struct CatchCardView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black.opacity(0.06), radius: 18, y: 8)
-            if let img = stickerImage {
+            if let lift = vm.cutoutLift, !revealDone, !showSelfie {
+                CutoutRevealView(lift: lift) {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { revealDone = true }
+                }
+                .padding(8)
+                .transition(.opacity)
+            } else if let img = stickerImage {
                 PeelStickerView(image: img, isCutout: vm.cutout != nil && !showSelfie, disabled: isCatching,
                                 onPeel: catchNow,
                                 onTap: {
@@ -66,7 +72,7 @@ struct CatchCardView: View {
             }
             HStack(spacing: 6) {
                 if vm.isCutting { ProgressView().controlSize(.mini).tint(.white) }
-                Text(vm.isCutting ? "切り抜いています" : "好きな方向にはがしてキャッチ")
+                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? "切り抜いています" : "好きな方向にはがしてキャッチ")
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)
@@ -95,7 +101,11 @@ struct CatchCardView: View {
             .buttonStyle(PressableStyle())
             Button(action: catchNow) {
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold))
+                    if isCatching && vm.details == nil {
+                        ProgressView().controlSize(.small).tint(.white)
+                    } else {
+                        Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold))
+                    }
                     Text("図鑑に追加").font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white)
@@ -130,22 +140,18 @@ struct CatchCardView: View {
                     .background(Theme.primary, in: Circle())
                 Text("意味").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
             }
-            Text(c.meaningJa).font(.system(size: 22, weight: .medium)).foregroundStyle(Theme.foreground)
-            if !c.pinyin.isEmpty {
-                Text(c.pinyin).font(.system(size: 13)).foregroundStyle(Theme.muted)
-            }
-            if let ex = vm.details?.exampleSentence, !ex.isEmpty {
-                Divider().overlay(Theme.border)
-                Text(ex).font(.system(size: 16)).foregroundStyle(Theme.foreground)
-                if let tr = vm.details?.exampleTranslation, !tr.isEmpty {
-                    Text(tr).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                }
-            }
+            Text(meaning(c)).font(.system(size: 22, weight: .medium)).foregroundStyle(Theme.foreground)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+    }
+
+    /// The card's meaning once it arrives (reader language, scrubbed), else the candidate's.
+    private func meaning(_ c: Candidate) -> String {
+        let m = vm.details?.raw?["meaning_ja"]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return m.isEmpty ? c.meaningJa : m
     }
 
     private var captionField: some View {

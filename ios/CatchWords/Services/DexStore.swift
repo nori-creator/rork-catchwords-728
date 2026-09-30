@@ -113,82 +113,109 @@ final class DexStore {
 
     // MARK: - Save a catch
 
+    /// Saves a new catch through the web's own `saveSticker` (stickers.functions.ts): the same
+    /// word upsert, extras merge (service role), new-shelf proposal, first-catch event and
+    /// duplicate guard as the web. Photos are uploaded first, in parallel; a failed cutout or
+    /// selfie never blocks the catch.
     func save(_ draft: CatchDraft) async throws -> SaveOutcome {
         guard let uid = client.userId else { throw APIError.unauthorized }
+        guard let card = draft.details else { throw APIError.message("カード生成に失敗しました") }
         let ts = Int(Date().timeIntervalSince1970 * 1000)
-        let head = draft.candidate.headword
-
-        var ownedMatch: Sticker?
-        if let existing = try await findWord(headword: head) {
-            if let local = stickers.first(where: { $0.wordId == existing.id }) {
-                ownedMatch = local
-            } else {
-                ownedMatch = try await ownedSticker(wordId: existing.id)
-            }
-        }
-        if let owned = ownedMatch {
-            // Reencounter: never create a duplicate sticker, but never throw the photo away either.
-            if let jpeg = ImageTools.jpegForUpload(draft.photo) {
-                try? await client.upload(jpeg, path: "\(uid)/\(ts)-encounter.jpg")
-            }
-            _ = try? await client.rest("PATCH", "stickers?id=eq.\(owned.id)", body: ["taken_at": SupabaseDate.string(Date())])
-            return .reencounter(owned)
-        }
 
         async let objectPath: String? = uploadJPEG(draft.photo, uid: uid, ts: ts, kind: "object")
         async let cutoutPath: String? = uploadPNG(draft.cutout, uid: uid, ts: ts, kind: "cutout")
         async let selfiePath: String? = try? uploadJPEG(draft.selfie, uid: uid, ts: ts, kind: "selfie")
-        async let wordId: String = ensureWord(draft)
+        let obj = try await objectPath
+        let cut = await cutoutPath
+        let selfieRef: String? = await selfiePath
 
-        let (obj, cut, wid) = try await (objectPath, cutoutPath, wordId)
-        let selfieRef = await selfiePath
-
-        var row: [String: Any] = [
-            "user_id": uid,
-            "word_id": wid,
-            "language": language,
-            "capture_type": draft.captureType,
-            "taken_at": SupabaseDate.string(Date()),
-        ]
-        if let obj { row["object_image_url"] = obj }
-        if let cut { row["cutout_image_url"] = cut }
-        if let s = selfieRef ?? nil { row["selfie_image_url"] = s }
-        let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !caption.isEmpty { row["caption"] = caption }
-        if let name = draft.placeName { row["location_name"] = name }
-        if let loc = draft.location {
-            row["lat"] = loc.coordinate.latitude
-            row["lng"] = loc.coordinate.longitude
+        let c = draft.candidate
+        let raw = card.raw
+        func text(_ key: String, _ fallback: String) -> String {
+            let v = raw?[key]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return v.isEmpty ? fallback : v
         }
-        let data = try await client.rest(
-            "POST",
-            "stickers?select=\(Self.selectColumns)",
-            body: row,
-            prefer: "return=representation"
-        )
-        guard let sticker = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
+        var word: [String: Any] = [
+            // The picked name is the headword (capture.tsx `selectedHead`), not the card's own guess.
+            "headword": c.headword,
+            "reading_zhuyin": text("reading_zhuyin", c.zhuyin),
+            "pinyin": text("pinyin", c.pinyin),
+            "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
+            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? "名詞" : c.pos),
+            "level": text("level", card.level),
+            "category_key": text("category_key", card.categoryKey),
+            "example_sentence": text("example_sentence", card.exampleSentence),
+            "example_translation": text("example_translation", card.exampleTranslation),
+        ]
+        if let extras = raw?["extras"], case .object = extras { word["extras"] = extras.foundation }
+        let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        let data: [String: Any] = [
+            "word": word,
+            "new_shelf": orNull(raw?["new_shelf"]?.foundation),
+            "language": NativeAPI.targetLanguage,
+            "object_path": orNull(obj),
+            "cutout_path": orNull(cut),
+            "selfie_path": orNull(selfieRef),
+            "caption": orNull(caption.isEmpty ? nil : caption),
+            "location_name": orNull(draft.placeName),
+            "lat": orNull(draft.location?.coordinate.latitude),
+            "lng": orNull(draft.location?.coordinate.longitude),
+        ]
+        struct Saved: Decodable { let id: String }
+        let saved = try await NativeAPI.call("saveSticker", data, as: Saved.self, timeout: 45)
 
         cacheLocal(path: obj, image: draft.photo)
         cacheLocal(path: cut, image: draft.cutout)
-        cacheLocal(path: selfieRef ?? nil, image: draft.selfie)
+        cacheLocal(path: selfieRef, image: draft.selfie)
+        let sticker = try await fetchSticker(id: saved.id)
+        stickers.removeAll { $0.id == sticker.id }
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
         saveToPhotosIfEnabled(draft.photo)
         return .created(sticker)
     }
 
+    private func fetchSticker(id: String) async throws -> Sticker {
+        let data = try await client.rest("GET", "stickers?id=eq.\(id)&select=\(Self.selectColumns)&limit=1")
+        guard let s = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
+        return s
+    }
+
+    /// Re-encounter (web `recordReencounter`): this photo is added to the word you already own,
+    /// with where you met it again. No quiz, and the review interval is not moved (`recalled: null`).
+    /// If the photo upload fails the encounter itself is still recorded.
+    func recordEncounter(owned: OwnedWord, photo: UIImage?, cutout: UIImage?,
+                         location: CLLocation?, placeName: String?) async throws -> (count: Int, photoSaved: Bool) {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        async let imagePath: String? = uploadJPEG(photo, uid: uid, ts: ts, kind: "encounter")
+        async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "encounter-cutout")
+        let image = try await imagePath
+        let cut = await cutoutPath
+        if photo != nil && image == nil { throw APIError.message("記録に失敗しました") }
+        struct Recorded: Decodable {
+            let encounterCount: Int?
+            enum CodingKeys: String, CodingKey { case encounterCount = "encounter_count" }
+        }
+        let res = try await NativeAPI.call("recordEncounter", [
+            "sticker_id": owned.stickerId,
+            "recalled": NSNull(),
+            "lat": orNull(location?.coordinate.latitude),
+            "lng": orNull(location?.coordinate.longitude),
+            "location_name": orNull(placeName),
+            "image_path": orNull(image),
+            "cutout_path": orNull(cut),
+        ], as: Recorded.self, timeout: 30)
+        cacheLocal(path: image, image: photo)
+        if let fresh = try? await fetchSticker(id: owned.stickerId) {
+            replace(owned.stickerId) { _ in fresh }
+        }
+        return (res.encounterCount ?? owned.encounterCount + 1, image != nil || cut != nil)
+    }
+
     private func findWord(headword: String) async throws -> Word? {
         let data = try await client.rest("GET", "words?language=eq.\(language)&headword=eq.\(Self.enc(headword))&select=*&limit=1")
         return try JSONDecoder().decode([Word].self, from: data).first
-    }
-
-    private func ownedSticker(wordId: String) async throws -> Sticker? {
-        let data = try await client.rest("GET", "stickers?word_id=eq.\(wordId)&select=\(Self.selectColumns)&limit=1")
-        return try SupabaseDate.decoder.decode([Sticker].self, from: data).first
-    }
-
-    private func ensureWord(_ draft: CatchDraft) async throws -> String {
-        try await ensureWord(candidate: draft.candidate, details: draft.details)
     }
 
     private func ensureWord(candidate c: Candidate, details d: CardDetails?) async throws -> String {
@@ -367,3 +394,6 @@ final class DexStore {
         return s.addingPercentEncoding(withAllowedCharacters: allowed) ?? s
     }
 }
+
+/// JSON `null` for a missing value (`JSONSerialization` bodies).
+private func orNull(_ value: Any?) -> Any { value ?? NSNull() }

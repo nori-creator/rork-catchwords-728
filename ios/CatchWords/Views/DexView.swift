@@ -94,6 +94,8 @@ struct DexView: View {
     @State private var impactTick: Int = 0
     @State private var openMenu: DexFilterMenu?
     @Namespace private var modeBubble
+    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var categoryCounts: [(key: String, count: Int)] {
         var counts: [String: Int] = [:]
@@ -341,6 +343,20 @@ struct DexView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     Color.clear.frame(height: 108)
+                    if fx3D && !reduceMotion && categoryCounts.count > 1 {
+                        // 図鑑の本棚: one Blender book per category (most words first). Tap = filter.
+                        Bookshelf3DView(
+                            books: categoryCounts.prefix(6).map { ShelfBook(key: $0.key, count: $0.count) },
+                            selected: categoryFilter
+                        ) { key in
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) { categoryFilter = key }
+                        }
+                        .background(
+                            LinearGradient(colors: [Color(hex: 0xFFF7EC), Color(hex: 0xF3E6D2)], startPoint: .top, endPoint: .bottom),
+                            in: .rect(cornerRadius: 24, style: .continuous)
+                        )
+                        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    }
                     ForEach(Category.orderedKeys, id: \.self) { key in
                         let items = filtered.filter { $0.categoryKey == key }
                         if !items.isEmpty {

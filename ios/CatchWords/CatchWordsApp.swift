@@ -16,6 +16,21 @@ struct CatchWordsApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if let preview = UIPreview.requested {
+                UIPreviewRoot(name: preview)
+                    .environment(dex)
+                    .preferredColorScheme(.light)
+            } else {
+                app
+            }
+            #else
+            app
+            #endif
+        }
+    }
+
+    private var app: some View {
             RootView()
                 .environment(auth)
                 .environment(dex)
@@ -25,6 +40,5 @@ struct CatchWordsApp: App {
                 .preferredColorScheme(.light)
                 .tint(Theme.primary)
                 .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
-        }
     }
 }

@@ -46,6 +46,9 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 28)
 
+                    HomeAlbum3D(sticker: todayItems.first ?? dex.stickers.first)
+                        .padding(.bottom, 8)
+
                     VStack(spacing: 2) {
                         Text(JPDate.weekday(today))
                             .font(.system(size: 15, weight: .semibold))
@@ -538,5 +541,33 @@ private struct PhotoCorners: View {
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// The Blender album with the newest catch on its cover (3D on, motion not reduced).
+/// Nothing is drawn until the cover photo is ready, and nothing at all without catches.
+struct HomeAlbum3D: View {
+    let sticker: Sticker?
+    @Environment(DexStore.self) private var dex
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
+    @State private var cover: UIImage?
+
+    var body: some View {
+        Group {
+            if fx3D, !reduceMotion, let cover {
+                Album3DView(cover: cover)
+                    .frame(height: 170)
+                    .id(sticker?.id)
+                    .transition(.opacity)
+            }
+        }
+        .task(id: sticker?.id) {
+            guard let s = sticker, let path = s.cutoutImageUrl ?? s.objectImageUrl else { cover = nil; return }
+            if let img = ImageCache.shared.image(for: path) { cover = img; return }
+            guard let url = dex.url(for: path, preferThumb: false) else { return }
+            let img = await ImageCache.shared.load(url: url, key: path)
+            withAnimation(.easeOut(duration: 0.3)) { cover = img }
+        }
     }
 }

@@ -1,13 +1,16 @@
 import SwiftUI
 import CoreLocation
 
-/// capture.tsx `Step`: camera → (selfie) → processing → select → card → (reward) → dex.
+/// capture.tsx `Step`: camera → (selfie) → processing → select → (reencounter | card) → (reward) → dex.
 enum CaptureStep: Equatable {
     case camera
     case selfie
     case processing
     case select
     case card
+    /// Web `reencounter`: the picked word is already in the dex ("再会！").
+    case reencounter
+    /// Web `offlineSaved`: analysis failed; the photo is kept in "解析待ち".
     case failed(String, retryable: Bool)
 }
 
@@ -41,21 +44,41 @@ final class CaptureViewModel {
     var picked: Candidate?
     var details: CardDetails?
     var cutout: UIImage?
+    /// The same lift, aligned with the photo — drives the cut-out animation on the card.
+    var cutoutLift: CutoutService.Lift?
     var isCutting: Bool = false
     var cutoutFailed: Bool = false
     var isLoadingDetails: Bool = false
     var isLookingUp: Bool = false
+    /// The owned-word check runs between the tap and the card (capture.tsx:905-919).
+    var isCheckingOwned: Bool = false
     var caption: String = ""
     var placeName: String?
     var location: CLLocation?
     var captureType: String = "photo"
     var restoredPendingId: String?
+    /// Inline error under "違う単語を入力" (web `input.notTargetLang`).
+    var searchError: String?
+    /// One-line notice (web toast).
+    var toast: String?
+    /// The failure was "no connection" (web shows WifiOff; otherwise Sparkles).
+    var failedOffline: Bool = false
+
+    // Re-encounter ("再会！")
+    var owned: OwnedWord?
+    var reencCount: Int?
+    var reencPhotoSaved: Bool = false
+    var reencFailed: Bool = false
 
     /// runToken: "cancel" only discards stale results; in-flight work is never killed mid-save.
     private var runToken: Int = 0
     private var cutoutTask: Task<Void, Never>?
+    private var detailsTask: Task<CardDetails?, Never>?
     /// Detection may finish while the user is still taking the selfie.
     private var detectOutcome: Result<[Candidate], Error>?
+    /// The photo is kept in "解析待ち" from the shutter on (capture.tsx enqueueCapture), and
+    /// released only when its job is done: saved, re-encountered, or the user starts over.
+    private(set) var pendingId: String?
 
     /// Starts analysis immediately; the selfie prompt covers the wait (web: "ものと一緒に、もう一枚").
     func analyze(_ image: UIImage, askSelfie: Bool = false) {
@@ -66,34 +89,37 @@ final class CaptureViewModel {
         candidates = []
         picked = nil
         details = nil
+        detailsTask = nil
         cutout = nil
+        cutoutLift = nil
         cutoutFailed = false
         detectOutcome = nil
+        searchError = nil
+        owned = nil
         captureType = mode == .scan ? "scan" : "photo"
         let textOnly = mode == .scan
         step = askSelfie ? .selfie : .processing
         if !askSelfie { SoundService.shared.startAnalyzeLoop() }
+        // A photo restored from the queue is never queued again (one entry per photo, not per retry).
+        if let rid = restoredPendingId {
+            pendingId = rid
+        } else if pendingId == nil {
+            pendingId = PendingQueue.shared.add(image: image, reason: "解析中", lat: nil, lng: nil)?.id
+        }
 
         Task {
             async let loc = LocationService.shared.current()
             do {
-                let found = try await AIService.shared.detect(image: image, textOnly: textOnly)
+                let found = textOnly
+                    ? try await AIService.shared.detect(image: image, textOnly: true)
+                    : try await AIService.shared.suggest(image: image)
                 guard token == runToken else { return }
-                detectOutcome = .success(found.sorted { $0.confidence > $1.confidence })
-                if let pid = restoredPendingId {
-                    PendingQueue.shared.remove(id: pid)
-                    restoredPendingId = nil
-                }
+                detectOutcome = .success(found)
             } catch {
                 guard token == runToken else { return }
                 detectOutcome = .failure(error)
-                let reason = (error as? LocalizedError)?.errorDescription ?? "解析に失敗しました。"
-                let here = await loc
-                if let pid = restoredPendingId {
-                    PendingQueue.shared.updateReason(id: pid, reason: reason)
-                } else {
-                    PendingQueue.shared.add(image: image, reason: reason,
-                                            lat: here?.coordinate.latitude, lng: here?.coordinate.longitude)
+                if let pid = pendingId {
+                    PendingQueue.shared.updateReason(id: pid, reason: Self.reason(error))
                 }
             }
             if step != .selfie { advanceAfterDetect() }
@@ -102,6 +128,13 @@ final class CaptureViewModel {
             location = here
             if let here { placeName = await LocationService.shared.placeName(for: here) }
         }
+    }
+
+    /// "いますぐもう一度試す": same photo, same queue entry.
+    func retry() {
+        guard let p = photo else { reset(); return }
+        restoredPendingId = pendingId
+        analyze(p)
     }
 
     func finishSelfie(_ image: UIImage?) {
@@ -124,17 +157,25 @@ final class CaptureViewModel {
             Haptics.impact(.medium)
             withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
         case .failure(let error):
-            let reason = (error as? LocalizedError)?.errorDescription ?? "解析に失敗しました。"
             let retryable = (error as? APIError)?.isRetryable ?? true
+            failedOffline = { if case .offline? = error as? APIError { return true }; return false }()
             Haptics.warning()
-            step = .failed(reason, retryable: retryable)
+            step = .failed(Self.reason(error), retryable: retryable)
         }
     }
 
-    /// Typed search. With `keepPhoto` (the "違う単語を入力" box under a photo) the photo stays the sticker.
+    static func reason(_ error: Error) -> String {
+        if case .timeout? = error as? APIError { return "通信に時間がかかっています。写真は端末に保存しました。" }
+        return (error as? LocalizedError)?.errorDescription ?? "解析に失敗しました。"
+    }
+
+    /// Typed search (`suggestWordCandidates`). One result goes straight on; several go to the picker.
+    /// With `keepPhoto` (the "違う単語を入力" box under a photo) the photo stays the sticker and
+    /// the screen stays put: a miss is shown inline, never as a full-screen failure.
     func search(text: String, keepPhoto: Bool = false) {
         runToken += 1
         let token = runToken
+        searchError = nil
         if !keepPhoto {
             step = .processing
             captureType = "text"
@@ -147,47 +188,95 @@ final class CaptureViewModel {
         Task {
             defer { if token == runToken { isLookingUp = false } }
             do {
-                let c = try await AIService.shared.lookup(text: text)
+                let found = try await AIService.shared.candidates(for: text, scene: placeName)
                 guard token == runToken else { return }
                 SoundService.shared.stopAnalyzeLoop()
-                if !keepPhoto { candidates = [c] }
-                pick(c)
+                guard !found.isEmpty else { throw APIError.message(Self.notTargetLang) }
+                if found.count == 1 {
+                    pick(found[0])
+                } else {
+                    candidates = found
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
+                }
             } catch {
                 guard token == runToken else { return }
                 SoundService.shared.stopAnalyzeLoop()
+                Haptics.warning()
+                let message: String = {
+                    if case .message? = error as? APIError { return Self.notTargetLang }
+                    return (error as? LocalizedError)?.errorDescription ?? Self.notTargetLang
+                }()
                 if keepPhoto {
-                    Haptics.warning()
+                    searchError = message
                 } else {
-                    step = .failed((error as? LocalizedError)?.errorDescription ?? "見つかりませんでした。", retryable: true)
+                    showToast(message)
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { step = .camera }
                 }
             }
         }
     }
 
-    /// confirmWord: the card appears immediately — cutout is an upgrade, never a gate.
+    /// input.notTargetLang (web i18n), with the learning language filled in.
+    static let notTargetLang = "台湾華語の単語が見つかりませんでした。別の言い方で調べてみてください。"
+
+    /// Tap on a word: first ask the server whether it is already in the dex (re-encounter),
+    /// then show the card. Card details keep generating in the background.
     func pick(_ candidate: Candidate) {
+        guard !isCheckingOwned else { return }
+        let token = runToken
         picked = candidate
         details = nil
+        detailsTask = nil
+        searchError = nil
         Haptics.impact(.light)
         SoundService.shared.speak(candidate.headword)
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { step = .card }
-        startCutout(for: candidate)
-        loadDetails(for: candidate)
+        isCheckingOwned = true
+        Task {
+            let found = try? await NativeAPI.call(
+                "checkOwnedWord",
+                ["headword": candidate.headword, "language": NativeAPI.targetLanguage],
+                as: OwnedCheck.self, timeout: 15
+            )
+            guard token == runToken else { return }
+            isCheckingOwned = false
+            if let o = found?.owned {
+                owned = o
+                reencCount = nil
+                reencFailed = false
+                reencPhotoSaved = false
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { step = .reencounter }
+            } else {
+                // Fail open: a broken check must never block a new catch.
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { step = .card }
+                startCutout(for: candidate)
+                loadDetails(for: candidate)
+            }
+        }
     }
 
+    private struct OwnedCheck: Decodable { let owned: OwnedWord? }
+
+    /// Settings → 切り抜きモード (web `catchSpeed`, default on). Off = keep the photo as the sticker.
+    static let cutoutModeKey = "capture.cutoutMode"
+    static var cutoutMode: Bool { UserDefaults.standard.object(forKey: cutoutModeKey) as? Bool ?? true }
+
+    /// Cut-out mode: cutting starts the moment a word is tapped, never delays the card,
+    /// and is awaited only right before saving (capture.tsx: 図鑑に入れる前に切り抜きが揃っていること).
     func startCutout(for candidate: Candidate?) {
-        guard let photo, cutout == nil, captureType != "scan" else { return }
+        guard Self.cutoutMode, let photo, cutout == nil, captureType != "scan" else { return }
         cutoutTask?.cancel()
         isCutting = true
         cutoutFailed = false
-        let point = candidate.map { CGPoint(x: $0.point[0] / 1000, y: $0.point[1] / 1000) }
+        let point = candidate.flatMap { $0.group == nil && $0.point != [500, 500]
+            ? CGPoint(x: $0.point[0] / 1000, y: $0.point[1] / 1000) : nil }
         cutoutTask = Task {
-            let lifted = await CutoutService.liftSubject(from: photo, near: point)
+            let lifted = await CutoutService.liftDetailed(from: photo, near: point)
             guard !Task.isCancelled else { return }
             isCutting = false
             if let lifted {
-                withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) { cutout = lifted }
-                Haptics.impact(.soft)
+                // The card animates from `cutoutLift` (aligned) to `cutout` (the sticker).
+                cutoutLift = lifted
+                cutout = lifted.cropped
             } else {
                 cutoutFailed = true
             }
@@ -197,27 +286,67 @@ final class CaptureViewModel {
     func useOriginal() {
         cutoutTask?.cancel()
         isCutting = false
+        cutoutLift = nil
         withAnimation(.snappy) { cutout = nil }
     }
 
+    /// Waits for a cut-out that is still running (a failed one simply leaves the photo).
+    func awaitCutout() async {
+        guard isCutting, let task = cutoutTask else { return }
+        await task.value
+    }
+
+    /// Web: card failure → toast 「カード生成に失敗しました」 and back to the picker.
     private func loadDetails(for candidate: Candidate) {
         let token = runToken
         isLoadingDetails = true
+        let task = Task<CardDetails?, Never> {
+            try? await AIService.shared.cardDetails(for: candidate)
+        }
+        detailsTask = task
         Task {
-            let d = try? await AIService.shared.cardDetails(for: candidate)
+            let d = await task.value
             guard token == runToken, picked == candidate else { return }
             isLoadingDetails = false
-            withAnimation(.easeOut(duration: 0.3)) { details = d }
+            if let d {
+                withAnimation(.easeOut(duration: 0.3)) { details = d }
+            } else if step == .card {
+                showToast("カード生成に失敗しました")
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                    step = candidates.isEmpty ? .camera : .select
+                }
+            }
         }
     }
 
-    func draft() -> CatchDraft? {
+    /// Saving needs the real card (level, category, extras). Never save placeholder values:
+    /// wait for the card that is already being generated.
+    func awaitDetails() async -> CardDetails? {
+        if let details { return details }
+        return await detailsTask?.value
+    }
+
+    func draft(details d: CardDetails) -> CatchDraft? {
         guard let picked else { return nil }
         let base = photo ?? Self.textCard(for: picked.headword)
         return CatchDraft(
-            candidate: picked, details: details, photo: base, cutout: cutout, selfie: selfie,
+            candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
             caption: caption, location: location, placeName: placeName, captureType: captureType
         )
+    }
+
+    /// The catch was saved (or re-encountered): the queued photo's job is done.
+    func releasePending() {
+        if let pid = pendingId { PendingQueue.shared.remove(id: pid) }
+        pendingId = nil
+        restoredPendingId = nil
+    }
+
+    /// "もう一枚撮る" from the failure panel keeps the photo in "解析待ち" (that is what it promised).
+    func keepPendingAndReset() {
+        pendingId = nil
+        restoredPendingId = nil
+        reset()
     }
 
     func restore(_ item: PendingCatch) {
@@ -226,26 +355,48 @@ final class CaptureViewModel {
             return
         }
         restoredPendingId = item.id
+        pendingId = item.id
         mode = .photo
         analyze(img)
     }
 
+    func showToast(_ text: String) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            withAnimation(.easeOut(duration: 0.25)) { if toast == text { toast = nil } }
+        }
+    }
+
+    /// Starting over throws the queued photo away too (otherwise "解析待ち" piles up).
     func reset() {
         runToken += 1
         SoundService.shared.stopAnalyzeLoop()
         cutoutTask?.cancel()
+        if let pid = pendingId { PendingQueue.shared.remove(id: pid) }
+        pendingId = nil
         photo = nil
         selfie = nil
         candidates = []
         picked = nil
         details = nil
+        detailsTask = nil
         cutout = nil
+        cutoutLift = nil
         caption = ""
         placeName = nil
         location = nil
         restoredPendingId = nil
         detectOutcome = nil
         isLookingUp = false
+        isCheckingOwned = false
+        isLoadingDetails = false
+        searchError = nil
+        failedOffline = false
+        owned = nil
+        reencCount = nil
+        reencFailed = false
+        reencPhotoSaved = false
         withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { step = .camera }
     }
 

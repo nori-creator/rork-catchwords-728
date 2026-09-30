@@ -8,6 +8,11 @@ nonisolated enum APIError: LocalizedError {
     case server(Int, String)
     case decoding
     case message(String)
+    /// The server's rolling-24h cap (`assertWithinDailyCap`). Waiting a few minutes does not help.
+    case limit(String)
+
+    /// err.dailyCap (web i18n).
+    static let dailyCapMessage = "1日の利用上限に達しました。24時間以内に自動で回復します。"
 
     var errorDescription: String? {
         switch self {
@@ -18,6 +23,7 @@ nonisolated enum APIError: LocalizedError {
         case .server(let code, let msg): msg.isEmpty ? "サーバーエラー（\(code)）" : msg
         case .decoding: "データの読み込みに失敗しました。"
         case .message(let m): m
+        case .limit(let m): m
         }
     }
 
@@ -26,6 +32,7 @@ nonisolated enum APIError: LocalizedError {
         switch self {
         case .timeout, .offline: true
         case .server(let code, _): code >= 500 || code == 429
+        case .limit: false
         default: false
         }
     }
@@ -43,9 +50,9 @@ final class SupabaseClient {
     private let urlSession: URLSession
 
     init() {
-        let raw = Config.EXPO_PUBLIC_SUPABASE_URL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = AppConfig.supabaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         baseURL = raw.isEmpty ? nil : URL(string: raw)
-        anonKey = Config.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        anonKey = AppConfig.supabasePublishableKey
         let cfg = URLSessionConfiguration.default
         cfg.timeoutIntervalForRequest = 30
         urlSession = URLSession(configuration: cfg)

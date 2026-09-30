@@ -151,7 +151,7 @@ struct MainTabView: View {
 }
 
 /// TabBar.tsx: floating capsule (87.6% width, ~55pt, full-capsule corners), a bubble exactly one
-/// cell wide that slides between cells, and the camera as a raised blue disc in the centre.
+/// cell wide that slides between cells. The camera sits in the same row, same size (blue icon).
 /// On the camera it becomes dark glass instead of a paper-like white strip.
 struct CapsuleTabBar: View {
     @Binding var selection: AppTab
@@ -187,16 +187,18 @@ struct CapsuleTabBar: View {
         .animation(.easeInOut(duration: 0.25), value: onCamera)
     }
 
-    private func cell(_ tab: AppTab) -> some View {
+    private func cell(_ tab: AppTab, iconColor: Color? = nil) -> some View {
         let isOn = selection == tab
+        let tint = isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75))
         return Button { select(tab) } label: {
             VStack(spacing: 5) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 19, weight: .regular))
                     .frame(height: 21)
+                    .foregroundStyle(isOn ? Theme.primary : (iconColor ?? tint))
                 Text(tab.title).font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75)))
+            .foregroundStyle(tint)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
                 if isOn {
@@ -212,35 +214,11 @@ struct CapsuleTabBar: View {
         .accessibilityLabel(tab.title)
     }
 
-    /// The camera cell: a raised disc on other tabs; on the camera itself it lies flat in the bar.
+    /// The camera cell: the same size and height as every other tab, in one row
+    /// (owner request 2026-09-30: no raised disc). The icon stays blue so it is still easy to find.
     private var cameraCell: some View {
-        let isOn = selection == .camera
-        return Button { select(.camera) } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    if isOn {
-                        Image(systemName: "camera")
-                            .font(.system(size: 19))
-                            .foregroundStyle(Theme.primary)
-                    } else {
-                        Circle()
-                            .fill(Theme.primary)
-                            .frame(width: 50, height: 50)
-                            .shadow(color: Theme.primary.opacity(0.45), radius: 10, y: 4)
-                            .overlay(Image(systemName: "camera").font(.system(size: 20, weight: .semibold)).foregroundStyle(.white))
-                            .offset(y: -14)
-                    }
-                }
-                .frame(height: 21)
-                Text("カメラ").font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75)))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressableStyle(scale: 0.92))
-        .tourAnchor(.cameraTab)
-        .accessibilityLabel("カメラ")
+        cell(.camera, iconColor: Theme.primary)
+            .tourAnchor(.cameraTab)
     }
 
     private func select(_ tab: AppTab) {

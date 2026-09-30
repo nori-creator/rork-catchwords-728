@@ -41,8 +41,8 @@ struct WordDetailView: View {
                     metaCard
                     heroCard
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
-                    if let e = extras, e.hasMeters { MetersPanel(extras: e) }
-                    if let ctx = extras?.usageContext, !ctx.isEmpty { textCard("使う場面", icon: "bubble.left.and.text.bubble.right", ctx) }
+                    // Web WordCard: no frequency/register meters and no separate "使う場面" card
+                    // (owner: メーターいらない). Register is a chip word in the header only.
                     ForEach(prefs.visible.filter(hasContent)) { section in
                         sectionView(section)
                     }
@@ -166,7 +166,8 @@ struct WordDetailView: View {
                 if let level = word?.level, !level.isEmpty { chip(levelLabel(level)) }
                 if let r = extras?.resolvedRegister { chip(registerLabel(r)) }
             }
-            if let p = word?.pinyin, !p.isEmpty {
+            // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
+            if (word?.readingZhuyin ?? "").isEmpty, let p = word?.pinyin, !p.isEmpty {
                 Text(p).font(.system(size: 14)).foregroundStyle(Theme.muted)
             }
             HStack {
