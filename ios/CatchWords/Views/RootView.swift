@@ -1,0 +1,90 @@
+import SwiftUI
+
+struct RootView: View {
+    @Environment(AuthStore.self) private var auth
+    @Environment(DexStore.self) private var dex
+    @Environment(PlanStore.self) private var plan
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            switch auth.phase {
+            case .checking:
+                SplashView()
+                    .transition(.opacity)
+            case .signedOut:
+                AuthView()
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            case .signedIn:
+                MainTabView()
+                    .transition(.opacity)
+                    .task {
+                        await dex.load()
+                        await plan.bootstrap()
+                    }
+            case .failed(let reason):
+                ConnectionFailedView(reason: reason) {
+                    Task { await auth.bootstrap() }
+                }
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.9), value: auth.phase)
+        .task { await auth.bootstrap() }
+        .onChange(of: auth.phase) { _, phase in
+            if phase == .signedOut { dex.reset() }
+        }
+    }
+}
+
+struct SplashView: View {
+    @State private var breathe: Bool = false
+
+    var body: some View {
+        VStack(spacing: 18) {
+            LogoMark(size: 88)
+                .scaleEffect(breathe ? 1.04 : 0.98)
+            ProgressView().tint(Theme.muted)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) { breathe = true }
+        }
+    }
+}
+
+struct ConnectionFailedView: View {
+    let reason: String
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 44, weight: .semibold))
+                .foregroundStyle(Theme.muted)
+            Text(reason)
+                .font(.system(size: 15))
+                .foregroundStyle(Theme.foreground)
+                .multilineTextAlignment(.center)
+            PrimaryButton(title: "もう一度試す", icon: "arrow.clockwise", action: retry)
+                .frame(maxWidth: 260)
+        }
+        .padding(32)
+    }
+}
+
+/// The app's interlocking-loop mark, drawn natively (matches the icon).
+struct LogoMark: View {
+    var size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+                .fill(Theme.brandGradient)
+            HStack(spacing: -size * 0.16) {
+                Circle().stroke(.white, lineWidth: size * 0.07).frame(width: size * 0.4)
+                Circle().stroke(.white, lineWidth: size * 0.07).frame(width: size * 0.4)
+            }
+        }
+        .frame(width: size, height: size)
+        .shadow(color: Theme.primary.opacity(0.5), radius: size * 0.25, y: size * 0.08)
+    }
+}

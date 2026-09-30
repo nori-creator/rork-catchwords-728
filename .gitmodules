@@ -1,0 +1,4 @@
+[submodule "lovable-catch-words-app"]
+	path = lovable-catch-words-app
+	url = https://github.com/nori-creator/lovable-catch-words-app.git
+	branch = main
