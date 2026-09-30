@@ -31,6 +31,7 @@ struct CatchWordsApp: App {
                 // "<scene>-dark" photographs the same scene in the dark appearance.
                 UIPreviewRoot(name: preview.hasSuffix("-dark") ? String(preview.dropLast(5)) : preview)
                     .environment(dex)
+                    .environment(diary)
                     .preferredColorScheme(preview.hasSuffix("-dark") ? .dark : .light)
             } else {
                 app

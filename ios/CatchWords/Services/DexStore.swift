@@ -90,6 +90,9 @@ final class DexStore {
 
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
 
+    /// The photos the home album shows (the ones taken off the album stay in the dex only).
+    var albumStickers: [Sticker] { stickers.filter { !albumHidden.contains($0.id) } }
+
     /// True when this headword is already in the dex (scan "取得済み").
     func owns(headword: String) -> Bool { stickers.contains { $0.word?.headword == headword } }
 

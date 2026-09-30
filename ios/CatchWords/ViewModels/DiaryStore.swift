@@ -82,6 +82,9 @@ final class DiaryStore {
 
     func text(for day: Date) -> String { entries[Self.key(day)] ?? "" }
 
+    /// Days (YYYY-MM-DD) that have a diary entry — they get a page in the month's book even without photos.
+    var dayKeys: [String] { entries.filter { !$0.value.isEmpty }.map(\.key) }
+
     func loadMonth(of day: Date) async {
         let dayKey = Self.key(day)
         let month = String(dayKey.prefix(7))

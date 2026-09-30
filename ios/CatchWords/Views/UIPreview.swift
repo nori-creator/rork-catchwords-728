@@ -34,6 +34,7 @@ struct UIPreviewRoot: View {
             case "hero": HeroPickerPreview()
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
+            case "book": BookPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -273,6 +274,47 @@ private struct MemorialPreview: View {
 
     var body: some View {
         MemorialReveal(n: 30, words: 48, photos: Self.photos) {}
+    }
+}
+/// The month book: slides to the diary page, then turns the page to the next day (autoplay).
+private struct BookPreview: View {
+    private static let days: [BookDay] = {
+        let cal = Calendar.current
+        let words = [("芒果", "マンゴー"), ("盤子", "お皿"), ("咖啡", "コーヒー"), ("雨傘", "傘"), ("花", "花")]
+        var out: [BookDay] = []
+        for d in 0..<3 {
+            let day = cal.date(byAdding: .day, value: d - 2, to: cal.startOfDay(for: Date()))!
+            var items: [Sticker] = []
+            for j in 0..<(d == 1 ? 1 : 2) {
+                let i = (d * 2 + j) % words.count
+                let json = #"{"id":"bw\#(i)","headword":"\#(words[i].0)","meaning_ja":"\#(words[i].1)"}"#
+                guard let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8)) else { continue }
+                let path = "preview/book-\(d)-\(j).jpg"
+                let img = UIGraphicsImageRenderer(size: CGSize(width: 600, height: j == 0 ? 760 : 520)).image { ctx in
+                    let hue = CGFloat(i) / 5
+                    UIColor(hue: hue, saturation: 0.4, brightness: 0.93, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 760))
+                    UIColor(hue: hue, saturation: 0.7, brightness: 0.72, alpha: 1).setFill()
+                    ctx.cgContext.fillEllipse(in: CGRect(x: 150, y: 140, width: 300, height: 260))
+                }
+                ImageCache.shared.set(img, for: path)
+                items.append(Sticker(id: "b\(d)\(j)", wordId: "w", objectImageUrl: path, cutoutImageUrl: nil, selfieImageUrl: nil,
+                                     caption: j == 0 && d == 0 ? "駅前のカフェで" : nil, locationName: nil,
+                                     takenAt: day.addingTimeInterval(Double(9 + j) * 3600), captureType: "photo", word: word))
+            }
+            out.append(BookDay(day: day, items: items))
+        }
+        return out
+    }()
+
+    var body: some View {
+        VStack {
+            MonthBookView(days: Self.days, startAtEnd: false, onOpen: { _ in }, onWrite: { _ in }, autoplay: true)
+                .frame(height: 600)
+                .padding(.horizontal, 12)
+        }
+        .frame(maxHeight: .infinity)
+        .background(HomeBackground().ignoresSafeArea())
     }
 }
 #endif

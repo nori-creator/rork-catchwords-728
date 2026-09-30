@@ -12,6 +12,8 @@ struct CollageBoard: View {
     let onOpen: (Sticker) -> Void
     /// Lay every photo out automatically, ignoring positions placed by hand (the memorial album).
     var autoOnly: Bool = false
+    /// Tells the book to stop turning pages while photos are being moved.
+    var onEditingChange: ((Bool) -> Void)? = nil
 
     @Environment(DexStore.self) private var dex
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -58,6 +60,7 @@ struct CollageBoard: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { boardW = $0 }
             .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82), value: editing)
         }
+        .onChange(of: editing) { _, on in onEditingChange?(on) }
     }
 
     // MARK: Layout
