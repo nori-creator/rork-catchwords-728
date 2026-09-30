@@ -231,11 +231,10 @@ struct ScanView: View {
             try? await Task.sleep(for: .milliseconds(700))
             if !Task.isCancelled, stage == .sensing { stage = .reading }
         }
-        let t0 = Date()
         do {
-            let found = try await AIService.shared.detect(image: shot)
+            let found = try await AIService.shared.detectScan(image: shot, lat: location?.coordinate.latitude,
+                                                              lng: location?.coordinate.longitude)
             stageTimer.cancel()
-            let detectMs = Int(Date().timeIntervalSince(t0) * 1000)
             stage = .matching
             let dict = await Dictionary.lookup(found.map(\.headword))
             let merged = found.map { c in ScanItem(candidate: c, entry: dict[c.headword]) }
@@ -243,7 +242,6 @@ struct ScanView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { items = merged }
             stage = .idle
             Haptics.success()
-            ScanLog.detected(merged, detectMs: detectMs, location: location)
         } catch {
             stageTimer.cancel()
             stage = .idle
@@ -327,28 +325,18 @@ struct ScanItem: Identifiable, Hashable {
     }
 }
 
-/// Silent log to `scan_events` (detect_ms / tap_to_audio_ms), never blocks the UI.
+/// Silent scan funnel log, never blocks the UI. Detection rows are written by the web's `detectScan`
+/// itself; taps and catches mark those same rows (web `markScanTap` / `markScanCaught`), so nothing is
+/// counted twice.
 enum ScanLog {
-    static func detected(_ items: [ScanItem], detectMs: Int, location: CLLocation?) {
-        guard let uid = SupabaseClient.shared.userId, !items.isEmpty else { return }
-        let rows: [[String: Any]] = items.map { i in
-            var r: [String: Any] = [
-                "user_id": uid, "headword": i.headword, "meaning_ja": i.meaning,
-                "kind": i.candidate.kind == "text" ? "text" : "object",
-                "confidence": i.candidate.confidence, "detect_ms": detectMs,
-            ]
-            if let l = location { r["lat"] = l.coordinate.latitude; r["lng"] = l.coordinate.longitude }
-            return r
-        }
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: rows) }
+    static func tapped(_ item: ScanItem, ms: Int?) {
+        var d: [String: Any] = ["headword": item.headword]
+        if let ms { d["tap_to_audio_ms"] = max(0, ms) }
+        Task { _ = try? await NativeAPI.call("markScanTap", d, timeout: 10) }
     }
 
-    static func tapped(_ item: ScanItem, ms: Int?) {
-        guard let uid = SupabaseClient.shared.userId else { return }
-        var r: [String: Any] = ["user_id": uid, "headword": item.headword, "meaning_ja": item.meaning,
-                                "kind": item.candidate.kind == "text" ? "text" : "object", "tapped": true]
-        if let ms { r["tap_to_audio_ms"] = ms }
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: r) }
+    static func caught(_ item: ScanItem) {
+        Task { _ = try? await NativeAPI.call("markScanCaught", ["headword": item.headword], timeout: 10) }
     }
 }
 
@@ -482,11 +470,3 @@ struct ScanCatchSheet: View {
     }
 }
 
-extension ScanLog {
-    static func caught(_ item: ScanItem) {
-        guard let uid = SupabaseClient.shared.userId else { return }
-        let r: [String: Any] = ["user_id": uid, "headword": item.headword, "meaning_ja": item.meaning,
-                                "kind": item.candidate.kind == "text" ? "text" : "object", "tapped": true, "caught": true]
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: r) }
-    }
-}

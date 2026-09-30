@@ -67,6 +67,20 @@ final class AIService {
         return out
     }
 
+    /// The scan screen (web `detectScan`): nouns only, the learner's level, dictionary learning and
+    /// the scan_events funnel log — all on the server, same as the web.
+    func detectScan(image: UIImage, lat: Double? = nil, lng: Double? = nil) async throws -> [Candidate] {
+        struct Res: Decodable { let items: [Candidate] }
+        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
+        var data: [String: Any] = ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]
+        if let lat, let lng { data["lat"] = lat; data["lng"] = lng }
+        let res = try await NativeAPI.call("detectScan", data, as: Res.self, timeout: 40)
+        var out: [Candidate] = []
+        for c in res.items where !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
+        guard !out.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
+        return out
+    }
+
     /// Typed word (Japanese or Chinese) → 2–5 names, each with how it differs
     /// (`suggestWordCandidates`). One result goes straight to the card; several go to the picker.
     func candidates(for query: String, scene: String? = nil) async throws -> [Candidate] {
