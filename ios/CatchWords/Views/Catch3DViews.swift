@@ -128,8 +128,8 @@ final class JarScene {
             UIRectFill(CGRect(x: 0, y: size.height - 19, width: size.width, height: 5))
             let p = NSMutableParagraphStyle()
             p.alignment = .center
-            let font = UIFont(name: "PingFangTC-Semibold", size: 132) ?? .systemFont(ofSize: 132, weight: .semibold)
-            (text as NSString).draw(in: CGRect(x: 40, y: 22, width: size.width - 80, height: 170),
+            let font = UIFont(name: "PingFangTC-Semibold", size: 124) ?? .systemFont(ofSize: 124, weight: .semibold)
+            (text as NSString).draw(in: CGRect(x: 40, y: 8, width: size.width - 80, height: 195),
                                     withAttributes: [.font: font, .paragraphStyle: p,
                                                      .foregroundColor: UIColor(red: 0.2, green: 0.16, blue: 0.12, alpha: 1)])
         }
