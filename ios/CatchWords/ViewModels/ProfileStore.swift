@@ -87,16 +87,12 @@ final class ProfileStore {
 
     /// 退会: removes the user's photos and every personal row RLS lets the owner delete
     /// (stickers cascade encounters / reviews / review_history). Shared `words` stay.
-    func deleteAccountData(photoPaths: [String]) async throws {
-        guard let uid = client.userId else { return }
-        for chunk in stride(from: 0, to: photoPaths.count, by: 500) {
-            try? await client.removeObjects(Array(photoPaths[chunk..<min(chunk + 500, photoPaths.count)]))
-        }
-        for table in ["review_history", "reviews", "encounters", "stickers"] {
-            _ = try? await client.rest("DELETE", "\(table)?user_id=eq.\(uid)")
-        }
-        _ = try await client.rest("DELETE", "stickers?user_id=eq.\(uid)")
-        _ = try? await client.rest("DELETE", "profiles?id=eq.\(uid)")
+    /// Deletes the whole account through the web's `deleteMyAccount`: photos, every row
+    /// (children first), and the **login itself** (`auth.admin.deleteUser`, service role).
+    /// Deleting only the rows left a live login behind (App Store Review Guideline 5.1.1(v)).
+    /// The user has typed 「削除」 on the settings screen; that is the confirmation the server requires.
+    func deleteAccount() async throws {
+        _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)
     }
 
     func clearAvatar() async {

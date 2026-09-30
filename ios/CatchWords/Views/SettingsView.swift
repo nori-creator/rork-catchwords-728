@@ -448,10 +448,8 @@ struct SettingsView: View {
     private func deleteAccount() async {
         isDeleting = true
         deleteError = nil
-        let paths = dex.stickers.flatMap { [$0.objectImageUrl, $0.cutoutImageUrl, $0.selfieImageUrl].compactMap { $0 } }
-            .filter { !$0.hasPrefix("http") }
         do {
-            try await profile.deleteAccountData(photoPaths: paths)
+            try await profile.deleteAccount()
             isDeleting = false
             auth.signOut()
         } catch {
