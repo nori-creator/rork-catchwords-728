@@ -395,32 +395,16 @@ final class DexStore {
     func setHeadword(_ sticker: Sticker, to raw: String) async throws {
         let head = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !head.isEmpty, head.count <= 60 else { throw APIError.message("単語を入れてください。") }
-        guard head.hasHan else { throw APIError.message("学習している言語の単語を入れてください") }
         if sticker.word?.headword == head { return }
-
-        let wordId: String
-        if let existing = try await findWord(headword: head) {
-            wordId = existing.id
-        } else {
-            let looked = try? await AIService.shared.lookup(text: head)
-            let candidate = Candidate(
-                kind: "text", headword: head, zhuyin: looked?.zhuyin ?? "", pinyin: looked?.pinyin ?? "",
-                meaningJa: looked?.meaningJa ?? "", pos: looked?.pos ?? "", point: [500, 500], confidence: 1, alternatives: []
-            )
-            let details = try? await AIService.shared.cardDetails(for: candidate)
-            wordId = try await ensureWord(candidate: candidate, details: details)
+        do {
+            // The server checks the language, reuses or creates the word row (its contents are
+            // filled in afterwards by the detail page's auto-fill, as on the web).
+            _ = try await NativeAPI.call("setStickerHeadword", ["sticker_id": sticker.id, "headword": head])
+        } catch let APIError.server(_, message) where message.contains("NOT_TARGET_LANGUAGE") {
+            throw APIError.message(NativeAPI.targetLanguage == "en"
+                ? "英語の単語を入れてください。" : "繁体字（台湾華語）の単語を入れてください。")
         }
-        let data = try await client.rest(
-            "PATCH", "stickers?id=eq.\(sticker.id)&select=\(Self.selectColumns)",
-            body: ["word_id": wordId], prefer: "return=representation"
-        )
-        guard let updated = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
-        replace(sticker.id) { old in
-            var s = updated
-            s.lat = old.lat
-            s.lng = old.lng
-            return s
-        }
+        await reload(stickerId: sticker.id)
     }
 
     /// Dictionary error report → `entry_reports` (reports.functions.ts). Lands in the admin review queue.

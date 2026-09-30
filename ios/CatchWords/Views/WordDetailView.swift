@@ -106,7 +106,7 @@ struct WordDetailView: View {
             Text("AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。")
         }
         .alert("単語を直す", isPresented: $editingHead) {
-            TextField("繁体字で入力", text: $headDraft)
+            TextField(NativeAPI.targetLanguage == "en" ? "英語で入力" : "繁体字で入力", text: $headDraft)
             Button("キャンセル", role: .cancel) {}
             Button("直す") { saveHeadword() }
         } message: {
