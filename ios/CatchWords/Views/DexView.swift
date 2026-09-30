@@ -703,6 +703,7 @@ struct DexMapView: View {
     @State private var panelOpen: Bool = true
     @State private var position: MapCameraPosition = .automatic
     @State private var showDatePicker: Bool = false
+    @State private var visibleRegion: MKCoordinateRegion?
 
     private var days: [Date] {
         let cal = Calendar.current
@@ -714,12 +715,13 @@ struct DexMapView: View {
         return stickers.filter { Calendar.current.isDate($0.takenAt, inSameDayAs: day) }.sorted { $0.takenAt < $1.takenAt }
     }
 
-    /// Visits: consecutive catches within 60 min and ~150 m collapse into one stop ("15:33–15:43", pin badge "2").
+    /// day-map.ts groupStops: within 80 m and 40 min of the previous catch = the same stop.
+    /// A catch without a location joins the previous stop when it is close in time.
     private var groups: [MapVisit] {
         var out: [MapVisit] = []
         for s in dayItems {
             if var last = out.last, let prev = last.items.last,
-               s.takenAt.timeIntervalSince(prev.takenAt) <= 3600, MapVisit.isNear(prev, s) {
+               s.takenAt.timeIntervalSince(prev.takenAt) <= 40 * 60, MapVisit.isNear(last, s) {
                 last.items.append(s)
                 out[out.count - 1] = last
             } else {
@@ -740,7 +742,9 @@ struct DexMapView: View {
                     }
                 }
             }
-            .mapStyle(.standard(pointsOfInterest: .excludingAll))
+            // Owner 2026-09-24: keep the map's own colours and shop/station marks — no grey styling.
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .all))
+            .onMapCameraChange(frequency: .onEnd) { ctx in visibleRegion = ctx.region }
             .ignoresSafeArea(edges: .bottom)
 
             VStack(spacing: 10) {
@@ -786,28 +790,43 @@ struct DexMapView: View {
         }
     }
 
-    private func focus() {
-        let pts = dayItems.compactMap { s -> CLLocationCoordinate2D? in
+    /// DexDayMap frame(): fit only the stops within 3 km of the anchor, so a Taipei-morning /
+    /// Tamsui-evening day stays a close-up map; farther stops are reached through the timeline.
+    private func focus(anchor: Sticker? = nil) {
+        let located = dayItems.compactMap { s -> CLLocationCoordinate2D? in
             guard let la = s.lat, let lo = s.lng else { return nil }
             return CLLocationCoordinate2D(latitude: la, longitude: lo)
         }
+        let a: CLLocationCoordinate2D? = anchor.flatMap { s in
+            guard let la = s.lat, let lo = s.lng else { return nil }
+            return CLLocationCoordinate2D(latitude: la, longitude: lo)
+        } ?? located.first
+        guard let a else { return }
+        let origin = CLLocation(latitude: a.latitude, longitude: a.longitude)
+        let pts = located.filter { origin.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude)) <= 3000 }
         guard let first = pts.first else { return }
         let lats = pts.map(\.latitude), lngs = pts.map(\.longitude)
         let center = CLLocationCoordinate2D(latitude: ((lats.min() ?? 0) + (lats.max() ?? 0)) / 2 - 0.002,
                                             longitude: ((lngs.min() ?? 0) + (lngs.max() ?? 0)) / 2)
-        let span = MKCoordinateSpan(latitudeDelta: max(0.008, ((lats.max() ?? 0) - (lats.min() ?? 0)) * 2.4),
-                                    longitudeDelta: max(0.008, ((lngs.max() ?? 0) - (lngs.min() ?? 0)) * 2.4))
+        let span = pts.count == 1
+            ? MKCoordinateSpan(latitudeDelta: 0.007, longitudeDelta: 0.007)
+            : MKCoordinateSpan(latitudeDelta: max(0.005, ((lats.max() ?? 0) - (lats.min() ?? 0)) * 2.4),
+                               longitudeDelta: max(0.005, ((lngs.max() ?? 0) - (lngs.min() ?? 0)) * 2.4))
         withAnimation(.easeInOut(duration: 0.6)) {
             position = .region(MKCoordinateRegion(center: pts.count == 1 ? CLLocationCoordinate2D(latitude: first.latitude - 0.002, longitude: first.longitude) : center, span: span))
         }
     }
 
+    /// Already on screen (clear of the top filters and bottom panel) → don't move; otherwise re-frame near it.
     private func focusOn(_ s: Sticker) {
         guard let la = s.lat, let lo = s.lng else { return }
-        withAnimation(.easeInOut(duration: 0.5)) {
-            position = .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: la - 0.0025, longitude: lo),
-                                                  span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
+        if let r = visibleRegion {
+            let top = r.center.latitude + r.span.latitudeDelta * 0.32
+            let bottom = r.center.latitude - r.span.latitudeDelta * 0.05
+            let half = r.span.longitudeDelta * 0.4
+            if la <= top, la >= bottom, abs(lo - r.center.longitude) <= half { return }
         }
+        focus(anchor: s)
     }
 
     private func pin(_ v: MapVisit) -> some View {
@@ -997,12 +1016,10 @@ struct MapVisit: Identifiable {
         return a == b ? a : "\(a)–\(b)"
     }
 
-    static func isNear(_ a: Sticker, _ b: Sticker) -> Bool {
-        guard let la = a.lat, let lo = a.lng, let lb = b.lat, let lob = b.lng else {
-            return a.lat == nil && b.lat == nil
-        }
-        let d = CLLocation(latitude: la, longitude: lo).distance(from: CLLocation(latitude: lb, longitude: lob))
-        return d < 150
+    static func isNear(_ visit: MapVisit, _ b: Sticker) -> Bool {
+        guard let c = visit.coordinate, let lb = b.lat, let lob = b.lng else { return true }
+        let d = CLLocation(latitude: c.latitude, longitude: c.longitude).distance(from: CLLocation(latitude: lb, longitude: lob))
+        return d <= 80
     }
 }
 
