@@ -574,6 +574,7 @@ struct WheelCard: View {
     let field: WheelField
     let profile: ProfileStore
     let onClose: () -> Void
+    @Environment(DexStore.self) private var dex
     @State private var value: String = ""
     @State private var appeared: Bool = false
 
