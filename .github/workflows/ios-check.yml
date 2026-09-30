@@ -1,0 +1,97 @@
+# iOS 版の確認（iPhone が無くても見られるようにする）
+#
+# 何をするか:
+#   1. GitHub が用意する Mac の上で、iOS アプリを組み立てる（=コンパイルが通るかの確認）。
+#   2. iPhone のシミュレーター（画面上で動く仮想の iPhone）で起動する。
+#   3. 起動直後の画面の写真と、20 秒の動画を撮る。
+#   4. 結果を「ios-check-report」という成果物（Artifacts）として保存する。
+#
+# 見方: GitHub のリポジトリ → Actions → 「iOS check（iOS 版の確認）」→ 最新の実行 →
+#       下の Artifacts から ios-check-report をダウンロード → 中の写真・動画を開く。
+#
+# 限界: シミュレーターではカメラと「被写体の切り抜き（Vision）」は動かない。
+#       その 2 つは TestFlight で本物の iPhone に入れて確かめる。
+name: iOS check（iOS 版の確認）
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-shoot:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode の版を表示
+        run: xcodebuild -version
+
+      - name: シミュレーター用に組み立てる
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project CatchWords.xcodeproj \
+            -target CatchWords \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -arch arm64 \
+            CODE_SIGNING_ALLOWED=NO \
+            SYMROOT="$RUNNER_TEMP/build" \
+            | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
+          test -d "$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
+
+      - name: シミュレーターで起動して撮影する
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/report"
+          mkdir -p "$OUT"
+          # 入っている iPhone シミュレーターのうち、最も新しい iOS の「iPhone 1x Pro」系を選ぶ
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
+          for rt in runtimes:
+              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
+              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[-1]["udid"]); break
+          ')
+          echo "simulator: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          APP="$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
+          xcrun simctl install "$UDID" "$APP"
+          # 許可ダイアログで画面が隠れないよう、先に許可しておく
+          for s in camera microphone photos location; do xcrun simctl privacy "$UDID" grant "$s" "$BUNDLE_ID" || true; done
+          xcrun simctl io "$UDID" recordVideo --codec=h264 "$OUT/launch.mp4" &
+          REC=$!
+          sleep 2
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          for t in 3 8 15; do
+            sleep $(( t - ${prev:-0} )); prev=$t
+            xcrun simctl io "$UDID" screenshot "$OUT/screen-${t}s.png"
+          done
+          sleep 5
+          kill -INT $REC; wait $REC || true
+          # 起動直後に落ちていないか（落ちていれば失敗にする）
+          xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID" || { echo "::error::アプリが起動後に終了しました"; exit 1; }
+
+      - name: 結果を保存する
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-check-report
+          path: |
+            ${{ runner.temp }}/report
+            ${{ runner.temp }}/build.log
+          if-no-files-found: warn
+          retention-days: 14

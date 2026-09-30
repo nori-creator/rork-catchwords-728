@@ -1,13 +1,18 @@
 import Foundation
 import UIKit
 
-/// Vision detection + card generation through the Rork Toolkit (OpenAI-compatible gateway).
+/// Vision detection + card generation through the web app's server (`/api/native-ai`).
+/// The server holds the AI keys, picks the model (same switch point as the web) and applies
+/// the same daily caps; the app only sends the prompt, an optional photo and the signed-in
+/// user's Supabase token. No AI key ships inside the app.
 /// Prompts are ported verbatim in intent from `scan.functions.ts` (Taiwan Mandarin, nouns only, 0–1000 points).
 final class AIService {
     static let shared = AIService()
 
-    private let model = "google/gemini-3.8-flash"
-    private let fallbackModel = "openai/gpt-6-luna-fast"
+    /// What the server should use the call for (model choice + daily cap). Mirrors `NATIVE_AI_FEATURES`.
+    enum Feature: String {
+        case scan, card, wordbook, text
+    }
 
     private static let detectPrompt = """
     あなたは台湾華語(zh-TW / 繁体字 / 注音)の学習アプリの検出エンジンです。
@@ -56,20 +61,10 @@ final class AIService {
 
     func detect(image: UIImage, textOnly: Bool = false) async throws -> [Candidate] {
         guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
-        let dataURL = "data:image/jpeg;base64,\(jpeg.base64EncodedString())"
         let prompt = textOnly
             ? Self.detectPrompt + "\n今回はスキャンです。kind=text(写っている文字そのもの)だけを返し、名詞以外の語も写っていれば返してよい。"
             : Self.detectPrompt
-        let content: [[String: Any]] = [
-            ["type": "text", "text": prompt],
-            ["type": "image_url", "image_url": ["url": dataURL]],
-        ]
-        let text: String
-        do {
-            text = try await complete(model: model, content: content, timeout: 40)
-        } catch {
-            text = try await complete(model: fallbackModel, content: content, timeout: 40)
-        }
+        let text = try await complete(.scan, prompt: prompt, jpeg: jpeg, timeout: 40)
         let items = try Self.parseItems(text)
         guard !items.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
         return items
@@ -81,14 +76,14 @@ final class AIService {
         学習者が「\(query)」を台湾華語で知りたがっています。日本語なら台湾華語に訳し、中国語ならそのまま使ってください。
         出力はJSONのみ: {"items":[{"kind":"text","headword":"繁体字","zhuyin":"注音","pinyin":"拼音","meaning_ja":"日本語訳","pos":"名詞など","point":[500,500],"confidence":0.9,"alternatives":[]}]}
         """
-        let text = try await complete(model: model, content: [["type": "text", "text": prompt]], timeout: 30)
+        let text = try await complete(.scan, prompt: prompt, timeout: 30)
         guard let first = try Self.parseItems(text).first else { throw APIError.message("その言葉が見つかりませんでした。") }
         return first
     }
 
     func cardDetails(for candidate: Candidate) async throws -> CardDetails {
         let prompt = Self.cardPrompt(headword: candidate.headword, meaning: candidate.meaningJa)
-        let text = try await complete(model: model, content: [["type": "text", "text": prompt]], timeout: 40)
+        let text = try await complete(.card, prompt: prompt, timeout: 40)
         let data = try Self.jsonData(from: text)
         return try JSONDecoder().decode(CardDetails.self, from: data)
     }
@@ -111,16 +106,7 @@ final class AIService {
 
         {"title":"単元名や級(読めなければ空文字)","entries":[{"headword":"繁体字","reading_zhuyin":"注音","pinyin":"拼音","meaning_ja":"意味"}]}
         """
-        let content: [[String: Any]] = [
-            ["type": "text", "text": prompt],
-            ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]],
-        ]
-        let text: String
-        do {
-            text = try await complete(model: model, content: content, timeout: 60)
-        } catch {
-            text = try await complete(model: fallbackModel, content: content, timeout: 60)
-        }
+        let text = try await complete(.wordbook, prompt: prompt, jpeg: jpeg, timeout: 60)
         guard let draft = try? JSONDecoder().decode(WordbookDraft.self, from: Self.jsonData(from: text)) else {
             throw APIError.message("単語帳の形が読み取れませんでした。もう一度撮ってみてください。")
         }
@@ -131,37 +117,29 @@ final class AIService {
 
     /// Plain text completion (journal correction, scaffolds).
     func text(_ prompt: String, timeout: TimeInterval = 40) async throws -> String {
-        do {
-            return try await complete(model: model, content: [["type": "text", "text": prompt]], timeout: timeout)
-        } catch {
-            return try await complete(model: fallbackModel, content: [["type": "text", "text": prompt]], timeout: timeout)
-        }
+        try await complete(.text, prompt: prompt, timeout: timeout)
     }
 
     /// JSON completion decoded leniently.
     func json<T: Decodable>(_ type: T.Type, prompt: String, image: UIImage? = nil, timeout: TimeInterval = 40) async throws -> T {
-        var content: [[String: Any]] = [["type": "text", "text": prompt]]
-        if let image, let jpeg = ImageTools.jpegForUpload(image, maxSide: 1024, quality: 0.8) {
-            content.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]])
-        }
-        let raw = try await complete(model: model, content: content, timeout: timeout)
+        let jpeg = image.flatMap { ImageTools.jpegForUpload($0, maxSide: 1024, quality: 0.8) }
+        let raw = try await complete(.text, prompt: prompt, jpeg: jpeg, timeout: timeout)
         return try JSONDecoder().decode(T.self, from: Self.jsonData(from: raw))
     }
 
     // MARK: - Transport
 
-    private func complete(model: String, content: [[String: Any]], timeout: TimeInterval) async throws -> String {
-        let base = Config.EXPO_PUBLIC_TOOLKIT_URL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !base.isEmpty, let url = URL(string: "\(base)/v2/vercel/v1/chat/completions") else { throw APIError.notConfigured }
+    private func complete(_ feature: Feature, prompt: String, jpeg: Data? = nil, timeout: TimeInterval) async throws -> String {
+        let url = AppConfig.webBaseURL.appendingPathComponent("api/native-ai")
+        // Guests are signed in anonymously, so there is always a session; refresh it if it is about to expire.
+        try? await SupabaseClient.shared.refreshIfNeeded()
+        guard let token = SupabaseClient.shared.session?.accessToken else { throw APIError.unauthorized }
         var req = URLRequest(url: url, timeoutInterval: timeout)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("Bearer \(Config.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY)", forHTTPHeaderField: "Authorization")
-        let body: [String: Any] = [
-            "model": model,
-            "messages": [["role": "user", "content": content]],
-            "temperature": 0.2,
-        ]
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        var body: [String: Any] = ["feature": feature.rawValue, "prompt": prompt]
+        if let jpeg { body["imageBase64"] = "data:image/jpeg;base64,\(jpeg.base64EncodedString())" }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let data: Data
         let response: URLResponse
@@ -171,17 +149,16 @@ final class AIService {
             throw e.code == .timedOut ? APIError.timeout : APIError.offline
         }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        // The server's `error` is written for the learner, so show it as-is when present.
+        let serverMessage = (json?["error"] as? String) ?? ""
         switch status {
         case 200: break
-        case 401: throw APIError.message("AI機能が一時的に使えません。アプリを再起動してください。")
-        case 402: throw APIError.message("AI機能が一時的に使えません。しばらくしてからお試しください。")
-        case 429: throw APIError.server(429, "混み合っています。少し待ってからもう一度お試しください。")
-        default: throw APIError.server(status, "AIの解析に失敗しました（\(status)）")
+        case 401: throw APIError.unauthorized
+        case 429: throw APIError.server(429, serverMessage.isEmpty ? "混み合っています。少し待ってからもう一度お試しください。" : serverMessage)
+        default: throw APIError.server(status, serverMessage.isEmpty ? "AIの解析に失敗しました（\(status)）" : serverMessage)
         }
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let message = choices.first?["message"] as? [String: Any],
-              let text = message["content"] as? String else { throw APIError.decoding }
+        guard let text = json?["text"] as? String else { throw APIError.decoding }
         return text
     }
 

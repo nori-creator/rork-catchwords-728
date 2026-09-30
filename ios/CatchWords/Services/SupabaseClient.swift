@@ -43,9 +43,9 @@ final class SupabaseClient {
     private let urlSession: URLSession
 
     init() {
-        let raw = Config.EXPO_PUBLIC_SUPABASE_URL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = AppConfig.supabaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         baseURL = raw.isEmpty ? nil : URL(string: raw)
-        anonKey = Config.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        anonKey = AppConfig.supabasePublishableKey
         let cfg = URLSessionConfiguration.default
         cfg.timeoutIntervalForRequest = 30
         urlSession = URLSession(configuration: cfg)
