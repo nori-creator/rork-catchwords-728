@@ -35,6 +35,7 @@ struct UIPreviewRoot: View {
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
             case "book": BookPreview()
+            case "detail": DetailPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -315,6 +316,32 @@ private struct BookPreview: View {
         }
         .frame(maxHeight: .infinity)
         .background(HomeBackground().ignoresSafeArea())
+    }
+}
+/// The word page's chunk / measure-word / related-word cards (web WordCard look), scrolled to the chunks.
+private struct DetailPreview: View {
+    private static let sticker: Sticker = {
+        let json = #"""
+        {"id":"w-teppan","headword":"鐵板麵","reading_zhuyin":"ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ","meaning_ja":"鉄板焼きそば","part_of_speech":"名詞",
+         "example_sentence":"早餐我想吃鐵板麵。","example_translation":"朝ごはんに鉄板焼きそばが食べたい。",
+         "extras":{
+          "usage_chunks":[
+            {"parts":[{"text":"蘑菇","pos":"N"},{"text":"鐵板麵","pos":"N"}],"ja":"マッシュルームソースの鉄板焼きそば"},
+            {"parts":[{"text":"黑胡椒","pos":"N"},{"text":"鐵板麵","pos":"N"}],"ja":"黒胡椒ソースの鉄板焼きそば"},
+            {"parts":[{"text":"點","pos":"V"},{"text":"鐵板麵","pos":"N"}],"ja":"鉄板焼きそばを注文する"}],
+          "measure_words":[{"word":"份","zhuyin":"ㄈㄣˋ","note":"一皿分（料理を数える際の最も一般的な量詞）"}],
+          "related_words":[
+            {"word":"炒麵","kind":"syn","reading":"ㄔㄠˇ ㄇㄧㄢˋ","note":"一般的な炒め麺。鐵板麵は鉄板の上でソースをかけて調理する点が異なる。"},
+            {"word":"義大利麵","kind":"rel","reading":"ㄧˋ ㄉㄚˋ ㄌㄧˋ ㄇㄧㄢˋ","note":"パスタ。鐵板麵はパスタより安価で、朝食店で提供される軽食という位置づけ。"}]
+         }}
+        """#
+        let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8))
+        return Sticker(id: "detail", wordId: "w-teppan", objectImageUrl: nil, cutoutImageUrl: nil, selfieImageUrl: nil,
+                       caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
+    }()
+
+    var body: some View {
+        WordDetailView(sticker: Self.sticker, previewFocus: .usageChunks)
     }
 }
 #endif

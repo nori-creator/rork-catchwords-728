@@ -8,6 +8,8 @@ struct WordDetailView: View {
     @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
     let sticker: Sticker
+    /// DEBUG preview: open scrolled to this section so the simulator frame shows it.
+    var previewFocus: CardSection? = nil
 
     @State private var isCutting: Bool = false
     @State private var cutoutMessage: String?
@@ -23,6 +25,7 @@ struct WordDetailView: View {
     @State private var showCutout: Bool = false
     @State private var pickingHero: Bool = false
     @State private var showCurve: Bool = false
+    @State private var refreshing: Set<CardSection> = []
     @State private var curveStore = ReviewStore()
     @State private var editingCaption: Bool = false
     @State private var captionDraft: String = ""
@@ -47,6 +50,7 @@ struct WordDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 16) {
                     if !photos.isEmpty { photoHero }
@@ -78,6 +82,12 @@ struct WordDetailView: View {
                 LinearGradient(colors: [Theme.background, Theme.backgroundDeep], startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             )
+            .onAppear {
+                if let f = previewFocus {
+                    Task { try? await Task.sleep(for: .milliseconds(400)); proxy.scrollTo(f, anchor: .top) }
+                }
+            }
+            }
         }
         .alert("ひと言", isPresented: $editingCaption) {
             TextField("その場のメモ", text: $captionDraft)
@@ -203,7 +213,6 @@ struct WordDetailView: View {
             }
             FlowRow(spacing: 8) {
                 if let pos = word?.partOfSpeech, !pos.isEmpty { chip(posLabel(pos)) }
-                if let level = word?.level, !level.isEmpty { chip(levelLabel(level)) }
                 if let r = extras?.resolvedRegister { chip(registerLabel(r)) }
             }
             // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
@@ -525,16 +534,6 @@ struct WordDetailView: View {
             .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
     }
 
-    private func levelLabel(_ level: String) -> String {
-        let digits = level.filter(\.isNumber)
-        if level.uppercased().hasPrefix("TOCFL"), let n = Int(digits), (1...7).contains(n) {
-            let band = n <= 2 ? "A" : (n <= 4 ? "B" : "C")
-            return "TOCFL \(n)級（Band \(band)）"
-        }
-        if level.uppercased().hasPrefix("TOCFL") { return "TOCFL 級外の語" }
-        return level
-    }
-
     private func registerLabel(_ r: Int) -> String {
         switch r {
         case ...(-2): "話し言葉"
@@ -588,6 +587,28 @@ struct WordDetailView: View {
 
     @ViewBuilder
     private func sectionView(_ s: CardSection) -> some View {
+        sectionBody(s)
+            .environment(\.sectionRefresh, s == .realUsage ? nil : SectionRefresh(running: refreshing.contains(s)) {
+                regenerate(s)
+            })
+    }
+
+    /// Web 「作り直す」 (regenerateCardSection): this one item is written again at the learner's level.
+    private func regenerate(_ s: CardSection) {
+        guard !refreshing.contains(s) else { return }
+        Haptics.impact(.light)
+        let wordId = current.wordId
+        withAnimation(.snappy) { _ = refreshing.insert(s) }
+        Task {
+            let ok = await dex.fillSection(wordId: wordId, section: s.rawValue, onlyIfEmpty: false)
+            await dex.reload(stickerId: current.id)
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { _ = refreshing.remove(s) }
+            if ok { Haptics.success() } else { Haptics.warning(); showToast("作り直せませんでした。少し待ってからお試しください") }
+        }
+    }
+
+    @ViewBuilder
+    private func sectionBody(_ s: CardSection) -> some View {
         switch s {
         case .meaning: meaningCard
         case .example: exampleCard(word?.exampleSentence ?? "", word?.exampleTranslation)
@@ -786,24 +807,24 @@ struct WordDetailView: View {
                             FlowRow(spacing: 4) {
                                 ForEach(Array(chunk.parts.enumerated()), id: \.offset) { i, part in
                                     HStack(spacing: 4) {
-                                        if i > 0 { Text("+").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.5)) }
+                                        if i > 0 { Text("+").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.45)) }
                                         chunkBlock(part)
                                     }
                                 }
                             }
-                            Text(chunk.ja).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                            Text(chunk.ja).font(.system(size: 16)).foregroundStyle(Theme.muted).lineSpacing(3)
                         }
                         Spacer(minLength: 0)
-                        PronounceCircle(text: chunk.text, size: 40)
+                        PronounceCircle(text: chunk.text, size: 50)
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 14)
                     Divider().overlay(Theme.border)
                 }
                 HStack(spacing: 14) {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 5) {
                             Circle().fill(k.ink).frame(width: 8, height: 8)
-                            Text(k.label).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                            Text(k.label).font(.system(size: 13)).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -816,15 +837,16 @@ struct WordDetailView: View {
         let kind = ChunkKind(pos: part.pos)
         let isHead = part.text == headword
         return Text(part.text)
-            .font(.system(size: 17, weight: .bold))
-            .foregroundStyle(kind.ink.mix(with: .black, by: 0.25))
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(kind.ink.mix(with: .black, by: 0.3))
             .padding(.horizontal, 12)
-            .frame(minHeight: 40)
-            .background(kind.ink.opacity(isHead ? 0.16 : 0.09), in: .rect(cornerRadius: 11, style: .continuous))
+            .frame(minHeight: 48)
+            .background(kind.ink.opacity(isHead ? 0.14 : 0.08), in: .rect(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .stroke(kind.ink.opacity(isHead ? 0.8 : 0.35), lineWidth: isHead ? 2 : 1.2)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(kind.ink.opacity(isHead ? 0.75 : 0.35), lineWidth: isHead ? 2.5 : 1.5)
             )
+            .shadow(color: kind.ink.opacity(isHead ? 0.18 : 0), radius: 6, y: 2)
     }
 
     private func measureCard(_ items: [MeasureWord]) -> some View {
@@ -832,20 +854,21 @@ struct WordDetailView: View {
             VStack(spacing: 10) {
                 ForEach(items, id: \.word) { m in
                     HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                Text(m.word).font(.system(size: 21, weight: .bold)).foregroundStyle(Theme.foreground)
-                                if let z = m.zhuyin, !z.isEmpty { Text(z).font(.system(size: 13)).foregroundStyle(Theme.muted) }
-                            }
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Shown as it is said: 一 + the measure word (web: 「一份」).
+                            let said = m.word.hasPrefix("一") ? m.word : "一" + m.word
+                            let reading = m.word.hasPrefix("一") ? m.zhuyin : m.zhuyin.map { "ㄧ " + $0 }
+                            ZhuyinWordView(headword: said, zhuyin: reading, size: 32, weight: .heavy)
                             if let n = m.note, !n.isEmpty {
-                                Text(n).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(4)
+                                Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
                             }
                         }
                         Spacer(minLength: 0)
-                        PronounceCircle(text: m.word, size: 40)
+                        PronounceCircle(text: m.word.hasPrefix("一") ? m.word : "一" + m.word, size: 50)
                     }
-                    .padding(14)
-                    .background(Theme.secondary, in: .rect(cornerRadius: 20, style: .continuous))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 26, style: .continuous))
                 }
             }
         }
@@ -859,27 +882,17 @@ struct WordDetailView: View {
                     let rows = items.filter { $0.kind == kind }
                     if !rows.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(label).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                            Text(label).font(.system(size: 14)).foregroundStyle(Theme.muted)
                             ForEach(rows, id: \.word) { r in
                                 HStack(alignment: .center, spacing: 10) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(alignment: .center, spacing: 10) {
-                                            Text(r.word)
-                                                .font(.system(size: 19, weight: .bold))
-                                                .foregroundStyle(Color(hex: 0x3B3FB6))
-                                                .padding(.horizontal, 12)
-                                                .frame(minHeight: 36)
-                                                .background(Color(hex: 0xE4E6FB), in: Capsule())
-                                            if !r.reading.isEmpty {
-                                                Text(r.reading).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                                            }
-                                        }
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        relatedPill(r, kind: kind)
                                         if !r.note.isEmpty {
-                                            Text(r.note).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(3)
+                                            Text(r.note).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
                                         }
                                     }
                                     Spacer(minLength: 0)
-                                    PronounceCircle(text: r.word, size: 40)
+                                    PronounceCircle(text: r.word, size: 50)
                                 }
                             }
                         }
@@ -887,6 +900,27 @@ struct WordDetailView: View {
                 }
             }
         }
+    }
+
+    /// A word pill with its zhuyin beside each character: plain for synonyms, violet for related words,
+    /// rose for antonyms (web RelatedWords).
+    private func relatedPill(_ r: RelatedWord, kind: String) -> some View {
+        let tint: Color = switch kind {
+        case "rel": Color(hex: 0x3B3FB6)
+        case "ant": Color(hex: 0xC2410C)
+        default: Theme.foreground
+        }
+        let fill: Color = switch kind {
+        case "rel": Color(hex: 0xE4E6FB)
+        case "ant": Color(hex: 0xFDE7DC)
+        default: Theme.card
+        }
+        return ZhuyinWordView(headword: r.word, zhuyin: r.reading.isEmpty ? nil : r.reading, size: 30, weight: .bold,
+                              color: tint, readingColor: tint.opacity(0.6))
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(fill, in: Capsule())
+            .overlay(Capsule().stroke(kind == "syn" ? Theme.border : .clear, lineWidth: 1.2))
     }
 
     private func textCard(_ title: String, icon: String, _ body: String) -> some View {
@@ -1016,24 +1050,48 @@ struct WordDetailView: View {
     }
 }
 
+/// The section's 「作り直す」 button (set by the word page; the links card has none).
+struct SectionRefresh {
+    var running: Bool
+    var action: () -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var sectionRefresh: SectionRefresh? = nil
+}
+
 /// White section card with a blue round icon and title (card-sections + section-icon.ts).
 struct SectionCard<Content: View>: View {
     let title: String
     let icon: String
     @ViewBuilder let content: Content
+    @Environment(\.sectionRefresh) private var refresh
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 40, height: 40)
                     .background(Theme.primary, in: Circle())
-                Text(title).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
+                Text(title).font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
                 Spacer()
+                if let refresh {
+                    Button(action: refresh.action) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Theme.muted.opacity(0.75))
+                            .rotationEffect(.degrees(refresh.running ? 360 : 0))
+                            .animation(refresh.running ? .linear(duration: 0.9).repeatForever(autoreverses: false) : .default, value: refresh.running)
+                            .frame(width: 44, height: 44)
+                    }
+                    .disabled(refresh.running)
+                    .accessibilityLabel("\(title)を作り直す")
+                }
             }
             content
+                .opacity(refresh?.running == true ? 0.45 : 1)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
