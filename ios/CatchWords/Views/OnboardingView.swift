@@ -23,6 +23,10 @@ struct OnboardingView: View {
     @State private var reminderMode: String = "ai"
     @State private var isSaving: Bool = false
     @State private var showMenu: Bool = false
+    @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
+    @AppStorage("ipa.pref") private var ipaPref: String = "us"
+    @AppStorage("sound.level") private var soundLevel: String = "soft"
+    @AppStorage("haptics.enabled") private var hapticsOn: Bool = true
 
     static let goalList: [(id: String, label: String, icon: String)] = [
         ("conversation", "日常会話", "bubble.left.and.bubble.right"),
@@ -62,7 +66,7 @@ struct OnboardingView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.88), value: stage)
         .animation(.spring(response: 0.45, dampingFraction: 0.88), value: step)
-        .sheet(isPresented: $showMenu) { menu.presentationDetents([.medium]) }
+        .sheet(isPresented: $showMenu) { menu.presentationDetents([.large]) }
     }
 
     // MARK: - Intro
@@ -277,41 +281,80 @@ struct OnboardingView: View {
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: index)
             Text("\(index) / 7").font(AppFont.mono(13, weight: .semibold)).foregroundStyle(Theme.muted)
             Button { showMenu = true } label: {
-                Image(systemName: "globe").font(.system(size: 17, weight: .semibold))
+                Image(systemName: "gearshape").font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.muted).frame(width: 44, height: 44)
             }
-            .accessibilityLabel("言語とやり直し")
+            .accessibilityLabel("設定")
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
     }
 
-    /// TutorialMenu: change languages or restart from the welcome screen at any point.
+    /// TutorialSettings: the same settings a signed-up user has, limited to what can be decided before
+    /// finishing. Values stay in the tutorial draft and are saved to the account on finish.
     private var menu: some View {
         NavigationStack {
             Form {
-                Section("表示言語") {
+                Section {
+                    Text("案内中の設定です。案内を終えると、そのままあなたのアカウントに引き継がれます。")
+                        .font(.footnote).foregroundStyle(Theme.muted)
+                }
+                Section("言語") {
                     Picker("表示言語", selection: $uiLanguage) {
                         ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
                     }
-                    .pickerStyle(.inline).labelsHidden()
-                }
-                Section("学ぶ言語") {
                     Picker("学ぶ言語", selection: $targetLanguage) {
-                        ForEach(Self.targets, id: \.id) { Text($0.native).tag($0.id) }
+                        ForEach(Self.targets, id: \.id) { Text($0.label).tag($0.id) }
                     }
-                    .pickerStyle(.inline).labelsHidden()
+                    if targetLanguage == "en" {
+                        Picker("発音記号", selection: $ipaPref) {
+                            Text("アメリカ式").tag("us")
+                            Text("イギリス式").tag("uk")
+                        }
+                    } else {
+                        Picker("読みの表記", selection: $readingPref) {
+                            Text("注音").tag("zhuyin")
+                            Text("拼音").tag("pinyin")
+                            Text("両方").tag("both")
+                        }
+                    }
+                }
+                Section("学習") {
+                    Picker("1日の学習時間", selection: $minutes) {
+                        ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0)分").tag($0) }
+                    }
+                    Picker("通知", selection: $reminderMode) {
+                        Text("おまかせ").tag("ai")
+                        Text("朝と夜").tag("custom")
+                        Text("通知しない").tag("off")
+                    }
+                }
+                Section("効果音と振動") {
+                    Picker("効果音", selection: $soundLevel) {
+                        Text("なし").tag("off")
+                        Text("控えめ").tag("soft")
+                        Text("しっかり").tag("full")
+                    }
+                    Toggle("振動", isOn: $hapticsOn)
                 }
                 Section {
+                    Button("最初の質問に答え直す", systemImage: "list.bullet.clipboard") {
+                        showMenu = false
+                        go(.questions, step: 0, back: true)
+                    }
                     Button("最初の画面に戻る", systemImage: "arrow.counterclockwise") {
                         showMenu = false
                         go(.intro, step: 0, back: true)
                     }
+                    Button("ログインする", systemImage: "person.crop.circle") {
+                        showMenu = false
+                        finishToLogin()
+                    }
                 }
             }
-            .navigationTitle("言語とやり直し")
+            .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("閉じる") { showMenu = false } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("案内に戻る") { showMenu = false } } }
         }
     }
 

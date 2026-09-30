@@ -57,6 +57,17 @@ struct AuthView: View {
                             .font(.system(size: 13))
                             .foregroundStyle(Theme.ok)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                        if auth.awaitingConfirmation {
+                            PrimaryButton(title: "確認が終わったので、ログインする", icon: "arrow.right") {
+                                withAnimation(.snappy) {
+                                    isSignUp = false
+                                    showMail = true
+                                    auth.awaitingConfirmation = false
+                                    auth.infoMessage = nil
+                                }
+                                focused = .password
+                            }
+                        }
                     }
                 }
                 .opacity(appeared ? 1 : 0)

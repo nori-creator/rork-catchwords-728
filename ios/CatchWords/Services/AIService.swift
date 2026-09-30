@@ -206,7 +206,11 @@ final class AIService {
         var out: [Candidate] = []
         for item in raw.prefix(6) {
             guard let d = try? JSONSerialization.data(withJSONObject: item),
-                  let c = try? JSONDecoder().decode(Candidate.self, from: d) else { continue }
+                  let raw = try? JSONDecoder().decode(Candidate.self, from: d) else { continue }
+            // Headwords must be in the learning language: fix a trailing note once, otherwise drop it.
+            guard let head = raw.headword.coercedZhHeadword else { continue }
+            let c = Candidate(kind: raw.kind, headword: head, zhuyin: raw.zhuyin, pinyin: raw.pinyin, meaningJa: raw.meaningJa,
+                              pos: raw.pos, point: raw.point, confidence: raw.confidence, alternatives: raw.alternatives)
             if !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
         }
         return out

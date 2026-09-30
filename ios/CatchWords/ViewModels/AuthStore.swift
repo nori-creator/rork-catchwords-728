@@ -15,6 +15,8 @@ final class AuthStore {
     var isBusy: Bool = false
     var errorMessage: String?
     var infoMessage: String?
+    /// True after sign-up sent a confirmation email: the screen offers "I've confirmed — sign in".
+    var awaitingConfirmation: Bool = false
     var email: String? { SupabaseClient.shared.session?.email }
 
     /// Development only: enter the app without logging in. Set to false before App Store release.
@@ -74,7 +76,8 @@ final class AuthStore {
             if signedIn {
                 self.phase = .signedIn
             } else {
-                self.infoMessage = "確認メールを送りました。メール内のリンクを開いてからログインしてください。"
+                self.infoMessage = "確認メールを送りました。メールのリンクを開いて登録を完了したら、このアプリに戻って「ログイン」してください。"
+                self.awaitingConfirmation = true
             }
         }
     }
@@ -137,6 +140,7 @@ final class AuthStore {
         isBusy = true
         errorMessage = nil
         infoMessage = nil
+        awaitingConfirmation = false
         defer { isBusy = false }
         do {
             try await work()

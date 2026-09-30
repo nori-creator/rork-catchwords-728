@@ -114,4 +114,41 @@ extension String {
     nonisolated var hasHan: Bool {
         unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) || (0x3400...0x4DBF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) }
     }
+
+    /// headwordCore: bracketed notes and surrounding punctuation don't count toward the judgement.
+    nonisolated private var headwordCore: String {
+        replacingOccurrences(of: "[（(【〔\\[][^）)】〕\\]]*[）)】〕\\]]", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+    }
+
+    /// target-language.ts isZhHeadword: Han only — kana, Latin, Hangul or Cyrillic anywhere drops it (「シャーペン」, 「pencil」).
+    nonisolated var isZhHeadword: Bool {
+        let core = headwordCore
+        guard core.hasHan else { return false }
+        return !core.unicodeScalars.contains { s in
+            let v = s.value
+            return (0x3040...0x30FF).contains(v) || (0x31F0...0x31FF).contains(v) || (0xFF66...0xFF9F).contains(v)
+                || (0x41...0x5A).contains(v) || (0x61...0x7A).contains(v) || (0xC0...0x24F).contains(v)
+                || (0xFF21...0xFF3A).contains(v) || (0xFF41...0xFF5A).contains(v)
+                || (0xAC00...0xD7AF).contains(v) || (0x1100...0x11FF).contains(v) || (0x0400...0x04FF).contains(v)
+        }
+    }
+
+    /// coerceTargetHeadword: fix once before discarding — keep the longest leading part that passes
+    /// (「烤肉 (BBQ)」→「烤肉」). Returns nil when nothing passes; never lets the native language through.
+    nonisolated var coercedZhHeadword: String? {
+        let text = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        if text.isZhHeadword { return text }
+        var best: String?
+        var prefix = ""
+        for ch in text {
+            prefix.append(ch)
+            let head = prefix.trimmingCharacters(in: .whitespaces)
+            if !head.isEmpty, head.isZhHeadword { best = head }
+        }
+        guard let best else { return nil }
+        let trimmed = best.replacingOccurrences(of: "[\\s，、。．・…！？!?,.:;：；「」『』（）()【】〔〕\\[\\]{}\"'’”—–~〜-]+$", with: "", options: .regularExpression)
+        return !trimmed.isEmpty && trimmed.isZhHeadword ? trimmed : best
+    }
 }
