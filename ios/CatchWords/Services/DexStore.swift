@@ -297,6 +297,20 @@ final class DexStore {
 
     // MARK: - Edit
 
+    /// Replaces the word's photo (web `replaceStickerPhoto`): the date and place you met it are kept;
+    /// the old cut-out is dropped so a new one can be made from the new photo.
+    func replacePhoto(_ sticker: Sticker, with image: UIImage) async throws {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        guard let path = try await uploadJPEG(image, uid: uid, ts: ts, kind: "object") else {
+            throw APIError.message("写真を読み込めませんでした。")
+        }
+        _ = try await NativeAPI.call("replaceStickerPhoto", ["sticker_id": sticker.id, "object_path": path])
+        ImageCache.shared.set(image, for: path)
+        await reload(stickerId: sticker.id)
+        if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
+    }
+
     func addCutout(to sticker: Sticker, image: UIImage) async throws {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let ts = Int(Date().timeIntervalSince1970 * 1000)

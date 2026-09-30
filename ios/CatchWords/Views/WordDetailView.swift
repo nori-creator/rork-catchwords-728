@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Word detail (WordCard.tsx): a hero card, then one white card per section that has content.
 struct WordDetailView: View {
@@ -26,6 +27,8 @@ struct WordDetailView: View {
     @State private var reporting: Bool = false
     @State private var reportNote: String = ""
     @State private var isFixing: Bool = false
+    @State private var newPhoto: PhotosPickerItem?
+    @State private var isReplacing: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
@@ -853,10 +856,25 @@ struct WordDetailView: View {
 
     private var footer: some View {
         let days = Calendar.current.dateComponents([.day], from: current.takenAt, to: Date()).day ?? 0
-        return HStack {
+        return VStack(alignment: .leading, spacing: 12) {
             Label(days == 0 ? "今日キャッチしました" : "\(days)日前にキャッチしました", systemImage: "clock.arrow.circlepath")
                 .font(AppFont.hand(16))
                 .foregroundStyle(Theme.muted)
+            HStack {
+            PhotosPicker(selection: $newPhoto, matching: .images) {
+                Label(isReplacing ? "替えています…" : "写真を替える", systemImage: "photo.badge.arrow.down")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.primaryInk)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 48)
+                    .background(Theme.primary.opacity(0.08), in: Capsule())
+            }
+            .disabled(isReplacing)
+            .onChange(of: newPhoto) { _, item in
+                guard let item else { return }
+                newPhoto = nil
+                Task { await replacePhoto(item) }
+            }
             Spacer()
             Button { confirmDelete = true } label: {
                 Label("削除", systemImage: "trash")
@@ -868,8 +886,27 @@ struct WordDetailView: View {
                     .overlay(Capsule().stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
             }
             .buttonStyle(PressableStyle(scale: 0.95))
+            }
         }
         .padding(.top, 6)
+    }
+
+    /// 写真を替える: upload + web replaceStickerPhoto; in cut-out mode the new photo is cut out too.
+    private func replacePhoto(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data)?.normalizedOrientation() else { return }
+        isReplacing = true
+        defer { isReplacing = false }
+        do {
+            try await dex.replacePhoto(current, with: img)
+            Haptics.success()
+            showToast("写真を替えました")
+            if CaptureViewModel.cutoutMode, let lifted = await CutoutService.liftSubject(from: img) {
+                try? await dex.addCutout(to: current, image: lifted)
+            }
+        } catch {
+            Haptics.warning()
+            showToast((error as? LocalizedError)?.errorDescription ?? "写真を替えられませんでした")
+        }
     }
 
     private func cutOut() async {
