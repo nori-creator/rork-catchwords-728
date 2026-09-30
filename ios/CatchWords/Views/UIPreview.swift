@@ -77,9 +77,11 @@ enum PreviewFixtures {
 
     /// The subject cropped to its bounds, like the saved sticker.
     static let subjectCropped: UIImage = {
-        let rect = CGRect(x: 240, y: 240, width: 420, height: 400)
+        // cgImage is in pixels (the renderer draws at screen scale), so scale the point rect.
+        let s = subject.scale
+        let rect = CGRect(x: 240 * s, y: 240 * s, width: 420 * s, height: 400 * s)
         guard let cg = subject.cgImage?.cropping(to: rect) else { return subject }
-        return UIImage(cgImage: cg)
+        return UIImage(cgImage: cg, scale: s, orientation: .up)
     }()
 }
 
