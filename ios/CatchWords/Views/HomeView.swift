@@ -7,6 +7,7 @@ struct HomeView: View {
     @Environment(AppRouter.self) private var router
     @State private var writingDay: WritingDay?
     @State private var showJournal = false
+    @State private var showStats = false
     @AppStorage("album.span") private var spanRaw: String = AlbumSpan.day.rawValue
 
     private var span: AlbumSpan { AlbumSpan(rawValue: spanRaw) ?? .day }
@@ -148,13 +149,22 @@ struct HomeView: View {
         .sheet(isPresented: $showJournal) {
             JournalHistoryView()
         }
+        .sheet(isPresented: $showStats) {
+            UserStatsPanel(
+                onSettings: { showStats = false; router.tab = .settings },
+                onReview: { showStats = false; router.tab = .review }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(32)
+        }
     }
 
     private var header: some View {
         HStack(spacing: 12) {
-            Button { router.tab = .settings } label: { AvatarView(url: profile.avatarURL, size: 38) }
+            Button { Haptics.selection(); showStats = true } label: { AvatarView(url: profile.avatarURL, size: 38) }
                 .buttonStyle(PressableStyle(scale: 0.92))
-                .accessibilityLabel("設定")
+                .accessibilityLabel("あなたの記録")
             Text("CatchWords")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(Theme.muted)
