@@ -36,6 +36,21 @@ jobs:
       - name: Xcode の版を表示
         run: xcodebuild -version
 
+      - name: シミュレーターを先に起動する（組み立てと並べて、待ち時間を短くする）
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
+          for rt in runtimes:
+              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
+              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[-1]["udid"]); break
+          ')
+          echo "$UDID" > "$RUNNER_TEMP/udid"
+          xcrun simctl boot "$UDID" || true
+
       - name: シミュレーター用に組み立てる
         working-directory: ios
         run: |
@@ -57,19 +72,9 @@ jobs:
           OUT="$RUNNER_TEMP/report"
           mkdir -p "$OUT"
           # 入っている iPhone シミュレーターのうち、最も新しい iOS の「iPhone 1x Pro」系を選ぶ
-          UDID=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          d = json.load(sys.stdin)["devices"]
-          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
-          for rt in runtimes:
-              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
-              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
-              if phones:
-                  print(phones[-1]["udid"]); break
-          ')
+          # 組み立ての前に起動を始めてある（下の「シミュレーターを先に起動する」）。ここでは待つだけ。
+          UDID=$(cat "$RUNNER_TEMP/udid")
           echo "simulator: $UDID"
-          echo "$UDID" > "$RUNNER_TEMP/udid"
-          xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           APP="$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
