@@ -82,7 +82,13 @@ final class WordbookStore {
             "wordbook_entries?wordbook_id=eq.\(bookId)&select=id,wordbook_id,headword,reading_zhuyin,pinyin,meaning_ja,ease,interval_days,repetitions,due_at,last_reviewed_at&order=due_at.asc&limit=200"
         )
         let all = try SupabaseDate.decoder.decode([WordbookEntry].self, from: data)
-        return (Array(all.filter(\.isDue).prefix(limit)), all.map(\.headword))
+        // Not in the order the page was read (owner): overdue cards first by how overdue they are,
+        // new cards in random order, and the session itself shuffled.
+        let due = all.filter(\.isDue)
+        let reviewed = due.filter { $0.lastReviewedAt != nil }
+        let fresh = due.filter { $0.lastReviewedAt == nil }.shuffled()
+        let batch = Array((reviewed + fresh).prefix(limit)).shuffled()
+        return (batch, all.map(\.headword))
     }
 
     /// gradeWordbookEntry: same SRS as the dex (correct=5, wrong=2).
