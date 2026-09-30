@@ -14,7 +14,7 @@ enum DexMode: String, CaseIterable, Identifiable {
     }
     var icon: String {
         switch self {
-        case .cover: "rectangle.stack"
+        case .cover: "rectangle.split.3x1"
         case .map: "map"
         case .grid: "square.grid.2x2"
         case .list: "list.bullet"
@@ -405,8 +405,11 @@ struct DexCoverFlow: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 14) {
                         ForEach(stickers) { s in
-                            Button { onOpen(s) } label: { card(s, width: w) }
-                                .buttonStyle(PressableStyle(scale: 0.98))
+                            VStack(spacing: 6) {
+                                Button { onOpen(s) } label: { card(s, width: w) }
+                                    .buttonStyle(PressableStyle(scale: 0.98))
+                                reflection(s, width: w)
+                            }
                                 .scrollTransition(axis: .horizontal) { content, phase in
                                     content
                                         .scaleEffect(phase.isIdentity ? 1 : 0.88)
@@ -423,7 +426,7 @@ struct DexCoverFlow: View {
                 .scrollPosition(id: $current)
                 .onChange(of: current) { _, _ in Haptics.selection() }
             }
-            .frame(height: 440)
+            .frame(height: 480)
 
             pageDots
             thumbnails
@@ -469,10 +472,21 @@ struct DexCoverFlow: View {
             .frame(width: width, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .top)
         }
-        .frame(width: width, height: 420)
+        .frame(width: width, height: 400)
         .background(Theme.card)
         .clipShape(.rect(cornerRadius: 22, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+    }
+
+    /// Mirrored, fading copy of the card's bottom edge (the "floor" reflection in DexCoverFlow).
+    private func reflection(_ s: Sticker, width: CGFloat) -> some View {
+        card(s, width: width)
+            .scaleEffect(x: 1, y: -1)
+            .frame(width: width, height: 64, alignment: .top)
+            .clipped()
+            .mask(LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private var pageDots: some View {
@@ -567,16 +581,32 @@ struct DexMapView: View {
 
     private var dayItems: [Sticker] {
         guard let day else { return [] }
-        return stickers.filter { Calendar.current.isDate($0.takenAt, inSameDayAs: day) }.sorted { $0.takenAt > $1.takenAt }
+        return stickers.filter { Calendar.current.isDate($0.takenAt, inSameDayAs: day) }.sorted { $0.takenAt < $1.takenAt }
+    }
+
+    /// Visits: consecutive catches within 60 min and ~150 m collapse into one stop ("15:33–15:43", pin badge "2").
+    private var groups: [MapVisit] {
+        var out: [MapVisit] = []
+        for s in dayItems {
+            if var last = out.last, let prev = last.items.last,
+               s.takenAt.timeIntervalSince(prev.takenAt) <= 3600, MapVisit.isNear(prev, s) {
+                last.items.append(s)
+                out[out.count - 1] = last
+            } else {
+                out.append(MapVisit(items: [s]))
+            }
+        }
+        return out
     }
 
     var body: some View {
-        let located = dayItems.filter { $0.lat != nil && $0.lng != nil }
+        let visits = groups
+        let located = visits.filter { $0.coordinate != nil }
         ZStack(alignment: .bottom) {
             Map(position: $position) {
-                ForEach(located) { s in
-                    Annotation("", coordinate: CLLocationCoordinate2D(latitude: s.lat ?? 0, longitude: s.lng ?? 0)) {
-                        pin(s)
+                ForEach(located) { v in
+                    Annotation("", coordinate: v.coordinate ?? CLLocationCoordinate2D()) {
+                        pin(v)
                     }
                 }
             }
@@ -590,7 +620,7 @@ struct DexMapView: View {
                         .padding(.horizontal, 16).frame(minHeight: 40)
                         .background(.regularMaterial, in: Capsule())
                 }
-                if panelOpen && !dayItems.isEmpty { timeline.transition(.move(edge: .bottom).combined(with: .opacity)) }
+                if panelOpen && !dayItems.isEmpty { timeline(visits).transition(.move(edge: .bottom).combined(with: .opacity)) }
                 dayBar
             }
             .padding(.horizontal, 16)
@@ -650,8 +680,10 @@ struct DexMapView: View {
         }
     }
 
-    private func pin(_ s: Sticker) -> some View {
-        let isOn = s.id == selectedId
+    private func pin(_ v: MapVisit) -> some View {
+        let selected = v.items.first { $0.id == selectedId }
+        let isOn = selected != nil
+        let s = selected ?? v.items[0]
         let path = s.objectImageUrl ?? s.cutoutImageUrl
         return Button {
             Haptics.selection()
@@ -663,9 +695,19 @@ struct DexMapView: View {
                     .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                     .clipShape(Circle())
                     .overlay(Circle().stroke(isOn ? Theme.primary : .white, lineWidth: isOn ? 4 : 3))
+                    .overlay(alignment: .topTrailing) {
+                        if v.items.count > 1 {
+                            Text("\(v.items.count)")
+                                .font(.system(size: 12, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                                .frame(minWidth: 22, minHeight: 22)
+                                .background(Theme.primary, in: Circle())
+                                .overlay(Circle().stroke(.white, lineWidth: 2))
+                                .offset(x: 6, y: -6)
+                        }
+                    }
                     .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
                 if isOn {
-                    Text(JPDate.time(s.takenAt))
+                    Text(JPDate.time(v.start))
                         .font(.system(size: 13, weight: .bold)).monospacedDigit().foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Theme.primary, in: Capsule())
@@ -676,30 +718,54 @@ struct DexMapView: View {
         .zIndex(isOn ? 1 : 0)
     }
 
-    private var timeline: some View {
+    private func timeline(_ visits: [MapVisit]) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(dayItems) { s in
-                        let isOn = s.id == selectedId
-                        let path = s.objectImageUrl ?? s.cutoutImageUrl
+                    ForEach(visits) { v in
+                        let groupOn = v.items.contains { $0.id == selectedId }
                         HStack(alignment: .top, spacing: 14) {
                             VStack(spacing: 0) {
-                                Circle().fill(isOn ? Theme.primary : Theme.muted.opacity(0.5)).frame(width: isOn ? 14 : 11, height: isOn ? 14 : 11).padding(.top, 5)
+                                Circle().fill(groupOn ? Theme.primary : Theme.muted.opacity(0.5)).frame(width: groupOn ? 14 : 11, height: groupOn ? 14 : 11).padding(.top, 5)
                                 Rectangle().fill(Theme.border).frame(width: 2)
                             }
                             .frame(width: 16)
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 8) {
-                                    Text(JPDate.time(s.takenAt))
+                                    Text(v.timeLabel)
                                         .font(.system(size: 17, weight: .bold)).monospacedDigit()
-                                        .foregroundStyle(isOn ? Theme.primaryInk : Theme.foreground)
-                                    if let place = s.locationName, !place.isEmpty {
+                                        .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
+                                    if let place = v.placeName {
                                         Label(place, systemImage: "mappin")
                                             .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
                                     }
                                 }
-                                Button {
+                                ForEach(v.items) { s in
+                                    row(s)
+                                }
+                            }
+                            .padding(.bottom, 16)
+                        }
+                        .id(v.id)
+                    }
+                }
+                .padding(18)
+            }
+            .frame(maxHeight: 250)
+            .background(.white.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
+            .onChange(of: selectedId) { _, id in
+                guard let id, let v = visits.first(where: { $0.items.contains { $0.id == id } }) else { return }
+                withAnimation { proxy.scrollTo(v.id, anchor: .top) }
+            }
+        }
+    }
+
+    private func row(_ s: Sticker) -> some View {
+        let isOn = s.id == selectedId
+        let path = s.objectImageUrl ?? s.cutoutImageUrl
+        return Button {
                                     if isOn { onOpen(s) } else {
                                         Haptics.selection()
                                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
@@ -726,23 +792,6 @@ struct DexMapView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(PressableStyle(scale: 0.98))
-                            }
-                            .padding(.bottom, 16)
-                        }
-                        .id(s.id)
-                    }
-                }
-                .padding(18)
-            }
-            .frame(maxHeight: 250)
-            .background(.white.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
-            .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
-            .onChange(of: selectedId) { _, id in
-                guard let id else { return }
-                withAnimation { proxy.scrollTo(id, anchor: .top) }
-            }
-        }
     }
 
     private var dayBar: some View {
@@ -791,6 +840,39 @@ struct DexMapView: View {
                 .background(Theme.secondary, in: Circle())
         }
         .buttonStyle(PressableStyle(scale: 0.9))
+    }
+}
+
+/// One stop on the day map: catches taken close together in time and place.
+struct MapVisit: Identifiable {
+    var items: [Sticker]
+    var id: String { items.first?.id ?? UUID().uuidString }
+    var start: Date { items.first?.takenAt ?? Date() }
+    var end: Date { items.last?.takenAt ?? Date() }
+
+    var coordinate: CLLocationCoordinate2D? {
+        let pts = items.compactMap { s -> (Double, Double)? in
+            guard let la = s.lat, let lo = s.lng else { return nil }
+            return (la, lo)
+        }
+        guard !pts.isEmpty else { return nil }
+        let n = Double(pts.count)
+        return CLLocationCoordinate2D(latitude: pts.map(\.0).reduce(0, +) / n, longitude: pts.map(\.1).reduce(0, +) / n)
+    }
+
+    var placeName: String? { items.compactMap(\.locationName).first { !$0.isEmpty } }
+
+    var timeLabel: String {
+        let a = JPDate.time(start), b = JPDate.time(end)
+        return a == b ? a : "\(a)–\(b)"
+    }
+
+    static func isNear(_ a: Sticker, _ b: Sticker) -> Bool {
+        guard let la = a.lat, let lo = a.lng, let lb = b.lat, let lob = b.lng else {
+            return a.lat == nil && b.lat == nil
+        }
+        let d = CLLocation(latitude: la, longitude: lo).distance(from: CLLocation(latitude: lb, longitude: lob))
+        return d < 150
     }
 }
 
