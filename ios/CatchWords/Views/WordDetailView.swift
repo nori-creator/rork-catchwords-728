@@ -20,6 +20,7 @@ struct WordDetailView: View {
     @State private var showSelfie: Bool = false
     @State private var flipAngle: Double = 0
     @State private var showCutout: Bool = false
+    @State private var pickingHero: Bool = false
     @State private var editingCaption: Bool = false
     @State private var captionDraft: String = ""
     /// Sections being filled by the server right now (web AutoFillSections).
@@ -84,6 +85,16 @@ struct WordDetailView: View {
             }
         }
         .task(id: current.wordId) { await autoFill() }
+        .onAppear { applyHeroRole(animated: false) }
+        .sheet(isPresented: $pickingHero) {
+            HeroPhotoPickerSheet(sticker: current) { role in
+                try await dex.setHeroRole(current, role: role)
+                applyHeroRole(animated: true)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(32)
+        }
         .alert("どこが違いましたか？", isPresented: $reporting) {
             TextField("例: 読み方が違う（書かなくても大丈夫）", text: $reportNote)
             Button("キャンセル", role: .cancel) {}
@@ -267,6 +278,12 @@ struct WordDetailView: View {
             .shadow(color: .black.opacity(0.14), radius: 16, y: 8)
             .contentShape(.rect(cornerRadius: 28))
             .onTapGesture { flip() }
+            // 長押し: この単語をどの絵で見せるか選ぶ（Web HeroPhotoPicker）。
+            .onLongPressGesture(minimumDuration: 0.45) {
+                Haptics.impact(.medium)
+                pickingHero = true
+            }
+            .accessibilityAction(named: "表示する写真を選ぶ") { pickingHero = true }
             .overlay(alignment: .bottomLeading) {
                 if !back, current.cutoutImageUrl != nil {
                     Button {
@@ -287,6 +304,25 @@ struct WordDetailView: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(back ? "自撮り写真" : "写真")
+    }
+
+    /// Shows the side the learner chose (`hero_role`): the selfie is the card's back, the cut-out a toggle.
+    private func applyHeroRole(animated: Bool) {
+        let role = current.heroRole
+        let wantSelfie = role == "selfie" && hasSelfie
+        let change = {
+            // nil (まだ選んでいない) keeps the page's own default.
+            if role == "cutout" || role == "object" { showCutout = role == "cutout" && current.cutoutImageUrl != nil }
+            if wantSelfie != showSelfie {
+                showSelfie = wantSelfie
+                flipAngle = wantSelfie ? 180 : 0
+            }
+        }
+        if animated && !reduceMotion {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.78), change)
+        } else {
+            change()
+        }
     }
 
     /// Half-turn with the image swapped at 90° so the selfie reads as the card's back side.

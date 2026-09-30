@@ -40,8 +40,13 @@ final class DexStore {
 
     private let client = SupabaseClient.shared
     private var language: String { NativeAPI.targetLanguage }
-    private static let selectColumns =
-        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key,word:words(*)"
+    private static let baseColumns =
+        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
+    /// `hero_role` came with a later migration; if the column is missing the dex still loads without it.
+    nonisolated(unsafe) private static var hasHeroRole = true
+    private static var selectColumns: String {
+        baseColumns + (hasHeroRole ? ",hero_role" : "") + ",word:words(*)"
+    }
 
     func load() async {
         pending = PendingQueue.shared.all()
@@ -49,7 +54,13 @@ final class DexStore {
         isLoading = true
         defer { isLoading = false }
         do {
-            let data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
+            let data: Data
+            do {
+                data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
+            } catch where Self.hasHeroRole && "\(error)".contains("hero_role") {
+                Self.hasHeroRole = false
+                data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
+            }
             let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
             await loadShelves()
             await loadAlbumHidden()
@@ -456,6 +467,20 @@ final class DexStore {
     }
 
     /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
+    /// Which picture shows this word on its detail page (web setStickerHeroRole; nil = default order).
+    func setHeroRole(_ sticker: Sticker, role: String?) async throws {
+        struct Saved: Decodable { let saved: Bool }
+        let res: Saved = try await NativeAPI.call("setStickerHeroRole", [
+            "sticker_id": sticker.id, "hero_role": role.map { $0 as Any } ?? NSNull(),
+        ], as: Saved.self)
+        guard res.saved else { throw APIError.message("まだ保存できません。サーバの更新を待ってください。") }
+        replace(sticker.id) { old in
+            var s = old
+            s.heroRole = role
+            return s
+        }
+    }
+
     func move(_ sticker: Sticker, to key: String?) async throws {
         _ = try await NativeAPI.call("setStickerCategory", ["sticker_id": sticker.id, "key": key.map { $0 as Any } ?? NSNull()])
         replace(sticker.id) { old in

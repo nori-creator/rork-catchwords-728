@@ -31,6 +31,7 @@ struct UIPreviewRoot: View {
                               previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
                                                CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
             case "album": AlbumPreview()
+            case "hero": HeroPickerPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -202,6 +203,30 @@ private struct TabBarPreview: View {
             Spacer()
         }
         .background(AppBackground())
+    }
+}
+/// 「表示する写真」: the sheet's grid with original, cut-out and selfie, the cut-out chosen.
+private struct HeroPickerPreview: View {
+    private static let sticker: Sticker = {
+        ImageCache.shared.set(PreviewFixtures.photo, for: "preview/hero-object.jpg")
+        ImageCache.shared.set(PreviewFixtures.subject, for: "preview/hero-cutout.png")
+        let selfie = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 600)).image { ctx in
+            UIColor(red: 0.98, green: 0.86, blue: 0.78, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 600))
+            UIColor(red: 0.45, green: 0.32, blue: 0.25, alpha: 1).setFill()
+            ctx.cgContext.fillEllipse(in: CGRect(x: 190, y: 120, width: 220, height: 260))
+        }
+        ImageCache.shared.set(selfie, for: "preview/hero-selfie.jpg")
+        var s = Sticker(id: "hero", wordId: "w", objectImageUrl: "preview/hero-object.jpg",
+                        cutoutImageUrl: "preview/hero-cutout.png", selfieImageUrl: "preview/hero-selfie.jpg",
+                        caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: nil)
+        s.heroRole = "cutout"
+        return s
+    }()
+
+    var body: some View {
+        HeroPhotoPickerSheet(sticker: Self.sticker) { _ in }
+            .padding(.top, 60)
     }
 }
 #endif

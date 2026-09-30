@@ -253,9 +253,12 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var lng: Double? = nil
     /// The shelf the learner put this word on (`stickers.shelf_key`); nil = the AI's category.
     var shelfKey: String? = nil
+    /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
+    var heroRole: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
+        case heroRole = "hero_role"
         case wordId = "word_id"
         case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"
@@ -266,8 +269,15 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         case captureType = "capture_type"
     }
 
-    /// One place decides which photo represents a sticker (photo-surface.ts): cutout, then original.
-    var heroPath: String? { cutoutImageUrl ?? objectImageUrl }
+    /// One place decides which photo represents a sticker (photo-surface.ts): the learner's choice,
+    /// else the cut-out, else the original.
+    var heroPath: String? {
+        switch heroRole {
+        case "object": objectImageUrl ?? cutoutImageUrl
+        case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl
+        default: cutoutImageUrl ?? objectImageUrl
+        }
+    }
     var room: Room { Category.room(for: shelfKey ?? word?.categoryKey) }
     /// Where the word sits in the dex: the learner's shelf first, else the AI's category (web `effectiveShelf`).
     var categoryKey: String { Category.key(for: shelfKey ?? word?.categoryKey) }
