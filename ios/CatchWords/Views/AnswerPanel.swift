@@ -39,7 +39,7 @@ struct AnswerPanel: View {
                             .foregroundStyle(Theme.foreground)
                             .labelStyle(TintedIconLabel())
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+                            .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(PressableStyle(scale: 0.98))
@@ -57,7 +57,7 @@ struct AnswerPanel: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
         }
-        .background(.white)
+        .background(Theme.card)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
         .overlay(alignment: .top) {
             UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)

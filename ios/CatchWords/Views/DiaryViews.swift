@@ -470,7 +470,7 @@ struct StrandedDiaryBanner: View {
                     Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
                 }
                 .padding(14)
-                .background(.white, in: .rect(cornerRadius: 14))
+                .background(Theme.card, in: .rect(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border))
             }
             .buttonStyle(PressableStyle())

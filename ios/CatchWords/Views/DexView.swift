@@ -214,7 +214,7 @@ struct DexView: View {
                                 .frame(width: 44, height: 38)
                                 .background {
                                     if mode == m {
-                                        Capsule().fill(.white)
+                                        Capsule().fill(Theme.card)
                                             .shadow(color: .black.opacity(0.1), radius: 4, y: 1)
                                             .matchedGeometryEffect(id: "mode", in: modeBubble)
                                     }
@@ -993,7 +993,7 @@ struct DexMapView: View {
                 .padding(18)
             }
             .frame(maxHeight: 250)
-            .background(.white.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
+            .background(Theme.card.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
             .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
             .onChange(of: selectedId) { _, id in
@@ -1065,7 +1065,7 @@ struct DexMapView: View {
             .accessibilityLabel("次の日")
         }
         .padding(6)
-        .background(.white.opacity(0.95), in: Capsule())
+        .background(Theme.card.opacity(0.95), in: Capsule())
         .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
     }

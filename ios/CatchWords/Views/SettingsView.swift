@@ -31,7 +31,6 @@ struct SettingsView: View {
     @FocusState private var nameFocused: Bool
     @State private var wheel: WheelField?
     @State private var notifyDenied: Bool = false
-    @State private var themeNote: Bool = false
     @State private var deleteOpen: Bool = false
     @State private var deleteText: String = ""
     @State private var isDeleting: Bool = false
@@ -108,7 +107,7 @@ struct SettingsView: View {
                     .focused($nameFocused)
                     .submitLabel(.done)
                     .padding(.horizontal, 14).frame(minHeight: 48)
-                    .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+                    .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
                     .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
                     .onSubmit(saveName)
@@ -202,14 +201,11 @@ struct SettingsView: View {
                 ChoicePills(
                     options: [("light", "ライト"), ("dark", "ダーク"), ("system", "システム")],
                     selection: Binding(get: { themePref }, set: { v in
-                        themePref = v
-                        withAnimation { themeNote = v != "light" }
+                        withAnimation(.easeInOut(duration: 0.35)) { themePref = v }
                     })
                 )
-                if themeNote {
-                    Text("ダーク表示は次のアップデートで対応します。今はライトで表示されます。")
-                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
-                }
+                Text("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。")
+                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 label("アニメーション").padding(.top, 6)
                 ChoicePills(options: [("system", "自動"), ("full", "見せる"), ("reduce", "減らす")], selection: $motionPref)
                 label("ホームの壁紙").padding(.top, 10)
@@ -280,7 +276,7 @@ struct SettingsView: View {
                 Label("サインアウト", systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(.white, in: Capsule())
+                    .background(Theme.card, in: Capsule())
                     .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
                     .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
             }
@@ -316,7 +312,7 @@ struct SettingsView: View {
                 TextField("削除", text: $deleteText)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(minHeight: 46)
-                    .background(.white, in: .rect(cornerRadius: 14))
+                    .background(Theme.card, in: .rect(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
                 Button { Task { await deleteAccount() } } label: {
                     HStack(spacing: 8) {
@@ -333,7 +329,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
-        .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 26, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
     }
 
@@ -488,7 +484,7 @@ struct SettingsCard<Content: View>: View {
             content
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+                .background(Theme.card, in: .rect(cornerRadius: 26, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
         }
     }
@@ -623,7 +619,7 @@ struct WheelCard: View {
                 .buttonStyle(PressableStyle())
             }
             .padding(.horizontal, 20).padding(.vertical, 16)
-            .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
+            .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
             .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
             .padding(.horizontal, 20)
             .scaleEffect(appeared ? 1 : 0.94)

@@ -105,7 +105,7 @@ struct MemoryBadge: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 4)
-        .background(Color.white.opacity(0.94), in: Capsule())
+        .background(Theme.card.opacity(0.94), in: Capsule())
         .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(Self.labels[lv]) \(percent)%")

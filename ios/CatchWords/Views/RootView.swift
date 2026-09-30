@@ -26,6 +26,7 @@ struct RootView: View {
                     MainTabView()
                     if needsOnboarding {
                         OnboardingView { withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { onboardingDone = true } }
+                            .environment(\.colorScheme, .light)
                             .transition(.opacity.combined(with: .scale(scale: 1.02)))
                             .zIndex(1)
                     }

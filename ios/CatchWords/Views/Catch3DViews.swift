@@ -21,10 +21,16 @@ final class JarScene {
     /// Photo height inside the jar (metres). The jar is ~0.22 m tall with its base at y = 0.
     static let photoY: Float = 0.095
 
+    /// Draw order for the see-through parts: the photo first, then the glass over it. Without this
+    /// RealityKit may draw the glass first; its depth then hides the photo standing inside the jar
+    /// (seen on the CI simulator frames: an empty jar).
+    private let sortGroup = ModelSortGroup(depthPass: nil)
+
     func build(image: UIImage) async {
         root.position = .zero
         if let jar = await Scene3D.load(.jar) {
             Scene3D.paint(jar, named: "JarGlass", with: Scene3D.glass)
+            if let glass = jar.findEntity(named: "JarGlass") { Self.setSort(glass, group: sortGroup, order: 1) }
             Scene3D.paint(jar, named: "JarRim", with: Scene3D.gold)
             // The Blender marker plane is only a guide; an "invisible" material still renders
             // opaque grey in RealityKit and hid the photo — remove it.
@@ -48,6 +54,15 @@ final class JarScene {
         let h: Float = 0.105
         let plane = ModelEntity(mesh: .generatePlane(width: h * aspect, height: h, cornerRadius: 0.008))
         if let mat = await Scene3D.picture(image) { plane.model?.materials = [mat] }
+        plane.components.set(ModelSortGroupComponent(group: sortGroup, order: 0))
+        // A thin paper card behind it, like a print slipped into the jar (also keeps the
+        // photo readable against the glass).
+        var paper = UnlitMaterial(color: UIColor(red: 1, green: 0.99, blue: 0.96, alpha: 1))
+        paper.faceCulling = .none
+        let card = ModelEntity(mesh: .generatePlane(width: h * aspect + 0.012, height: h + 0.016, cornerRadius: 0.006),
+                               materials: [paper])
+        card.position = [0, -0.002, -0.0015]
+        plane.addChild(card)
         plane.position = [0, Self.photoY + 0.02, 0]
         plane.scale = .init(repeating: 1.55)
         root.addChild(plane)
@@ -64,6 +79,11 @@ final class JarScene {
         }
         built = true
         if bloomRequested { bloom() }
+    }
+
+    private static func setSort(_ e: Entity, group: ModelSortGroup, order: Int32) {
+        if e.components.has(ModelComponent.self) { e.components.set(ModelSortGroupComponent(group: group, order: order)) }
+        for c in e.children { setSort(c, group: group, order: order) }
     }
 
     /// 幕2 bloom: the jar forms around the photo, the photo settles in, the cork drops, stars burst.

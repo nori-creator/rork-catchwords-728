@@ -38,7 +38,7 @@ struct MemoryOverviewPanel: View {
                 .padding(.top, 6)
         }
         .padding(14)
-        .background(.white, in: .rect(cornerRadius: 24, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }

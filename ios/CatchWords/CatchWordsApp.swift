@@ -8,6 +8,16 @@ struct CatchWordsApp: App {
     @State private var profile = ProfileStore()
     @State private var diary = DiaryStore()
     @AppStorage("motion.pref") private var motionPref: String = "system"
+    @AppStorage("theme.pref") private var themePref: String = "light"
+
+    /// ライト / ダーク / システム (web settings theme).
+    private var scheme: ColorScheme? {
+        switch themePref {
+        case "dark": .dark
+        case "system": nil
+        default: .light
+        }
+    }
 
     init() {
         AppFont.registerAll()
@@ -18,9 +28,10 @@ struct CatchWordsApp: App {
         WindowGroup {
             #if DEBUG
             if let preview = UIPreview.requested {
-                UIPreviewRoot(name: preview)
+                // "<scene>-dark" photographs the same scene in the dark appearance.
+                UIPreviewRoot(name: preview.hasSuffix("-dark") ? String(preview.dropLast(5)) : preview)
                     .environment(dex)
-                    .preferredColorScheme(.light)
+                    .preferredColorScheme(preview.hasSuffix("-dark") ? .dark : .light)
             } else {
                 app
             }
@@ -37,7 +48,7 @@ struct CatchWordsApp: App {
                 .environment(plan)
                 .environment(profile)
                 .environment(diary)
-                .preferredColorScheme(.light)
+                .preferredColorScheme(scheme)
                 .tint(Theme.primary)
                 .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
     }

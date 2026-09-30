@@ -2,25 +2,27 @@ import SwiftUI
 import UIKit
 import CoreText
 
-/// Design tokens ported from the web app's `styles.css` (light theme `:root`, oklch → sRGB).
-/// The camera keeps the deep-navy "machine" look (`.dark` / camera chrome).
+/// Design tokens ported from the web app's `styles.css` (light `:root` and dark `.dark`
+/// "Deep Ocean", oklch → sRGB). Surface and text tokens follow the light/dark setting; the
+/// camera keeps its deep-navy "machine" look and the home album stays paper in both.
 enum Theme {
-    static let background = Color(hex: 0xF9FCFF)
-    static let backgroundDeep = Color(hex: 0xEEF3F9)
-    static let card = Color.white
-    static let surface2 = Color(hex: 0xEDF2F8)
-    static let secondary = Color(hex: 0xEDF2F8)
-    static let accent = Color(hex: 0xD8EEFF)
+    static let background = Color(light: 0xF9FCFF, dark: 0x030915)
+    static let backgroundDeep = Color(light: 0xEEF3F9, dark: 0x010510)
+    static let card = Color(light: 0xFFFFFF, dark: 0x0A1423)
+    static let surface2 = Color(light: 0xEDF2F8, dark: 0x16202F)
+    static let secondary = Color(light: 0xEDF2F8, dark: 0x132032)
+    static let accent = Color(light: 0xD8EEFF, dark: 0x112D55)
     static let primary = Color(hex: 0x0083FF)
-    static let primaryInk = Color(hex: 0x0053D4)
+    /// Blue used as text: brighter on dark surfaces so it doesn't sink (web: 暗い面では青を暗くしない).
+    static let primaryInk = Color(light: 0x0053D4, dark: 0x6FB0FF)
     static let primaryBright = Color(hex: 0x2A9BFF)
     static let primaryDeep = Color(hex: 0x0060E0)
-    static let foreground = Color(hex: 0x0B121A)
-    static let muted = Color(hex: 0x5C646F)
-    static let border = Color(hex: 0xE0E5EB)
+    static let foreground = Color(light: 0x0B121A, dark: 0xF2F6F8)
+    static let muted = Color(light: 0x5C646F, dark: 0x99A6B8)
+    static let border = Color(light: 0xE0E5EB, dark: 0x1D2635)
     static let gold = Color(hex: 0xF4B93C)
     static let cyan = Color(hex: 0x64E0FF)
-    static let destructive = Color(hex: 0xE62B34)
+    static let destructive = Color(light: 0xE62B34, dark: 0xFF5E63)
     static let ok = Color(hex: 0x00A95C)
     static let chunkV = Color(hex: 0xF9343C)
     static let chunkO = Color(hex: 0x0083FF)
@@ -45,6 +47,15 @@ enum Theme {
 }
 
 extension Color {
+    /// A colour that follows the light/dark appearance.
+    init(light: UInt32, dark: UInt32) {
+        self.init(uiColor: UIColor { traits in
+            let hex = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+                           blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+        })
+    }
+
     init(hex: UInt32, opacity: Double = 1) {
         self.init(
             .sRGB,

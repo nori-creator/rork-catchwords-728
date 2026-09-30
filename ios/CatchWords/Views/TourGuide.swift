@@ -223,7 +223,7 @@ struct TourCoachCard: View {
         .padding(.horizontal, 18)
         .padding(.top, 16)
         .padding(.bottom, 8)
-        .background(.white, in: .rect(cornerRadius: 24, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.25), radius: 24, y: 10)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .id(step)

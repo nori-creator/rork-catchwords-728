@@ -57,7 +57,7 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch router.tab {
-                case .home: HomeView()
+                case .home: HomeView().environment(\.colorScheme, .light)  // the paper album stays paper
                 case .dex: DexView()
                 case .camera: CaptureView()
                 case .review: ReviewView()
@@ -177,7 +177,7 @@ struct CapsuleTabBar: View {
                 if onCamera {
                     Capsule().fill(Theme.navyDeep.opacity(0.55)).background(.ultraThinMaterial, in: Capsule())
                 } else {
-                    Capsule().fill(.white.opacity(0.9)).background(.regularMaterial, in: Capsule())
+                    Capsule().fill(Theme.card.opacity(0.9)).background(.regularMaterial, in: Capsule())
                 }
             }
             .overlay(Capsule().stroke(onCamera ? .white.opacity(0.12) : Theme.border, lineWidth: 1))

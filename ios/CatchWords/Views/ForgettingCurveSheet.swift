@@ -139,7 +139,7 @@ struct ForgettingCurveSheet: View {
             }
             ForEach(d.reviews) { p in
                 PointMark(x: .value("日", p.date), y: .value("%", p.value))
-                    .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(.white)).frame(width: 13, height: 13) }
+                    .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(Theme.card)).frame(width: 13, height: 13) }
             }
             PointMark(x: .value("日", d.today.date), y: .value("%", d.today.value))
                 .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(d.today.value))]).overlay(Circle().stroke(.white, lineWidth: 2.5)).frame(width: 18, height: 18) }

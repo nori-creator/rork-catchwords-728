@@ -45,7 +45,7 @@ struct ReviewView: View {
                 }
                 .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
-                .background(alignment: .bottom) { Color.white.frame(height: 80) }
+                .background(alignment: .bottom) { Theme.card.frame(height: 80) }
                 .ignoresSafeArea(edges: .bottom)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .id(card.id)
@@ -62,7 +62,7 @@ struct ReviewView: View {
                         }
                     }, onClose: { closeCurve() })
                     .frame(maxHeight: 640)
-                    .background(.white, in: .rect(cornerRadius: 32, style: .continuous))
+                    .background(Theme.card, in: .rect(cornerRadius: 32, style: .continuous))
                     .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
                     .padding(.horizontal, 16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
@@ -333,7 +333,7 @@ struct QuizCard: View {
             .offset(x: shake)
         }
         .padding(14)
-        .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
         .onAppear { started = Date() }
@@ -419,6 +419,6 @@ struct ReviewDone: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
-        .background(.white, in: .rect(cornerRadius: 28))
+        .background(Theme.card, in: .rect(cornerRadius: 28))
     }
 }
