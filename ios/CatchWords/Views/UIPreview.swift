@@ -25,6 +25,7 @@ struct UIPreviewRoot: View {
             case "cutout": CutoutPreview()
             case "picker": PickerPreview()
             case "tabbar": TabBarPreview()
+            case "reward": RewardPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -64,7 +65,14 @@ enum PreviewFixtures {
         c.fillEllipse(in: CGRect(x: 420, y: 250, width: 110, height: 70))
     }
 
-    static let lift = CutoutService.Lift(cropped: subject, full: subject, photo: photo)
+    static let lift = CutoutService.Lift(cropped: subjectCropped, full: subject, photo: photo)
+
+    /// The subject cropped to its bounds, like the saved sticker.
+    static let subjectCropped: UIImage = {
+        let rect = CGRect(x: 240, y: 240, width: 420, height: 400)
+        guard let cg = subject.cgImage?.cropping(to: rect) else { return subject }
+        return UIImage(cgImage: cg)
+    }()
 }
 
 /// The cut-out animation, replayed every 3 seconds.
@@ -116,6 +124,30 @@ private struct PickerPreview: View {
     }()
 
     var body: some View { CandidatePickerView(vm: vm) }
+}
+
+/// The full catch celebration with the cut-out sticker, replayed every 7 seconds.
+/// The save never "finishes" here, so the 1 s hold shows its breathing state.
+private struct RewardPreview: View {
+    @State private var round = 0
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            RewardOverlay(payload: RewardPayload(
+                image: PreviewFixtures.subjectCropped, isCutout: true, headword: "芒果",
+                reading: "ㄇㄤˊ ㄍㄨㄛˇ", pinyin: "mángguǒ", meaning: "マンゴー", rarity: 0, gate: SaveGate()
+            )) {}
+            .id(round)
+        }
+        .ignoresSafeArea()
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(7))
+                round += 1
+            }
+        }
+    }
 }
 
 /// The tab bar on a light page and on the dark camera.

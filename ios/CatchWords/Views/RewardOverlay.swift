@@ -242,6 +242,8 @@ struct RewardOverlay: View {
         withAnimation(.easeIn(duration: 0.22)) { ringOpacity = 1 }
         withAnimation(.easeInOut(duration: 0.5)) { ringProgress = 1 }
         try? await Task.sleep(for: .milliseconds(380))
+        // Core Haptics: the rumble rises through the compression and lands on the release (~0.22 s).
+        HapticPatterns.shared.bloom()
         withAnimation(.easeIn(duration: 0.14)) { scale *= 0.975 }
         try? await Task.sleep(for: .milliseconds(140))
         // 80–120ms full stop before the release.
@@ -255,7 +257,7 @@ struct RewardOverlay: View {
         particles = true
         SoundService.shared.play(.impact)
         try? await Task.sleep(for: .milliseconds(30))
-        Haptics.impact(.heavy)
+        if !HapticPatterns.shared.isAvailable { Haptics.impact(.heavy) }
 
         // At ~90% of bloom: voice + word + medium haptic + light sweep on the SAME frame.
         try? await Task.sleep(for: .milliseconds(190))

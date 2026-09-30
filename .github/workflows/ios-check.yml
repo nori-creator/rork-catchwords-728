@@ -96,8 +96,8 @@ jobs:
           OUT="$RUNNER_TEMP/report/previews"
           mkdir -p "$OUT"
           UDID=$(cat "$RUNNER_TEMP/udid"); BUNDLE_ID=$(cat "$RUNNER_TEMP/bundle")
-          # 名前 / 待つ秒 / コマ数（0.4 秒おき）
-          for spec in "tabbar 2 1" "picker 2 1" "cutout 1 9" "3d 1 10"; do
+          # 名前 / 待つ秒 / コマ数（撮影の間隔はおよそ 0.4〜0.6 秒）
+          for spec in "tabbar 2 1" "picker 2 1" "cutout 0 12" "reward 0 14" "3d 2 8"; do
             set -- $spec
             name=$1; wait_s=$2; frames=$3
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
