@@ -278,8 +278,14 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     /// One place decides which photo represents a sticker (photo-surface.ts): the learner's choice,
     /// else the cut-out, else the original.
     var heroPath: String? {
-        switch heroRole {
+        // The word's own choice first, else 設定 › 表示するタイプ (web: hero_role ?? resolvePrefer(pref)).
+        let role = heroRole ?? { () -> String? in
+            let p = UserDefaults.standard.string(forKey: "photo.pref") ?? "auto"
+            return p == "auto" ? nil : p
+        }()
+        switch role {
         case "object": objectImageUrl ?? cutoutImageUrl ?? placeholderImageUrl
+        case "cutout": cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         case "placeholder": placeholderImageUrl ?? cutoutImageUrl ?? objectImageUrl
         default: cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl

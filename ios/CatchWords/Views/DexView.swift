@@ -679,7 +679,7 @@ struct DexCoverFlow: View {
                     if let p = dex.memoryPercent(for: s) { MemoryBadge(percent: p).padding(8) }
                 }
             VStack(alignment: .leading, spacing: 6) {
-                ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 24, weight: .semibold)
+                ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 24, weight: .semibold, pinyin: s.word?.pinyin)
                 Text(s.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.foreground.opacity(0.85)).lineLimit(1)
                 Spacer(minLength: 4)
                 HStack(spacing: 8) {
@@ -769,7 +769,7 @@ struct DexListRow: View {
                         .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                         .clipShape(.rect(cornerRadius: 16, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
-                        ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold)
+                        ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
                         Text(sticker.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
                     }
                     Spacer(minLength: 0)

@@ -25,7 +25,7 @@ struct OnboardingView: View {
     @State private var showMenu: Bool = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
-    @AppStorage("sound.level") private var soundLevel: String = "soft"
+    @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("haptics.enabled") private var hapticsOn: Bool = true
 
     static let goalList: [(id: String, label: String, icon: String)] = [
@@ -332,7 +332,7 @@ struct OnboardingView: View {
                 Section("効果音と振動") {
                     Picker("効果音", selection: $soundLevel) {
                         Text("なし").tag("off")
-                        Text("控えめ").tag("soft")
+                        Text("控えめ").tag("subtle")
                         Text("しっかり").tag("full")
                     }
                     Toggle("振動", isOn: $hapticsOn)

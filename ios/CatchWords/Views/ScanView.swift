@@ -454,7 +454,7 @@ struct ScanCatchSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
-                ZhuyinWordView(headword: item.headword, zhuyin: item.zhuyin, size: 36, weight: .heavy)
+                ZhuyinWordView(headword: item.headword, zhuyin: item.zhuyin, size: 36, weight: .heavy, pinyin: item.pinyin)
                 Spacer()
                 PronounceCircle(text: item.headword, size: 48)
             }

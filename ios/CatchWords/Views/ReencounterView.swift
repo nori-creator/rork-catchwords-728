@@ -51,7 +51,7 @@ struct ReencounterView: View {
                     .padding(12)
             }
             HStack {
-                ZhuyinWordView(headword: owned.headword, zhuyin: owned.readingZhuyin, size: 34, weight: .bold)
+                ZhuyinWordView(headword: owned.headword, zhuyin: owned.readingZhuyin, size: 34, weight: .bold, pinyin: owned.pinyin)
                 Spacer()
                 PronounceCircle(text: owned.headword, size: 44)
             }

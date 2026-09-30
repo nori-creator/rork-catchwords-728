@@ -90,6 +90,9 @@ final class DexStore {
 
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
 
+    /// When reviews come due (for おまかせ reminders).
+    var upcomingDueTimes: [Date] { reviews.values.compactMap(\.dueAt) }
+
     /// The photos the home album shows (the ones taken off the album stay in the dex only).
     var albumStickers: [Sticker] { stickers.filter { !albumHidden.contains($0.id) } }
 

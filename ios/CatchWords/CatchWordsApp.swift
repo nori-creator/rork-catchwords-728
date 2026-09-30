@@ -7,7 +7,7 @@ struct CatchWordsApp: App {
     @State private var plan = PlanStore()
     @State private var profile = ProfileStore()
     @State private var diary = DiaryStore()
-    @AppStorage("motion.pref") private var motionPref: String = "system"
+    @AppStorage("motion.pref") private var motionPref: String = "full"
     @AppStorage("theme.pref") private var themePref: String = "light"
 
     /// ライト / ダーク / システム (web settings theme).
@@ -20,6 +20,10 @@ struct CatchWordsApp: App {
     }
 
     init() {
+        // Settings values renamed to the web's: sound "soft" → "subtle".
+        if UserDefaults.standard.string(forKey: "sound.level") == "soft" {
+            UserDefaults.standard.set("subtle", forKey: "sound.level")
+        }
         AppFont.registerAll()
         SoundService.shared.configure()
     }

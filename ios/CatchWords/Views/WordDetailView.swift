@@ -193,7 +193,7 @@ struct WordDetailView: View {
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
-                ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy)
+                ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy, pinyin: word?.pinyin)
                     .opacity(isSavingHead ? 0.4 : 1)
                 Button {
                     headDraft = headword

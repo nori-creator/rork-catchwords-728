@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
 
     private var needsOnboarding: Bool {
@@ -37,6 +38,8 @@ struct RootView: View {
                         await dex.load()
                         await p
                         await plan.bootstrap()
+                        await ReminderService.loadFromAccount()
+                        await ReminderService.refresh(due: dex.upcomingDueTimes)
                     }
             case .failed(let reason):
                 ConnectionFailedView(reason: reason) {
@@ -48,6 +51,12 @@ struct RootView: View {
         .task { await auth.bootstrap() }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut { dex.reset() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // おまかせ reminders follow yesterday's first open and the cards coming due.
+            guard phase == .active, auth.phase == .signedIn else { return }
+            ReminderService.recordAppOpen()
+            Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
     }
 }

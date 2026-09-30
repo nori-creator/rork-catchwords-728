@@ -117,6 +117,20 @@ final class SupabaseClient {
         guard (200..<300).contains(response.statusCode) else { throw APIError.server(response.statusCode, "") }
     }
 
+    /// The signed-in user's `user_metadata` (notification_preferences, learning_preferences…).
+    func userMetadata() async throws -> [String: Any] {
+        try await refreshIfNeeded()
+        guard let baseURL, let token = session?.accessToken,
+              let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await perform(req)
+        guard (200..<300).contains(response.statusCode),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { throw APIError.server(response.statusCode, "") }
+        return json["user_metadata"] as? [String: Any] ?? [:]
+    }
+
     func refreshIfNeeded() async throws {
         guard let current = session else { throw APIError.unauthorized }
         guard current.expiresAt.timeIntervalSinceNow < 120 else { return }

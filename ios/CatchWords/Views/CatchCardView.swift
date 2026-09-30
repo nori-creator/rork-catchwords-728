@@ -120,7 +120,7 @@ struct CatchCardView: View {
 
     private func headwordCard(_ c: Candidate) -> some View {
         HStack {
-            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 30, weight: .semibold)
+            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 30, weight: .semibold, pinyin: c.pinyin)
             Spacer()
             PronounceCircle(text: c.headword, size: 44)
         }

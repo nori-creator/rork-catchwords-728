@@ -62,9 +62,24 @@ struct ZhuyinWordView: View {
     var weight: Font.Weight = .medium
     var color: Color = Theme.foreground
     var readingColor: Color = Theme.muted
+    /// Shown instead of the zhuyin when the learner chose ピンイン (設定 › 発音表記, web reading-pref).
+    var pinyin: String? = nil
+    @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
 
     var body: some View {
-        if let units = ZhuyinLayout.pair(headword, zhuyin) {
+        if readingPref == "pinyin", let p = pinyin?.trimmingCharacters(in: .whitespaces), !p.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(p)
+                    .font(.system(size: max(10, size * 0.4), weight: .medium))
+                    .foregroundStyle(readingColor)
+                Text(headword)
+                    .font(.system(size: size, weight: weight))
+                    .foregroundStyle(color)
+            }
+            .fixedSize()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(headword)
+        } else if let units = ZhuyinLayout.pair(headword, zhuyin) {
             HStack(alignment: .center, spacing: size * 0.06) {
                 ForEach(Array(units.enumerated()), id: \.offset) { _, u in
                     HStack(alignment: .center, spacing: size * 0.03) {

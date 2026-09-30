@@ -12,7 +12,7 @@ struct SettingsView: View {
 
     @AppStorage("photos.sync") private var photoSync: Bool = true
     @AppStorage("haptics.enabled") private var haptics: Bool = true
-    @AppStorage("sound.level") private var soundLevel: String = "soft"
+    @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
@@ -20,10 +20,10 @@ struct SettingsView: View {
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
-    @AppStorage("motion.pref") private var motionPref: String = "system"
+    @AppStorage("motion.pref") private var motionPref: String = "full"
     @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
-    @AppStorage(ReminderService.timesKey) private var reminderTimes: String = "20:00"
+    @AppStorage(ReminderService.timesKey) private var reminderTimes: String = ReminderService.defaultTime
     @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
 
     @State private var avatarItem: PhotosPickerItem?
@@ -146,7 +146,9 @@ struct SettingsView: View {
         SettingsCard(title: "学習設定") {
             VStack(alignment: .leading, spacing: 10) {
                 label("表示するタイプ")
-                ChoicePills(options: [("object", "元の写真"), ("selfie", "自撮り")], selection: $photoPref)
+                // Web photo-pref: which picture shows on home, dex and review when a word has no choice of its own.
+                // iOS keeps 切り抜き (cut-out mode is iOS's own).
+                ChoicePills(options: [("object", "元の写真"), ("cutout", "切り抜き"), ("selfie", "自撮り")], selection: $photoPref)
                 label("1日の復習枚数").padding(.top, 6)
                 ChoicePills(
                     options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", "無制限")],
@@ -226,7 +228,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 label("効果音")
                 ChoicePills(
-                    options: [("off", "オフ"), ("soft", "控えめ"), ("full", "しっかり")],
+                    options: [("off", "オフ"), ("subtle", "控えめ"), ("full", "しっかり")],
                     selection: Binding(get: { soundLevel }, set: { v in
                         soundLevel = v
                         if v != "off" { SoundService.shared.play(.impact) }
@@ -358,7 +360,7 @@ struct SettingsView: View {
                 }
             }
             if times.count < 3 {
-                Button { saveTimes(times + ["20:00"]) } label: {
+                Button { saveTimes(times + [ReminderService.defaultTime]) } label: {
                     Label("時刻を追加", systemImage: "plus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primary)
                         .frame(minHeight: 44)
                 }
@@ -426,13 +428,18 @@ struct SettingsView: View {
             }
             notifyDenied = false
             reminderMode = mode
-            await ReminderService.applyReview(mode: mode, times: ReminderService.parseTimes(reminderTimes))
+            let times = ReminderService.parseTimes(reminderTimes)
+            await ReminderService.applyReview(mode: mode, times: times, due: dex.upcomingDueTimes)
+            await ReminderService.saveToAccount(mode: mode, times: times)
         }
     }
 
     private func saveTimes(_ list: [String]) {
         reminderTimes = list.joined(separator: ",")
-        Task { await ReminderService.applyReview(mode: reminderMode, times: list) }
+        Task {
+            await ReminderService.applyReview(mode: reminderMode, times: list, due: dex.upcomingDueTimes)
+            await ReminderService.saveToAccount(mode: reminderMode, times: list)
+        }
     }
 
     private func setPlaceRemind(_ on: Bool) {
@@ -636,13 +643,16 @@ struct WheelCard: View {
         switch field {
         case .native:
             profile.nativeLanguage = v
-            Task { await profile.update(["native_language": v]) }
+            // The web derives native_language from ui_language and saves both (settings.tsx).
+            Task { await profile.update(["native_language": v, "ui_language": v]) }
         case .target:
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
             profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
             Task {
-                await profile.update(["target_language": v, "current_level": profile.currentLevel, "level_goal": profile.levelGoal])
+                // Language first, on its own (web: a rejected level column must not undo the language).
+                await profile.update(["target_language": v])
+                await profile.update(["current_level": profile.currentLevel, "level_goal": profile.levelGoal])
                 // The dex, album and review show only the words of the language being learned.
                 await dex.load()
             }

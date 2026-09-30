@@ -51,10 +51,11 @@ final class SoundService {
     }
 
     private var levelMultiplier: Float {
-        switch UserDefaults.standard.string(forKey: "sound.level") ?? "full" {
+        // Same values and default as the web (cw-sound-level: off / subtle / full, default subtle).
+        switch UserDefaults.standard.string(forKey: "sound.level") ?? "subtle" {
         case "off": 0
-        case "soft": 0.45
-        default: 0.8
+        case "full": 0.8
+        default: 0.45   // "subtle" (and the old iOS value "soft")
         }
     }
 

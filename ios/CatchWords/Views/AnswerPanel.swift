@@ -24,7 +24,7 @@ struct AnswerPanel: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
-                    ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 26, weight: .bold)
+                    ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 26, weight: .bold, pinyin: word?.pinyin)
                     Spacer(minLength: 0)
                     PronounceCircle(text: headword, size: 46)
                 }

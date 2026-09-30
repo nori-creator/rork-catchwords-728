@@ -13,7 +13,8 @@ final class ProfileStore {
     var levelGoal: String = "TOCFL-2"
     /// 0 = 無制限 (review-batch.ts).
     var reviewDailyLimit: Int = 20
-    var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 500 : reviewDailyLimit }
+    /// 無制限 = every due card (1000 is the most one REST read returns).
+    var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 1000 : reviewDailyLimit }
     var isSavingAvatar: Bool = false
     /// `profiles.onboarded` — true once the first-run setup has been finished (on any device).
     var onboarded: Bool = false
