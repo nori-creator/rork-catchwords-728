@@ -1,22 +1,26 @@
 import SwiftUI
 
 enum AppTab: Int, CaseIterable, Identifiable {
-    case dex, camera, settings
+    case home, dex, camera, review, settings
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
+        case .home: "ホーム"
         case .dex: "図鑑"
         case .camera: "カメラ"
+        case .review: "復習"
         case .settings: "設定"
         }
     }
 
     var icon: String {
         switch self {
+        case .home: "house"
         case .dex: "book"
         case .camera: "camera"
+        case .review: "sparkles"
         case .settings: "gearshape"
         }
     }
@@ -25,7 +29,7 @@ enum AppTab: Int, CaseIterable, Identifiable {
 /// Shared navigation state so the reward flight can open the dex and target the new cell.
 @Observable
 final class AppRouter {
-    var tab: AppTab = .camera
+    var tab: AppTab = .home
     var landingStickerId: String?
     var detailSticker: Sticker?
     var showPaywall: Bool = false
@@ -42,8 +46,10 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch router.tab {
+                case .home: HomeView()
                 case .dex: DexView()
                 case .camera: CaptureView()
+                case .review: ReviewView()
                 case .settings: SettingsView()
                 }
             }
@@ -79,7 +85,7 @@ struct CapsuleTabBar: View {
 
     var body: some View {
         GeometryReader { geo in
-            let width = min(geo.size.width * 0.876, 380)
+            let width = min(geo.size.width * 0.92, 400)
             HStack(spacing: 0) {
                 ForEach(AppTab.allCases) { tab in
                     if tab == .camera {
@@ -89,7 +95,7 @@ struct CapsuleTabBar: View {
                     }
                 }
             }
-            .frame(width: width, height: 56)
+            .frame(width: width, height: 58)
             .background {
                 if onCamera {
                     Capsule().fill(Theme.navyDeep.opacity(0.55)).background(.ultraThinMaterial, in: Capsule())
@@ -101,7 +107,7 @@ struct CapsuleTabBar: View {
             .shadow(color: .black.opacity(onCamera ? 0.35 : 0.1), radius: 16, y: 6)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 56)
+        .frame(height: 58)
         .animation(.easeInOut(duration: 0.25), value: onCamera)
     }
 

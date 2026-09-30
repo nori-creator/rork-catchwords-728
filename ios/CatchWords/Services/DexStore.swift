@@ -61,8 +61,21 @@ final class DexStore {
         }
     }
 
+    func reloadReviews() async { await loadReviews() }
+
+    func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
+
+    /// Level index (0–5) for every sticker that has a review — feeds the memory bar.
+    var memoryLevelCounts: [Int] {
+        var out = Array(repeating: 0, count: 6)
+        for s in stickers {
+            if let p = memoryPercent(for: s) { out[MemoryBadge.level(p)] += 1 }
+        }
+        return out
+    }
+
     private func loadReviews() async {
-        guard let data = try? await client.rest("GET", "reviews?select=sticker_id,ease,interval_days,last_reviewed_at&limit=2000"),
+        guard let data = try? await client.rest("GET", "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&limit=3000"),
               let rows = try? SupabaseDate.decoder.decode([ReviewState].self, from: data) else { return }
         reviews = Dictionary(rows.map { ($0.stickerId, $0) }, uniquingKeysWith: { a, _ in a })
     }

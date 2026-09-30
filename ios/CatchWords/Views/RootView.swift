@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(AuthStore.self) private var auth
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
+    @Environment(ProfileStore.self) private var profile
 
     var body: some View {
         ZStack {
@@ -19,7 +20,9 @@ struct RootView: View {
                 MainTabView()
                     .transition(.opacity)
                     .task {
+                        async let p: Void = profile.load()
                         await dex.load()
+                        await p
                         await plan.bootstrap()
                     }
             case .failed(let reason):

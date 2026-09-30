@@ -234,11 +234,27 @@ struct DexView: View {
 
     private var list: some View {
         ScrollView {
-            LazyVStack(spacing: 8) {
+            LazyVStack(alignment: .leading, spacing: 10) {
                 Color.clear.frame(height: 104)
-                ForEach(filtered) { s in
-                    Button { router.detailSticker = s } label: { DexListRow(sticker: s) }
-                        .buttonStyle(PressableStyle(scale: 0.98))
+                ForEach(Category.orderedKeys, id: \.self) { key in
+                    let items = filtered.filter { $0.categoryKey == key }
+                    if !items.isEmpty {
+                        HStack(spacing: 6) {
+                            Text(Category.emoji(for: key)).font(.system(size: 17))
+                            Text(Category.label(for: key)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Spacer()
+                            Text("\(items.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                        }
+                        .padding(.top, 6)
+                        VStack(spacing: 0) {
+                            ForEach(Array(items.enumerated()), id: \.element.id) { i, s in
+                                if i > 0 { Divider().padding(.leading, 12) }
+                                DexListRow(sticker: s) { router.detailSticker = s }
+                            }
+                        }
+                        .background(Theme.card, in: .rect(cornerRadius: 22, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -500,62 +516,245 @@ struct DexCoverFlow: View {
 struct DexListRow: View {
     @Environment(DexStore.self) private var dex
     let sticker: Sticker
+    let onOpen: () -> Void
 
     var body: some View {
         let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
         HStack(spacing: 12) {
-            Theme.secondary.frame(width: 56, height: 56)
-                .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
-                .clipShape(.rect(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 3) {
-                ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 19)
-                Text(sticker.word?.meaningJa ?? "").font(.system(size: 13)).foregroundStyle(Theme.muted).lineLimit(1)
+            Button(action: onOpen) {
+                HStack(spacing: 14) {
+                    Theme.secondary.frame(width: 60, height: 60)
+                        .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold)
+                        Text(sticker.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 6) {
-                if let p = dex.memoryPercent(for: sticker) { MemoryBadge(percent: p) }
-                Text(JPDate.monthDay(sticker.takenAt)).font(.system(size: 11)).foregroundStyle(Theme.muted)
-            }
+            .buttonStyle(PressableStyle(scale: 0.98))
+            PronounceCircle(text: sticker.word?.headword ?? "", size: 46)
         }
-        .padding(10)
-        .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 }
 
-/// Where each word was caught (only stickers that have a location).
+/// DexDayMap.tsx: one day at a time — round photo pins, a timeline panel, and a day bar (calendar / ‹ ›).
 struct DexMapView: View {
     @Environment(DexStore.self) private var dex
     let stickers: [Sticker]
     let onOpen: (Sticker) -> Void
 
+    @State private var day: Date?
+    @State private var selectedId: String?
+    @State private var panelOpen: Bool = true
+    @State private var position: MapCameraPosition = .automatic
+    @State private var showDatePicker: Bool = false
+
+    private var days: [Date] {
+        let cal = Calendar.current
+        return Array(Set(stickers.map { cal.startOfDay(for: $0.takenAt) })).sorted(by: >)
+    }
+
+    private var dayItems: [Sticker] {
+        guard let day else { return [] }
+        return stickers.filter { Calendar.current.isDate($0.takenAt, inSameDayAs: day) }.sorted { $0.takenAt > $1.takenAt }
+    }
+
     var body: some View {
-        let located = stickers.filter { $0.lat != nil && $0.lng != nil }
-        ZStack {
-            Map {
+        let located = dayItems.filter { $0.lat != nil && $0.lng != nil }
+        ZStack(alignment: .bottom) {
+            Map(position: $position) {
                 ForEach(located) { s in
-                    Annotation(s.word?.headword ?? "", coordinate: CLLocationCoordinate2D(latitude: s.lat ?? 0, longitude: s.lng ?? 0)) {
-                        Button { onOpen(s) } label: {
-                            let path = s.objectImageUrl ?? s.cutoutImageUrl
-                            Theme.secondary.frame(width: 44, height: 44)
-                                .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
-                                .clipShape(.rect(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white, lineWidth: 2))
-                                .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-                        }
+                    Annotation("", coordinate: CLLocationCoordinate2D(latitude: s.lat ?? 0, longitude: s.lng ?? 0)) {
+                        pin(s)
                     }
                 }
             }
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
             .ignoresSafeArea(edges: .bottom)
-            if located.isEmpty {
-                Text("場所つきのキャッチはまだありません")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Theme.foreground)
-                    .padding(.horizontal, 16).frame(minHeight: 40)
-                    .background(.regularMaterial, in: Capsule())
+
+            VStack(spacing: 10) {
+                if located.isEmpty && !dayItems.isEmpty {
+                    Text("この日は場所の記録がありません")
+                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.foreground)
+                        .padding(.horizontal, 16).frame(minHeight: 40)
+                        .background(.regularMaterial, in: Capsule())
+                }
+                if panelOpen && !dayItems.isEmpty { timeline.transition(.move(edge: .bottom).combined(with: .opacity)) }
+                dayBar
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 84)
+        }
+        .onAppear {
+            if day == nil { day = days.first }
+            focus()
+        }
+        .onChange(of: day) { _, _ in
+            selectedId = dayItems.first?.id
+            focus()
+        }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationStack {
+                DatePicker("日付", selection: Binding(get: { day ?? Date() }, set: { day = Calendar.current.startOfDay(for: $0) }),
+                           in: ...Date(), displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .environment(\.locale, Locale(identifier: "ja_JP"))
+                    .padding()
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { showDatePicker = false } } }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    private func focus() {
+        let pts = dayItems.compactMap { s -> CLLocationCoordinate2D? in
+            guard let la = s.lat, let lo = s.lng else { return nil }
+            return CLLocationCoordinate2D(latitude: la, longitude: lo)
+        }
+        guard let first = pts.first else { return }
+        let lats = pts.map(\.latitude), lngs = pts.map(\.longitude)
+        let center = CLLocationCoordinate2D(latitude: ((lats.min() ?? 0) + (lats.max() ?? 0)) / 2 - 0.002,
+                                            longitude: ((lngs.min() ?? 0) + (lngs.max() ?? 0)) / 2)
+        let span = MKCoordinateSpan(latitudeDelta: max(0.008, ((lats.max() ?? 0) - (lats.min() ?? 0)) * 2.4),
+                                    longitudeDelta: max(0.008, ((lngs.max() ?? 0) - (lngs.min() ?? 0)) * 2.4))
+        withAnimation(.easeInOut(duration: 0.6)) {
+            position = .region(MKCoordinateRegion(center: pts.count == 1 ? CLLocationCoordinate2D(latitude: first.latitude - 0.002, longitude: first.longitude) : center, span: span))
+        }
+    }
+
+    private func pin(_ s: Sticker) -> some View {
+        let isOn = s.id == selectedId
+        let path = s.objectImageUrl ?? s.cutoutImageUrl
+        return Button {
+            Haptics.selection()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedId = s.id; panelOpen = true }
+        } label: {
+            VStack(spacing: 4) {
+                Theme.secondary.frame(width: isOn ? 64 : 48, height: isOn ? 64 : 48)
+                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(isOn ? Theme.primary : .white, lineWidth: isOn ? 4 : 3))
+                    .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
+                if isOn {
+                    Text(JPDate.time(s.takenAt))
+                        .font(.system(size: 13, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Theme.primary, in: Capsule())
+                }
             }
         }
+        .buttonStyle(.plain)
+        .zIndex(isOn ? 1 : 0)
+    }
+
+    private var timeline: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(dayItems) { s in
+                        let isOn = s.id == selectedId
+                        let path = s.objectImageUrl ?? s.cutoutImageUrl
+                        HStack(alignment: .top, spacing: 14) {
+                            VStack(spacing: 0) {
+                                Circle().fill(isOn ? Theme.primary : Theme.muted.opacity(0.5)).frame(width: isOn ? 14 : 11, height: isOn ? 14 : 11).padding(.top, 5)
+                                Rectangle().fill(Theme.border).frame(width: 2)
+                            }
+                            .frame(width: 16)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(JPDate.time(s.takenAt))
+                                    .font(.system(size: 17, weight: .bold)).monospacedDigit()
+                                    .foregroundStyle(isOn ? Theme.primaryInk : Theme.foreground)
+                                Button { onOpen(s) } label: {
+                                    HStack(spacing: 14) {
+                                        Theme.secondary.frame(width: 64, height: 64)
+                                            .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                                            .clipShape(.rect(cornerRadius: 16, style: .continuous))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(s.word?.headword ?? "").font(.system(size: 17, weight: .medium)).foregroundStyle(Theme.foreground)
+                                            if let cap = s.caption, !cap.isEmpty {
+                                                Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
+                                            } else {
+                                                Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Theme.muted).lineLimit(1)
+                                            }
+                                        }
+                                        Spacer(minLength: 0)
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PressableStyle(scale: 0.98))
+                            }
+                            .padding(.bottom, 16)
+                        }
+                        .id(s.id)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
+                        }
+                    }
+                }
+                .padding(18)
+            }
+            .frame(maxHeight: 250)
+            .background(.white.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
+            .onChange(of: selectedId) { _, id in
+                guard let id else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .top) }
+            }
+        }
+    }
+
+    private var dayBar: some View {
+        let idx = day.flatMap { d in days.firstIndex(of: d) }
+        return HStack(spacing: 10) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { panelOpen.toggle() }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    .rotationEffect(.degrees(panelOpen ? 0 : 180))
+                    .frame(width: 48, height: 48)
+                    .background(Theme.foreground, in: Circle())
+            }
+            .buttonStyle(PressableStyle(scale: 0.9))
+            .accessibilityLabel(panelOpen ? "一覧を閉じる" : "一覧を開く")
+            Text(day.map { JPDate.monthDayWeek($0) } ?? "—")
+                .font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
+            Spacer()
+            circleButton("calendar") { showDatePicker = true }.accessibilityLabel("日付を選ぶ")
+            circleButton("chevron.left") {
+                if let idx, idx + 1 < days.count { day = days[idx + 1] }
+            }
+            .disabled(idx == nil || (idx ?? 0) + 1 >= days.count)
+            .accessibilityLabel("前の日")
+            circleButton("chevron.right") {
+                if let idx, idx > 0 { day = days[idx - 1] }
+            }
+            .disabled(idx == nil || idx == 0)
+            .accessibilityLabel("次の日")
+        }
+        .padding(6)
+        .background(.white.opacity(0.95), in: Capsule())
+        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+    }
+
+    private func circleButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.selection()
+            action()
+        } label: {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                .frame(width: 46, height: 46)
+                .background(Theme.secondary, in: Circle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.9))
     }
 }
 

@@ -174,10 +174,10 @@ final class SupabaseClient {
 
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)
 
-    func upload(_ data: Data, path: String, contentType: String = "image/jpeg") async throws {
+    func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers") async throws {
         try await refreshIfNeeded()
         guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/stickers/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
+              let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -190,6 +190,12 @@ final class SupabaseClient {
             let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
             throw APIError.server(response.statusCode, (json?["message"] as? String) ?? "写真の保存に失敗しました。")
         }
+    }
+
+    /// Public bucket URL (avatars).
+    func publicURL(bucket: String, path: String) -> String? {
+        guard let baseURL, let url = URL(string: "storage/v1/object/public/\(bucket)/\(path)", relativeTo: baseURL) else { return nil }
+        return url.absoluteString
     }
 
     func signedURLs(for paths: [String], expiresIn: Int = 60 * 60 * 6) async throws -> [String: URL] {

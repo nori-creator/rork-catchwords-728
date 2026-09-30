@@ -187,16 +187,49 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
 
 /// Row of `reviews` (SM-2 state) — read only here; the web app owns the schedule.
 nonisolated struct ReviewState: Codable, Sendable, Hashable {
+    var id: String?
     let stickerId: String
-    let ease: Double
-    let intervalDays: Int
-    let lastReviewedAt: Date?
+    var ease: Double
+    var intervalDays: Int
+    var repetitions: Int?
+    var lastReviewedAt: Date?
+    var dueAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case ease
+        case id, ease, repetitions
         case stickerId = "sticker_id"
         case intervalDays = "interval_days"
         case lastReviewedAt = "last_reviewed_at"
+        case dueAt = "due_at"
+    }
+}
+
+/// Row of `review_history` (forgetting-curve chart + review streak).
+nonisolated struct ReviewHistoryRow: Codable, Sendable, Hashable {
+    let reviewedAt: Date
+    let score: Int?
+    let intervalDaysAfter: Int?
+    let easeAfter: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case score
+        case reviewedAt = "reviewed_at"
+        case intervalDaysAfter = "interval_days_after"
+        case easeAfter = "ease_after"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        reviewedAt = try c.decode(Date.self, forKey: .reviewedAt)
+        score = try? c.decodeIfPresent(Int.self, forKey: .score)
+        intervalDaysAfter = try? c.decodeIfPresent(Int.self, forKey: .intervalDaysAfter)
+        if let d = try? c.decodeIfPresent(Double.self, forKey: .easeAfter) {
+            easeAfter = d
+        } else if let s = try? c.decodeIfPresent(String.self, forKey: .easeAfter) {
+            easeAfter = Double(s)
+        } else {
+            easeAfter = nil
+        }
     }
 }
 

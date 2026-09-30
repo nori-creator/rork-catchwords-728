@@ -65,6 +65,35 @@ enum JPDate {
     }()
 
     static func monthDay(_ date: Date) -> String { md.string(from: date) }
+
+    private static func make(_ format: String) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = format
+        return f
+    }
+
+    private static let weekdayF = make("EEEE")
+    private static let mdwF = make("M月d日(E)")
+    private static let slashF = make("M/d")
+    private static let timeF = make("HH:mm")
+    private static let monthEN: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "MMMM"
+        return f
+    }()
+
+    /// 水曜日
+    static func weekday(_ d: Date) -> String { weekdayF.string(from: d) }
+    /// 9月28日(月)
+    static func monthDayWeek(_ d: Date) -> String { mdwF.string(from: d) }
+    /// 9/28
+    static func slash(_ d: Date) -> String { slashF.string(from: d) }
+    /// 15:36
+    static func time(_ d: Date) -> String { timeF.string(from: d) }
+    /// SEPTEMBER
+    static func monthName(_ d: Date) -> String { monthEN.string(from: d).uppercased() }
 }
 
 /// Bundled fonts: Zen Kurenaido (handwritten Japanese captions) and Caveat (handwritten Latin).
