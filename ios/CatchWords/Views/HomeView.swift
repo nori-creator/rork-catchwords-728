@@ -480,6 +480,7 @@ struct AlbumPrint: View {
             }
     }
 
+    @ViewBuilder
     private var printView: some View {
         let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
         Button { onOpen(sticker) } label: {
