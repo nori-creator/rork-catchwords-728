@@ -90,18 +90,23 @@ struct AnalyzingView: View {
 
     private func findTargets() async {
         guard let photo, let cg = photo.normalizedOrientation().cgImage else { return }
-        let found: [CGRect] = previewTargets ?? await Task.detached(priority: .userInitiated) {
-            let request = VNGenerateObjectnessBasedSaliencyImageRequest()
-            try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
-            let objects = (request.results?.first?.salientObjects ?? [])
-                .sorted { $0.confidence > $1.confidence }
-                .prefix(3)
-            // Vision is bottom-left origin; flip to top-left. Skip slivers.
-            return objects.map { o in
-                let b = o.boundingBox
-                return CGRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height)
-            }.filter { $0.width > 0.08 && $0.height > 0.08 }
-        }.value
+        let found: [CGRect]
+        if let previewTargets {
+            found = previewTargets
+        } else {
+            found = await Task.detached(priority: .userInitiated) {
+                let request = VNGenerateObjectnessBasedSaliencyImageRequest()
+                try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+                let objects = (request.results?.first?.salientObjects ?? [])
+                    .sorted { $0.confidence > $1.confidence }
+                    .prefix(3)
+                // Vision is bottom-left origin; flip to top-left. Skip slivers.
+                return objects.map { o in
+                    let b = o.boundingBox
+                    return CGRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height)
+                }.filter { $0.width > 0.08 && $0.height > 0.08 }
+            }.value
+        }
         guard !found.isEmpty else { return }
         targets = found
         for i in found.indices {
