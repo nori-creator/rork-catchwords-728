@@ -9,7 +9,12 @@ struct WordDetailView: View {
 
     @State private var isCutting: Bool = false
     @State private var cutoutMessage: String?
-    @State private var photoIndex: Int = 0
+    @State private var prefs: CardPrefsStore = .shared
+    @State private var showSections: Bool = false
+    @State private var editingHead: Bool = false
+    @State private var headDraft: String = ""
+    @State private var isSavingHead: Bool = false
+    @State private var toast: String?
     @State private var confirmDelete: Bool = false
     @State private var showSelfie: Bool = false
     @State private var flipAngle: Double = 0
@@ -35,16 +40,12 @@ struct WordDetailView: View {
                     if !photos.isEmpty { photoHero }
                     metaCard
                     heroCard
-                    if !(word?.meaningJa ?? "").isEmpty { meaningCard }
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     if let e = extras, e.hasMeters { MetersPanel(extras: e) }
-                    if let ex = word?.exampleSentence, !ex.isEmpty { exampleCard(ex, word?.exampleTranslation) }
-                    if let chunks = extras?.usageChunks?.filter({ !$0.parts.isEmpty }), !chunks.isEmpty { chunkCard(chunks) }
-                    if let mw = extras?.measureWords?.filter({ !$0.word.isEmpty }), !mw.isEmpty { measureCard(mw) }
-                    if let related = extras?.allRelated, !related.isEmpty { relatedCard(related) }
-                    if let ctx = extras?.usageContext, !ctx.isEmpty { textCard("使う場面", icon: "mappin.and.ellipse", ctx) }
-                    if let mn = extras?.mnemonic, !mn.isEmpty { textCard("覚え方", icon: "lightbulb", mn) }
-                    if !headword.isEmpty { realUsageCard }
+                    if let ctx = extras?.usageContext, !ctx.isEmpty { textCard("使う場面", icon: "bubble.left.and.text.bubble.right", ctx) }
+                    ForEach(prefs.visible.filter(hasContent)) { section in
+                        sectionView(section)
+                    }
                     footer
                 }
                 .padding(.horizontal, 16)
@@ -67,6 +68,25 @@ struct WordDetailView: View {
                 }
             }
         }
+        .alert("単語を直す", isPresented: $editingHead) {
+            TextField("繁体字で入力", text: $headDraft)
+            Button("キャンセル", role: .cancel) {}
+            Button("直す") { saveHeadword() }
+        } message: {
+            Text("この写真が指す単語だけを変えます。中身は新しく作ります。")
+        }
+        .overlay(alignment: .bottom) {
+            if let toast {
+                Text(toast)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(Theme.foreground.opacity(0.92), in: Capsule())
+                    .padding(.bottom, 30)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .confirmationDialog("この単語を図鑑から削除しますか？", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("削除", role: .destructive) {
                 Task {
@@ -85,6 +105,23 @@ struct WordDetailView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Theme.muted)
             Spacer()
+            Button {
+                Haptics.selection()
+                showSections = true
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.foreground)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.card, in: Circle())
+                    .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+            }
+            .buttonStyle(PressableStyle(scale: 0.9))
+            .accessibilityLabel("表示する項目と順番")
+            .popover(isPresented: $showSections, arrowEdge: .top) {
+                SectionsPanel(prefs: prefs)
+                    .presentationCompactAdaptation(.popover)
+            }
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
@@ -107,6 +144,20 @@ struct WordDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
                 ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy)
+                    .opacity(isSavingHead ? 0.4 : 1)
+                Button {
+                    headDraft = headword
+                    editingHead = true
+                } label: {
+                    Group {
+                        if isSavingHead { ProgressView() } else { Image(systemName: "pencil") }
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.muted)
+                    .frame(width: 44, height: 44)
+                }
+                .disabled(isSavingHead)
+                .accessibilityLabel("単語を直す")
                 Spacer(minLength: 8)
                 PronounceCircle(text: headword, size: 50)
             }
@@ -120,17 +171,20 @@ struct WordDetailView: View {
             }
             HStack {
                 Spacer()
-                Button {
-                    let subject = "CatchWords 報告: \(headword)"
-                    let q = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                    if let url = URL(string: "mailto:support@catchwords.app?subject=\(q)") { openURL(url) }
+                Menu {
+                    Section("どこが違う？") {
+                        Button("発音・読み") { sendReport("pronunciation") }
+                        Button("意味") { sendReport("meaning") }
+                        Button("品詞") { sendReport("pos") }
+                        Button("その他") { sendReport("other") }
+                    }
                 } label: {
                     Label("報告", systemImage: "flag")
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.muted)
-                        .frame(minHeight: 32)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
-                .accessibilityHint("読みや意味の誤りを知らせます")
+                .accessibilityLabel("この語の誤りを報告")
             }
         }
         .padding(.horizontal, 20)
@@ -343,7 +397,7 @@ struct WordDetailView: View {
     // MARK: - Sections
 
     private var meaningCard: some View {
-        SectionCard(title: "意味", icon: "book") {
+        SectionCard(title: CardSection.meaning.title, icon: CardSection.meaning.icon) {
             Text(word?.meaningJa ?? "")
                 .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(Theme.foreground)
@@ -351,58 +405,138 @@ struct WordDetailView: View {
         }
     }
 
-    private var photoCard: some View {
-        SectionCard(title: "写真", icon: "photo.on.rectangle") {
+    // MARK: - Section routing (card-sections.ts: draw only what has content)
+
+    private var exampleOK: Bool { (word?.exampleSentence ?? "").hasHan }
+    private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { $0.zh.hasHan } }
+    private var chunks: [UsageChunk] { refinedChunks(extras?.usageChunks ?? []) }
+    private var measures: [MeasureWord] { (extras?.measureWords ?? []).filter { !$0.word.isEmpty } }
+    private var pronunciationText: String { nonEmpty([extras?.pronunciationTips, extras?.studyTips]) }
+    private var etymologyText: String { nonEmpty([extras?.etymology, extras?.radicals.map { $0.isEmpty ? "" : "部首: \($0)" }]) }
+    private var taiwanText: String { nonEmpty([extras?.taiwanNote, extras?.trivia, extras?.usageNote]) }
+
+    private func nonEmpty(_ parts: [String?]) -> String {
+        parts.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: "\n\n")
+    }
+
+    private func hasContent(_ s: CardSection) -> Bool {
+        switch s {
+        case .meaning: !(word?.meaningJa ?? "").isEmpty
+        case .example: exampleOK
+        case .examplesExtra: !extraExamples.isEmpty
+        case .usageChunks: !chunks.isEmpty
+        case .measureWords: !measures.isEmpty
+        case .relatedWords: !(extras?.allRelated.isEmpty ?? true) || !(extras?.synonymDiff ?? "").isEmpty
+        case .pronunciationTips: !pronunciationText.isEmpty
+        case .etymology: !etymologyText.isEmpty
+        case .mnemonic: !(extras?.mnemonic ?? "").isEmpty
+        case .taiwanNote: !taiwanText.isEmpty
+        case .realUsage: !headword.isEmpty
+        }
+    }
+
+    @ViewBuilder
+    private func sectionView(_ s: CardSection) -> some View {
+        switch s {
+        case .meaning: meaningCard
+        case .example: exampleCard(word?.exampleSentence ?? "", word?.exampleTranslation)
+        case .examplesExtra: extraExamplesCard
+        case .usageChunks: chunkCard(chunks)
+        case .measureWords: measureCard(measures)
+        case .relatedWords: relatedCard(extras?.allRelated ?? [])
+        case .pronunciationTips: textCard(s.title, icon: s.icon, pronunciationText)
+        case .etymology: textCard(s.title, icon: s.icon, etymologyText)
+        case .mnemonic: textCard(s.title, icon: s.icon, extras?.mnemonic ?? "")
+        case .taiwanNote: textCard(s.title, icon: s.icon, taiwanText)
+        case .realUsage: realUsageCard
+        }
+    }
+
+    /// refineUsageChunks (extras.ts): drop measure-word patterns, sentences, >8 chars, headword-only, duplicates; keep 5.
+    private func refinedChunks(_ raw: [UsageChunk]) -> [UsageChunk] {
+        let mwords = Set(measures.map(\.word))
+        var seen = Set<String>()
+        var out: [UsageChunk] = []
+        for c in raw where !c.parts.isEmpty {
+            let text = c.text
+            if text.count > 8 || text == headword { continue }
+            if text.contains(where: { "。！？!?".contains($0) }) { continue }
+            if c.parts.contains(where: { $0.pos.uppercased() == "M" || mwords.contains($0.text) }) { continue }
+            if mwords.contains(where: { !$0.isEmpty && text.contains($0) }) { continue }
+            if !seen.insert(text).inserted { continue }
+            out.append(c)
+            if out.count == 5 { break }
+        }
+        return out
+    }
+
+    private var extraExamplesCard: some View {
+        SectionCard(title: CardSection.examplesExtra.title, icon: CardSection.examplesExtra.icon) {
             VStack(spacing: 10) {
-                TabView(selection: $photoIndex) {
-                    ForEach(Array(photos.enumerated()), id: \.offset) { idx, path in
-                        let isCut = path == current.cutoutImageUrl
-                        Color(hex: 0xEEF3F9)
-                            .overlay {
-                                StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: isCut ? .fit : .fill)
-                                    .padding(isCut ? 20 : 0)
-                                    .shadow(color: .black.opacity(isCut ? 0.25 : 0), radius: 12, y: 8)
-                                    .allowsHitTesting(false)
+                ForEach(extraExamples, id: \.zh) { ex in
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !ex.scene.isEmpty {
+                                Text(ex.scene)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Theme.primaryInk)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Theme.primary.opacity(0.1), in: Capsule())
                             }
-                            .clipShape(.rect(cornerRadius: 20, style: .continuous))
-                            .tag(idx)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
-                .frame(height: 260)
-
-                HStack(spacing: 10) {
-                    Label(JPDate.monthDay(current.takenAt), systemImage: "calendar")
-                    if let place = current.locationName, !place.isEmpty { Label(place, systemImage: "mappin").lineLimit(1) }
-                    Spacer()
-                }
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-
-                if let cap = current.caption, !cap.isEmpty {
-                    Text(cap).font(AppFont.hand(18)).foregroundStyle(Theme.foreground.opacity(0.85))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if current.cutoutImageUrl == nil, current.objectImageUrl != nil {
-                    Button { Task { await cutOut() } } label: {
-                        HStack(spacing: 8) {
-                            if isCutting { ProgressView().tint(Theme.primaryInk) } else { Image(systemName: "scissors") }
-                            Text(isCutting ? "切り抜いています" : "被写体を切り抜く")
+                            Text(highlighted(ex.zh)).font(.system(size: 18)).lineSpacing(7)
+                            if !ex.ja.isEmpty {
+                                Text(ex.ja).font(.system(size: 14)).foregroundStyle(Theme.muted).lineSpacing(5)
+                            }
                         }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.primaryInk)
-                        .padding(.horizontal, 18)
-                        .frame(minHeight: 44)
-                        .background(Theme.primary.opacity(0.1), in: Capsule())
+                        Spacer(minLength: 0)
+                        PronounceCircle(text: ex.zh, size: 40)
                     }
-                    .buttonStyle(PressableStyle())
-                    .disabled(isCutting)
-                }
-                if let cutoutMessage {
-                    Text(cutoutMessage).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 22, style: .continuous))
                 }
             }
+        }
+    }
+
+    // MARK: - Headword edit & report
+
+    private func saveHeadword() {
+        let next = headDraft
+        isSavingHead = true
+        Task {
+            defer { isSavingHead = false }
+            do {
+                try await dex.setHeadword(current, to: next)
+                Haptics.success()
+                showToast("単語を直しました")
+            } catch {
+                Haptics.warning()
+                showToast((error as? LocalizedError)?.errorDescription ?? "直せませんでした")
+            }
+        }
+    }
+
+    private func sendReport(_ kind: String) {
+        let head = headword
+        Task {
+            do {
+                try await dex.report(headword: head, kind: kind, note: "")
+                Haptics.success()
+                showToast("報告を受け付けました。確かめてから直します")
+            } catch {
+                Haptics.warning()
+                showToast("報告に失敗しました")
+            }
+        }
+    }
+
+    private func showToast(_ text: String) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }
+        Task {
+            try? await Task.sleep(for: .seconds(2.4))
+            withAnimation(.easeOut(duration: 0.25)) { if toast == text { toast = nil } }
         }
     }
 

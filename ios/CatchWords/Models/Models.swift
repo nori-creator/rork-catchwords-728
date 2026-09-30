@@ -63,10 +63,23 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var synonyms: [String]?
     var antonyms: [String]?
     var taiwanNote: String?
+    var examplesExtra: [ExampleExtra]?
+    var pronunciationTips: String?
+    var studyTips: String?
+    var etymology: String?
+    var radicals: String?
+    var trivia: String?
+    var usageNote: String?
+    var synonymDiff: String?
 
     enum CodingKeys: String, CodingKey {
-        case mnemonic, synonyms, antonyms
+        case mnemonic, synonyms, antonyms, etymology, radicals, trivia
         case taiwanNote = "taiwan_note"
+        case examplesExtra = "examples_extra"
+        case pronunciationTips = "pronunciation_tips"
+        case studyTips = "study_tips"
+        case usageNote = "usage_note"
+        case synonymDiff = "synonym_diff"
         case relatedWords = "related_words"
         case frequencyLevel = "frequency_level"
         case registerScale = "register_scale"
@@ -104,6 +117,14 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         synonyms = (try? c.decodeIfPresent([String].self, forKey: .synonyms)).flatMap { $0 }
         antonyms = (try? c.decodeIfPresent([String].self, forKey: .antonyms)).flatMap { $0 }
         taiwanNote = (try? c.decodeIfPresent(String.self, forKey: .taiwanNote)).flatMap { $0 }
+        examplesExtra = (try? c.decodeIfPresent([ExampleExtra].self, forKey: .examplesExtra)).flatMap { $0 }
+        pronunciationTips = (try? c.decodeIfPresent(String.self, forKey: .pronunciationTips)).flatMap { $0 }
+        studyTips = (try? c.decodeIfPresent(String.self, forKey: .studyTips)).flatMap { $0 }
+        etymology = (try? c.decodeIfPresent(String.self, forKey: .etymology)).flatMap { $0 }
+        radicals = (try? c.decodeIfPresent(String.self, forKey: .radicals)).flatMap { $0 }
+        trivia = (try? c.decodeIfPresent(String.self, forKey: .trivia)).flatMap { $0 }
+        usageNote = (try? c.decodeIfPresent(String.self, forKey: .usageNote)).flatMap { $0 }
+        synonymDiff = (try? c.decodeIfPresent(String.self, forKey: .synonymDiff)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).
@@ -184,6 +205,20 @@ nonisolated struct RelatedWord: Codable, Sendable, Hashable {
         kind = ["syn", "ant", "rel"].contains(k) ? k : "rel"
         note = (try? c.decode(String.self, forKey: .note)) ?? ""
         reading = (try? c.decode(String.self, forKey: .reading)) ?? ""
+    }
+}
+
+/// `examples_extra` item: sentence + translation + when you'd say it.
+nonisolated struct ExampleExtra: Codable, Sendable, Hashable {
+    var zh: String
+    var ja: String
+    var scene: String
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        zh = (try? c.decode(String.self, forKey: .zh)) ?? ""
+        ja = (try? c.decode(String.self, forKey: .ja)) ?? ""
+        scene = (try? c.decode(String.self, forKey: .scene)) ?? ""
     }
 }
 

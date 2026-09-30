@@ -185,9 +185,11 @@ final class DexStore {
     }
 
     private func ensureWord(_ draft: CatchDraft) async throws -> String {
-        if let w = try await findWord(headword: draft.candidate.headword) { return w.id }
-        let c = draft.candidate
-        let d = draft.details
+        try await ensureWord(candidate: draft.candidate, details: draft.details)
+    }
+
+    private func ensureWord(candidate c: Candidate, details d: CardDetails?) async throws -> String {
+        if let w = try await findWord(headword: c.headword) { return w.id }
         var extras: Any = [String: Any]()
         if let e = d?.extras, let data = try? JSONEncoder().encode(e), let obj = try? JSONSerialization.jsonObject(with: data) {
             extras = obj
@@ -291,6 +293,49 @@ final class DexStore {
                 takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng
             )
         }
+    }
+
+    /// Points this sticker at another headword (setStickerHeadword). The shared `words` row is never rewritten.
+    func setHeadword(_ sticker: Sticker, to raw: String) async throws {
+        let head = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !head.isEmpty, head.count <= 60 else { throw APIError.message("単語を入れてください。") }
+        guard head.hasHan else { throw APIError.message("学習している言語の単語を入れてください") }
+        if sticker.word?.headword == head { return }
+
+        let wordId: String
+        if let existing = try await findWord(headword: head) {
+            wordId = existing.id
+        } else {
+            let looked = try? await AIService.shared.lookup(text: head)
+            let candidate = Candidate(
+                kind: "text", headword: head, zhuyin: looked?.zhuyin ?? "", pinyin: looked?.pinyin ?? "",
+                meaningJa: looked?.meaningJa ?? "", pos: looked?.pos ?? "", point: [500, 500], confidence: 1, alternatives: []
+            )
+            let details = try? await AIService.shared.cardDetails(for: candidate)
+            wordId = try await ensureWord(candidate: candidate, details: details)
+        }
+        let data = try await client.rest(
+            "PATCH", "stickers?id=eq.\(sticker.id)&select=\(Self.selectColumns)",
+            body: ["word_id": wordId], prefer: "return=representation"
+        )
+        guard let updated = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
+        replace(sticker.id) { old in
+            var s = updated
+            s.lat = old.lat
+            s.lng = old.lng
+            return s
+        }
+    }
+
+    /// Dictionary error report → `entry_reports` (reports.functions.ts). Lands in the admin review queue.
+    func report(headword: String, kind: String, note: String) async throws {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        _ = try await client.rest("POST", "entry_reports", body: [
+            "user_id": uid,
+            "headword": String(headword.prefix(80)),
+            "kind": kind,
+            "note": String(note.prefix(500)),
+        ])
     }
 
     private func replace(_ id: String, _ transform: (Sticker) -> Sticker) {
