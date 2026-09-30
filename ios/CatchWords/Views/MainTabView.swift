@@ -92,6 +92,7 @@ struct MainTabView: View {
             if router.tour == .word { startTourReview() }
         }) { sticker in
             WordDetailView(sticker: sticker)
+                .environment(router)
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.background)
                 .overlay(alignment: .bottom) {

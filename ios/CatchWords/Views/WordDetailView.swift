@@ -6,6 +6,7 @@ struct WordDetailView: View {
     @Environment(DexStore.self) private var dex
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(AppRouter.self) private var router
     let sticker: Sticker
 
     @State private var isCutting: Bool = false
@@ -21,6 +22,8 @@ struct WordDetailView: View {
     @State private var flipAngle: Double = 0
     @State private var showCutout: Bool = false
     @State private var pickingHero: Bool = false
+    @State private var showCurve: Bool = false
+    @State private var curveStore = ReviewStore()
     @State private var editingCaption: Bool = false
     @State private var captionDraft: String = ""
     /// Sections being filled by the server right now (web AutoFillSections).
@@ -417,12 +420,53 @@ struct WordDetailView: View {
             .accessibilityLabel("ひと言を編集")
             Divider().overlay(Theme.border)
             shelfPicker
+            if let pct = dex.memoryPercent(for: current) {
+                Divider().overlay(Theme.border)
+                memoryRow(pct)
+            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
+    }
+
+    /// 記憶の曲線 (web dex.$stickerId ForgettingCurveChart): how likely you remember it now.
+    private func memoryRow(_ pct: Int) -> some View {
+        let lv = MemoryBadge.level(pct)
+        return Button {
+            Haptics.selection()
+            showCurve = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "chart.line.downtrend.xyaxis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.memoryLevels[lv])
+                Text("記憶の曲線")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Theme.foreground.opacity(0.85))
+                Spacer()
+                Text("\(MemoryBadge.labels[lv]) · \(pct)%")
+                    .font(.system(size: 13, weight: .bold).monospacedDigit())
+                    .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+            }
+            .frame(minHeight: 40)
+            .contentShape(.rect)
+        }
+        .buttonStyle(PressableStyle(scale: 0.98))
+        .sheet(isPresented: $showCurve) {
+            ForgettingCurveSheet(sticker: current, store: curveStore, onReviewNow: {
+                showCurve = false
+                dismiss()
+                router.tab = .review
+            })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private var placeChip: some View {
