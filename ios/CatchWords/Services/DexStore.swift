@@ -65,6 +65,9 @@ final class DexStore {
 
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
 
+    /// True when this headword is already in the dex (scan "取得済み").
+    func owns(headword: String) -> Bool { stickers.contains { $0.word?.headword == headword } }
+
     /// Level index (0–5) for every sticker that has a review — feeds the memory bar.
     var memoryLevelCounts: [Int] {
         var out = Array(repeating: 0, count: 6)

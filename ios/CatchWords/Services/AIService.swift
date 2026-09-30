@@ -93,6 +93,61 @@ final class AIService {
         return try JSONDecoder().decode(CardDetails.self, from: data)
     }
 
+    /// wordbook.functions.ts EXTRACT_PROMPT: read the words printed on a vocabulary page (not saved yet).
+    func extractWordbook(image: UIImage) async throws -> WordbookDraft {
+        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 2000, quality: 0.85) else { throw APIError.message("写真を読み込めませんでした。") }
+        let prompt = """
+        あなたは台湾華語(zh-TW / 繁体字 / 注音)の学習アプリの、単語帳読み取りエンジンです。
+        入力画像は単語帳・教科書の語彙ページ・自作の単語リストです。そこに並んでいる語を読み取ってください。
+
+        厳守ルール:
+        - 出力は下記の JSON オブジェクト1つだけ。前置き・後書き・コードフェンス禁止。
+        - 写っている語だけを返す。足さない。関連語や思いついた語を混ぜない。
+        - 台湾教育部準拠の繁体字で返す。簡体字で書かれていれば繁体字に直す。
+        - 注音・拼音・意味がその頁に書かれていればそれを写す。書かれていなければ、その語の正しい読みと意味を補ってよい。
+        - ページ番号・単元番号・記号だけの行、欧文だけの見出しは語ではないので返さない。
+        - 語はページに並んでいる順で返す。
+        - 多くても\(Wordbook.maxEntriesPerPhoto)語まで。
+
+        {"title":"単元名や級(読めなければ空文字)","entries":[{"headword":"繁体字","reading_zhuyin":"注音","pinyin":"拼音","meaning_ja":"意味"}]}
+        """
+        let content: [[String: Any]] = [
+            ["type": "text", "text": prompt],
+            ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]],
+        ]
+        let text: String
+        do {
+            text = try await complete(model: model, content: content, timeout: 60)
+        } catch {
+            text = try await complete(model: fallbackModel, content: content, timeout: 60)
+        }
+        guard let draft = try? JSONDecoder().decode(WordbookDraft.self, from: Self.jsonData(from: text)) else {
+            throw APIError.message("単語帳の形が読み取れませんでした。もう一度撮ってみてください。")
+        }
+        let cleaned = Wordbook.clean(draft.entries)
+        guard !cleaned.isEmpty else { throw APIError.message("このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。") }
+        return WordbookDraft(title: draft.title, entries: cleaned)
+    }
+
+    /// Plain text completion (journal correction, scaffolds).
+    func text(_ prompt: String, timeout: TimeInterval = 40) async throws -> String {
+        do {
+            return try await complete(model: model, content: [["type": "text", "text": prompt]], timeout: timeout)
+        } catch {
+            return try await complete(model: fallbackModel, content: [["type": "text", "text": prompt]], timeout: timeout)
+        }
+    }
+
+    /// JSON completion decoded leniently.
+    func json<T: Decodable>(_ type: T.Type, prompt: String, image: UIImage? = nil, timeout: TimeInterval = 40) async throws -> T {
+        var content: [[String: Any]] = [["type": "text", "text": prompt]]
+        if let image, let jpeg = ImageTools.jpegForUpload(image, maxSide: 1024, quality: 0.8) {
+            content.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]])
+        }
+        let raw = try await complete(model: model, content: content, timeout: timeout)
+        return try JSONDecoder().decode(T.self, from: Self.jsonData(from: raw))
+    }
+
     // MARK: - Transport
 
     private func complete(model: String, content: [[String: Any]], timeout: TimeInterval) async throws -> String {

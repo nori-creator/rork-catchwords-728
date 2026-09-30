@@ -15,6 +15,7 @@ struct CaptureView: View {
     @State private var searchText: String = ""
     @State private var pickerItem: PhotosPickerItem?
     @State private var showPending: Bool = false
+    @State private var showScan: Bool = false
     @State private var reward: RewardPayload?
     @State private var baseZoom: CGFloat = 1
     @State private var positionBeforeSelfie: AVCaptureDevice.Position = .back
@@ -91,6 +92,9 @@ struct CaptureView: View {
                 pickerItem = nil
             }
         }
+        .fullScreenCover(isPresented: $showScan, onDismiss: { Task { await camera.start() } }) {
+            ScanView()
+        }
         .sheet(isPresented: $showTextSearch) { textSearchSheet }
         .sheet(isPresented: $showPending) {
             PendingListView { item in
@@ -142,6 +146,22 @@ struct CaptureView: View {
             HStack {
                 usagePill
                 Spacer()
+                Button {
+                    Haptics.selection()
+                    camera.stop()
+                    showScan = true
+                } label: {
+                    Label("かざす", systemImage: "dot.viewfinder")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.cyan)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 30)
+                        .background(.white.opacity(0.1), in: Capsule())
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel("かざして調べる")
                 if !dex.pending.isEmpty {
                     Button { showPending = true } label: {
                         Label("\(dex.pending.count)", systemImage: "tray.and.arrow.up.fill")
