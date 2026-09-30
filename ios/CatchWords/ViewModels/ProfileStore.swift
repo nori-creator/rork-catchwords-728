@@ -9,14 +9,31 @@ final class ProfileStore {
     var targetLanguage: String = "zh-TW"
     var currentLevel: String = "TOCFL-1"
     var levelGoal: String = "TOCFL-2"
-    var reviewDailyLimit: Int = 10
+    /// 0 = 無制限 (review-batch.ts).
+    var reviewDailyLimit: Int = 20
+    var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 500 : reviewDailyLimit }
     var isSavingAvatar: Bool = false
     var message: String?
 
     private let client = SupabaseClient.shared
 
     static let levelOptions: [(value: String, label: String)] = (1...6).map { ("TOCFL-\($0)", "TOCFL Level \($0)") }
-    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體中文")]
+    static let cefrOptions: [(value: String, label: String)] = ["A1", "A2", "B1", "B2", "C1", "C2"].map { ($0, "CEFR \($0)") }
+    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體字（台灣）")]
+    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "繁體字（台灣）"), ("en", "English")]
+
+    /// TOCFL for 台湾華語, CEFR for English (level-scale.ts).
+    static func levels(for target: String) -> [(value: String, label: String)] {
+        target == "en" ? cefrOptions : levelOptions
+    }
+
+    /// Re-maps a stored level onto the other scale by step (TOCFL-4 ⇄ B2).
+    static func remap(_ value: String, to target: String) -> String {
+        let all = levels(for: target)
+        if all.contains(where: { $0.value == value }) { return value }
+        let step = (levelOptions.firstIndex { $0.value == value } ?? cefrOptions.firstIndex { $0.value == value }) ?? 0
+        return all[min(step, all.count - 1)].value
+    }
 
     func load() async {
         guard let uid = client.userId else { return }
@@ -32,7 +49,7 @@ final class ProfileStore {
         targetLanguage = row["target_language"] as? String ?? "zh-TW"
         if let v = row["current_level"] as? String, !v.isEmpty { currentLevel = v }
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
-        if let v = row["review_daily_limit"] as? Int, v > 0 { reviewDailyLimit = v }
+        if let v = row["review_daily_limit"] as? Int, v >= 0 { reviewDailyLimit = v }
     }
 
     func update(_ fields: [String: Any]) async {
@@ -61,6 +78,20 @@ final class ProfileStore {
         } catch {
             message = "写真を保存できませんでした。"
         }
+    }
+
+    /// 退会: removes the user's photos and every personal row RLS lets the owner delete
+    /// (stickers cascade encounters / reviews / review_history). Shared `words` stay.
+    func deleteAccountData(photoPaths: [String]) async throws {
+        guard let uid = client.userId else { return }
+        for chunk in stride(from: 0, to: photoPaths.count, by: 500) {
+            try? await client.removeObjects(Array(photoPaths[chunk..<min(chunk + 500, photoPaths.count)]))
+        }
+        for table in ["review_history", "reviews", "encounters", "stickers"] {
+            _ = try? await client.rest("DELETE", "\(table)?user_id=eq.\(uid)")
+        }
+        _ = try await client.rest("DELETE", "stickers?user_id=eq.\(uid)")
+        _ = try? await client.rest("DELETE", "profiles?id=eq.\(uid)")
     }
 
     func clearAvatar() async {

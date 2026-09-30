@@ -6,6 +6,7 @@ struct CatchWordsApp: App {
     @State private var dex = DexStore()
     @State private var plan = PlanStore()
     @State private var profile = ProfileStore()
+    @AppStorage("motion.pref") private var motionPref: String = "system"
 
     init() {
         AppFont.registerAll()
@@ -21,6 +22,7 @@ struct CatchWordsApp: App {
                 .environment(profile)
                 .preferredColorScheme(.light)
                 .tint(Theme.primary)
+                .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
         }
     }
 }

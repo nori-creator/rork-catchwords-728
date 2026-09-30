@@ -19,6 +19,7 @@ struct CaptureView: View {
     @State private var baseZoom: CGFloat = 1
     @State private var positionBeforeSelfie: AVCaptureDevice.Position = .back
     @Namespace private var modeBubble
+    @AppStorage("selfie.mode") private var selfieMode: Bool = true
 
     private var isMachine: Bool {
         switch vm.step {
@@ -381,7 +382,7 @@ struct CaptureView: View {
         guard plan.canCatch else { router.showPaywall = true; return }
         flash()
         Task {
-            if let img = await camera.capture() { beginAnalyze(img, askSelfie: vm.mode == .photo) }
+            if let img = await camera.capture() { beginAnalyze(img, askSelfie: vm.mode == .photo && selfieMode) }
         }
     }
 

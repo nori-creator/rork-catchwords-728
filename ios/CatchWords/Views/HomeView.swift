@@ -277,8 +277,10 @@ struct AlbumPage: View {
     let isToday: Bool
     let onOpen: (Sticker) -> Void
     let onCamera: () -> Void
+    @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
 
     var body: some View {
+        let wall = Wallpaper(rawValue: wallRaw) ?? .paper
         VStack(spacing: 0) {
             if items.isEmpty {
                 VStack(spacing: 16) {
@@ -303,11 +305,10 @@ struct AlbumPage: View {
                 layout
             }
         }
-        .padding(14)
+        .padding(14 + wall.inset)
         .background {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0xFBF9F4), Color(hex: 0xF1ECE2)], startPoint: .top, endPoint: .bottom))
-                .shadow(color: Color(hex: 0x5A4630, opacity: 0.18), radius: 16, y: 8)
+            WallpaperSurface(kind: wall)
+                .shadow(color: Color(hex: 0x5A4630, opacity: wall == .frame ? 0.35 : 0.18), radius: 16, y: 8)
         }
     }
 

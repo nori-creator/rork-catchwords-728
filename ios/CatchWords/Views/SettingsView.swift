@@ -1,150 +1,66 @@
 import SwiftUI
 import PhotosUI
 
-/// settings.tsx: grouped white cards on the light background (プロフィール / 言語 / 撮影 / 音と触感 / アカウント).
+/// settings.tsx: small grey section titles outside white cards; every choice is a row of pills with a
+/// sliding blue capsule; language/level open a wheel card. Order matches the web app.
 struct SettingsView: View {
     @Environment(AuthStore.self) private var auth
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
+    @Environment(DexStore.self) private var dex
     @Environment(AppRouter.self) private var router
 
     @AppStorage("photos.sync") private var photoSync: Bool = true
     @AppStorage("haptics.enabled") private var haptics: Bool = true
-    @AppStorage("sound.level") private var soundLevel: String = "full"
+    @AppStorage("sound.level") private var soundLevel: String = "soft"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
-    @State private var confirmSignOut: Bool = false
+    @AppStorage("ipa.pref") private var ipaPref: String = "us"
+    @AppStorage("photo.pref") private var photoPref: String = "auto"
+    @AppStorage("selfie.mode") private var selfieMode: Bool = true
+    @AppStorage("theme.pref") private var themePref: String = "light"
+    @AppStorage("motion.pref") private var motionPref: String = "system"
+    @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
+    @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
+    @AppStorage(ReminderService.timesKey) private var reminderTimes: String = "20:00"
+    @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
+
     @State private var avatarItem: PhotosPickerItem?
     @State private var nameDraft: String = ""
     @FocusState private var nameFocused: Bool
+    @State private var wheel: WheelField?
+    @State private var notifyDenied: Bool = false
+    @State private var themeNote: Bool = false
+    @State private var deleteOpen: Bool = false
+    @State private var deleteText: String = ""
+    @State private var isDeleting: Bool = false
+    @State private var deleteError: String?
+    @State private var confirmSignOut: Bool = false
 
     var body: some View {
-        @Bindable var profile = profile
         ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                proCard.padding(.bottom, 16)
-
-                sectionTitle("プロフィール")
-                card {
-                    VStack(alignment: .leading, spacing: 12) {
-                        fieldLabel("プロフィール写真")
-                        HStack(spacing: 14) {
-                            AvatarView(url: profile.avatarURL, size: 60)
-                                .overlay { if profile.isSavingAvatar { ProgressView() } }
-                            PhotosPicker(selection: $avatarItem, matching: .images) {
-                                Text(profile.avatarURL == nil ? "選ぶ" : "変更")
-                                    .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
-                                    .padding(.horizontal, 20).frame(minHeight: 46)
-                                    .background(Color(hex: 0xF3F7FC), in: Capsule())
-                                    .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
-                            }
-                            if profile.avatarURL != nil {
-                                Button("外す") { Task { await profile.clearAvatar() } }
-                                    .font(.system(size: 16)).foregroundStyle(Theme.muted)
-                                    .frame(minWidth: 44, minHeight: 44)
-                            }
-                        }
-                        fieldLabel("表示名").padding(.top, 6)
-                        TextField("名前", text: $nameDraft)
-                            .font(.system(size: 17))
-                            .focused($nameFocused)
-                            .submitLabel(.done)
-                            .padding(.horizontal, 16).frame(minHeight: 50)
-                            .background(.white, in: .rect(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
-                            .shadow(color: .black.opacity(0.04), radius: 3, y: 2)
-                            .onSubmit(saveName)
-                            .onChange(of: nameFocused) { _, f in if !f { saveName() } }
-                    }
-                }
-
-                sectionTitle("言語").padding(.top, 20)
-                card {
-                    VStack(alignment: .leading, spacing: 10) {
-                        fieldLabel("母語")
-                        menuRow(value: profile.nativeLanguage, options: ProfileStore.nativeOptions) { v in
-                            profile.nativeLanguage = v
-                            Task { await profile.update(["native_language": v]) }
-                        }
-                        fieldLabel("学習言語").padding(.top, 6)
-                        menuRow(value: profile.targetLanguage, options: [("zh-TW", "繁體字（台灣）")]) { _ in }
-                        fieldLabel("今のレベル").padding(.top, 6)
-                        menuRow(value: profile.currentLevel, options: ProfileStore.levelOptions) { v in
-                            profile.currentLevel = v
-                            Task { await profile.update(["current_level": v]) }
-                        }
-                        fieldLabel("目標レベル").padding(.top, 6)
-                        menuRow(value: profile.levelGoal, options: ProfileStore.levelOptions) { v in
-                            profile.levelGoal = v
-                            Task { await profile.update(["level_goal": v]) }
-                        }
-                        fieldLabel("発音表記").padding(.top, 6)
-                        Picker("発音表記", selection: $readingPref) {
-                            Text("注音").tag("zhuyin")
-                            Text("拼音").tag("pinyin")
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(minHeight: 40)
-                        if let m = profile.message {
-                            Text(m).font(.footnote).foregroundStyle(Theme.destructive)
-                        }
-                    }
-                }
-
-                sectionTitle("撮影").padding(.top, 20)
-                card {
-                    Toggle("スマホの写真アプリと同期", isOn: $photoSync).font(.system(size: 16)).frame(minHeight: 44)
-                }
-
-                sectionTitle("音と触感").padding(.top, 20)
-                card {
-                    VStack(alignment: .leading, spacing: 12) {
-                        fieldLabel("効果音")
-                        Picker("効果音", selection: $soundLevel) {
-                            Text("オフ").tag("off")
-                            Text("控えめ").tag("soft")
-                            Text("しっかり").tag("full")
-                        }
-                        .pickerStyle(.segmented)
-                        Toggle("触覚フィードバック", isOn: $haptics).font(.system(size: 16)).frame(minHeight: 44)
-                        Button("音を試す") {
-                            SoundService.shared.play(.impact)
-                            Haptics.impact(.heavy)
-                        }
-                        .font(.system(size: 16, weight: .medium)).frame(minHeight: 44)
-                    }
-                }
-
-                sectionTitle("アカウント").padding(.top, 20)
-                card {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if let email = auth.email {
-                            row { Text("ログイン中"); Spacer(); Text(email).foregroundStyle(Theme.muted).lineLimit(1) }
-                            Divider()
-                        }
-                        Button { Task { await plan.restore() } } label: { row { Text("購入を復元"); Spacer() } }
-                        if let msg = plan.message { Text(msg).font(.footnote).foregroundStyle(Theme.muted).padding(.bottom, 6) }
-                        Divider()
-                        Link(destination: URL(string: "https://catchwords.lovable.app")!) { row { Text("Web版を開く"); Spacer(); Image(systemName: "arrow.up.right") } }
-                        Divider()
-                        Link(destination: URL(string: "https://catchwords.lovable.app/terms")!) { row { Text("利用規約"); Spacer(); Image(systemName: "chevron.right") } }
-                        Divider()
-                        Link(destination: URL(string: "https://catchwords.lovable.app/privacy")!) { row { Text("プライバシーポリシー"); Spacer(); Image(systemName: "chevron.right") } }
-                        Divider()
-                        Button(role: .destructive) { confirmSignOut = true } label: { row { Text("ログアウト").foregroundStyle(Theme.destructive); Spacer() } }
-                    }
-                    .foregroundStyle(Theme.foreground)
-                }
-
-                Text("CatchWords for iPhone 1.0")
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
-                    .frame(maxWidth: .infinity).padding(.top, 16)
+            VStack(alignment: .leading, spacing: 28) {
+                profileSection
+                languageSection
+                studySection
+                notifySection
+                appearanceSection
+                feelSection
+                proSection
+                accountButtons
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 120)
+            .padding(.top, 16)
+            .padding(.bottom, 130)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(AppBackground())
+        .overlay {
+            if let wheel {
+                WheelCard(field: wheel, profile: profile) { closeWheel() }
+                    .transition(.opacity)
+                    .zIndex(3)
+            }
+        }
         .onAppear { nameDraft = profile.displayName }
         .onChange(of: profile.displayName) { _, v in if !nameFocused { nameDraft = v } }
         .onChange(of: avatarItem) { _, item in
@@ -156,9 +72,338 @@ struct SettingsView: View {
                 avatarItem = nil
             }
         }
-        .confirmationDialog("ログアウトしますか？", isPresented: $confirmSignOut, titleVisibility: .visible) {
-            Button("ログアウト", role: .destructive) { auth.signOut() }
+        .confirmationDialog("サインアウトしますか？", isPresented: $confirmSignOut, titleVisibility: .visible) {
+            Button("サインアウト", role: .destructive) { auth.signOut() }
         }
+    }
+
+    // MARK: - Sections
+
+    private var profileSection: some View {
+        SettingsCard(title: "プロフィール") {
+            VStack(alignment: .leading, spacing: 12) {
+                label("プロフィール写真")
+                HStack(spacing: 14) {
+                    AvatarView(url: profile.avatarURL, size: 60)
+                        .overlay { if profile.isSavingAvatar { ProgressView() } }
+                    PhotosPicker(selection: $avatarItem, matching: .images) {
+                        Text(profile.avatarURL == nil ? "選ぶ" : "変更")
+                            .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
+                            .padding(.horizontal, 18).frame(minHeight: 46)
+                            .background(Color(hex: 0xF3F7FC), in: Capsule())
+                            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+                    }
+                    .buttonStyle(PressableStyle())
+                    if profile.avatarURL != nil {
+                        Button("外す") { Task { await profile.clearAvatar() } }
+                            .font(.system(size: 16)).foregroundStyle(Theme.muted)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                }
+                label("表示名").padding(.top, 4)
+                TextField("名前", text: $nameDraft)
+                    .font(.system(size: 17))
+                    .focused($nameFocused)
+                    .submitLabel(.done)
+                    .padding(.horizontal, 14).frame(minHeight: 48)
+                    .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+                    .onSubmit(saveName)
+                    .onChange(of: nameFocused) { _, f in if !f { saveName() } }
+            }
+        }
+    }
+
+    private var languageSection: some View {
+        let isEnglish = profile.targetLanguage == "en"
+        let levels = ProfileStore.levels(for: profile.targetLanguage)
+        return SettingsCard(title: "言語") {
+            VStack(alignment: .leading, spacing: 10) {
+                label("母語")
+                wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? "日本語") { openWheel(.native) }
+                label("学習言語").padding(.top, 6)
+                wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? "繁體字（台灣）") { openWheel(.target) }
+                label("今のレベル").padding(.top, 6)
+                wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
+                label("目標レベル").padding(.top, 6)
+                wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
+                label("発音表記").padding(.top, 6)
+                if isEnglish {
+                    ChoicePills(options: [("us", "IPA アメリカ"), ("uk", "IPA イギリス")], selection: $ipaPref)
+                } else {
+                    ChoicePills(options: [("zhuyin", "ㄅㄆㄇ 注音"), ("pinyin", "abc ピンイン")], selection: $readingPref)
+                }
+                if let m = profile.message {
+                    Text(m).font(.footnote).foregroundStyle(Theme.destructive)
+                }
+            }
+        }
+    }
+
+    private var studySection: some View {
+        SettingsCard(title: "学習設定") {
+            VStack(alignment: .leading, spacing: 10) {
+                label("表示するタイプ")
+                ChoicePills(options: [("object", "元の写真"), ("selfie", "自撮り")], selection: $photoPref)
+                label("1日の復習枚数").padding(.top, 6)
+                ChoicePills(
+                    options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", "無制限")],
+                    selection: Binding(
+                        get: { String(profile.reviewDailyLimit) },
+                        set: { v in
+                            let n = Int(v) ?? 20
+                            profile.reviewDailyLimit = n
+                            Task { await profile.update(["review_daily_limit": n]) }
+                        }
+                    )
+                )
+                Divider().overlay(Theme.border).padding(.top, 8)
+                SettingsToggle(title: "自撮りモード", detail: "単語を撮ったあと、続けてその場の自分を撮る画面に進みます", isOn: $selfieMode)
+                Divider().overlay(Theme.border)
+                SettingsToggle(title: "カメラロールに保存", detail: "撮った写真をスマホの写真アプリにも残します", isOn: $photoSync)
+            }
+        }
+    }
+
+    private var notifySection: some View {
+        SettingsCard(title: "通知") {
+            VStack(alignment: .leading, spacing: 10) {
+                label("復習の通知")
+                ChoicePills(
+                    options: [("off", "オフ"), ("ai", "自動"), ("custom", "時刻を指定")],
+                    selection: Binding(get: { reminderMode }, set: { setReminderMode($0) })
+                )
+                if reminderMode == "custom" { timesEditor.transition(.opacity.combined(with: .move(edge: .top))) }
+                if notifyDenied {
+                    notice("通知が許可されていません。iPhoneの「設定」→「CatchWords」→「通知」から許可してください。")
+                }
+                Divider().overlay(Theme.border).padding(.top, 8)
+                SettingsToggle(
+                    title: "場所でリマインド",
+                    detail: "単語を撮った場所の近くに来ると、その単語を通知で思い出させます",
+                    isOn: Binding(get: { placeRemind }, set: { setPlaceRemind($0) })
+                )
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.86), value: reminderMode)
+        }
+    }
+
+    private var appearanceSection: some View {
+        SettingsCard(title: "外観") {
+            VStack(alignment: .leading, spacing: 10) {
+                label("画面の明るさ")
+                ChoicePills(
+                    options: [("light", "ライト"), ("dark", "ダーク"), ("system", "システム")],
+                    selection: Binding(get: { themePref }, set: { v in
+                        themePref = v
+                        withAnimation { themeNote = v != "light" }
+                    })
+                )
+                if themeNote {
+                    Text("ダーク表示は次のアップデートで対応します。今はライトで表示されます。")
+                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                }
+                label("アニメーション").padding(.top, 6)
+                ChoicePills(options: [("system", "自動"), ("full", "見せる"), ("reduce", "減らす")], selection: $motionPref)
+                label("ホームの壁紙").padding(.top, 10)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
+                    ForEach(Wallpaper.allCases) { w in
+                        WallpaperSwatch(kind: w, isSelected: wallRaw == w.rawValue) {
+                            Haptics.selection()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { wallRaw = w.rawValue }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var feelSection: some View {
+        SettingsCard(title: "音と手ざわり") {
+            VStack(alignment: .leading, spacing: 10) {
+                label("効果音")
+                ChoicePills(
+                    options: [("off", "オフ"), ("soft", "控えめ"), ("full", "しっかり")],
+                    selection: Binding(get: { soundLevel }, set: { v in
+                        soundLevel = v
+                        if v != "off" { SoundService.shared.play(.impact) }
+                    })
+                )
+                SettingsToggle(title: "振動", detail: nil, isOn: Binding(get: { haptics }, set: { v in
+                    haptics = v
+                    if v { Haptics.impact(.medium) }
+                }))
+                .padding(.top, 6)
+            }
+        }
+    }
+
+    private var proSection: some View {
+        SettingsCard(title: "CatchWords Pro") {
+            VStack(alignment: .leading, spacing: 10) {
+                if plan.isPro {
+                    Text("Pro をご利用中です").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text("撮影は無制限です").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                } else {
+                    Text("今日あと\(plan.remainingToday)回撮れます").font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    Button { router.showPaywall = true } label: {
+                        Text("Proにアップグレード").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(pillFill, in: Capsule())
+                            .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                HStack(spacing: 18) {
+                    Button("購入を復元") { Task { await plan.restore() } }
+                    Link("利用規約", destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                    Link("プライバシー", destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                }
+                .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                if let msg = plan.message { Text(msg).font(.footnote).foregroundStyle(Theme.muted) }
+            }
+        }
+    }
+
+    private var accountButtons: some View {
+        VStack(spacing: 20) {
+            Button { confirmSignOut = true } label: {
+                Label("サインアウト", systemImage: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(.white, in: Capsule())
+                    .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+                    .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+            }
+            .buttonStyle(PressableStyle())
+
+            deleteZone
+
+            Text("CatchWords for iPhone 1.0")
+                .font(.system(size: 12)).foregroundStyle(Theme.muted)
+        }
+    }
+
+    private var deleteZone: some View {
+        let armed = ["削除", "DELETE", "刪除"].contains(deleteText.trimmingCharacters(in: .whitespaces).uppercased())
+        return VStack(alignment: .leading, spacing: 12) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { deleteOpen.toggle() }
+            } label: {
+                HStack {
+                    Text("アカウントを削除").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(hex: 0xB42329))
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xB42329).opacity(0.7))
+                        .rotationEffect(.degrees(deleteOpen ? 180 : 0))
+                }
+                .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if deleteOpen {
+                Text("撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。")
+                    .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                Text("確認のため「削除」と入力してください").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                TextField("削除", text: $deleteText)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .padding(.horizontal, 14).frame(minHeight: 46)
+                    .background(.white, in: .rect(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+                Button { Task { await deleteAccount() } } label: {
+                    HStack(spacing: 8) {
+                        if isDeleting { ProgressView().tint(.white) } else { Image(systemName: "trash") }
+                        Text(isDeleting ? "削除しています…" : "完全に削除する")
+                    }
+                    .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(Theme.destructive.opacity(armed ? 1 : 0.4), in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
+                .disabled(!armed || isDeleting)
+                if let deleteError { Text(deleteError).font(.footnote).foregroundStyle(Theme.destructive) }
+            }
+        }
+        .padding(.horizontal, 20).padding(.vertical, 10)
+        .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
+    }
+
+    private var timesEditor: some View {
+        let times = ReminderService.parseTimes(reminderTimes)
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(times.enumerated()), id: \.offset) { i, t in
+                HStack {
+                    DatePicker("通知の時刻", selection: Binding(
+                        get: { Self.date(from: t) },
+                        set: { d in
+                            var list = times
+                            list[i] = Self.hhmm(d)
+                            saveTimes(list)
+                        }
+                    ), displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    if times.count > 1 {
+                        Button { var list = times; list.remove(at: i); saveTimes(list) } label: {
+                            Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel("この時刻を消す")
+                    }
+                    Spacer()
+                }
+            }
+            if times.count < 3 {
+                Button { saveTimes(times + ["20:00"]) } label: {
+                    Label("時刻を追加", systemImage: "plus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primary)
+                        .frame(minHeight: 44)
+                }
+            }
+        }
+    }
+
+    // MARK: - Pieces
+
+    private var pillFill: LinearGradient {
+        LinearGradient(colors: [Theme.primaryBright, Theme.primaryDeep], startPoint: .top, endPoint: .bottom)
+    }
+
+    private func label(_ t: String) -> some View {
+        Text(t).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+    }
+
+    private func notice(_ t: String) -> some View {
+        Text(t).font(.system(size: 12)).foregroundStyle(Color(hex: 0x7A4B00))
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: 0xFFF5DB), in: .rect(cornerRadius: 12))
+    }
+
+    private func wheelRow(_ value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(value).font(.system(size: 18)).foregroundStyle(Theme.foreground)
+                Spacer()
+                Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+            }
+            .padding(.horizontal, 20).frame(minHeight: 56)
+            .background(LinearGradient(colors: [.white, Color(hex: 0xEEF5FF)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        in: .rect(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.primary.opacity(0.2), lineWidth: 1))
+            .shadow(color: Theme.primary.opacity(0.06), radius: 6, y: 3)
+        }
+        .buttonStyle(PressableStyle(scale: 0.98))
+    }
+
+    // MARK: - Actions
+
+    private func openWheel(_ f: WheelField) {
+        Haptics.selection()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { wheel = f }
+    }
+
+    private func closeWheel() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) { wheel = nil }
     }
 
     private func saveName() {
@@ -168,63 +413,239 @@ struct SettingsView: View {
         Task { await profile.update(["display_name": v]) }
     }
 
-    private var proCard: some View {
-        Button { router.showPaywall = !plan.isPro } label: {
-            HStack(spacing: 14) {
-                Image(systemName: plan.isPro ? "crown.fill" : "sparkles")
-                    .font(.system(size: 20, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
-                    .background(plan.isPro ? AnyShapeStyle(Theme.gold) : AnyShapeStyle(Theme.brandGradient), in: .rect(cornerRadius: 14))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(plan.isPro ? "CatchWords Pro" : "Proにアップグレード").font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.foreground)
-                    Text(plan.isPro ? "撮影は無制限です" : "今日あと\(plan.remainingToday)回 · 無制限にする").font(.system(size: 13)).foregroundStyle(Theme.muted)
+    private func setReminderMode(_ mode: String) {
+        Task {
+            if mode != "off", reminderMode == "off" {
+                guard await ReminderService.requestPermission() else {
+                    withAnimation { notifyDenied = true }
+                    return
                 }
-                Spacer()
-                if !plan.isPro { Image(systemName: "chevron.right").foregroundStyle(Theme.muted) }
             }
-            .padding(16)
-            .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            notifyDenied = false
+            reminderMode = mode
+            await ReminderService.applyReview(mode: mode, times: ReminderService.parseTimes(reminderTimes))
         }
-        .buttonStyle(PressableStyle(scale: 0.98))
     }
 
-    private func sectionTitle(_ t: String) -> some View {
-        Text(t).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted).padding(.leading, 6)
+    private func saveTimes(_ list: [String]) {
+        reminderTimes = list.joined(separator: ",")
+        Task { await ReminderService.applyReview(mode: reminderMode, times: list) }
     }
 
-    private func fieldLabel(_ t: String) -> some View {
-        Text(t).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+    private func setPlaceRemind(_ on: Bool) {
+        Task {
+            if on, !(await ReminderService.requestPermission()) {
+                withAnimation { notifyDenied = true }
+                placeRemind = false
+                return
+            }
+            placeRemind = on
+            await ReminderService.applyPlaces(enabled: on, stickers: dex.stickers)
+        }
     }
 
-    private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        content()
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
+    private func deleteAccount() async {
+        isDeleting = true
+        deleteError = nil
+        let paths = dex.stickers.flatMap { [$0.objectImageUrl, $0.cutoutImageUrl, $0.selfieImageUrl].compactMap { $0 } }
+            .filter { !$0.hasPrefix("http") }
+        do {
+            try await profile.deleteAccountData(photoPaths: paths)
+            isDeleting = false
+            auth.signOut()
+        } catch {
+            isDeleting = false
+            deleteError = "削除できませんでした。通信を確かめて、もう一度お試しください。"
+        }
     }
 
-    private func row<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        HStack { content() }.font(.system(size: 16)).frame(minHeight: 48).contentShape(Rectangle())
+    private static func date(from hhmm: String) -> Date {
+        let p = hhmm.split(separator: ":").compactMap { Int($0) }
+        return Calendar.current.date(bySettingHour: p.first ?? 20, minute: p.last ?? 0, second: 0, of: Date()) ?? Date()
     }
 
-    private func menuRow(value: String, options: [(value: String, label: String)], onPick: @escaping (String) -> Void) -> some View {
-        Menu {
+    private static func hhmm(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        return String(format: "%02d:%02d", c.hour ?? 20, c.minute ?? 0)
+    }
+}
+
+// MARK: - Building blocks
+
+/// Section title (small, grey, outside) + white rounded card.
+struct SettingsCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted).padding(.leading, 6)
+            content
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        }
+    }
+}
+
+/// ChoiceRow: equal-width pills; the selected one is a glowing blue capsule that slides between them.
+struct ChoicePills: View {
+    let options: [(value: String, label: String)]
+    @Binding var selection: String
+    @Namespace private var ns
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 8) {
             ForEach(options, id: \.value) { o in
-                Button { Haptics.selection(); onPick(o.value) } label: {
-                    if o.value == value { Label(o.label, systemImage: "checkmark") } else { Text(o.label) }
+                let on = o.value == selection
+                Button {
+                    guard !on else { return }
+                    Haptics.selection()
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.72)) { selection = o.value }
+                } label: {
+                    Text(o.label)
+                        .font(.system(size: 16, weight: on ? .bold : .regular))
+                        .foregroundStyle(on ? .white : Theme.foreground)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 4)
+                        .background {
+                            Capsule()
+                                .fill(LinearGradient(colors: [.white, Color(hex: 0xF1F6FD)], startPoint: .top, endPoint: .bottom))
+                                .overlay(Capsule().stroke(Color(hex: 0xC9DDF5), lineWidth: 1))
+                            if on {
+                                Capsule()
+                                    .fill(LinearGradient(colors: [Theme.primaryBright, Theme.primaryDeep], startPoint: .top, endPoint: .bottom))
+                                    .shadow(color: Theme.primary.opacity(0.4), radius: 10, y: 6)
+                                    .matchedGeometryEffect(id: "pill", in: ns)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(PressableStyle(scale: 0.95))
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// ToggleRow: title, optional grey one-liner, blue switch.
+struct SettingsToggle: View {
+    let title: String
+    let detail: String?
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { isOn }, set: { v in Haptics.selection(); isOn = v })) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                if let detail {
+                    Text(detail).font(.system(size: 13)).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }
-        } label: {
-            HStack {
-                Text(options.first { $0.value == value }?.label ?? value).font(.system(size: 18)).foregroundStyle(Theme.foreground)
-                Spacer()
-                Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+        }
+        .tint(Theme.primary)
+        .frame(minHeight: 48)
+    }
+}
+
+enum WheelField: Identifiable {
+    case native, target, current, goal
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .native: "母語"
+        case .target: "学習言語"
+        case .current: "今のレベル"
+        case .goal: "目標レベル"
+        }
+    }
+}
+
+/// WheelPicker: dimmed backdrop, centred white card with title, ×, wheel and 「閉じる」.
+struct WheelCard: View {
+    let field: WheelField
+    let profile: ProfileStore
+    let onClose: () -> Void
+    @State private var value: String = ""
+    @State private var appeared: Bool = false
+
+    private var options: [(value: String, label: String)] {
+        switch field {
+        case .native: ProfileStore.nativeOptions
+        case .target: ProfileStore.targetOptions
+        case .current, .goal: ProfileStore.levels(for: profile.targetLanguage)
+        }
+    }
+
+    private var initial: String {
+        switch field {
+        case .native: profile.nativeLanguage
+        case .target: profile.targetLanguage
+        case .current: profile.currentLevel
+        case .goal: profile.levelGoal
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4).ignoresSafeArea()
+                .onTapGesture(perform: onClose)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(field.title).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("閉じる")
+                }
+                Picker(field.title, selection: $value) {
+                    ForEach(options, id: \.value) { o in Text(o.label).tag(o.value) }
+                }
+                .pickerStyle(.wheel)
+                .frame(height: 150)
+                .onChange(of: value) { _, v in commit(v) }
+                Button(action: onClose) {
+                    Text("閉じる").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(Theme.primary, in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
             }
-            .padding(.horizontal, 20).frame(minHeight: 58)
-            .background(Color(hex: 0xF5F9FF), in: .rect(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.primary.opacity(0.2), lineWidth: 1))
+            .padding(.horizontal, 20).padding(.vertical, 16)
+            .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
+            .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
+            .padding(.horizontal, 20)
+            .scaleEffect(appeared ? 1 : 0.94)
+        }
+        .onAppear {
+            value = initial
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) { appeared = true }
+        }
+    }
+
+    private func commit(_ v: String) {
+        guard !v.isEmpty, v != initial else { return }
+        Haptics.selection()
+        switch field {
+        case .native:
+            profile.nativeLanguage = v
+            Task { await profile.update(["native_language": v]) }
+        case .target:
+            profile.targetLanguage = v
+            profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
+            profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
+            Task { await profile.update(["target_language": v, "current_level": profile.currentLevel, "level_goal": profile.levelGoal]) }
+        case .current:
+            profile.currentLevel = v
+            Task { await profile.update(["current_level": v]) }
+        case .goal:
+            profile.levelGoal = v
+            Task { await profile.update(["level_goal": v]) }
         }
     }
 }

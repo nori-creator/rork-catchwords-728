@@ -31,7 +31,7 @@ struct ReviewView: View {
                 .padding(.top, 8)
                 .padding(.bottom, answer == nil ? 120 : 420)
             }
-            .refreshable { await store.load(dex: dex, limit: profile.reviewDailyLimit) }
+            .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
         .overlay(alignment: .bottom) {
             if let answer, let card = store.current {
@@ -68,7 +68,7 @@ struct ReviewView: View {
             }
         }
         .task {
-            if !store.hasLoaded { await store.load(dex: dex, limit: profile.reviewDailyLimit) }
+            if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
     }
 
@@ -107,7 +107,7 @@ struct ReviewView: View {
         if let err = store.loadError, store.queue.isEmpty {
             VStack(spacing: 12) {
                 Label(err, systemImage: "wifi.exclamationmark").foregroundStyle(Theme.foreground)
-                Button("もう一度読み込む") { Task { await store.load(dex: dex, limit: profile.reviewDailyLimit) } }
+                Button("もう一度読み込む") { Task { await store.load(dex: dex, limit: profile.effectiveReviewLimit) } }
                     .foregroundStyle(Theme.primary)
             }
             .frame(maxWidth: .infinity).padding(.top, 60)
