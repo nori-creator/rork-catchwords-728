@@ -32,6 +32,7 @@ struct UIPreviewRoot: View {
                                                CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
             case "album": AlbumPreview()
             case "hero": HeroPickerPreview()
+            case "journal": JournalPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -227,6 +228,29 @@ private struct HeroPickerPreview: View {
     var body: some View {
         HeroPhotoPickerSheet(sticker: Self.sticker) { _ in }
             .padding(.top, 60)
+    }
+}
+/// The diary's AI correction result (corrected text, pattern notes, native phrases).
+private struct JournalPreview: View {
+    private static let entry: JournalEntry = {
+        let json = #"""
+        {"id":"j","entry_date":"2026-09-30","body_zh":null,"body_ja":null,
+         "user_draft":"今天我去咖啡店，我喝咖啡很好喝。",
+         "correction":"今天我去了咖啡店，喝的咖啡很好喝。",
+         "feedback_ja":"・「去了」で、もう行ったことを表します。\n・「我喝咖啡很好喝」は主語が2つに見えるので「喝的咖啡很好喝」にまとめます。",
+         "native_phrases":[{"zh":"這杯咖啡超好喝的！","ja":"このコーヒー、めっちゃおいしい！","note":"友だちに感動を伝えるとき"},
+                           {"zh":"我今天去咖啡廳坐了一下","ja":"今日はカフェでちょっと過ごした","note":"「坐一下」はくつろぐニュアンス"}]}
+        """#
+        return try! JSONDecoder().decode(JournalEntry.self, from: Data(json.utf8))
+    }()
+
+    var body: some View {
+        ScrollView {
+            CorrectionBlock(entry: Self.entry, highlight: true)
+                .padding(16)
+                .padding(.top, 50)
+        }
+        .background(Theme.background)
     }
 }
 #endif

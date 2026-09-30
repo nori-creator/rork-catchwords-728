@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(ProfileStore.self) private var profile
     @Environment(AppRouter.self) private var router
     @State private var writingDay: WritingDay?
+    @State private var showJournal = false
     @AppStorage("album.span") private var spanRaw: String = AlbumSpan.day.rawValue
 
     private var span: AlbumSpan { AlbumSpan(rawValue: spanRaw) ?? .day }
@@ -71,6 +72,16 @@ struct HomeView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 14)
 
+                    Button { showJournal = true } label: {
+                        Label("過去の日記と添削", systemImage: "books.vertical")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x33291F, opacity: 0.7))
+                            .frame(minHeight: 40)
+                    }
+                    .buttonStyle(PressableStyle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 22)
+
                     StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
@@ -133,6 +144,9 @@ struct HomeView: View {
         .sheet(item: $writingDay) { d in
             DiaryComposer(day: d.date)
                 .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showJournal) {
+            JournalHistoryView()
         }
     }
 

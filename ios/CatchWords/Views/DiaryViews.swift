@@ -63,14 +63,20 @@ struct RuledPaper: View {
 }
 
 /// Writing sheet: keeps the device copy on every keystroke (date-keyed) so nothing is lost
-/// if the save never reaches the server.
+/// if the save never reaches the server. On today's page it also offers the web JournalComposer's
+/// help: questions made from today's catches, sentence patterns, and the AI correction.
 struct DiaryComposer: View {
     let day: Date
     @Environment(DiaryStore.self) private var diary
     @Environment(DexStore.self) private var dex
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text: String = ""
+    @State private var justCorrected = false
     @FocusState private var focused: Bool
+
+    private var isToday: Bool { Calendar.current.isDateInToday(day) }
+    private var entry: JournalEntry? { diary.entry(for: day) }
 
     private var todaysWords: [String] {
         let cal = Calendar.current
@@ -79,54 +85,37 @@ struct DiaryComposer: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-                if !todaysWords.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(Set(todaysWords)).sorted(), id: \.self) { w in
-                                Button {
-                                    Haptics.selection()
-                                    text += w
-                                } label: {
-                                    Text(w)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(Theme.primaryInk)
-                                        .padding(.horizontal, 12)
-                                        .frame(minHeight: 36)
-                                        .background(Theme.accent, in: Capsule())
-                                }
-                                .buttonStyle(PressableStyle())
-                                .accessibilityHint("本文に入れる")
-                            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if !todaysWords.isEmpty { wordChips }
+                        if isToday, entry?.correction == nil, let sc = diary.scaffold {
+                            ScaffoldCard(scaffold: sc) { insert($0) }
+                                .padding(.horizontal, 16)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                         }
+                        editor
+                        if let m = diary.message {
+                            Text(m).font(.system(size: 13)).foregroundStyle(Theme.destructive).padding(.horizontal, 16)
+                        }
+                        if isToday { correctButton }
+                        if let e = entry, e.correction != nil || !(e.nativePhrases ?? []).isEmpty {
+                            CorrectionBlock(entry: e, highlight: justCorrected)
+                                .padding(.horizontal, 16)
+                                .id("result")
+                                .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+                        }
+                        Color.clear.frame(height: 24)
                     }
-                    .contentMargins(.horizontal, 16)
-                    Text("今日キャッチした語を押すと本文に入ります")
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
-                        .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.86), value: entry)
+                    .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.86), value: diary.scaffold)
                 }
-                TextEditor(text: $text)
-                    .font(AppFont.hand(21))
-                    .foregroundStyle(Color(hex: 0x33291F))
-                    .scrollContentBackground(.hidden)
-                    .padding(12)
-                    .background(RuledPaper().clipShape(.rect(cornerRadius: 14)))
-                    .overlay(alignment: .topLeading) {
-                        if text.isEmpty {
-                            Text("今日のことを、学んでいる言葉で書いてみよう")
-                                .font(AppFont.hand(19))
-                                .foregroundStyle(Theme.muted.opacity(0.7))
-                                .padding(.horizontal, 18).padding(.vertical, 20)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                    .focused($focused)
-                    .padding(.horizontal, 16)
-                if let m = diary.message {
-                    Text(m).font(.system(size: 13)).foregroundStyle(Theme.destructive).padding(.horizontal, 16)
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: justCorrected) { _, v in
+                    if v { withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) { proxy.scrollTo("result", anchor: .top) } }
                 }
             }
-            .padding(.top, 8)
             .background(Theme.background)
             .navigationTitle("\(JPDate.monthDay(day))の日記")
             .navigationBarTitleDisplayMode(.inline)
@@ -148,15 +137,317 @@ struct DiaryComposer: View {
                     } label: {
                         if diary.isSaving { ProgressView() } else { Text("保存").bold() }
                     }
-                    .disabled(diary.isSaving)
+                    .disabled(diary.isSaving || diary.isCorrecting)
                 }
             }
         }
         .onAppear {
             text = diary.draft(for: day) ?? diary.text(for: day)
-            focused = true
+            focused = text.isEmpty
+        }
+        .task {
+            if !diary.journalLoaded { await diary.loadJournal() }
+            if isToday { await diary.loadScaffold() }
         }
         .onChange(of: text) { _, v in diary.keepDraft(v, for: day) }
+    }
+
+    private var wordChips: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(Set(todaysWords)).sorted(), id: \.self) { w in
+                        Button {
+                            Haptics.selection()
+                            text += w
+                        } label: {
+                            Text(w)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Theme.primaryInk)
+                                .padding(.horizontal, 12)
+                                .frame(minHeight: 36)
+                                .background(Theme.accent, in: Capsule())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityHint("本文に入れる")
+                    }
+                }
+            }
+            .contentMargins(.horizontal, 16)
+            Text("今日キャッチした語を押すと本文に入ります")
+                .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                .padding(.horizontal, 16)
+        }
+    }
+
+    private var editor: some View {
+        TextEditor(text: $text)
+            .font(AppFont.hand(21))
+            .foregroundStyle(Color(hex: 0x33291F))
+            .scrollContentBackground(.hidden)
+            .frame(minHeight: 220)
+            .padding(12)
+            .background(RuledPaper().clipShape(.rect(cornerRadius: 14)))
+            .overlay(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text(isToday ? "例: 今天早上我去咖啡店…" : "この日のことを、学んでいる言葉で書いてみよう")
+                        .font(AppFont.hand(19))
+                        .foregroundStyle(Theme.muted.opacity(0.7))
+                        .padding(.horizontal, 18).padding(.vertical, 20)
+                        .allowsHitTesting(false)
+                }
+            }
+            .focused($focused)
+            .padding(.horizontal, 16)
+    }
+
+    private var correctButton: some View {
+        let ready = text.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2
+        return VStack(alignment: .leading, spacing: 6) {
+            Button {
+                focused = false
+                Task {
+                    justCorrected = false
+                    if await diary.correct(text, for: day) {
+                        Haptics.success()
+                        SoundService.shared.play(.bookOpen)
+                        justCorrected = true
+                    } else {
+                        Haptics.warning()
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if diary.isCorrecting {
+                        ProgressView().tint(.white).controlSize(.small)
+                    } else {
+                        Image(systemName: "wand.and.stars")
+                            .symbolEffect(.bounce, value: justCorrected)
+                    }
+                    Text(diary.isCorrecting ? "添削中…" : "AIに添削してもらう")
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(ready ? .white : Theme.muted)
+                .padding(.horizontal, 20)
+                .frame(minHeight: 46)
+                .background {
+                    if ready {
+                        Capsule().fill(Theme.brandGradient).shadow(color: Theme.primary.opacity(0.3), radius: 10, y: 4)
+                    } else {
+                        Capsule().fill(Theme.secondary)
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+            .disabled(!ready || diary.isCorrecting)
+            Text("書いたものはこの端末に控えてあります。添削が通らなくても消えません。")
+                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    /// Adds a pattern at the end — never over what is already written.
+    private func insert(_ zh: String) {
+        Haptics.selection()
+        let trimmed = text.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+        text = trimmed.isEmpty ? zh : trimmed + "\n" + zh
+    }
+}
+
+/// 「今日撮ったものから」: questions tied to today's catches, and patterns that insert on tap.
+private struct ScaffoldCard: View {
+    let scaffold: JournalScaffold
+    let onUsePattern: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("今日撮ったものから", systemImage: "sparkles")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.primaryInk)
+            ForEach(Array(scaffold.prompts.enumerated()), id: \.offset) { _, p in
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(p.questionZh)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.foreground)
+                        Text(p.questionJa)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.muted)
+                        if let id = p.stickerId, let head = scaffold.captures.first(where: { $0.id == id })?.headword {
+                            Text("「\(head)」のこと")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Theme.primaryInk.opacity(0.8))
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    PronounceCircle(text: p.questionZh, size: 36)
+                }
+                .padding(10)
+                .background(Theme.secondary.opacity(0.7), in: .rect(cornerRadius: 12, style: .continuous))
+            }
+            if !scaffold.patterns.isEmpty {
+                Divider().padding(.vertical, 2)
+                Text("この型が使えます")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+                FlowRow(spacing: 6) {
+                    ForEach(Array(scaffold.patterns.enumerated()), id: \.offset) { _, pt in
+                        Button { onUsePattern(pt.zh) } label: {
+                            Text(pt.zh)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.primaryInk)
+                                .padding(.horizontal, 12)
+                                .frame(minHeight: 36)
+                                .background(Theme.primary.opacity(0.1), in: Capsule())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityHint(pt.ja)
+                    }
+                }
+                Text("押すと下に入ります").font(.system(size: 11)).foregroundStyle(Theme.muted)
+            }
+        }
+        .padding(14)
+        .background(Theme.card, in: .rect(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border))
+        .shadow(color: .black.opacity(0.04), radius: 8, y: 3)
+    }
+}
+
+/// The corrected text, the notes on patterns, and 「ネイティブならこう言う」 (web EntryBlock + NativePhrases).
+struct CorrectionBlock: View {
+    let entry: JournalEntry
+    var highlight: Bool = false
+    var compact: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let c = entry.correction ?? entry.bodyZh, !c.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    if !compact {
+                        Text("✦ 添削後").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.primaryInk)
+                    }
+                    HStack(alignment: .top) {
+                        Text(c)
+                            .font(.system(size: 17))
+                            .foregroundStyle(Theme.foreground)
+                            .lineSpacing(5)
+                            .textSelection(.enabled)
+                        Spacer(minLength: 0)
+                        if !compact { PronounceCircle(text: c, size: 36) }
+                    }
+                    if let f = entry.feedbackJa, !f.isEmpty {
+                        Text("型と解説").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.muted).padding(.top, 4)
+                        Text(f).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(3)
+                    }
+                    if entry.correction == nil, let ja = entry.bodyJa, !ja.isEmpty {
+                        Text(ja).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                    }
+                }
+                .padding(compact ? 0 : 16)
+                .background {
+                    if !compact {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.card)
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(highlight ? Theme.primary.opacity(0.45) : Theme.border, lineWidth: highlight ? 1.5 : 1))
+                            .shadow(color: Theme.primary.opacity(highlight ? 0.15 : 0.03), radius: highlight ? 16 : 6, y: 4)
+                    }
+                }
+            }
+            if let phrases = entry.nativePhrases, !phrases.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("ネイティブならこう言う", systemImage: "quote.opening")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.primaryInk)
+                    ForEach(Array(phrases.enumerated()), id: \.offset) { _, p in
+                        HStack(alignment: .top, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(p.zh).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                                Text(p.ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                                if let n = p.note, !n.isEmpty {
+                                    Text(n).font(.system(size: 12)).foregroundStyle(Theme.muted.opacity(0.9))
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            PronounceCircle(text: p.zh, size: 32)
+                        }
+                        .padding(12)
+                        .background(Theme.card, in: .rect(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.border.opacity(0.7)))
+                    }
+                }
+                .padding(compact ? 0 : 14)
+                .background(compact ? Color.clear : Theme.primary.opacity(0.05), in: .rect(cornerRadius: 18, style: .continuous))
+            }
+        }
+    }
+}
+
+/// 「過去の日記」: the last 30 days with their corrections (web /journal).
+struct JournalHistoryView: View {
+    @Environment(DiaryStore.self) private var diary
+    @Environment(\.dismiss) private var dismiss
+
+    private var past: [JournalEntry] {
+        let today = DiaryStore.key(Date())
+        return diary.journal.filter { $0.entryDate != today && ($0.correction ?? $0.userDraft ?? $0.bodyZh) != nil }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    if !diary.journalLoaded {
+                        ForEach(0..<3, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 18).fill(Theme.secondary).frame(height: 110)
+                        }
+                        .redacted(reason: .placeholder)
+                    } else if diary.journalFailed {
+                        VStack(spacing: 10) {
+                            Text("日記を読み込めませんでした。").foregroundStyle(Theme.muted)
+                            Button("もう一度") { Task { await diary.loadJournal() } }
+                        }
+                        .frame(maxWidth: .infinity).padding(.top, 60)
+                    } else if past.isEmpty {
+                        ContentUnavailableView("まだ過去の日記はありません", systemImage: "book.closed",
+                                               description: Text("書いた日記と添削はここに並びます。"))
+                            .padding(.top, 40)
+                    } else {
+                        ForEach(past) { e in
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(DiaryStore.date(from: e.entryDate).map { JPDate.monthDay($0) } ?? e.entryDate)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Theme.muted)
+                                if let draft = e.userDraft, !draft.isEmpty {
+                                    Text(draft)
+                                        .font(AppFont.hand(19))
+                                        .foregroundStyle(Color(hex: 0x33291F))
+                                        .lineSpacing(5)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(14)
+                                        .background(RuledPaper().clipShape(.rect(cornerRadius: 12)))
+                                }
+                                if e.correction != nil || e.bodyZh != nil || !(e.nativePhrases ?? []).isEmpty {
+                                    CorrectionBlock(entry: e, compact: true)
+                                }
+                            }
+                            .padding(16)
+                            .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border))
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .background(Theme.background)
+            .navigationTitle("過去の日記")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("閉じる") { dismiss() } }
+            }
+            .refreshable { await diary.loadJournal() }
+            .task { await diary.loadJournal() }
+        }
     }
 }
 
