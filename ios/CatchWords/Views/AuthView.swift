@@ -130,6 +130,17 @@ struct AuthView: View {
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(Theme.primary)
             .frame(minHeight: 44)
+            if AuthStore.devSkipLogin {
+                Button {
+                    Task { await auth.enterAsGuest() }
+                } label: {
+                    Label("ログインせずに入る（開発用）", systemImage: "arrow.right.circle")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.muted)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(PressableStyle())
+            }
         }
     }
 

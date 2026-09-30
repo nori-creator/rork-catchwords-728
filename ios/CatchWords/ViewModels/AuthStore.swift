@@ -17,13 +17,21 @@ final class AuthStore {
     var infoMessage: String?
     var email: String? { SupabaseClient.shared.session?.email }
 
+    /// Development only: enter the app without logging in. Set to false before App Store release.
+    static let devSkipLogin: Bool = true
+    /// True while inside the app without a real account (guest mode).
+    var isGuest: Bool = false
+
     private let client = SupabaseClient.shared
     private var currentNonce: String?
 
     /// Session check with an 8s timeout — never an endless silent spinner (route.tsx lesson).
     func bootstrap() async {
         phase = .checking
-        guard client.session != nil else { phase = .signedOut; return }
+        guard client.session != nil else {
+            if Self.devSkipLogin { await enterAsGuest() } else { phase = .signedOut }
+            return
+        }
         let result = await withTaskGroup(of: Bool?.self) { group -> Bool? in
             group.addTask { [client] in
                 do {
@@ -106,8 +114,22 @@ final class AuthStore {
         }
     }
 
+    /// Tries a Supabase anonymous session (so saving works); falls back to a local-only guest entry.
+    func enterAsGuest() async {
+        do {
+            try await client.signInAnonymously()
+            isGuest = false
+        } catch {
+            print("[Auth] anonymous sign-in unavailable, entering local guest mode")
+            isGuest = true
+        }
+        errorMessage = nil
+        phase = .signedIn
+    }
+
     func signOut() {
         client.signOut()
+        isGuest = false
         phase = .signedOut
     }
 

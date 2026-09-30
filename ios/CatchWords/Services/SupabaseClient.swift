@@ -73,6 +73,12 @@ final class SupabaseClient {
         return false
     }
 
+    /// Supabase anonymous sign-in (only works when anonymous sign-ins are enabled on the project).
+    func signInAnonymously() async throws {
+        let json = try await authRequest(path: "signup", body: [:])
+        try storeSession(json)
+    }
+
     func signInWithApple(idToken: String, nonce: String) async throws {
         let json = try await authRequest(
             path: "token?grant_type=id_token",
