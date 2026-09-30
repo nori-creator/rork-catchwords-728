@@ -703,7 +703,7 @@ struct DexListRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressableStyle(scale: 0.98))
-            PronounceCircle(text: sticker.word?.headword ?? "", size: 46)
+            PronounceCircle(text: sticker.word?.headword ?? "", size: 46, prefetch: false)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

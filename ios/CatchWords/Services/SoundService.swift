@@ -79,9 +79,102 @@ final class SoundService {
         }
     }
 
-    /// Always the same zh-TW voice for the same device (never falls back to a "close" language).
+    // MARK: - Pronunciation (the web's server voice)
+
+    /// The same voice as the web (`synthesizeSpeech`: the developer-chosen TTS provider, cached in the
+    /// `tts` bucket). Each text is fetched once and kept on the device, so repeats are instant and offline.
+    /// Only when the server is slow (>2.5 s) or unreachable does the device voice speak instead —
+    /// pressing the button must never be silent.
+    private var voicePlayer: AVAudioPlayer?
+    private var inflight: [String: Task<Data?, Never>] = [:]
+    private var speakToken = 0
+
+    private static let ttsDir: URL = {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("tts", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    private static func cacheURL(for text: String) -> URL {
+        let key = text.unicodeScalars.reduce(into: UInt64(1469598103934665603)) { h, c in
+            h = (h ^ UInt64(c.value)) &* 1099511628211
+        }
+        return ttsDir.appendingPathComponent("\(NativeAPI.targetLanguage)-\(String(key, radix: 16)).mp3")
+    }
+
+    /// Warm the cache (e.g. when candidates appear) so the first tap plays at once.
+    func prefetch(_ text: String) {
+        guard !text.isEmpty else { return }
+        _ = audio(for: text)
+    }
+
+    private func audio(for text: String) -> Task<Data?, Never> {
+        if let t = inflight[text] { return t }
+        let file = Self.cacheURL(for: text)
+        let task = Task<Data?, Never> {
+            if let d = try? Data(contentsOf: file) { return d }
+            struct Res: Decodable {
+                let audioURL: String?
+                let locked: Bool?
+                enum CodingKeys: String, CodingKey { case locked, audioURL = "audio_url" }
+            }
+            guard let res = try? await NativeAPI.call(
+                "synthesizeSpeech", ["text": String(text.prefix(400)), "language": NativeAPI.targetLanguage],
+                as: Res.self, timeout: 20
+            ), res.locked != true, let raw = res.audioURL else { return nil }
+            let data: Data?
+            if raw.hasPrefix("data:"), let comma = raw.firstIndex(of: ",") {
+                data = Data(base64Encoded: String(raw[raw.index(after: comma)...]))
+            } else if let url = URL(string: raw) {
+                data = try? await URLSession.shared.data(from: url).0
+            } else {
+                data = nil
+            }
+            if let data, !data.isEmpty { try? data.write(to: file, options: .atomic) }
+            return data
+        }
+        inflight[text] = task
+        Task {
+            _ = await task.value
+            inflight[text] = nil
+        }
+        return task
+    }
+
     func speak(_ text: String) {
-        guard !text.isEmpty, let voice else { return }
+        guard !text.isEmpty else { return }
+        speakToken += 1
+        let token = speakToken
+        voicePlayer?.stop()
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        let task = audio(for: text)
+        Task {
+            // Whichever comes first: the audio, or 2.5 s of waiting (then the device voice speaks,
+            // and the fetch keeps going so the next tap is instant).
+            let data: Data? = await withTaskGroup(of: Data?.self) { group in
+                group.addTask { await task.value }
+                group.addTask {
+                    try? await Task.sleep(for: .milliseconds(2500))
+                    return nil
+                }
+                let first: Data?? = await group.next()
+                group.cancelAll()
+                return first ?? nil
+            }
+            guard token == speakToken else { return }
+            if let data, let player = try? AVAudioPlayer(data: data) {
+                voicePlayer = player
+                player.volume = 1
+                player.play()
+            } else {
+                speakOnDevice(text)
+            }
+        }
+    }
+
+    /// Device voice fallback: always the same zh-TW voice (never a "close" language).
+    private func speakOnDevice(_ text: String) {
+        guard let voice else { return }
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = voice

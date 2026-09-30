@@ -329,6 +329,8 @@ struct CollectHeader: View {
 struct PronounceCircle: View {
     let text: String
     var size: CGFloat = 42
+    /// Off in long lists (the dex list), where warming every row would synthesize words nobody plays.
+    var prefetch: Bool = true
 
     var body: some View {
         Button { SoundService.shared.speak(text) } label: {
@@ -342,5 +344,7 @@ struct PronounceCircle: View {
         }
         .buttonStyle(PressableStyle(scale: 0.9))
         .accessibilityLabel("発音を聞く")
+        // Web `pronounce.prefetch`: fetch the server voice when the button appears, so the tap is instant.
+        .task(id: text) { if prefetch { SoundService.shared.prefetch(text) } }
     }
 }

@@ -96,41 +96,30 @@ final class ReviewStore {
         return ([correct] + out).shuffled()
     }
 
-    /// gradeReview: correct=5 (−1 if slow >8s), wrong=1.
+    /// Graded by the web's own `gradeReview` (reviews.functions.ts): the same scoring (correct=5,
+    /// −1 when slow, wrong=1), the same interval engine (SM-2 with the Jev guardrails) and the same
+    /// history rows as the web — so a word comes due on the same day on the iPhone and on the web.
+    /// If the server cannot be reached, nothing is written locally (a half-graded card would drift).
     func grade(_ card: ReviewCard, correct: Bool, responseMs: Int, dex: DexStore) async {
-        var score = correct ? 5 : 1
-        if correct && responseMs > 8000 { score -= 1 }
         if correct { correctCount += 1 }
         let r = card.review
-        let elapsed = r.lastReviewedAt.map { Date().timeIntervalSince($0) / 86_400 }
-        let next = SRS.next(.init(ease: r.ease, intervalDays: r.intervalDays, repetitions: r.repetitions ?? 0), score: score, elapsedDays: elapsed)
         let now = Date()
-        let due = now.addingTimeInterval(Double(next.intervalDays) * 86_400)
         guard let rid = r.id else { return }
-        _ = try? await client.rest("PATCH", "reviews?id=eq.\(rid)", body: [
-            "ease": next.ease,
-            "interval_days": next.intervalDays,
-            "repetitions": next.repetitions,
-            "last_score": score,
-            "last_reviewed_at": SupabaseDate.string(now),
-            "due_at": SupabaseDate.string(due),
-        ])
-        if let uid = client.userId {
-            _ = try? await client.rest("POST", "review_history", body: [
-                "user_id": uid,
-                "review_id": rid,
-                "sticker_id": r.stickerId,
-                "score": score,
-                "correct": correct,
-                "blur_seen": false,
-                "response_ms": responseMs,
-                "interval_days_after": next.intervalDays,
-                "ease_after": next.ease,
-                "repetitions_after": next.repetitions,
-            ])
+        struct Graded: Decodable {
+            let score: Int?
+            let intervalDays: Double?
+            enum CodingKeys: String, CodingKey { case score, intervalDays = "interval_days" }
         }
+        let graded = try? await NativeAPI.call("gradeReview", [
+            "review_id": rid,
+            "correct": correct,
+            "blur_seen": false,
+            "response_ms": max(0, responseMs),
+        ], as: Graded.self, timeout: 20)
+        let intervalAfter = graded?.intervalDays.map { Int($0.rounded()) } ?? r.intervalDays
         doneToday += 1
-        if let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: next.intervalDays, easeAfter: next.ease) {
+        if graded != nil,
+           let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: intervalAfter, easeAfter: r.ease) {
             allHistory.insert(row, at: 0)
         }
         if streak == 0 || !Calendar.current.isDateInToday(now) { streak = max(streak, 1) }
