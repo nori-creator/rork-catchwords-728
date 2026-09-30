@@ -364,7 +364,9 @@ struct ParticleBurst: View {
         let isStar: Bool
     }
 
-    private let particles: [Particle] = (0..<22).map { i in
+    /// Drawn once (State): a plain `let` was re-randomized whenever the parent redrew, so the
+    /// stars jumped to new directions mid-flight.
+    @State private var particles: [Particle] = (0..<22).map { i in
         Particle(
             id: i,
             angle: Double(i) / 22 * 360 + Double.random(in: -8...8),
@@ -392,7 +394,7 @@ struct ParticleBurst: View {
                             y: active ? sin(p.angle * .pi / 180) * r * p.distance : 0)
                     .scaleEffect(active ? 0.3 : 1)
                     .opacity(active ? 0 : 1)
-                    .animation(.easeOut(duration: Double.random(in: 0.7...1.1)), value: active)
+                    .animation(.easeOut(duration: 0.7 + Double(p.id % 5) * 0.1), value: active)
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
