@@ -53,6 +53,7 @@ final class DexStore {
             let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
             await loadShelves()
             await loadAlbumHidden()
+            await loadAlbumPlacements()
             stickers = rows
             loadError = nil
             hasLoaded = true
@@ -379,6 +380,52 @@ final class DexStore {
         if !ok {
             if hidden { albumHidden.remove(id) } else { albumHidden.insert(id) }
         }
+    }
+
+    /// Where the learner placed each photo on the album page (web album_x / album_y / album_scale /
+    /// album_rot / album_order / album_size). Read on its own so a database without these columns
+    /// never breaks the dex (web listMyStickers keeps the same fallback).
+    var albumPlacements: [String: DayLayoutSticker] = [:]
+
+    func loadAlbumPlacements() async {
+        struct Row: Decodable {
+            let id: String
+            let album_order: Int?
+            let album_size: String?
+            let album_x: Double?
+            let album_y: Double?
+            let album_scale: Double?
+            let album_rot: Double?
+        }
+        guard let data = try? await client.rest("GET", "stickers?select=id,album_order,album_size,album_x,album_y,album_scale,album_rot&limit=3000"),
+              let rows = try? JSONDecoder().decode([Row].self, from: data) else { return }
+        var out: [String: DayLayoutSticker] = [:]
+        for r in rows {
+            out[r.id] = DayLayoutSticker(id: r.id, albumOrder: r.album_order, albumSize: r.album_size.flatMap(AlbumSize.init(rawValue:)),
+                                         albumX: r.album_x, albumY: r.album_y, albumScale: r.album_scale, albumRot: r.album_rot)
+        }
+        albumPlacements = out
+    }
+
+    /// Saves one day's arrangement (web `saveAlbumLayout`). Returns false if nothing was saved.
+    func saveAlbumLayout(_ items: [(id: String, order: Int, size: AlbumSize, place: AlbumPlacement)]) async -> Bool {
+        let payload: [[String: Any]] = items.map { i in
+            ["sticker_id": i.id, "order": i.order, "size": i.size.rawValue,
+             "x": AlbumLayout.clamp(i.place.x, 0, 1), "y": AlbumLayout.clamp(i.place.y, 0, 8),
+             "scale": AlbumLayout.clamp(i.place.scale, 0.45, 2.6), "rot": AlbumLayout.clamp(i.place.rot, -180, 180)]
+        }
+        guard (try? await NativeAPI.call("saveAlbumLayout", ["items": payload], timeout: 30)) != nil else { return false }
+        for i in items {
+            var d = albumPlacements[i.id] ?? DayLayoutSticker(id: i.id)
+            d.albumOrder = i.order
+            d.albumSize = i.size
+            d.albumX = i.place.x
+            d.albumY = i.place.y
+            d.albumScale = i.place.scale
+            d.albumRot = i.place.rot
+            albumPlacements[i.id] = d
+        }
+        return true
     }
 
     // MARK: - Shelves (web categories.functions.ts)

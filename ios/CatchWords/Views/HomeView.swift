@@ -398,7 +398,8 @@ struct AlbumPage: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 260)
             } else {
-                layout
+                // Web album-day-layout: the same collage (and the same hand-placed positions) as the web.
+                CollageBoard(items: items, editable: isToday, onOpen: onOpen)
             }
         }
         .padding(14 + wall.inset)

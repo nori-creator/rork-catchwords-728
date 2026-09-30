@@ -27,6 +27,7 @@ struct UIPreviewRoot: View {
             case "tabbar": TabBarPreview()
             case "reward": RewardPreview()
             case "analyzing": AnalyzingView(photo: PreviewFixtures.photo) {}
+            case "album": AlbumPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -148,6 +149,37 @@ private struct RewardPreview: View {
                 round += 1
             }
         }
+    }
+}
+
+/// Today's album page (web collage layout) with four made-up catches whose photos sit in the image cache.
+private struct AlbumPreview: View {
+    private static let words = [("芒果", "マンゴー"), ("盤子", "お皿"), ("咖啡", "コーヒー"), ("雨傘", "傘")]
+
+    private static let stickers: [Sticker] = words.enumerated().compactMap { i, w in
+        let json = #"{"id":"w\#(i)","headword":"\#(w.0)","meaning_ja":"\#(w.1)"}"#
+        guard let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8)) else { return nil }
+        let path = "preview/\(i).jpg"
+        let img = UIGraphicsImageRenderer(size: CGSize(width: 600, height: i % 2 == 0 ? 760 : 480)).image { ctx in
+            let hues: [CGFloat] = [0.12, 0.55, 0.08, 0.62]
+            UIColor(hue: hues[i], saturation: 0.45, brightness: 0.92, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 760))
+            UIColor(hue: hues[i], saturation: 0.7, brightness: 0.7, alpha: 1).setFill()
+            ctx.cgContext.fillEllipse(in: CGRect(x: 150, y: 150, width: 300, height: 260))
+        }
+        ImageCache.shared.set(img, for: path)
+        return Sticker(id: "s\(i)", wordId: "w\(i)", objectImageUrl: path, cutoutImageUrl: nil, selfieImageUrl: nil,
+                       caption: i == 2 ? "駅前のカフェで" : nil, locationName: nil,
+                       takenAt: Date().addingTimeInterval(Double(-i) * 1800), captureType: "photo", word: word)
+    }
+
+    var body: some View {
+        ScrollView {
+            AlbumPage(items: Self.stickers, isToday: true, onOpen: { _ in }, onCamera: {})
+                .padding(16)
+                .padding(.top, 50)
+        }
+        .background(AppBackground())
     }
 }
 
