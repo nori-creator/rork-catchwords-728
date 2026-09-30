@@ -457,7 +457,13 @@ struct DexCoverFlow: View {
                 ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 24, weight: .semibold)
                 Text(s.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.foreground.opacity(0.85)).lineLimit(1)
                 Spacer(minLength: 4)
-                Text(JPDate.monthDay(s.takenAt)).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                HStack(spacing: 8) {
+                    Text(JPDate.monthDay(s.takenAt))
+                    if let place = s.locationName, !place.isEmpty {
+                        Label(place, systemImage: "mappin").lineLimit(1)
+                    }
+                }
+                .font(.system(size: 12)).foregroundStyle(Theme.muted)
             }
             .padding(14)
             .frame(width: width, alignment: .leading)
@@ -600,14 +606,23 @@ struct DexMapView: View {
         }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
-                DatePicker("日付", selection: Binding(get: { day ?? Date() }, set: { day = Calendar.current.startOfDay(for: $0) }),
-                           in: ...Date(), displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .environment(\.locale, Locale(identifier: "ja_JP"))
-                    .padding()
-                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { showDatePicker = false } } }
+                ScrollView {
+                    DexCalendarView(stickers: stickers, selectedDay: $day, onOpen: onOpen) { picked in
+                        day = picked
+                        panelOpen = true
+                        showDatePicker = false
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showDatePicker = false } label: { Image(systemName: "xmark") }
+                            .accessibilityLabel("閉じる")
+                    }
+                }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
+            .presentationContentInteraction(.scrolls)
         }
     }
 
@@ -627,12 +642,21 @@ struct DexMapView: View {
         }
     }
 
+    private func focusOn(_ s: Sticker) {
+        guard let la = s.lat, let lo = s.lng else { return }
+        withAnimation(.easeInOut(duration: 0.5)) {
+            position = .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: la - 0.0025, longitude: lo),
+                                                  span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
+        }
+    }
+
     private func pin(_ s: Sticker) -> some View {
         let isOn = s.id == selectedId
         let path = s.objectImageUrl ?? s.cutoutImageUrl
         return Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedId = s.id; panelOpen = true }
+            focusOn(s)
         } label: {
             VStack(spacing: 4) {
                 Theme.secondary.frame(width: isOn ? 64 : 48, height: isOn ? 64 : 48)
@@ -666,10 +690,22 @@ struct DexMapView: View {
                             }
                             .frame(width: 16)
                             VStack(alignment: .leading, spacing: 10) {
-                                Text(JPDate.time(s.takenAt))
-                                    .font(.system(size: 17, weight: .bold)).monospacedDigit()
-                                    .foregroundStyle(isOn ? Theme.primaryInk : Theme.foreground)
-                                Button { onOpen(s) } label: {
+                                HStack(spacing: 8) {
+                                    Text(JPDate.time(s.takenAt))
+                                        .font(.system(size: 17, weight: .bold)).monospacedDigit()
+                                        .foregroundStyle(isOn ? Theme.primaryInk : Theme.foreground)
+                                    if let place = s.locationName, !place.isEmpty {
+                                        Label(place, systemImage: "mappin")
+                                            .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
+                                    }
+                                }
+                                Button {
+                                    if isOn { onOpen(s) } else {
+                                        Haptics.selection()
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
+                                        focusOn(s)
+                                    }
+                                } label: {
                                     HStack(spacing: 14) {
                                         Theme.secondary.frame(width: 64, height: 64)
                                             .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
@@ -684,6 +720,9 @@ struct DexMapView: View {
                                         }
                                         Spacer(minLength: 0)
                                     }
+                                    .padding(isOn ? 8 : 0)
+                                    .background(isOn ? Theme.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 20, style: .continuous))
+                                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isOn ? Theme.primary.opacity(0.35) : .clear, lineWidth: 1))
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(PressableStyle(scale: 0.98))
@@ -691,9 +730,6 @@ struct DexMapView: View {
                             .padding(.bottom, 16)
                         }
                         .id(s.id)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
-                        }
                     }
                 }
                 .padding(18)

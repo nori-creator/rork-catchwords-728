@@ -6,6 +6,8 @@ struct DexCalendarView: View {
     let stickers: [Sticker]
     @Binding var selectedDay: Date?
     let onOpen: (Sticker) -> Void
+    /// When set, tapping a day hands it back instead of opening the in-sheet timeline (used by the map).
+    var onPickDay: ((Date) -> Void)? = nil
 
     @State private var month: Date = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
     @State private var timelineDay: Date?
@@ -27,21 +29,32 @@ struct DexCalendarView: View {
     }
 
     private var monthGrid: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button { shift(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
+        let monthItems = stickers.filter { cal.isDate($0.takenAt, equalTo: month, toGranularity: .month) }
+        let dayCount = Set(monthItems.map { cal.startOfDay(for: $0.takenAt) }).count
+        return VStack(spacing: 12) {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(String(cal.component(.year, from: month)))年")
+                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    Text("\(cal.component(.month, from: month))月")
+                        .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.primaryInk)
+                    Text("\(monthItems.count)枚・\(dayCount)日")
+                        .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                        .foregroundStyle(Theme.primaryInk)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Theme.primary.opacity(0.12), in: Capsule())
+                        .padding(.top, 4)
+                }
                 Spacer()
-                Text(month.formatted(.dateTime.year().month(.wide)))
-                    .font(.system(size: 17, weight: .bold))
-                Spacer()
-                Button { shift(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
+                navCircle("chevron.left") { shift(-1) }.accessibilityLabel("前の月")
+                navCircle("chevron.right") { shift(1) }.accessibilityLabel("次の月")
             }
-            .foregroundStyle(Theme.foreground)
 
             let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
             LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(weekdays, id: \.self) { w in
-                    Text(w).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
+                ForEach(Array(weekdays.enumerated()), id: \.offset) { i, w in
+                    Text(w).font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(i == 0 ? Color(hex: 0xE5484D) : i == 6 ? Theme.primary : Theme.muted)
                 }
                 ForEach(Array(days().enumerated()), id: \.offset) { _, day in
                     if let day {
@@ -52,8 +65,7 @@ struct DexCalendarView: View {
                 }
             }
         }
-        .padding(14)
-        .background(Theme.card.opacity(0.7), in: .rect(cornerRadius: 22))
+        .padding(4)
         .gesture(DragGesture(minimumDistance: 30).onEnded { v in
             if v.translation.width < -40 { shift(1) } else if v.translation.width > 40 { shift(-1) }
         })
@@ -63,36 +75,49 @@ struct DexCalendarView: View {
         let items = stickers.filter { cal.isDate($0.takenAt, inSameDayAs: day) }
         let first = items.first
         let isToday = cal.isDateInToday(day)
+        let weekday = cal.component(.weekday, from: day)
+        let isSelected = selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false
+        let path = first.map { $0.objectImageUrl ?? $0.cutoutImageUrl }
         return Button {
             guard !items.isEmpty else { return }
             Haptics.selection()
-            timelineDay = day
+            if let onPickDay { onPickDay(cal.startOfDay(for: day)) } else { timelineDay = day }
         } label: {
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10).fill(Theme.surface2.opacity(items.isEmpty ? 0.25 : 0.6))
-                if let first {
-                    StickerImage(path: first.heroPath, url: dex.url(for: first.heroPath), contentMode: first.cutoutImageUrl != nil ? .fit : .fill)
-                        .padding(first.cutoutImageUrl != nil ? 3 : 0)
-                        .clipShape(.rect(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(first.room.accent.opacity(0.8), lineWidth: 1.5))
+            Color(hex: 0xE8F1FD)
+                .aspectRatio(0.72, contentMode: .fit)
+                .overlay {
+                    if let path {
+                        StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false)
+                    }
                 }
-                Text("\(cal.component(.day, from: day))")
-                    .font(AppFont.mono(10, weight: .bold))
-                    .foregroundStyle(isToday ? Theme.primary : .white)
-                    .padding(3)
-                    .background(items.isEmpty ? .clear : .black.opacity(0.45), in: .rect(cornerRadius: 4))
-                    .padding(3)
-                if items.count > 1 {
-                    Text("+\(items.count - 1)")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(Theme.primary, in: Capsule())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                        .padding(3)
+                .clipShape(.rect(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(first == nil ? .clear : Theme.primary, lineWidth: isSelected ? 3.5 : 2)
+                )
+                .overlay(alignment: first == nil ? .center : .bottomLeading) {
+                    Text("\(cal.component(.day, from: day))")
+                        .font(.system(size: first == nil ? 13 : 12, weight: .bold)).monospacedDigit()
+                        .foregroundStyle(first != nil ? .white : weekday == 1 ? Color(hex: 0xE5484D) : weekday == 7 ? Theme.primary : Theme.muted)
+                        .shadow(color: first != nil ? .black.opacity(0.6) : .clear, radius: 2)
+                        .padding(first == nil ? 0 : 5)
                 }
-            }
-            .aspectRatio(0.8, contentMode: .fit)
+                .overlay(alignment: .topTrailing) {
+                    if items.count > 1 {
+                        Text("\(items.count)")
+                            .font(.system(size: 10, weight: .bold)).monospacedDigit()
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 18, minHeight: 18)
+                            .background(Theme.primary, in: Circle())
+                            .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                            .padding(3)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if isToday && first == nil {
+                        Circle().fill(Theme.primary).frame(width: 5, height: 5).padding(.top, 6)
+                    }
+                }
         }
         .buttonStyle(PressableStyle(scale: 0.92))
         .disabled(items.isEmpty)
@@ -153,6 +178,16 @@ struct DexCalendarView: View {
         .gesture(DragGesture(minimumDistance: 30).onEnded { v in
             if v.translation.width > 60 { timelineDay = nil }
         })
+    }
+
+    private func navCircle(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                .frame(width: 44, height: 44)
+                .background(Theme.secondary, in: Circle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.9))
     }
 
     private func shift(_ delta: Int) {
