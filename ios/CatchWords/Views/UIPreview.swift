@@ -26,7 +26,10 @@ struct UIPreviewRoot: View {
             case "picker": PickerPreview()
             case "tabbar": TabBarPreview()
             case "reward": RewardPreview()
-            case "analyzing": AnalyzingView(photo: PreviewFixtures.photo) {}
+            case "analyzing":
+                AnalyzingView(photo: PreviewFixtures.photo,
+                              previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
+                                               CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
             case "album": AlbumPreview()
             default: Text("unknown preview: \(name)")
             }

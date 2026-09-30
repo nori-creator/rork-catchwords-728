@@ -5,6 +5,8 @@ import Vision
 /// glowing motes around it (web: scan-analyzing default). "やめる" top-right, "AIが分析中…" at the bottom.
 struct AnalyzingView: View {
     let photo: UIImage?
+    /// Preview only: boxes to lock onto instead of asking Vision (which may not run on the simulator).
+    var previewTargets: [CGRect]? = nil
     let onCancel: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -88,7 +90,7 @@ struct AnalyzingView: View {
 
     private func findTargets() async {
         guard let photo, let cg = photo.normalizedOrientation().cgImage else { return }
-        let found: [CGRect] = await Task.detached(priority: .userInitiated) {
+        let found: [CGRect] = previewTargets ?? await Task.detached(priority: .userInitiated) {
             let request = VNGenerateObjectnessBasedSaliencyImageRequest()
             try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
             let objects = (request.results?.first?.salientObjects ?? [])

@@ -37,8 +37,9 @@ enum Scene3D {
         m.metallic = .init(floatLiteral: 0)
         m.clearcoat = .init(floatLiteral: 1)
         m.clearcoatRoughness = .init(floatLiteral: 0.02)
-        m.blending = .transparent(opacity: .init(floatLiteral: 0.2))
-        m.faceCulling = .none
+        // Thin and clear: back faces culled so the two walls don't stack into milk.
+        m.blending = .transparent(opacity: .init(floatLiteral: 0.14))
+        m.faceCulling = .back
         return m
     }
 

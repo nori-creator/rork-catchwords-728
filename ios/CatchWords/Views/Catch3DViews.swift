@@ -26,7 +26,9 @@ final class JarScene {
         if let jar = await Scene3D.load(.jar) {
             Scene3D.paint(jar, named: "JarGlass", with: Scene3D.glass)
             Scene3D.paint(jar, named: "JarRim", with: Scene3D.gold)
-            Scene3D.paint(jar, named: "JarStage", with: UnlitMaterial(color: .clear))
+            // The Blender marker plane is only a guide; an "invisible" material still renders
+            // opaque grey in RealityKit and hid the photo — remove it.
+            jar.findEntity(named: "JarStage")?.removeFromParent()
             // The cork is animated on its own: lift it out of the jar model.
             if let cork = jar.findEntity(named: "JarCork") {
                 let world = cork.transformMatrix(relativeTo: nil)
@@ -80,7 +82,7 @@ final class JarScene {
         if let photo {
             var t = photo.transform
             t.scale = .one
-            t.translation = [0, Self.photoY, 0.004]
+            t.translation = [0, Self.photoY, 0.012]
             photo.move(to: t, relativeTo: root, duration: 0.45, timingFunction: .easeInOut)
         }
         if let cork {
