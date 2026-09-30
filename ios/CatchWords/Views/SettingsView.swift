@@ -166,7 +166,7 @@ struct SettingsView: View {
                 Divider().overlay(Theme.border)
                 SettingsToggle(title: "切り抜きモード", detail: "単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます", isOn: $cutoutMode)
                 Divider().overlay(Theme.border)
-                SettingsToggle(title: "3Dの演出", detail: "キャッチの瓶・図鑑の本棚・アルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません", isOn: $fx3D)
+                SettingsToggle(title: "3Dの演出", detail: "図鑑の本棚とアルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません", isOn: $fx3D)
             }
         }
     }

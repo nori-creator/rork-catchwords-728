@@ -57,10 +57,6 @@ struct RewardOverlay: View {
     let onFinish: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
-
-    /// The Blender jar replaces the flat photo at the bloom (never with reduced motion).
-    private var use3D: Bool { fx3D && !reduceMotion }
 
     @State private var dim: Double = 0
     @State private var scaleX: CGFloat = 1
@@ -81,8 +77,6 @@ struct RewardOverlay: View {
     @State private var breathe: Bool = false
     @State private var sweep: CGFloat = -1
     @State private var particles: Bool = false
-    /// The 3D jar takes a moment to load; the flat photo stays up until it is ready (no empty stage).
-    @State private var jarReady: Bool = false
     @State private var exiting: Bool = false
 
     private var boost: CGFloat { 1 + CGFloat(payload.rarity) * 0.25 }
@@ -118,7 +112,7 @@ struct RewardOverlay: View {
                     .opacity(ringOpacity)
                     .offset(y: -geo.size.height * 0.06)
 
-                ParticleBurst(active: particles && !use3D)
+                ParticleBurst(active: particles)
                     .frame(width: side * 1.6, height: side * 1.6)
                     .offset(y: -geo.size.height * 0.06)
 
@@ -144,14 +138,6 @@ struct RewardOverlay: View {
                 .offset(y: side * 0.5 + shadowDrop)
                 .scaleEffect(1 + shadowDrop / 120)
 
-            if use3D {
-                JarCatch3DView(image: payload.image, label: payload.headword, bloom: particles) {
-                    withAnimation(.easeOut(duration: 0.3)) { jarReady = true }
-                }
-                .frame(width: side * 1.3, height: side * 1.3)
-                .opacity(jarReady ? 1 : 0)
-            }
-            if !use3D || !jarReady {
             Group {
                 if payload.isCutout {
                     Image(uiImage: payload.image).resizable().scaledToFit()
@@ -181,7 +167,6 @@ struct RewardOverlay: View {
                 .allowsHitTesting(false)
             }
             .shadow(color: Theme.primary.opacity(0.55), radius: 30)
-            }
         }
         .scaleEffect(x: scale * scaleX * (breathe ? 1.005 : 0.995), y: scale * scaleY * (breathe ? 1.005 : 0.995))
         .rotationEffect(.degrees(tilt))

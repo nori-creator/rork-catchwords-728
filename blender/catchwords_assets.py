@@ -2,7 +2,7 @@
 CatchWords の 3D 素材を Blender で作る（手作業なし・毎回同じ物ができる）。
 
 作る物（ios/CatchWords/Resources/3D/ に .usdz で書き出す）:
-  SpecimenJar.usdz  キャッチの瓶。捕まえた言葉（写真）が中に入る。
+  SpecimenJar.usdz  （廃止・書き出さない）キャッチの瓶。
                     名前付きの部品: JarGlass / JarCork / JarRim / JarLabel / JarStage
   RewardStar.usdz   祝福で飛び散る金の星（立体・面取り）。
   DexBook.usdz      図鑑の本（表紙・背・紙の束）。表紙の色はアプリ側で棚ごとに塗る。
@@ -384,7 +384,7 @@ def render_preview(name, camera_distance, target_z, angle=(62, 0, 28)):
 # ---------------------------------------------------------------- main
 
 MODELS = [
-    ("SpecimenJar", build_jar, 0.55, 0.10),
+    # SpecimenJar (build_jar) は書き出さない: キャッチ演出の瓶は廃止（オーナー指示 2026-09-30）。
     ("RewardStar", build_star, 0.20, 0.0),
     ("DexBook", build_book, 0.62, 0.10),
     ("PhotoAlbum", build_album, 0.62, 0.085),

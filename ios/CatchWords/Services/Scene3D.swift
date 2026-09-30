@@ -9,7 +9,6 @@ import UIKit
 /// to its 2D version instead of showing an empty box.
 enum Scene3D {
     enum Model: String {
-        case jar = "SpecimenJar"
         case star = "RewardStar"
         case book = "DexBook"
         case album = "PhotoAlbum"
