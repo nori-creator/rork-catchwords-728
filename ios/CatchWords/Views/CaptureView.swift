@@ -216,14 +216,17 @@ struct CaptureView: View {
             }
             .background(Color.black)
         case .denied:
-            CameraMessageView(icon: "camera.fill", title: "カメラへのアクセスが必要です",
-                              message: "設定アプリでカメラを許可すると、身の回りの物を撮って単語にできます。",
+            CameraMessageView(icon: "camera.fill", title: "カメラの使用が許可されていません",
+                              message: "1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る",
                               buttonTitle: "設定を開く") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
             }
         case .unavailable:
-            CameraMessageView(icon: "camera.metering.unknown", title: "カメラが見つかりません",
-                              message: "写真アプリの画像や、文字で調べることもできます。", buttonTitle: nil, action: {})
+            CameraMessageView(icon: "camera.metering.unknown", title: "カメラを起動できませんでした",
+                              message: "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。",
+                              buttonTitle: "もう一度試す") {
+                Task { await camera.start() }
+            }
         }
     }
 

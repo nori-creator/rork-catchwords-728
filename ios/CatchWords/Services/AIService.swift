@@ -71,7 +71,7 @@ final class AIService {
             text = try await complete(model: fallbackModel, content: content, timeout: 40)
         }
         let items = try Self.parseItems(text)
-        guard !items.isEmpty else { throw APIError.message("写真から単語を見つけられませんでした。対象に近づいてもう一度撮ってみてください。") }
+        guard !items.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
         return items
     }
 
@@ -202,7 +202,7 @@ final class AIService {
     nonisolated private static func parseItems(_ text: String) throws -> [Candidate] {
         let data = try jsonData(from: text)
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let raw = obj["items"] as? [Any] else { throw APIError.message("AIの返事を読み取れませんでした。もう一度お試しください。") }
+              let raw = obj["items"] as? [Any] else { throw APIError.message("AIの返事を読み取れませんでした。もう一度試してください。写真は残っています。") }
         var out: [Candidate] = []
         for item in raw.prefix(6) {
             guard let d = try? JSONSerialization.data(withJSONObject: item),
