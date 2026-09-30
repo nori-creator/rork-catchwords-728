@@ -217,6 +217,8 @@ struct JarCatch3DView: View {
     var label: String? = nil
     /// Becomes true at 幕2 (bloom). Before that only the photo is visible, exactly like the 2D version.
     let bloom: Bool
+    /// Called once the models are loaded and in the scene.
+    var onReady: (() -> Void)? = nil
 
     @State private var scene = JarScene()
 
@@ -227,6 +229,9 @@ struct JarCatch3DView: View {
             content.add(scene.root)
             Scene3D.addStudio(to: content, target: [0, JarScene.photoY + 0.01, 0], distance: 0.62)
             if bloom { scene.bloom() }
+            onReady?()
+        } placeholder: {
+            Color.clear  // never a spinner in the middle of the celebration
         }
         .onChange(of: bloom) { _, on in if on { scene.bloom() } }
         .onDisappear { scene.stop() }

@@ -81,6 +81,8 @@ struct RewardOverlay: View {
     @State private var breathe: Bool = false
     @State private var sweep: CGFloat = -1
     @State private var particles: Bool = false
+    /// The 3D jar takes a moment to load; the flat photo stays up until it is ready (no empty stage).
+    @State private var jarReady: Bool = false
     @State private var exiting: Bool = false
 
     private var boost: CGFloat { 1 + CGFloat(payload.rarity) * 0.25 }
@@ -143,9 +145,13 @@ struct RewardOverlay: View {
                 .scaleEffect(1 + shadowDrop / 120)
 
             if use3D {
-                JarCatch3DView(image: payload.image, label: payload.headword, bloom: particles)
-                    .frame(width: side * 1.3, height: side * 1.3)
-            } else {
+                JarCatch3DView(image: payload.image, label: payload.headword, bloom: particles) {
+                    withAnimation(.easeOut(duration: 0.3)) { jarReady = true }
+                }
+                .frame(width: side * 1.3, height: side * 1.3)
+                .opacity(jarReady ? 1 : 0)
+            }
+            if !use3D || !jarReady {
             Group {
                 if payload.isCutout {
                     Image(uiImage: payload.image).resizable().scaledToFit()
