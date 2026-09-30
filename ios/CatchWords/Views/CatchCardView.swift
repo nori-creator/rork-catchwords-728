@@ -165,6 +165,8 @@ struct CatchCardView: View {
                 .padding(14)
                 .background(Theme.card, in: .rect(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+            VoiceNoteButton(recorder: vm.voiceNote)
+                .padding(.top, 2)
             if let place = vm.placeName {
                 Label(place, systemImage: "mappin.and.ellipse")
                     .font(.system(size: 12))

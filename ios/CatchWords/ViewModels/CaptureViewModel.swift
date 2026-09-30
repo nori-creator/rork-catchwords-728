@@ -53,6 +53,8 @@ final class CaptureViewModel {
     /// The owned-word check runs between the tap and the card (capture.tsx:905-919).
     var isCheckingOwned: Bool = false
     var caption: String = ""
+    /// The spoken one-liner next to the memo (web VoiceCaptionButton).
+    let voiceNote = VoiceNoteRecorder()
     var placeName: String?
     var location: CLLocation?
     var captureType: String = "photo"
@@ -331,7 +333,8 @@ final class CaptureViewModel {
         let base = photo ?? Self.textCard(for: picked.headword)
         return CatchDraft(
             candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
-            caption: caption, location: location, placeName: placeName, captureType: captureType
+            caption: caption, location: location, placeName: placeName, captureType: captureType,
+            voiceNote: voiceNote.detachedCopy()
         )
     }
 
@@ -384,6 +387,7 @@ final class CaptureViewModel {
         cutout = nil
         cutoutLift = nil
         caption = ""
+        voiceNote.discard()
         placeName = nil
         location = nil
         restoredPendingId = nil

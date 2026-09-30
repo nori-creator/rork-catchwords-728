@@ -13,6 +13,8 @@ struct CatchDraft {
     let location: CLLocation?
     let placeName: String?
     let captureType: String
+    /// The spoken one-liner (a local m4a), uploaded after the save.
+    var voiceNote: URL? = nil
 }
 
 enum SaveOutcome {
@@ -42,10 +44,24 @@ final class DexStore {
     private var language: String { NativeAPI.targetLanguage }
     private static let baseColumns =
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
-    /// `hero_role` came with a later migration; if the column is missing the dex still loads without it.
-    nonisolated(unsafe) private static var hasHeroRole = true
+    /// Columns that came with later migrations (the web reads them the same way, in stages). If the
+    /// server doesn't have one yet the dex still loads without it.
+    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "voice_video_url", "placeholder_image_url"]
     private static var selectColumns: String {
-        baseColumns + (hasHeroRole ? ",hero_role" : "") + ",word:words(*)"
+        ([baseColumns] + optionalColumns + ["word:words(*)"]).joined(separator: ",")
+    }
+
+    /// Runs a stickers query; drops an optional column the server says it doesn't have and tries again.
+    private func selectStickers(_ query: (String) -> String) async throws -> Data {
+        while true {
+            do {
+                return try await client.rest("GET", query(Self.selectColumns))
+            } catch {
+                let text = "\(error)"
+                guard let missing = Self.optionalColumns.first(where: { text.contains($0) }) else { throw error }
+                Self.optionalColumns.removeAll { $0 == missing }
+            }
+        }
     }
 
     func load() async {
@@ -54,13 +70,7 @@ final class DexStore {
         isLoading = true
         defer { isLoading = false }
         do {
-            let data: Data
-            do {
-                data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
-            } catch where Self.hasHeroRole && "\(error)".contains("hero_role") {
-                Self.hasHeroRole = false
-                data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
-            }
+            let data = try await selectStickers { "stickers?select=\($0)&order=taken_at.desc&limit=500" }
             let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
             await loadShelves()
             await loadAlbumHidden()
@@ -113,10 +123,11 @@ final class DexStore {
     private func signPaths(for rows: [Sticker]) async {
         var paths: [String] = []
         for s in rows {
-            for p in [s.objectImageUrl, s.cutoutImageUrl, s.selfieImageUrl].compactMap({ $0 }) where signed[p] == nil {
+            for p in [s.objectImageUrl, s.cutoutImageUrl, s.selfieImageUrl, s.placeholderImageUrl].compactMap({ $0 }) where signed[p] == nil {
                 paths.append(p)
                 paths.append(p + ".thumb.webp")
             }
+            if let v = s.voiceNotePath, signed[v] == nil { paths.append(v) }
         }
         guard !paths.isEmpty else { return }
         for chunk in stride(from: 0, to: paths.count, by: 200).map({ Array(paths[$0..<min($0 + 200, paths.count)]) }) {
@@ -187,11 +198,15 @@ final class DexStore {
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
         saveToPhotosIfEnabled(draft.photo)
+        if let note = draft.voiceNote {
+            // Never holds up the catch (web: 保存を1ミリ秒も遅くしない).
+            Task { await attachVoiceNote(note, to: sticker.id, uid: uid) }
+        }
         return .created(sticker)
     }
 
     private func fetchSticker(id: String) async throws -> Sticker {
-        let data = try await client.rest("GET", "stickers?id=eq.\(id)&select=\(Self.selectColumns)&limit=1")
+        let data = try await selectStickers { "stickers?id=eq.\(id)&select=\($0)&limit=1" }
         guard let s = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
         return s
     }
@@ -262,6 +277,28 @@ final class DexStore {
             if let w = try await findWord(headword: c.headword) { return w.id }
             row["category_key"] = "other"
             return try await insertWord(row)
+        }
+    }
+
+    /// Uploads the one-liner to `{user}/{sticker}/voice.mp4` (web voiceNotePath, re-recording
+    /// overwrites) and links it with `setStickerVoiceVideo`.
+    func attachVoiceNote(_ file: URL, to stickerId: String, uid: String) async {
+        defer { try? FileManager.default.removeItem(at: file) }
+        guard let data = try? Data(contentsOf: file), !data.isEmpty, data.count <= 12 * 1024 * 1024 else { return }
+        let path = "\(uid)/\(stickerId)/voice.mp4"
+        struct Saved: Decodable { let saved: Bool }
+        do {
+            try await client.upload(data, path: path, contentType: "audio/mp4", upsert: true)
+            let res = try await NativeAPI.call("setStickerVoiceVideo", ["sticker_id": stickerId, "voice_video_path": path], as: Saved.self)
+            guard res.saved else { return }
+            replace(stickerId) { old in
+                var s = old
+                s.voiceNotePath = path
+                return s
+            }
+            if let map = try? await client.signedURLs(for: [path]) { signed.merge(map) { _, new in new } }
+        } catch {
+            Haptics.warning()
         }
     }
 

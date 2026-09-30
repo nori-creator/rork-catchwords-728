@@ -48,6 +48,9 @@ struct WordDetailView: View {
                 VStack(spacing: 16) {
                     if !photos.isEmpty { photoHero }
                     metaCard
+                    if let v = current.voiceNotePath {
+                        VoiceNoteRow(url: dex.url(for: v, preferThumb: false))
+                    }
                     heroCard
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     EncounterHistoryView(stickerId: current.id)

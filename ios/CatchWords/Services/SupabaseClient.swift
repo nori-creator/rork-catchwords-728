@@ -202,7 +202,7 @@ final class SupabaseClient {
 
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)
 
-    func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers") async throws {
+    func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers", upsert: Bool = false) async throws {
         try await refreshIfNeeded()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
@@ -211,7 +211,7 @@ final class SupabaseClient {
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        req.setValue("false", forHTTPHeaderField: "x-upsert")
+        req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
         req.httpBody = data
         let (body, response) = try await perform(req)
         guard (200..<300).contains(response.statusCode) else {

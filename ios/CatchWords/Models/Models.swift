@@ -255,10 +255,16 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var shelfKey: String? = nil
     /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
     var heroRole: String? = nil
+    /// The spoken one-liner recorded at the catch (`stickers.voice_video_url`, a storage path).
+    var voiceNotePath: String? = nil
+    /// Stand-in picture of a card caught without a photo (`stickers.placeholder_image_url`).
+    var placeholderImageUrl: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
         case heroRole = "hero_role"
+        case voiceNotePath = "voice_video_url"
+        case placeholderImageUrl = "placeholder_image_url"
         case wordId = "word_id"
         case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"
@@ -273,9 +279,10 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     /// else the cut-out, else the original.
     var heroPath: String? {
         switch heroRole {
-        case "object": objectImageUrl ?? cutoutImageUrl
-        case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl
-        default: cutoutImageUrl ?? objectImageUrl
+        case "object": objectImageUrl ?? cutoutImageUrl ?? placeholderImageUrl
+        case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        case "placeholder": placeholderImageUrl ?? cutoutImageUrl ?? objectImageUrl
+        default: cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         }
     }
     var room: Room { Category.room(for: shelfKey ?? word?.categoryKey) }
