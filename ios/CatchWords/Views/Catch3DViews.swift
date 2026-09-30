@@ -47,8 +47,9 @@ final class JarScene {
             }
             // The word printed on the paper band (the Blender band has no UVs, so a curved strip
             // with its own UVs is laid just over its front).
-            if let label, !label.isEmpty, let strip = Self.labelStrip(text: label) {
-                if let mat = await Scene3D.picture(Self.labelArt(label)) {
+            if let label, !label.isEmpty, let strip = Self.labelStrip() {
+                if var mat = await Scene3D.picture(Self.labelArt(label)) {
+                    mat.faceCulling = .none  // whichever way the strip winds, it is seen
                     let e = ModelEntity(mesh: strip, materials: [mat])
                     jar.addChild(e)
                 }
@@ -90,7 +91,7 @@ final class JarScene {
     }
 
     /// A curved strip on the jar's label band (radius 0.0712 m, y 0.040…0.070), facing the camera.
-    private static func labelStrip(text: String) -> MeshResource? {
+    private static func labelStrip() -> MeshResource? {
         let r: Float = 0.0716, y0: Float = 0.0425, y1: Float = 0.0675
         let span: Float = 1.25   // radians, centred on +z
         let seg = 24
