@@ -21,6 +21,11 @@ struct WordDetailView: View {
     @State private var showCutout: Bool = false
     @State private var editingCaption: Bool = false
     @State private var captionDraft: String = ""
+    /// Sections being filled by the server right now (web AutoFillSections).
+    @State private var filling: Set<CardSection> = []
+    @State private var reporting: Bool = false
+    @State private var reportNote: String = ""
+    @State private var isFixing: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
@@ -43,8 +48,14 @@ struct WordDetailView: View {
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
-                    ForEach(prefs.visible.filter(hasContent)) { section in
-                        sectionView(section)
+                    ForEach(prefs.visible.filter { hasContent($0) || filling.contains($0) }) { section in
+                        if hasContent(section) {
+                            sectionView(section)
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
+                        } else {
+                            SectionSkeleton(title: section.title, icon: section.icon)
+                                .transition(.opacity)
+                        }
                     }
                     footer
                 }
@@ -67,6 +78,14 @@ struct WordDetailView: View {
                     catch { Haptics.warning() }
                 }
             }
+        }
+        .task(id: current.wordId) { await autoFill() }
+        .alert("どこが違いましたか？", isPresented: $reporting) {
+            TextField("例: 読み方が違う（書かなくても大丈夫）", text: $reportNote)
+            Button("キャンセル", role: .cancel) {}
+            Button("直してもらう") { reportAndFix() }
+        } message: {
+            Text("AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。")
         }
         .alert("単語を直す", isPresented: $editingHead) {
             TextField("繁体字で入力", text: $headDraft)
@@ -172,19 +191,19 @@ struct WordDetailView: View {
             }
             HStack {
                 Spacer()
-                Menu {
-                    Section("どこが違う？") {
-                        Button("発音・読み") { sendReport("pronunciation") }
-                        Button("意味") { sendReport("meaning") }
-                        Button("品詞") { sendReport("pos") }
-                        Button("その他") { sendReport("other") }
-                    }
+                Button {
+                    reportNote = ""
+                    reporting = true
                 } label: {
-                    Label("報告", systemImage: "flag")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.muted)
-                        .frame(minWidth: 44, minHeight: 44)
+                    HStack(spacing: 5) {
+                        if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
+                        Text(isFixing ? "直しています…" : "報告")
+                    }
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.muted)
+                    .frame(minWidth: 44, minHeight: 44)
                 }
+                .disabled(isFixing)
                 .accessibilityLabel("この語の誤りを報告")
             }
         }
@@ -519,6 +538,57 @@ struct WordDetailView: View {
         }
     }
 
+    /// Web AutoFillSections: visible sections that are still empty are written by the server in
+    /// parallel (free, `only_if_empty`), then revealed together — never one by one popping in.
+    private func autoFill() async {
+        let missing = prefs.visible.filter { $0 != .realUsage && !hasContent($0) }
+        guard !missing.isEmpty else { return }
+        let wordId = current.wordId
+        withAnimation(.easeOut(duration: 0.2)) { filling = Set(missing) }
+        await withTaskGroup(of: Void.self) { group in
+            for section in missing {
+                group.addTask { @MainActor in
+                    _ = await dex.fillSection(wordId: wordId, section: section.rawValue, onlyIfEmpty: true)
+                }
+            }
+        }
+        await dex.reload(stickerId: current.id)
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { filling = [] }
+    }
+
+    /// Web reportAndFixSection (item = auto): the AI finds the wrong item among what is on screen.
+    private func reportAndFix() {
+        let note = reportNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let wordId = current.wordId
+        let candidates = ["pronunciation", "pos"] + prefs.visible.filter { $0 != .realUsage && hasContent($0) }.map(\.rawValue)
+        isFixing = true
+        Task {
+            defer { isFixing = false }
+            do {
+                let r = try await dex.reportAndFix(wordId: wordId, candidates: candidates, note: note)
+                await dex.reload(stickerId: current.id)
+                Haptics.success()
+                if r.fixed {
+                    showToast("「\(Self.itemTitle(r.item))」を直しました")
+                } else {
+                    showToast("確かめました。間違いは見つかりませんでした")
+                }
+            } catch {
+                Haptics.warning()
+                showToast((error as? LocalizedError)?.errorDescription ?? "直せませんでした")
+            }
+        }
+    }
+
+    private static func itemTitle(_ item: String?) -> String {
+        switch item {
+        case "pronunciation": "発音・読み"
+        case "pos": "品詞"
+        case let key?: CardSection(rawValue: key)?.title ?? key
+        default: "項目"
+        }
+    }
+
     private func sendReport(_ kind: String) {
         let head = headword
         Task {
@@ -835,6 +905,47 @@ enum ChunkKind: CaseIterable, Hashable {
         case .verb: "動詞"
         case .stative: "状態動詞(形容詞)"
         case .adverb: "副詞"
+        }
+    }
+}
+
+/// A section being written by the server: the card's frame with a soft moving sheen.
+struct SectionSkeleton: View {
+    let title: String
+    let icon: String
+    @State private var phase: CGFloat = -1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        SectionCard(title: title, icon: icon) {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach([0.92, 0.7, 0.8], id: \.self) { w in
+                    RoundedRectangle(cornerRadius: 6).fill(Theme.secondary)
+                        .frame(height: 14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .scaleEffect(x: w, y: 1, anchor: .leading)
+                }
+            }
+            .overlay {
+                GeometryReader { g in
+                    LinearGradient(colors: [.clear, .white.opacity(0.75), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: g.size.width * 0.45)
+                        .offset(x: phase * g.size.width * 1.4)
+                }
+                .mask(VStack(alignment: .leading, spacing: 10) {
+                    ForEach(0..<3, id: \.self) { _ in RoundedRectangle(cornerRadius: 6).frame(height: 14) }
+                })
+                .allowsHitTesting(false)
+            }
+        }
+        .accessibilityLabel("\(title)を作っています")
+        .task {
+            guard !reduceMotion else { return }
+            while !Task.isCancelled {
+                phase = -1
+                withAnimation(.easeInOut(duration: 1.2)) { phase = 1 }
+                try? await Task.sleep(for: .seconds(1.5))
+            }
         }
     }
 }

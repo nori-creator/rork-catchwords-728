@@ -358,6 +358,41 @@ final class DexStore {
     }
 
     /// Dictionary error report → `entry_reports` (reports.functions.ts). Lands in the admin review queue.
+    /// Re-reads one sticker (and its word) after the server changed it.
+    func reload(stickerId: String) async {
+        guard let fresh = try? await fetchSticker(id: stickerId) else { return }
+        replace(stickerId) { old in
+            var s = fresh
+            s.lat = old.lat
+            s.lng = old.lng
+            return s
+        }
+    }
+
+    /// Web `regenerateCardSection`. `onlyIfEmpty` = first fill of a missing section (free, like the web's
+    /// AutoFillSections); otherwise a full rewrite of the section (Pro on the web).
+    func fillSection(wordId: String, section: String, onlyIfEmpty: Bool) async -> Bool {
+        struct Res: Decodable { let ok: Bool?; let filled: Bool? }
+        let r = try? await NativeAPI.call("regenerateCardSection", [
+            "word_id": wordId, "section": section, "only_if_empty": onlyIfEmpty,
+        ], as: Res.self, timeout: 60)
+        return r?.ok == true || r?.filled == true
+    }
+
+    /// Web `reportAndFixSection`: the AI finds which item is wrong (from the one-line note and what is
+    /// on screen), checks it against the dictionary, and fixes only that item.
+    struct ReportFix: Decodable {
+        let fixed: Bool
+        let item: String?
+        let by: String?
+    }
+
+    func reportAndFix(wordId: String, candidates: [String], note: String) async throws -> ReportFix {
+        try await NativeAPI.call("reportAndFixSection", [
+            "word_id": wordId, "item": "auto", "candidates": Array(candidates.prefix(24)), "note": String(note.prefix(500)),
+        ], as: ReportFix.self, timeout: 90)
+    }
+
     func report(headword: String, kind: String, note: String) async throws {
         guard let uid = client.userId else { throw APIError.unauthorized }
         _ = try await client.rest("POST", "entry_reports", body: [
