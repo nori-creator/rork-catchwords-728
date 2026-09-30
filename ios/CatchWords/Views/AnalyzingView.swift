@@ -1,4 +1,5 @@
 import SwiftUI
+import Vision
 
 /// Full-bleed photo with a bright scan line that sweeps up and down, dissolving the image into
 /// glowing motes around it (web: scan-analyzing default). "やめる" top-right, "AIが分析中…" at the bottom.
@@ -8,6 +9,10 @@ struct AnalyzingView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start: Date = Date()
+    /// On-device Vision (objectness saliency): where the things are, found in ~0.2 s while the
+    /// server AI is still naming them. Normalized, top-left origin.
+    @State private var targets: [CGRect] = []
+    @State private var locked: Int = 0
 
     var body: some View {
         ZStack {
@@ -20,6 +25,19 @@ struct AnalyzingView: View {
                     .overlay(Color.black.opacity(0.12).ignoresSafeArea())
             } else {
                 MachineBackground()
+            }
+
+            if let photo {
+                GeometryReader { geo in
+                    let frame = Self.fillRect(image: photo.size, in: geo.size)
+                    ForEach(Array(targets.enumerated()), id: \.offset) { i, r in
+                        FocusBrackets(active: i < locked)
+                            .frame(width: r.width * frame.width, height: r.height * frame.height)
+                            .position(x: frame.minX + r.midX * frame.width, y: frame.minY + r.midY * frame.height)
+                    }
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             }
 
             TimelineView(.animation(paused: reduceMotion)) { tl in
@@ -57,6 +75,68 @@ struct AnalyzingView: View {
             }
         }
         .onAppear { start = Date() }
+        .task { await findTargets() }
+    }
+
+    /// Where a scaledToFill image sits inside `size`.
+    static func fillRect(image: CGSize, in size: CGSize) -> CGRect {
+        guard image.width > 0, image.height > 0 else { return CGRect(origin: .zero, size: size) }
+        let scale = max(size.width / image.width, size.height / image.height)
+        let w = image.width * scale, h = image.height * scale
+        return CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h)
+    }
+
+    private func findTargets() async {
+        guard let photo, let cg = photo.normalizedOrientation().cgImage else { return }
+        let found: [CGRect] = await Task.detached(priority: .userInitiated) {
+            let request = VNGenerateObjectnessBasedSaliencyImageRequest()
+            try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+            let objects = (request.results?.first?.salientObjects ?? [])
+                .sorted { $0.confidence > $1.confidence }
+                .prefix(3)
+            // Vision is bottom-left origin; flip to top-left. Skip slivers.
+            return objects.map { o in
+                let b = o.boundingBox
+                return CGRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height)
+            }.filter { $0.width > 0.08 && $0.height > 0.08 }
+        }.value
+        guard !found.isEmpty else { return }
+        targets = found
+        for i in found.indices {
+            try? await Task.sleep(for: .milliseconds(i == 0 ? 250 : 380))
+            if reduceMotion { locked = found.count; break }
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.62)) { locked = i + 1 }
+            Haptics.selection()
+        }
+    }
+}
+
+/// Camera-style focus brackets: start wide and faint, snap in and brighten when they lock.
+struct FocusBrackets: View {
+    let active: Bool
+    @State private var breathe = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width, h = g.size.height
+            let arm = min(w, h) * 0.22
+            Path { p in
+                for (cx, cy, sx, sy) in [(0.0, 0.0, 1.0, 1.0), (w, 0.0, -1.0, 1.0), (0.0, h, 1.0, -1.0), (w, h, -1.0, -1.0)] {
+                    p.move(to: CGPoint(x: cx, y: cy + sy * arm))
+                    p.addLine(to: CGPoint(x: cx, y: cy))
+                    p.addLine(to: CGPoint(x: cx + sx * arm, y: cy))
+                }
+            }
+            .stroke(Color(hex: 0xBFEFFF), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+            .shadow(color: Theme.cyan.opacity(0.8), radius: 6)
+        }
+        .scaleEffect(active ? (breathe ? 1.02 : 1) : 1.25)
+        .opacity(active ? 1 : 0)
+        .onChange(of: active) { _, on in
+            guard on, !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { breathe = true }
+        }
     }
 }
 

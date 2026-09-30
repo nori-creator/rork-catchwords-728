@@ -26,6 +26,7 @@ struct UIPreviewRoot: View {
             case "picker": PickerPreview()
             case "tabbar": TabBarPreview()
             case "reward": RewardPreview()
+            case "analyzing": AnalyzingView(photo: PreviewFixtures.photo) {}
             default: Text("unknown preview: \(name)")
             }
         }
