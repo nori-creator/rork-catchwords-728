@@ -26,7 +26,7 @@ final class JarScene {
     /// (seen on the CI simulator frames: an empty jar).
     private let sortGroup = ModelSortGroup(depthPass: nil)
 
-    func build(image: UIImage) async {
+    func build(image: UIImage, label: String? = nil) async {
         root.position = .zero
         if let jar = await Scene3D.load(.jar) {
             Scene3D.paint(jar, named: "JarGlass", with: Scene3D.glass)
@@ -44,6 +44,14 @@ final class JarScene {
                 cork.position.y += 0.12
                 cork.scale = .init(repeating: 0.001)
                 self.cork = cork
+            }
+            // The word printed on the paper band (the Blender band has no UVs, so a curved strip
+            // with its own UVs is laid just over its front).
+            if let label, !label.isEmpty, let strip = Self.labelStrip(text: label) {
+                if let mat = await Scene3D.picture(Self.labelArt(label)) {
+                    let e = ModelEntity(mesh: strip, materials: [mat])
+                    jar.addChild(e)
+                }
             }
             jar.scale = .init(repeating: 0.001)
             root.addChild(jar)
@@ -79,6 +87,51 @@ final class JarScene {
         }
         built = true
         if bloomRequested { bloom() }
+    }
+
+    /// A curved strip on the jar's label band (radius 0.0712 m, y 0.040…0.070), facing the camera.
+    private static func labelStrip(text: String) -> MeshResource? {
+        let r: Float = 0.0716, y0: Float = 0.0425, y1: Float = 0.0675
+        let span: Float = 1.25   // radians, centred on +z
+        let seg = 24
+        var pos: [SIMD3<Float>] = [], nor: [SIMD3<Float>] = [], uv: [SIMD2<Float>] = [], idx: [UInt32] = []
+        for i in 0...seg {
+            let u = Float(i) / Float(seg)
+            let a = -span / 2 + span * u
+            let n = SIMD3<Float>(sin(a), 0, cos(a))
+            pos += [SIMD3(n.x * r, y0, n.z * r), SIMD3(n.x * r, y1, n.z * r)]
+            nor += [n, n]
+            uv += [SIMD2(u, 0), SIMD2(u, 1)]
+        }
+        for i in 0..<seg {
+            let b = UInt32(i * 2)
+            idx += [b, b + 2, b + 1, b + 1, b + 2, b + 3]
+        }
+        var d = MeshDescriptor(name: "JarWordLabel")
+        d.positions = .init(pos)
+        d.normals = .init(nor)
+        d.textureCoordinates = .init(uv)
+        d.primitives = .triangles(idx)
+        return try? MeshResource.generate(from: [d])
+    }
+
+    /// Ink on paper: the headword, centred, in a warm dark ink with a thin gold rule.
+    private static func labelArt(_ text: String) -> UIImage {
+        let size = CGSize(width: 1024, height: 205)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            UIColor(red: 1, green: 0.973, blue: 0.918, alpha: 1).setFill()
+            UIRectFill(CGRect(origin: .zero, size: size))
+            let gold = UIColor(red: 0.83, green: 0.64, blue: 0.24, alpha: 1)
+            gold.setFill()
+            UIRectFill(CGRect(x: 0, y: 14, width: size.width, height: 5))
+            UIRectFill(CGRect(x: 0, y: size.height - 19, width: size.width, height: 5))
+            let p = NSMutableParagraphStyle()
+            p.alignment = .center
+            let font = UIFont(name: "PingFangTC-Semibold", size: 110) ?? .systemFont(ofSize: 110, weight: .semibold)
+            (text as NSString).draw(in: CGRect(x: 40, y: 32, width: size.width - 80, height: 150),
+                                    withAttributes: [.font: font, .paragraphStyle: p,
+                                                     .foregroundColor: UIColor(red: 0.2, green: 0.16, blue: 0.12, alpha: 1)])
+        }
     }
 
     private static func setSort(_ e: Entity, group: ModelSortGroup, order: Int32) {
@@ -159,6 +212,8 @@ final class JarScene {
 /// The caught photo in a Blender-made glass jar (RewardOverlay's photo slot when 3D is on).
 struct JarCatch3DView: View {
     let image: UIImage
+    /// Printed on the jar's paper band.
+    var label: String? = nil
     /// Becomes true at 幕2 (bloom). Before that only the photo is visible, exactly like the 2D version.
     let bloom: Bool
 
@@ -167,7 +222,7 @@ struct JarCatch3DView: View {
     var body: some View {
         RealityView { content in
             content.camera = .virtual
-            await scene.build(image: image)
+            await scene.build(image: image, label: label)
             content.add(scene.root)
             Scene3D.addStudio(to: content, target: [0, JarScene.photoY + 0.01, 0], distance: 0.62)
             if bloom { scene.bloom() }
@@ -325,7 +380,7 @@ struct Preview3DView: View {
                 Text("3D プレビュー").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
                 ZStack {
                     LinearGradient(colors: [Color(hex: 0x0B2548), Color(hex: 0x0A1F3E)], startPoint: .top, endPoint: .bottom)
-                    JarCatch3DView(image: CaptureViewModel.textCard(for: "芒果"), bloom: bloom)
+                    JarCatch3DView(image: CaptureViewModel.textCard(for: "芒果"), label: "芒果", bloom: bloom)
                 }
                 .frame(height: 320)
                 .clipShape(.rect(cornerRadius: 24))

@@ -143,7 +143,7 @@ struct RewardOverlay: View {
                 .scaleEffect(1 + shadowDrop / 120)
 
             if use3D {
-                JarCatch3DView(image: payload.image, bloom: particles)
+                JarCatch3DView(image: payload.image, label: payload.headword, bloom: particles)
                     .frame(width: side * 1.3, height: side * 1.3)
             } else {
             Group {
