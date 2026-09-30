@@ -21,6 +21,10 @@ struct ScanView: View {
     @State private var baseZoom: CGFloat = 1
     @State private var location: CLLocation?
     @State private var tapStart: Date?
+    /// Web rankScanCandidates: the one most worth learning glows; names doubtful as Taiwan usage get "?".
+    @State private var topId: String?
+    @State private var doubtful: Set<String> = []
+    @State private var touched = false
 
     enum Stage: Equatable {
         case idle, sensing, reading, matching
@@ -42,7 +46,9 @@ struct ScanView: View {
                     preview
                     if let frame, !items.isEmpty {
                         ForEach(items) { item in
-                            ScanTag(item: item, owned: dex.owns(headword: item.headword)) {
+                            ScanTag(item: item, owned: dex.owns(headword: item.headword),
+                                    isTop: item.id == topId, isDoubtful: doubtful.contains(item.id)) {
+                                touched = true
                                 tapStart = Date()
                                 Haptics.selection()
                                 selected = item
@@ -214,8 +220,30 @@ struct ScanView: View {
 
     // MARK: - Actions
 
+    /// Asked after the tags are already up, so scanning never waits for it; silently skipped on failure.
+    private func rank(_ list: [ScanItem]) async {
+        guard list.count >= 2 else { return }
+        struct Ranked: Decodable { let order: [Int]?; let doubtful: [Int]? }
+        let payload: [[String: Any]] = list.prefix(24).map { it in
+            ["headword": String(it.headword.prefix(40)), "meaning": String(it.meaning.prefix(80)),
+             "kind": String(it.candidate.kind.prefix(12)), "confidence": min(1, max(0, it.candidate.confidence)),
+             "owned": dex.owns(headword: it.headword)]
+        }
+        guard let r = try? await NativeAPI.call("rankScanCandidates", ["items": payload], as: Ranked.self, timeout: 8),
+              items.map(\.id) == list.map(\.id) else { return }
+        let doubt = Set((r.doubtful ?? []).compactMap { $0 < list.count ? list[$0].id : nil })
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            doubtful = doubt
+            if !touched, let first = r.order?.first(where: { $0 < list.count && !doubt.contains(list[$0].id) }) {
+                topId = list[first].id
+            }
+        }
+        if topId != nil, !touched { Haptics.selection() }
+    }
+
     private func scanOrReset() {
         if !items.isEmpty {
+            topId = nil; doubtful = []; touched = false
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items = []; frame = nil; message = nil }
             return
         }
@@ -242,6 +270,7 @@ struct ScanView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { items = merged }
             stage = .idle
             Haptics.success()
+            Task { await rank(merged) }
         } catch {
             stageTimer.cancel()
             stage = .idle
@@ -344,15 +373,23 @@ enum ScanLog {
 struct ScanTag: View {
     let item: ScanItem
     let owned: Bool
+    var isTop: Bool = false
+    var isDoubtful: Bool = false
     let onTap: () -> Void
     @State private var bob: Bool = false
+    @State private var glow: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+                    // Fixed ink: the tag is always a white label on the camera, in light and dark.
+                    Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Color(hex: 0x0B121A))
+                    if isDoubtful {
+                        Text("?").font(.system(size: 13, weight: .heavy)).foregroundStyle(Color(hex: 0xB45309))
+                            .accessibilityLabel("台湾での言い方として不確か")
+                    }
                     if owned {
                         Image(systemName: "checkmark.seal.fill").font(.system(size: 12)).foregroundStyle(Theme.ok)
                     }
@@ -360,8 +397,9 @@ struct ScanTag: View {
                 .padding(.horizontal, 14)
                 .frame(minHeight: 40)
                 .background(.white, in: Capsule())
-                .overlay(Capsule().stroke(Theme.primary.opacity(0.5), lineWidth: 1.5))
-                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                .overlay(Capsule().stroke(isTop ? Theme.gold : Theme.primary.opacity(0.5), lineWidth: isTop ? 2.5 : 1.5))
+                .shadow(color: isTop ? Theme.gold.opacity(glow ? 0.8 : 0.3) : .black.opacity(0.3), radius: isTop ? 14 : 8, y: 4)
+                .opacity(isDoubtful ? 0.78 : 1)
                 Circle().fill(Theme.cyan).frame(width: 10, height: 10)
                     .overlay(Circle().stroke(.white, lineWidth: 2))
                     .shadow(color: Theme.cyan, radius: 6)
@@ -370,9 +408,12 @@ struct ScanTag: View {
         }
         .buttonStyle(PressableStyle(scale: 0.92))
         .accessibilityLabel("\(item.headword)、\(item.meaning)\(owned ? "、取得済み" : "")")
+        .scaleEffect(isTop ? 1.08 : 1)
+        .zIndex(isTop ? 1 : 0)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.6))) { bob = true }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glow = true }
         }
     }
 }
