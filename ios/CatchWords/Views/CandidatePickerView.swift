@@ -46,6 +46,8 @@ struct CandidatePickerView: View {
     @State private var typed: String = ""
     @State private var openGroup: String?
     @FocusState private var inputFocused: Bool
+    /// The tapped word travels from its row to the big word of stage 2 (and back).
+    @Namespace private var hero
 
     private var groups: [CandidateGroup] { CandidateGroup.make(vm.candidates) }
 
@@ -123,6 +125,7 @@ struct CandidatePickerView: View {
             } label: {
                 HStack(spacing: 8) {
                     wordLine(g.main, size: 24, note: false)
+                        .matchedGeometryEffect(id: "word-\(g.id)", in: hero, properties: .position, anchor: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if !g.others.isEmpty {
                         HStack(spacing: 2) {
@@ -162,6 +165,7 @@ struct CandidatePickerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 12) {
                     wordLine(g.main, size: 40, note: true)
+                        .matchedGeometryEffect(id: "word-\(g.id)", in: hero, properties: .position, anchor: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     PronounceCircle(text: g.main.headword, size: 48)
                 }

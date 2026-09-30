@@ -8,6 +8,10 @@ enum SFX: String, CaseIterable {
     case slide = "el-gallery-slide"
     case sting = "el-celebrate-sting"
     case analyzeLoop = "el-analyze-loop"
+    // ElevenLabs SFX (eleven_text_to_sound_v2), trimmed and normalized for these moments:
+    case jarCork = "el-jar-cork"        // cork lands in the glass jar: soft pop + bright clink
+    case cutTrace = "el-cut-trace"      // scissors round the outline (cut-out mode)
+    case stickerLift = "el-sticker-lift" // the cut sticker peels up off the page
 
     var gain: Float {
         switch self {
@@ -17,6 +21,9 @@ enum SFX: String, CaseIterable {
         case .slide: 1.2
         case .sting: 1.1
         case .analyzeLoop: 0.9
+        case .jarCork: 0.9
+        case .cutTrace: 0.7
+        case .stickerLift: 0.8
         }
     }
 

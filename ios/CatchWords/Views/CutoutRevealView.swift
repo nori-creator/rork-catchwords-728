@@ -80,10 +80,11 @@ struct CutoutRevealView: View {
         // 1. scan
         withAnimation(.easeOut(duration: 0.12)) { scanOpacity = 1 }
         withAnimation(.easeInOut(duration: 0.55)) { scan = 1.2 }
-        SoundService.shared.play(.slide, volume: 0.45)
+        SoundService.shared.play(.slide, volume: 0.35)
         try? await Task.sleep(for: .milliseconds(200))
         // 2. scissors round the outline
         HapticPatterns.shared.trace(duration: 0.8)
+        SoundService.shared.play(.cutTrace)
         withAnimation(.easeInOut(duration: 0.8)) { trace = 1 }
         try? await Task.sleep(for: .milliseconds(300))
         withAnimation(.easeOut(duration: 0.25)) { scanOpacity = 0 }
@@ -93,7 +94,8 @@ struct CutoutRevealView: View {
         try? await Task.sleep(for: .milliseconds(350))
         // 4. solid white edge, lift off the page
         HapticPatterns.shared.lift()
-        Haptics.impact(.soft)
+        SoundService.shared.play(.stickerLift)
+        if !HapticPatterns.shared.isAvailable { Haptics.impact(.soft) }
         withAnimation(.easeOut(duration: 0.25)) { solid = 1; edge = 6 }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) { lifted = true }
         try? await Task.sleep(for: .milliseconds(420))

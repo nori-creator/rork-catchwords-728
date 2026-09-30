@@ -92,6 +92,9 @@ final class JarScene {
                 var down = cork.transform
                 down.translation.y -= 0.12
                 cork.move(to: down, relativeTo: root, duration: 0.28, timingFunction: .easeIn)
+                // The cork seats in the neck: pop + clink (ElevenLabs), timed to the landing.
+                try? await Task.sleep(for: .milliseconds(250))
+                SoundService.shared.play(.jarCork)
             }
         }
         for (i, star) in stars.enumerated() {
