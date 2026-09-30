@@ -62,6 +62,7 @@ struct HomeView: View {
                         router.tab = .camera
                     }
                     .padding(.horizontal, 16)
+                    .tourAnchor(.album)
 
                     DiaryLine(day: today) { writingDay = WritingDay(date: $0) }
                         .padding(.horizontal, 16)

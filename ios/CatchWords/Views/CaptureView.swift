@@ -70,6 +70,11 @@ struct CaptureView: View {
         }
         .onChange(of: vm.step) { old, step in
             syncChrome()
+            if step == .select { router.advanceTour(from: .shoot, to: .pick) }
+            if step == .card { router.advanceTour(from: .pick, to: .detail) }
+            if step == .camera, router.tour.isCapture, router.tour != .shoot {
+                withAnimation { router.tour = .shoot }
+            }
             switch step {
             case .camera:
                 if old == .selfie || camera.position != positionBeforeSelfie { camera.switchTo(positionBeforeSelfie) }
@@ -326,6 +331,7 @@ struct CaptureView: View {
             Spacer()
             ShutterButton(icon: vm.step == .selfie ? "camera" : vm.mode.shutterIcon,
                           enabled: vm.mode == .search || camera.state == .running) { shoot() }
+                .tourAnchor(.shutter)
             Spacer()
             Button { camera.toggle() } label: {
                 sideButton(icon: "arrow.triangle.2.circlepath.camera", label: "切替")
@@ -468,6 +474,10 @@ struct CaptureView: View {
         switch payload.gate.result {
         case .success(let outcome):
             router.landingStickerId = outcome.sticker.id
+            if router.tour == .peel || router.tour == .detail {
+                router.tourStickerId = outcome.sticker.id
+                router.tour = .added
+            }
             vm.reset()
             reward = nil
             withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }

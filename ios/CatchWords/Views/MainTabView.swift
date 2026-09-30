@@ -37,10 +37,21 @@ final class AppRouter {
     var cameraImmersive: Bool = true
     /// Analyzing and the reward stage take the whole screen (no tab bar).
     var tabBarHidden: Bool = false
+    /// First-run tour over the real screens (FirstCatchFlow's experience steps).
+    var tour: TourStep = .off
+    /// The word caught during the tour (used by the Dex / word / review steps).
+    var tourStickerId: String?
+
+    func advanceTour(from step: TourStep, to next: TourStep) {
+        guard tour == step else { return }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { tour = next }
+    }
 }
 
 struct MainTabView: View {
     @State private var router = AppRouter()
+    @Environment(DexStore.self) private var dex
+    @AppStorage(TourStep.pendingKey) private var tourPending: Bool = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -62,14 +73,79 @@ struct MainTabView: View {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.9), value: router.tabBarHidden)
+        .overlayPreferenceValue(TourAnchorKey.self) { anchors in
+            if router.tour != .off, router.tour != .word, router.tour != .complete, !router.tabBarHidden {
+                TourLayer(step: router.tour, anchors: anchors, onNext: tourNext, onSkip: endTour)
+                    .transition(.opacity)
+            }
+        }
+        .overlay {
+            if router.tour == .complete {
+                TourCompleteView(sticker: router.tourStickerId.flatMap { dex.sticker(id: $0) }) { endTour() }
+                    .transition(.opacity.combined(with: .scale(scale: 1.02)))
+                    .zIndex(3)
+            }
+        }
         .environment(router)
-        .sheet(item: $router.detailSticker) { sticker in
+        .sheet(item: $router.detailSticker, onDismiss: {
+            // 「ことば」を見終えたら復習へ（Web: StickerSheet の onClose → review）。
+            if router.tour == .word { startTourReview() }
+        }) { sticker in
             WordDetailView(sticker: sticker)
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.background)
+                .overlay(alignment: .bottom) {
+                    if router.tour == .word {
+                        TourCoachCard(step: .word, onNext: { router.detailSticker = nil }, onSkip: endTour)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    }
+                }
+        }
+        .onAppear { beginTourIfPending() }
+        .onChange(of: tourPending) { _, _ in beginTourIfPending() }
+        .onChange(of: router.tab) { _, tab in
+            if tab == .camera { router.advanceTour(from: .tapCamera, to: .shoot) }
+        }
+        .onChange(of: router.detailSticker) { _, s in
+            if s != nil { router.advanceTour(from: .dexOpen, to: .word) }
         }
         .fullScreenCover(isPresented: $router.showPaywall) {
             PaywallView()
+        }
+    }
+
+    private func beginTourIfPending() {
+        guard tourPending, router.tour == .off else { return }
+        router.tab = .home
+        withAnimation(.easeOut(duration: 0.3)) { router.tour = .home }
+    }
+
+    private func tourNext() {
+        switch router.tour {
+        case .home: router.advanceTour(from: .home, to: .tapCamera)
+        case .detail: router.advanceTour(from: .detail, to: .peel)
+        case .added: router.advanceTour(from: .added, to: .dexTypes)
+        case .dexOpen:
+            if let id = router.tourStickerId, let s = dex.sticker(id: id) { router.detailSticker = s } else { startTourReview() }
+        case .review: router.advanceTour(from: .review, to: .reviewPick)
+        default: break
+        }
+    }
+
+    private func startTourReview() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+            router.tour = .review
+            router.tab = .review
+        }
+    }
+
+    private func endTour() {
+        tourPending = false
+        router.detailSticker = nil
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+            router.tour = .off
+            router.tab = .home
         }
     }
 }
@@ -163,6 +239,7 @@ struct CapsuleTabBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableStyle(scale: 0.92))
+        .tourAnchor(.cameraTab)
         .accessibilityLabel("カメラ")
     }
 

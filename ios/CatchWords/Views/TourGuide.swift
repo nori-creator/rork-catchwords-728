@@ -1,0 +1,301 @@
+import SwiftUI
+
+/// FirstCatchFlow の体験段（ホーム → 撮る → 候補 → 発音 → はがす → 図鑑 → ことば → 復習 → 完了）。
+/// Web 版は見本の画面を別に組むが、iOS 版はログイン後に始まるので**本物の画面の上に**案内を重ねる。
+/// 撮った1枚は本物の図鑑に入る（登録後の引き継ぎが要らない）。
+enum TourStep: String, Equatable {
+    case off
+    case home, tapCamera, shoot, pick, detail, peel
+    case added, dexTypes, dexOpen, word
+    case review, reviewPick, reviewNext
+    case complete
+
+    var anchor: TourAnchor? {
+        switch self {
+        case .home: .album
+        case .tapCamera: .cameraTab
+        case .shoot: .shutter
+        case .pick: .pick
+        case .detail: .headword
+        case .peel: .peel
+        case .dexTypes: .dexModes
+        case .review, .reviewPick: .quiz
+        case .reviewNext: .reviewNext
+        case .off, .added, .dexOpen, .word, .complete: nil
+        }
+    }
+
+    var title: String? {
+        switch self {
+        case .home: "ホーム"
+        case .tapCamera, .shoot: "1枚撮ってみましょう"
+        case .pick: "覚えたいことばを選ぶ"
+        case .detail, .word: "発音と意味"
+        case .peel: "はがして図鑑へ"
+        case .added: "図鑑に追加しました！"
+        case .dexTypes, .dexOpen: "図鑑"
+        case .review: "復習"
+        default: nil
+        }
+    }
+
+    var text: String {
+        switch self {
+        case .home: "見つけた場面ごと、今日のアルバムに。単語帳へ書き写す手間がなくなります。"
+        case .tapCamera: "下のカメラを押して、気になるものを撮ってみましょう。名前を知らなくても大丈夫。"
+        case .shoot: "知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。"
+        case .pick: "写真から見つけた候補です。残したいことばを選んでください。"
+        case .detail: "スピーカーを押すと、発音を聞けます。"
+        case .peel: "写真を指で好きな方向にめくります。"
+        case .added: "集めたことばが、撮った写真と一緒に並びます。"
+        case .dexTypes: "上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。"
+        case .dexOpen: "追加した単語を開いて、意味や使い方を見てみましょう。"
+        case .word: "意味も使い方も、この写真から。例文を確認したら、復習を試してみましょう。"
+        case .review: "自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。"
+        case .reviewPick: "写真に合うことばを選んでください。"
+        case .reviewNext: "答えを確かめたら「次へ」。"
+        default: ""
+        }
+    }
+
+    var stepLabel: String? {
+        switch self {
+        case .home: "1 / 5"
+        case .tapCamera: "2 / 5"
+        case .dexTypes, .dexOpen: "3 / 5"
+        case .word: "4 / 5"
+        case .review: "5 / 5"
+        default: nil
+        }
+    }
+
+    /// Spotlight の `interactive`: 光っている所だけ押せる。false なら「次へ」で進む。
+    var isInteractive: Bool {
+        switch self {
+        case .home, .added, .review: false
+        default: true
+        }
+    }
+
+    var nextLabel: String? {
+        switch self {
+        case .home, .detail, .added, .review: "次へ"
+        case .dexOpen: "追加した単語を見てみる"
+        case .word: "復習してみる"
+        default: nil
+        }
+    }
+
+    var isReview: Bool { self == .review || self == .reviewPick || self == .reviewNext }
+    var isCapture: Bool { self == .shoot || self == .pick || self == .detail || self == .peel }
+
+    static let pendingKey = "tour.pending"
+}
+
+enum TourAnchor: Hashable {
+    case album, cameraTab, shutter, pick, headword, peel, dexModes, quiz, reviewNext
+}
+
+struct TourAnchorKey: PreferenceKey {
+    static let defaultValue: [TourAnchor: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [TourAnchor: Anchor<CGRect>], nextValue: () -> [TourAnchor: Anchor<CGRect>]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+extension View {
+    /// 案内の光を当てる所（Web の `data-tour`）。
+    func tourAnchor(_ id: TourAnchor, if active: Bool = true) -> some View {
+        anchorPreference(key: TourAnchorKey.self, value: .bounds) { active ? [id: $0] : [:] }
+    }
+}
+
+/// Spotlight.tsx: 画面を暗くし、押す所だけ穴を開けて青く光らせる。説明の札は穴と反対側に出す。
+struct TourLayer: View {
+    let step: TourStep
+    let anchors: [TourAnchor: Anchor<CGRect>]
+    let onNext: () -> Void
+    let onSkip: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse: Bool = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let full = CGRect(origin: .zero, size: geo.size)
+            let hole: CGRect? = step.anchor.flatMap { anchors[$0] }.map { geo[$0].insetBy(dx: -8, dy: -8) }
+            let dim = holePath(full: full, hole: hole)
+            // 押す所が画面に無い（表示を切り替えた等）ときは暗くせず、札だけ出して操作を妨げない。
+            let shouldDim = hole != nil || !step.isInteractive
+            let showsCard = shouldDim || step.nextLabel != nil
+            ZStack {
+                if shouldDim {
+                    dim
+                        .fill(Color(hex: 0x0B1020, opacity: 0.58), style: FillStyle(eoFill: true))
+                        .contentShape(step.isInteractive && hole != nil ? dim : Path(full), eoFill: true)
+                        .onTapGesture {}
+                        .transition(.opacity)
+                }
+                if let hole {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Theme.primary, lineWidth: 3)
+                        .shadow(color: Theme.primary.opacity(pulse ? 0.9 : 0.4), radius: pulse ? 18 : 8)
+                        .frame(width: hole.width, height: hole.height)
+                        .scaleEffect(pulse ? 1.03 : 1)
+                        .position(x: hole.midX, y: hole.midY)
+                        .allowsHitTesting(false)
+                }
+                let cardOnTop = (hole?.midY ?? geo.size.height) > geo.size.height * 0.5
+                if showsCard {
+                    VStack {
+                        if !cardOnTop { Spacer(minLength: 0) }
+                        TourCoachCard(step: step, onNext: onNext, onSkip: onSkip)
+                            .padding(.horizontal, 16)
+                            .padding(.top, cardOnTop ? geo.safeAreaInsets.top + 12 : 0)
+                            .padding(.bottom, cardOnTop ? 0 : max(geo.safeAreaInsets.bottom, 12) + 84)
+                        if cardOnTop { Spacer(minLength: 0) }
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { pulse = true }
+        }
+    }
+
+    private func holePath(full: CGRect, hole: CGRect?) -> Path {
+        var p = Path(full)
+        if let hole { p.addRoundedRect(in: hole, cornerSize: CGSize(width: 22, height: 22), style: .continuous) }
+        return p
+    }
+}
+
+struct TourCoachCard: View {
+    let step: TourStep
+    let onNext: () -> Void
+    let onSkip: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                if let title = step.title {
+                    Text(title).font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.foreground)
+                }
+                Spacer()
+                if let label = step.stepLabel {
+                    Text(label).font(AppFont.mono(12, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Theme.primary.opacity(0.1), in: Capsule())
+                }
+            }
+            Text(step.text)
+                .font(.system(size: 15))
+                .foregroundStyle(Theme.foreground.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("案内を終える", action: onSkip)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.muted)
+                    .frame(minHeight: 44)
+                Spacer()
+                if let next = step.nextLabel {
+                    Button {
+                        Haptics.impact(.light)
+                        onNext()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(next)
+                            Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold))
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(Theme.primary, in: Capsule())
+                        .shadow(color: Theme.primary.opacity(0.4), radius: 10, y: 4)
+                    }
+                    .buttonStyle(PressableStyle(scale: 0.95))
+                }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+        .background(.white, in: .rect(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.25), radius: 24, y: 10)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .id(step)
+    }
+}
+
+/// 「最初のキャッチ、完了！」— 撮った写真と紙吹雪。
+struct TourCompleteView: View {
+    let sticker: Sticker?
+    let onDone: () -> Void
+
+    @Environment(DexStore.self) private var dex
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var burst: Bool = false
+
+    private static let confetti: [Color] = [Theme.primary, Color(hex: 0xF5B83D), Color(hex: 0xFF7A8A), Color(hex: 0x4FC3A1)]
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            VStack(spacing: 18) {
+                Spacer(minLength: 20)
+                Text("最初のキャッチ、完了！")
+                    .font(.system(size: 28, weight: .heavy))
+                    .foregroundStyle(Theme.foreground)
+                Text("撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。")
+                    .font(.system(size: 15))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.muted)
+                ZStack {
+                    ForEach(0..<14, id: \.self) { i in
+                        let angle = Double(i) / 14 * 2 * .pi
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Self.confetti[i % Self.confetti.count])
+                            .frame(width: 8, height: 14)
+                            .rotationEffect(.degrees(Double(i) * 37 + (burst ? 180 : 0)))
+                            .offset(x: burst ? cos(angle) * 150 : 0, y: burst ? sin(angle) * 150 : 0)
+                            .opacity(burst ? 0.9 : 0)
+                    }
+                    let path = sticker?.heroPath
+                    Color.white
+                        .frame(width: 220, height: 220)
+                        .overlay {
+                            StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: .fit)
+                                .padding(10)
+                                .allowsHitTesting(false)
+                        }
+                        .clipShape(.rect(cornerRadius: 28, style: .continuous))
+                        .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+                        .rotationEffect(.degrees(-3))
+                        .scaleEffect(burst ? 1 : 0.8)
+                }
+                .frame(height: 320)
+                if let head = sticker?.word?.headword {
+                    Text(head).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.foreground)
+                }
+                Spacer()
+                PrimaryButton(title: "はじめる", icon: "arrow.right", sheen: true, action: onDone)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
+            }
+        }
+        .onAppear {
+            Haptics.success()
+            SoundService.shared.play(.sting)
+            if reduceMotion { burst = true } else {
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.6)) { burst = true }
+            }
+        }
+    }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}

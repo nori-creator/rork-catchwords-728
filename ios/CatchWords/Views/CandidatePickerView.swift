@@ -38,6 +38,7 @@ struct CandidatePickerView: View {
                     }
                     .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    .tourAnchor(.pick)
 
                     manualInput.padding(.top, 8)
                 }

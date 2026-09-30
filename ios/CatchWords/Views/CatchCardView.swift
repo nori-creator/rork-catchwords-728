@@ -21,14 +21,14 @@ struct CatchCardView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     CollectHeader { vm.reset() }
-                    stickerStage
+                    stickerStage.tourAnchor(.peel)
                     actions
                     if vm.selfie != nil {
                         Text("画像をタップで自撮りにフリップ")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                     }
-                    if let c = vm.picked { headwordCard(c) }
+                    if let c = vm.picked { headwordCard(c).tourAnchor(.headword) }
                     if let c = vm.picked { meaningCard(c) }
                     if let d = vm.details, d.extras.hasMeters {
                         MetersPanel(extras: d.extras).transition(.opacity.combined(with: .move(edge: .bottom)))

@@ -11,6 +11,7 @@ struct ReviewView: View {
     /// Verdict for the current card (nil until a choice is picked).
     @State private var answer: Bool?
     @State private var showWordbooks: Bool = false
+    @State private var practiceIndex: Int = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -35,13 +36,14 @@ struct ReviewView: View {
             .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
         .overlay(alignment: .bottom) {
-            if let answer, let card = store.current {
+            if let answer, let card = router.tour.isReview ? practiceCards[safe: practiceIndex] : store.current {
                 AnswerPanel(sticker: card.sticker, correct: answer) {
-                    router.detailSticker = card.sticker
+                    if !router.tour.isReview { router.detailSticker = card.sticker }
                 } onNext: {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { self.answer = nil }
-                    store.advance()
+                    if router.tour.isReview { nextPractice() } else { store.advance() }
                 }
+                .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
                 .background(alignment: .bottom) { Color.white.frame(height: 80) }
                 .ignoresSafeArea(edges: .bottom)
@@ -73,6 +75,26 @@ struct ReviewView: View {
         }
         .fullScreenCover(isPresented: $showWordbooks) {
             WordbookView()
+        }
+    }
+
+    /// FirstCatchPractice: 撮った1枚（と図鑑にあればもう1枚）で、4択を記録せずに試す。
+    private var practiceCards: [ReviewCard] {
+        let own = router.tourStickerId.flatMap { dex.sticker(id: $0) }
+        let other = dex.stickers.first { $0.id != own?.id && $0.word != nil }
+        return [own, other].compactMap { s in
+            guard let s, s.word != nil else { return nil }
+            return ReviewCard(review: ReviewState(stickerId: s.id, ease: 2.5, intervalDays: 0, repetitions: 0), sticker: s)
+        }
+    }
+
+    private func nextPractice() {
+        if practiceIndex + 1 < practiceCards.count {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { practiceIndex += 1 }
+            router.advanceTour(from: .reviewNext, to: .reviewPick)
+        } else {
+            practiceIndex = 0
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { router.tour = .complete }
         }
     }
 
@@ -125,7 +147,15 @@ struct ReviewView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let err = store.loadError, store.queue.isEmpty {
+        if router.tour.isReview, let card = practiceCards[safe: practiceIndex] {
+            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: nil, isAnswered: answer != nil) { correct, _ in
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
+                router.advanceTour(from: .reviewPick, to: .reviewNext)
+            } onBadge: {}
+            .tourAnchor(.quiz)
+            .id("practice-\(card.id)")
+            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+        } else if let err = store.loadError, store.queue.isEmpty {
             VStack(spacing: 12) {
                 Label(err, systemImage: "wifi.exclamationmark").foregroundStyle(Theme.foreground)
                 Button("もう一度読み込む") { Task { await store.load(dex: dex, limit: profile.effectiveReviewLimit) } }

@@ -175,6 +175,7 @@ struct DexView: View {
                         Button {
                             Haptics.selection()
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) { mode = m }
+                            router.advanceTour(from: .dexTypes, to: .dexOpen)
                         } label: {
                             Image(systemName: m.icon)
                                 .font(.system(size: 16, weight: .regular))
@@ -194,6 +195,7 @@ struct DexView: View {
                 }
                 .padding(3)
                 .background(Theme.secondary, in: Capsule())
+                .tourAnchor(.dexModes)
 
                 Spacer(minLength: 0)
 

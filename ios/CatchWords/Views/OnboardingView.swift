@@ -391,6 +391,8 @@ struct OnboardingView: View {
         ]
         try? await SupabaseClient.shared.updateUserMetadata(prefs)
         UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
+        // 質問の後は、本物の画面で「撮る → 図鑑 → 復習」を体験する（FirstCatchFlow の home 段から）。
+        UserDefaults.standard.set(true, forKey: TourStep.pendingKey)
         Haptics.success()
         SoundService.shared.play(.sting)
         onFinish()
