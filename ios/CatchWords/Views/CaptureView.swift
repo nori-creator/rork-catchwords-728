@@ -41,13 +41,41 @@ struct CaptureView: View {
                 CandidatePickerView(vm: vm).transition(.move(edge: .bottom).combined(with: .opacity))
             case .card:
                 CatchCardView(vm: vm, onCatch: startCatch).transition(.move(edge: .trailing).combined(with: .opacity))
+            case .reencounter:
+                ReencounterView(vm: vm, onSeeInDex: { id in
+                    vm.reset()
+                    router.landingStickerId = id
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
+                })
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             case .failed(let reason, let retryable):
                 ZStack {
                     MachineBackground()
-                    FailedView(reason: reason, retryable: retryable, onRetry: {
-                        if let p = vm.photo { vm.analyze(p) }
-                    }, onClose: { vm.reset() })
+                    FailedView(reason: reason, retryable: retryable, offline: vm.failedOffline,
+                               onRetry: { vm.retry() },
+                               onHome: {
+                                   vm.keepPendingAndReset()
+                                   withAnimation { router.tab = .home }
+                               },
+                               onAgain: { vm.keepPendingAndReset() })
                 }
+            }
+            if let toast = vm.toast {
+                VStack {
+                    Text(toast)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Theme.foreground.opacity(0.88), in: Capsule())
+                        .padding(.top, 60)
+                        .padding(.horizontal, 24)
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .allowsHitTesting(false)
+                .zIndex(20)
             }
             if shutterFlash {
                 Color.white.ignoresSafeArea().allowsHitTesting(false)
@@ -149,7 +177,7 @@ struct CaptureView: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
             HStack {
-                usagePill
+                if plan.isPro || PlanStore.catchLimitEnabled { usagePill }
                 Spacer()
                 Button {
                     Haptics.selection()
@@ -441,8 +469,25 @@ struct CaptureView: View {
     }
 
     /// Animation starts immediately from the photo on screen; save runs in parallel behind the 1s hold gate.
+    /// The card must be real before saving (never placeholder level/category): if it is still being
+    /// generated we wait for it; if it failed, nothing is saved.
     private func startCatch() {
-        guard reward == nil, let draft = vm.draft() else { return }
+        guard reward == nil, vm.picked != nil else { return }
+        if let d = vm.details, let draft = vm.draft(details: d) {
+            runCatch(draft)
+            return
+        }
+        Task {
+            guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
+                vm.showToast("カード生成に失敗しました")
+                return
+            }
+            runCatch(draft)
+        }
+    }
+
+    private func runCatch(_ draft: CatchDraft) {
+        guard reward == nil else { return }
         let gate = SaveGate()
         let payload = RewardPayload(
             image: draft.cutout ?? draft.photo,
@@ -451,7 +496,8 @@ struct CaptureView: View {
             reading: draft.candidate.zhuyin,
             pinyin: draft.candidate.pinyin,
             meaning: draft.candidate.meaningJa,
-            rarity: Double(6 - (draft.details?.extras.frequencyLevel ?? 3)) / 5,
+            // PRODUCT.md: no arbitrary rarity. Every catch gets the same lift.
+            rarity: 0,
             gate: gate
         )
         withAnimation(nil) { reward = payload }
@@ -459,11 +505,12 @@ struct CaptureView: View {
             do {
                 let outcome = try await dex.save(draft)
                 plan.recordCatch()
+                vm.releasePending()
+                dex.refreshPending()
                 gate.finish(.success(outcome))
             } catch {
-                PendingQueue.shared.add(image: draft.photo, reason: (error as? LocalizedError)?.errorDescription ?? "保存に失敗しました。",
-                                        lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude)
-                dex.refreshPending()
+                // The photo is still in "解析待ち" (queued at the shutter), and the card stays on
+                // screen so the chosen word is not lost.
                 gate.finish(.failure(error))
             }
         }
@@ -482,10 +529,10 @@ struct CaptureView: View {
             reward = nil
             withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
         case .failure(let error):
+            // Web: toast 「保存に失敗しました」 and stay on the card (capture.tsx reportSaveFailure).
             reward = nil
-            vm.reset()
-            let reason = (error as? LocalizedError)?.errorDescription ?? "保存に失敗しました。"
-            vm.step = .failed("写真は預かりました。\n\(reason)", retryable: false)
+            let reason = (error as? LocalizedError)?.errorDescription ?? ""
+            vm.showToast(reason.isEmpty ? "保存に失敗しました" : "保存に失敗しました\n\(reason)")
         case .none:
             reward = nil
             vm.reset()
@@ -597,43 +644,53 @@ struct CameraMessageView: View {
     }
 }
 
+/// Web `OfflineSavedPanel` (capture.tsx): the photo was kept in "解析待ち" when analysis failed.
+/// The reason is always shown — a 401 or a broken image must not look like "just try later".
 struct FailedView: View {
     let reason: String
     let retryable: Bool
+    let offline: Bool
     let onRetry: () -> Void
-    let onClose: () -> Void
+    let onHome: () -> Void
+    let onAgain: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "tray.and.arrow.down.fill")
+            Image(systemName: offline ? "wifi.slash" : "sparkles")
                 .font(.system(size: 40, weight: .semibold))
                 .foregroundStyle(Theme.gold)
-            Text("写真は預かりました")
+            Text("解析できなかったので写真を預かりました")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
-            Text(reason)
+                .multilineTextAlignment(.center)
+            Text("あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。")
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
-            Text(retryable ? "電波が戻ったら「解析待ち」から続きができます。" : "この理由は、時間をおいても直らない可能性があります。")
+            Text("理由: \(reason)")
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
             VStack(spacing: 10) {
-                if retryable { PrimaryButton(title: "もう一度解析する", icon: "arrow.clockwise", action: onRetry) }
-                Button("カメラに戻る", action: onClose)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(.white.opacity(0.1), in: .rect(cornerRadius: 16))
-                    .buttonStyle(PressableStyle())
+                if retryable { PrimaryButton(title: "いますぐもう一度試す", icon: "arrow.clockwise", action: onRetry) }
+                secondary("ホームへ", action: onHome)
+                secondary("もう一枚撮る", action: onAgain)
             }
             .padding(.top, 8)
             Spacer()
         }
         .padding(28)
         .padding(.bottom, 80)
+    }
+
+    private func secondary(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(title, action: action)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(.white.opacity(0.1), in: .rect(cornerRadius: 16))
+            .buttonStyle(PressableStyle())
     }
 }
 

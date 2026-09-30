@@ -332,14 +332,26 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
     let point: [Double]
     let confidence: Double
     let alternatives: [String]
+    /// Web `suggestWords` / `suggestWordCandidates`: how this name differs from the others (≤15 chars).
+    var distinction: String = ""
+    /// common / casual / specific / proper — "ほかの言い方" chips (candidate-order.ts).
+    var register: String?
+    /// Which object in the photo; other names of the same object share it.
+    var group: Int?
+    /// Shelf hint passed to `generateCard` as `hintCategory`.
+    var categoryKey: String?
 
     enum CodingKeys: String, CodingKey {
         case kind, headword, zhuyin, pinyin, pos, point, confidence, alternatives
+        case distinction, register, group
         case meaningJa = "meaning_ja"
+        case readingZhuyin = "reading_zhuyin"
+        case categoryKey = "category_key"
     }
 
     init(kind: String, headword: String, zhuyin: String, pinyin: String, meaningJa: String,
-         pos: String, point: [Double], confidence: Double, alternatives: [String]) {
+         pos: String, point: [Double], confidence: Double, alternatives: [String],
+         distinction: String = "", register: String? = nil, group: Int? = nil, categoryKey: String? = nil) {
         self.kind = kind
         self.headword = headword
         self.zhuyin = zhuyin
@@ -349,6 +361,27 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
         self.point = point
         self.confidence = confidence
         self.alternatives = alternatives
+        self.distinction = distinction
+        self.register = register
+        self.group = group
+        self.categoryKey = categoryKey
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(headword, forKey: .headword)
+        try c.encode(zhuyin, forKey: .zhuyin)
+        try c.encode(pinyin, forKey: .pinyin)
+        try c.encode(meaningJa, forKey: .meaningJa)
+        try c.encode(pos, forKey: .pos)
+        try c.encode(point, forKey: .point)
+        try c.encode(confidence, forKey: .confidence)
+        try c.encode(alternatives, forKey: .alternatives)
+        try c.encode(distinction, forKey: .distinction)
+        try c.encodeIfPresent(register, forKey: .register)
+        try c.encodeIfPresent(group, forKey: .group)
+        try c.encodeIfPresent(categoryKey, forKey: .categoryKey)
     }
 
     /// Lenient decode (scan-detect-parse.ts): nulls, percentages, strings all accepted.
@@ -360,7 +393,8 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
         }
         headword = head
         kind = ((try? c.decode(String.self, forKey: .kind)) ?? "object").lowercased() == "text" ? "text" : "object"
-        zhuyin = (try? c.decode(String.self, forKey: .zhuyin)) ?? ""
+        zhuyin = (try? c.decode(String.self, forKey: .zhuyin))
+            ?? (try? c.decode(String.self, forKey: .readingZhuyin)) ?? ""
         pinyin = (try? c.decode(String.self, forKey: .pinyin)) ?? ""
         meaningJa = (try? c.decode(String.self, forKey: .meaningJa)) ?? ""
         pos = (try? c.decode(String.self, forKey: .pos)) ?? "名詞"
@@ -372,6 +406,10 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
         if conf > 1 { conf /= 100 }
         confidence = max(0, min(1, conf))
         alternatives = (try? c.decode([String].self, forKey: .alternatives)) ?? []
+        distinction = ((try? c.decode(String.self, forKey: .distinction)) ?? "").trimmingCharacters(in: .whitespaces)
+        register = try? c.decode(String.self, forKey: .register)
+        group = try? c.decode(Int.self, forKey: .group)
+        categoryKey = try? c.decode(String.self, forKey: .categoryKey)
     }
 }
 
@@ -382,6 +420,9 @@ nonisolated struct CardDetails: Codable, Sendable {
     var exampleSentence: String
     var exampleTranslation: String
     var extras: WordExtras
+    /// The whole card exactly as `generateCard` returned it. Saving sends this back
+    /// (word fields, every extras key, new_shelf), so nothing the web generated is lost.
+    var raw: JSONValue?
 
     enum CodingKeys: String, CodingKey {
         case level, extras
@@ -405,5 +446,48 @@ nonisolated struct CardDetails: Codable, Sendable {
         exampleSentence = (try? c.decode(String.self, forKey: .exampleSentence)) ?? ""
         exampleTranslation = (try? c.decode(String.self, forKey: .exampleTranslation)) ?? ""
         extras = (try? c.decode(WordExtras.self, forKey: .extras)) ?? WordExtras()
+        raw = try? JSONValue(from: decoder)
     }
+
+    func encode(to encoder: Encoder) throws {
+        if let raw {
+            try raw.encode(to: encoder)
+            return
+        }
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(categoryKey, forKey: .categoryKey)
+        try c.encode(level, forKey: .level)
+        try c.encode(exampleSentence, forKey: .exampleSentence)
+        try c.encode(exampleTranslation, forKey: .exampleTranslation)
+        try c.encode(extras, forKey: .extras)
+    }
+}
+
+/// Web `checkOwnedWord` → `OwnedWord` (encounters.functions.ts). A word already in the dex:
+/// catching it again is a re-encounter ("再会！"), never a duplicate sticker.
+nonisolated struct OwnedWord: Codable, Sendable, Hashable {
+    let stickerId: String
+    let wordId: String
+    let headword: String
+    let meaningJa: String
+    let readingZhuyin: String?
+    let pinyin: String?
+    let cutoutUrl: String?
+    let encounterCount: Int
+    let takenAt: String
+    let locationName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case headword, pinyin
+        case stickerId = "sticker_id"
+        case wordId = "word_id"
+        case meaningJa = "meaning_ja"
+        case readingZhuyin = "reading_zhuyin"
+        case cutoutUrl = "cutout_url"
+        case encounterCount = "encounter_count"
+        case takenAt = "taken_at"
+        case locationName = "location_name"
+    }
+
+    var takenDate: Date? { SupabaseDate.parse(takenAt) }
 }

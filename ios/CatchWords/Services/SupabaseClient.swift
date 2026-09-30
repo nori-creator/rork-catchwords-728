@@ -8,6 +8,11 @@ nonisolated enum APIError: LocalizedError {
     case server(Int, String)
     case decoding
     case message(String)
+    /// The server's rolling-24h cap (`assertWithinDailyCap`). Waiting a few minutes does not help.
+    case limit(String)
+
+    /// err.dailyCap (web i18n).
+    static let dailyCapMessage = "1日の利用上限に達しました。24時間以内に自動で回復します。"
 
     var errorDescription: String? {
         switch self {
@@ -18,6 +23,7 @@ nonisolated enum APIError: LocalizedError {
         case .server(let code, let msg): msg.isEmpty ? "サーバーエラー（\(code)）" : msg
         case .decoding: "データの読み込みに失敗しました。"
         case .message(let m): m
+        case .limit(let m): m
         }
     }
 
@@ -26,6 +32,7 @@ nonisolated enum APIError: LocalizedError {
         switch self {
         case .timeout, .offline: true
         case .server(let code, _): code >= 500 || code == 429
+        case .limit: false
         default: false
         }
     }

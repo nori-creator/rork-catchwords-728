@@ -34,31 +34,6 @@ final class AIService {
     {"items":[{"kind":"object","headword":"芒果","zhuyin":"ㄇㄤˊ ㄍㄨㄛˇ","pinyin":"mángguǒ","meaning_ja":"マンゴー","pos":"名詞","point":[512,340],"confidence":0.93,"alternatives":[]}]}
     """
 
-    private static func cardPrompt(headword: String, meaning: String) -> String {
-        let keys = Category.allKeys.joined(separator: ", ")
-        return """
-        台湾華語の学習カードを作ってください。語: 「\(headword)」(意味: \(meaning))。
-        台湾で実際に使われる語彙・繁体字のみ。解説は日本語。
-        出力はJSONオブジェクトのみ(前置き・コードフェンス禁止):
-        {
-          "category_key": "次から1つ: \(keys)",
-          "level": "TOCFL-1〜TOCFL-6 のどれか",
-          "example_sentence": "台湾で自然な短い例文(繁体字)",
-          "example_translation": "例文の日本語訳",
-          "extras": {
-            "frequency_level": 1〜5の整数(5=毎日耳にする),
-            "register_scale": -2〜2の整数(-2=完全に口語, 0=どちらでも, 2=完全に書面),
-            "register_tag": "口語 / 書面 / 口語・書面",
-            "scene_weights": {"eat":0.0,"town":0.0,"house":0.0,"wear":0.0,"play":0.0,"nature":0.0,"people":0.0,"marks":0.0} (合計およそ1),
-            "usage_chunks": [ {"parts":[{"text":"買","pos":"V"},{"text":"\(headword)","pos":"O"}],"ja":"短い日本語訳"} ] (ネイティブ頻出の型を3つ。量詞は含めない。入れ替え可能な所は "slot": true),
-            "usage_context": "どこで見て使うか・口語/書面・頻度を2文以内で",
-            "measure_words": [{"word":"個","zhuyin":"ㄍㄜˋ","note":"使い分け(名詞のみ、無ければ空配列)"}],
-            "mnemonic": "覚え方を1文"
-          }
-        }
-        """
-    }
-
     func detect(image: UIImage, textOnly: Bool = false) async throws -> [Candidate] {
         guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
         let prompt = textOnly
@@ -68,6 +43,37 @@ final class AIService {
         let items = try Self.parseItems(text)
         guard !items.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
         return items
+    }
+
+    // MARK: - Web server functions (the Lovable-decided behaviour)
+
+    private struct Suggestions: Decodable { let suggestions: [Candidate] }
+    private struct WordCandidates: Decodable { let candidates: [Candidate] }
+
+    /// Photo → candidates, exactly like the web capture (`suggestWords`, capture.tsx runAi):
+    /// 768px / q0.8, one entry per object (`group`) plus its other names (`register`),
+    /// in the server's order (most likely first, everyday name first). Never re-sorted here.
+    func suggest(image: UIImage) async throws -> [Candidate] {
+        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 768, quality: 0.8) else {
+            throw APIError.message("写真を読み込めませんでした。")
+        }
+        let res = try await NativeAPI.call("suggestWords", [
+            "imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())",
+            "targetLanguage": NativeAPI.targetLanguage,
+        ], as: Suggestions.self, timeout: 25)
+        var out: [Candidate] = []
+        for c in res.suggestions where !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
+        guard !out.isEmpty else { throw APIError.message("AIから候補が返りませんでした。もう一度お試しください。") }
+        return out
+    }
+
+    /// Typed word (Japanese or Chinese) → 2–5 names, each with how it differs
+    /// (`suggestWordCandidates`). One result goes straight to the card; several go to the picker.
+    func candidates(for query: String, scene: String? = nil) async throws -> [Candidate] {
+        var data: [String: Any] = ["query": String(query.prefix(60)), "targetLanguage": NativeAPI.targetLanguage]
+        if let scene, !scene.isEmpty { data["scene"] = String(scene.prefix(200)) }
+        let res = try await NativeAPI.call("suggestWordCandidates", data, as: WordCandidates.self, timeout: 30)
+        return res.candidates
     }
 
     /// Text search ("文字で調べる"): turn a typed word (Japanese or Chinese) into a candidate.
@@ -81,11 +87,12 @@ final class AIService {
         return first
     }
 
+    /// The web's card (`generateCard`): level resolved against the dictionary (級外 when unsure),
+    /// the learner's level and explanation language, retries on bad shape, every extras section.
     func cardDetails(for candidate: Candidate) async throws -> CardDetails {
-        let prompt = Self.cardPrompt(headword: candidate.headword, meaning: candidate.meaningJa)
-        let text = try await complete(.card, prompt: prompt, timeout: 40)
-        let data = try Self.jsonData(from: text)
-        return try JSONDecoder().decode(CardDetails.self, from: data)
+        var data: [String: Any] = ["headword": candidate.headword, "targetLanguage": NativeAPI.targetLanguage]
+        if let hint = candidate.categoryKey, !hint.isEmpty { data["hintCategory"] = hint }
+        return try await NativeAPI.call("generateCard", data, as: CardDetails.self, timeout: 60)
     }
 
     /// wordbook.functions.ts EXTRACT_PROMPT: read the words printed on a vocabulary page (not saved yet).
@@ -155,7 +162,7 @@ final class AIService {
         switch status {
         case 200: break
         case 401: throw APIError.unauthorized
-        case 429: throw APIError.server(429, serverMessage.isEmpty ? "混み合っています。少し待ってからもう一度お試しください。" : serverMessage)
+        case 429: throw APIError.limit(serverMessage.isEmpty ? APIError.dailyCapMessage : serverMessage)
         default: throw APIError.server(status, serverMessage.isEmpty ? "AIの解析に失敗しました（\(status)）" : serverMessage)
         }
         guard let text = json?["text"] as? String else { throw APIError.decoding }

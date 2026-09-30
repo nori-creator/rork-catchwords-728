@@ -6,6 +6,9 @@ import StoreKit
 @Observable
 final class PlanStore {
     static let freeCatchesPerDay = 3
+    /// PRODUCT.md: "Initial public testing is a free beta. Do not prematurely hard-code a restrictive
+    /// daily Catch limit without observing behavior." Off until real usage decides Free/Pro.
+    static let catchLimitEnabled = false
     static let productIDs = ["catchwords.pro.yearly", "catchwords.pro.monthly"]
 
     var products: [Product] = []
@@ -17,7 +20,7 @@ final class PlanStore {
 
     var isPro: Bool { isStorePro || isServerPro }
     var remainingToday: Int { max(0, Self.freeCatchesPerDay - usedToday) }
-    var canCatch: Bool { isPro || remainingToday > 0 }
+    var canCatch: Bool { !Self.catchLimitEnabled || isPro || remainingToday > 0 }
 
     private var updatesTask: Task<Void, Never>?
 

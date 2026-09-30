@@ -246,7 +246,8 @@ struct SettingsView: View {
                     Text("Pro をご利用中です").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
                     Text("撮影は無制限です").font(.system(size: 13)).foregroundStyle(Theme.muted)
                 } else {
-                    Text("今日あと\(plan.remainingToday)回撮れます").font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    Text(PlanStore.catchLimitEnabled ? "今日あと\(plan.remainingToday)回撮れます" : "ベータ期間中は撮影回数の制限はありません")
+                        .font(.system(size: 15)).foregroundStyle(Theme.muted)
                     Button { router.showPaywall = true } label: {
                         Text("Proにアップグレード").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
