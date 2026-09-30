@@ -77,6 +77,12 @@ enum JPDate {
     private static let mdwF = make("M月d日(E)")
     private static let slashF = make("M/d")
     private static let timeF = make("HH:mm")
+    private static let fullF = make("yyyy年M月d日 HH:mm")
+    private static let mmddF = make("MM/dd")
+    /// 2026年9月28日 18:17
+    static func full(_ d: Date) -> String { fullF.string(from: d) }
+    /// 09/28
+    static func mmdd(_ d: Date) -> String { mmddF.string(from: d) }
     private static let monthEN: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")

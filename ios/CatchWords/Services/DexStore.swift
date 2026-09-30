@@ -270,14 +270,32 @@ final class DexStore {
         }
         _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["cutout_image_url": path])
         ImageCache.shared.set(image, for: path)
-        if let i = stickers.firstIndex(where: { $0.id == sticker.id }) {
-            let old = stickers[i]
-            stickers[i] = Sticker(
+        replace(sticker.id) { old in
+            Sticker(
                 id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: path,
                 selfieImageUrl: old.selfieImageUrl, caption: old.caption, locationName: old.locationName,
-                takenAt: old.takenAt, captureType: old.captureType, word: old.word
+                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng
             )
         }
+    }
+
+    /// Saves the sticker's one-line note (ひと言). Empty clears it.
+    func updateCaption(_ sticker: Sticker, caption: String) async throws {
+        let trimmed = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value: Any = trimmed.isEmpty ? NSNull() : trimmed
+        _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["caption": value])
+        replace(sticker.id) { old in
+            Sticker(
+                id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: old.cutoutImageUrl,
+                selfieImageUrl: old.selfieImageUrl, caption: trimmed.isEmpty ? nil : trimmed, locationName: old.locationName,
+                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng
+            )
+        }
+    }
+
+    private func replace(_ id: String, _ transform: (Sticker) -> Sticker) {
+        guard let i = stickers.firstIndex(where: { $0.id == id }) else { return }
+        stickers[i] = transform(stickers[i])
     }
 
     func delete(_ sticker: Sticker) async throws {

@@ -22,6 +22,65 @@ enum DexMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum DexFilterMenu { case category, day }
+
+/// White rounded dropdown panel that drops under a filter pill (dex.tsx popover).
+struct DexDropdown<Content: View>: View {
+    var width: CGFloat = 250
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 2) { content }
+                .padding(8)
+        }
+        .scrollIndicators(.visible)
+        .frame(width: width)
+        .frame(maxHeight: 340)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(Theme.card, in: .rect(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.14), radius: 22, y: 10)
+        .transition(.scale(scale: 0.92, anchor: .top).combined(with: .opacity))
+    }
+}
+
+struct DexDropdownRow: View {
+    let title: String
+    let count: Int?
+    let isSelected: Bool
+    var monospaced: Bool = false
+    var icon: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon ?? "checkmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(icon == nil ? Theme.primary : Theme.muted)
+                    .opacity(isSelected || icon != nil ? 1 : 0)
+                    .frame(width: 18)
+                Text(title)
+                    .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.foreground)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if let count {
+                    Text("\(count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .background(isSelected ? Theme.secondary : .clear, in: .rect(cornerRadius: 14, style: .continuous))
+            .contentShape(.rect)
+        }
+        .buttonStyle(PressableStyle(scale: 0.98))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
 struct DexView: View {
     @Environment(DexStore.self) private var dex
     @Environment(AppRouter.self) private var router
@@ -33,7 +92,25 @@ struct DexView: View {
     @State private var showCalendar: Bool = false
     @State private var landedId: String?
     @State private var impactTick: Int = 0
+    @State private var openMenu: DexFilterMenu?
     @Namespace private var modeBubble
+
+    private var categoryCounts: [(key: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        for s in dex.stickers { counts[s.categoryKey, default: 0] += 1 }
+        let order = Category.orderedKeys
+        return counts.map { ($0.key, $0.value) }.sorted {
+            $0.count != $1.count ? $0.count > $1.count
+                : (order.firstIndex(of: $0.key) ?? 99) < (order.firstIndex(of: $1.key) ?? 99)
+        }
+    }
+
+    private var dayCounts: [(day: Date, count: Int)] {
+        let cal = Calendar.current
+        var counts: [Date: Int] = [:]
+        for s in dex.stickers { counts[cal.startOfDay(for: s.takenAt), default: 0] += 1 }
+        return counts.map { ($0.key, $0.value) }.sorted { $0.day > $1.day }
+    }
 
     private var filtered: [Sticker] {
         let q = query.trimmingCharacters(in: .whitespaces)
@@ -54,6 +131,11 @@ struct DexView: View {
             ZStack(alignment: .top) {
                 AppBackground()
                 content
+                if openMenu != nil {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture { closeMenu() }
+                }
                 header
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -115,28 +197,25 @@ struct DexView: View {
 
                 Spacer(minLength: 0)
 
-                Menu {
-                    Button("すべて") { withAnimation(.snappy) { categoryFilter = nil } }
-                    ForEach(Room.allCases) { room in
-                        let keys = Category.orderedKeys.filter { Category.room(for: $0) == room && present.contains($0) }
-                        if !keys.isEmpty {
-                            Section(room.label) {
-                                ForEach(keys, id: \.self) { k in
-                                    Button("\(Category.emoji(for: k)) \(Category.label(for: k))") {
-                                        withAnimation(.snappy) { categoryFilter = k }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } label: {
+                Button { toggleMenu(.category) } label: {
                     pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? "カテゴリー",
-                         active: categoryFilter != nil)
+                         active: categoryFilter != nil, open: openMenu == .category)
                 }
-                Button { showCalendar = true } label: {
-                    pill(dayFilter.map { JPDate.monthDay($0) } ?? "日付", active: dayFilter != nil)
+                .buttonStyle(PressableStyle(scale: 0.95))
+                .overlay(alignment: .topLeading) {
+                    if openMenu == .category { categoryMenu.offset(x: -30, y: 52) }
                 }
+                .zIndex(openMenu == .category ? 2 : 0)
+                Button { toggleMenu(.day) } label: {
+                    pill(dayFilter.map { JPDate.mmdd($0) } ?? "日付", active: dayFilter != nil, open: openMenu == .day)
+                }
+                .buttonStyle(PressableStyle(scale: 0.95))
+                .overlay(alignment: .topTrailing) {
+                    if openMenu == .day { dayMenu.offset(y: 52) }
+                }
+                .zIndex(openMenu == .day ? 2 : 0)
             }
+            .zIndex(1)
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
                 TextField("", text: $query, prompt: Text("単語・読み・意味で検索").foregroundStyle(Theme.muted))
@@ -165,12 +244,63 @@ struct DexView: View {
         }
     }
 
-    private var present: Set<String> { Set(dex.stickers.map(\.categoryKey)) }
+    // MARK: Filter dropdowns
 
-    private func pill(_ text: String, active: Bool) -> some View {
+    private func toggleMenu(_ menu: DexFilterMenu) {
+        Haptics.selection()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { openMenu = openMenu == menu ? nil : menu }
+    }
+
+    private func closeMenu() {
+        withAnimation(.easeOut(duration: 0.18)) { openMenu = nil }
+    }
+
+    private var categoryMenu: some View {
+        DexDropdown {
+            DexDropdownRow(title: "すべて", count: nil, isSelected: categoryFilter == nil) {
+                pick { categoryFilter = nil }
+            }
+            ForEach(categoryCounts, id: \.key) { item in
+                DexDropdownRow(title: "\(Category.emoji(for: item.key)) \(Category.label(for: item.key))",
+                               count: item.count, isSelected: categoryFilter == item.key) {
+                    pick { categoryFilter = item.key }
+                }
+            }
+        }
+    }
+
+    private var dayMenu: some View {
+        DexDropdown(width: 200) {
+            DexDropdownRow(title: "すべての日", count: nil, isSelected: dayFilter == nil) {
+                pick { dayFilter = nil }
+            }
+            ForEach(dayCounts, id: \.day) { item in
+                let selected = dayFilter.map { Calendar.current.isDate($0, inSameDayAs: item.day) } ?? false
+                DexDropdownRow(title: JPDate.mmdd(item.day), count: item.count, isSelected: selected, monospaced: true) {
+                    pick { dayFilter = item.day }
+                }
+            }
+            Divider().padding(.vertical, 4)
+            DexDropdownRow(title: "カレンダーで選ぶ", count: nil, isSelected: false, icon: "calendar") {
+                closeMenu()
+                showCalendar = true
+            }
+        }
+    }
+
+    private func pick(_ change: () -> Void) {
+        Haptics.selection()
+        withAnimation(.snappy) {
+            change()
+            openMenu = nil
+        }
+    }
+
+    private func pill(_ text: String, active: Bool, open: Bool) -> some View {
         HStack(spacing: 4) {
             Text(text).lineLimit(1)
             Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+                .rotationEffect(.degrees(open ? 180 : 0))
         }
         .font(.system(size: 14, weight: .medium))
         .foregroundStyle(active ? .white : Theme.foreground)
