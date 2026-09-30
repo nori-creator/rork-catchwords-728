@@ -331,13 +331,13 @@ private struct PageTurn: ViewModifier, Animatable {
         content
             .overlay {
                 // Darkens as it stands up; a bright crease line near the spine.
-                LinearGradient(colors: [.black.opacity(0.25 * progress), .white.opacity(0.18 * sin(progress * .pi)), .black.opacity(0.1 * progress)],
+                LinearGradient(colors: [.black.opacity(0.25 * progress), .white.opacity(0.18 * sin(Double(progress) * Double.pi)), .black.opacity(0.1 * progress)],
                                startPoint: .leading, endPoint: .trailing)
                     .allowsHitTesting(false)
             }
             .rotation3DEffect(.degrees(active ? angle : 0), axis: (x: 0, y: 1, z: 0), anchor: .leading, perspective: 0.55)
             .opacity(active && progress > 0.5 ? 0 : 1)   // past upright its back faces away (the next page shows)
-            .shadow(color: .black.opacity(active ? 0.3 * sin(progress * .pi) : 0), radius: 18, x: -8 * progress, y: 6)
+            .shadow(color: .black.opacity(active ? 0.3 * sin(Double(progress) * Double.pi) : 0), radius: 18, x: -8 * progress, y: 6)
     }
 }
 
@@ -361,7 +361,7 @@ private struct PaperPage<Content: View>: View {
                     LinearGradient(colors: [.black.opacity(0.14), .clear], startPoint: .leading, endPoint: .init(x: 0.08, y: 0.5))
                 }
             }
-            .clipShape(.rect(topTrailingRadius: 6, bottomTrailingRadius: 6))
+            .clipShape(.rect(bottomTrailingRadius: 6, topTrailingRadius: 6))
     }
 }
 
