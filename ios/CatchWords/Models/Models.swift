@@ -59,9 +59,13 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var usageContext: String?
     var mnemonic: String?
     var measureWords: [MeasureWord]?
+    var relatedWords: [RelatedWord]?
+    var synonyms: [String]?
+    var antonyms: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case mnemonic
+        case mnemonic, synonyms, antonyms
+        case relatedWords = "related_words"
         case frequencyLevel = "frequency_level"
         case registerScale = "register_scale"
         case registerTag = "register_tag"
@@ -94,6 +98,15 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         usageContext = (try? c.decodeIfPresent(String.self, forKey: .usageContext)).flatMap { $0 }
         mnemonic = (try? c.decodeIfPresent(String.self, forKey: .mnemonic)).flatMap { $0 }
         measureWords = (try? c.decodeIfPresent([MeasureWord].self, forKey: .measureWords)).flatMap { $0 }
+        relatedWords = (try? c.decodeIfPresent([RelatedWord].self, forKey: .relatedWords)).flatMap { $0 }
+        synonyms = (try? c.decodeIfPresent([String].self, forKey: .synonyms)).flatMap { $0 }
+        antonyms = (try? c.decodeIfPresent([String].self, forKey: .antonyms)).flatMap { $0 }
+    }
+
+    /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).
+    var allRelated: [RelatedWord] {
+        if let r = relatedWords?.filter({ !$0.word.isEmpty }), !r.isEmpty { return r }
+        return (synonyms ?? []).map { RelatedWord(word: $0, kind: "syn") } + (antonyms ?? []).map { RelatedWord(word: $0, kind: "ant") }
     }
 
     /// "Draw only what exists" — the web app's rule: a section without content has no header.
@@ -144,6 +157,30 @@ nonisolated struct ChunkPart: Codable, Sendable, Hashable {
         text = (try? c.decode(String.self, forKey: .text)) ?? ""
         pos = (try? c.decode(String.self, forKey: .pos)) ?? ""
         slot = try? c.decodeIfPresent(Bool.self, forKey: .slot)
+    }
+}
+
+/// extras.related_words entry (RelatedWordSchema): kind is syn / ant / rel.
+nonisolated struct RelatedWord: Codable, Sendable, Hashable {
+    var word: String
+    var kind: String
+    var note: String
+    var reading: String
+
+    init(word: String, kind: String, note: String = "", reading: String = "") {
+        self.word = word
+        self.kind = kind
+        self.note = note
+        self.reading = reading
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        word = (try? c.decode(String.self, forKey: .word)) ?? ""
+        let k = (try? c.decode(String.self, forKey: .kind)) ?? "rel"
+        kind = ["syn", "ant", "rel"].contains(k) ? k : "rel"
+        note = (try? c.decode(String.self, forKey: .note)) ?? ""
+        reading = (try? c.decode(String.self, forKey: .reading)) ?? ""
     }
 }
 
