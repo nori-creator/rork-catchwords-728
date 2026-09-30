@@ -7,8 +7,9 @@ import Foundation
 /// (levels, dictionary checks, usage notes, extras merging, daily caps). Calling the same
 /// functions with the same input keeps iOS in step: fix it on the web and iOS is fixed too.
 enum NativeAPI {
-    /// The learning language. The web profile decides the rest (level, explanation language).
-    nonisolated static let targetLanguage = "zh-TW"
+    /// The learning language (`profiles.target_language`: "zh-TW" or "en"). `ProfileStore` keeps it
+    /// in step; the web profile decides the rest (level, explanation language).
+    nonisolated(unsafe) static var targetLanguage = "zh-TW"
 
     /// Returns the function's `result` as raw JSON bytes.
     static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40) async throws -> Data {

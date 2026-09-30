@@ -41,7 +41,14 @@ final class SoundService {
 
     private var players: [SFX: AVAudioPlayer] = [:]
     private let synthesizer = AVSpeechSynthesizer()
-    private lazy var voice: AVSpeechSynthesisVoice? = Self.pickVoice()
+    private var voiceCache: (lang: String, voice: AVSpeechSynthesisVoice?)?
+    /// The device voice for the language being learned (picked again if the learning language changes).
+    private var voice: AVSpeechSynthesisVoice? {
+        if let c = voiceCache, c.lang == NativeAPI.targetLanguage { return c.voice }
+        let v = Self.pickVoice()
+        voiceCache = (NativeAPI.targetLanguage, v)
+        return v
+    }
 
     private var levelMultiplier: Float {
         switch UserDefaults.standard.string(forKey: "sound.level") ?? "full" {
@@ -179,7 +186,7 @@ final class SoundService {
         }
     }
 
-    /// Device voice fallback: always the same zh-TW voice (never a "close" language).
+    /// Device voice fallback: always the learning language's own voice (never a "close" language).
     private func speakOnDevice(_ text: String) {
         guard let voice else { return }
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
@@ -200,12 +207,13 @@ final class SoundService {
     }
 
     private static func pickVoice() -> AVSpeechSynthesisVoice? {
+        let lang = NativeAPI.targetLanguage == "en" ? "en-US" : "zh-TW"
         let voices = AVSpeechSynthesisVoice.speechVoices()
-            .filter { $0.language == "zh-TW" }
+            .filter { $0.language == lang }
             .sorted { lhs, rhs in
                 if lhs.quality != rhs.quality { return lhs.quality.rawValue > rhs.quality.rawValue }
                 return lhs.identifier < rhs.identifier
             }
-        return voices.first ?? AVSpeechSynthesisVoice(language: "zh-TW")
+        return voices.first ?? AVSpeechSynthesisVoice(language: lang)
     }
 }

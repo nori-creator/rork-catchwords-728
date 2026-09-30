@@ -39,7 +39,7 @@ final class DexStore {
     var reviews: [String: ReviewState] = [:]
 
     private let client = SupabaseClient.shared
-    private let language = "zh-TW"
+    private var language: String { NativeAPI.targetLanguage }
     private static let selectColumns =
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key,word:words(*)"
 
@@ -54,7 +54,8 @@ final class DexStore {
             await loadShelves()
             await loadAlbumHidden()
             await loadAlbumPlacements()
-            stickers = rows
+            // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
+            stickers = rows.filter { $0.word?.matches(language) ?? true }
             loadError = nil
             hasLoaded = true
             await loadReviews()

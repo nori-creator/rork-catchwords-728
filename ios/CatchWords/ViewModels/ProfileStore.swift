@@ -6,7 +6,9 @@ final class ProfileStore {
     var displayName: String = ""
     var avatarURL: String?
     var nativeLanguage: String = "ja"
-    var targetLanguage: String = "zh-TW"
+    var targetLanguage: String = "zh-TW" {
+        didSet { NativeAPI.targetLanguage = targetLanguage == "en" ? "en" : "zh-TW" }
+    }
     var currentLevel: String = "TOCFL-1"
     var levelGoal: String = "TOCFL-2"
     /// 0 = 無制限 (review-batch.ts).

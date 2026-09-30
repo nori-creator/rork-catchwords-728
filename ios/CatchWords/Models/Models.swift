@@ -21,9 +21,11 @@ nonisolated struct Word: Codable, Sendable, Hashable {
     let exampleSentence: String?
     let exampleTranslation: String?
     let extras: WordExtras?
+    /// `words.language` (null on old rows = 台湾華語).
+    let language: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, headword, pinyin, level, extras
+        case id, headword, pinyin, level, extras, language
         case readingZhuyin = "reading_zhuyin"
         case meaningJa = "meaning_ja"
         case partOfSpeech = "part_of_speech"
@@ -45,6 +47,13 @@ nonisolated struct Word: Codable, Sendable, Hashable {
         exampleSentence = try? c.decodeIfPresent(String.self, forKey: .exampleSentence)
         exampleTranslation = try? c.decodeIfPresent(String.self, forKey: .exampleTranslation)
         extras = try? c.decodeIfPresent(WordExtras.self, forKey: .extras)
+        language = try? c.decodeIfPresent(String.self, forKey: .language)
+    }
+
+    /// Same rule as the web's `matchesTargetLanguage` (language-filter.ts): an empty language is 台湾華語.
+    func matches(_ target: String) -> Bool {
+        let raw = (language ?? "").trimmingCharacters(in: .whitespaces)
+        return raw.isEmpty ? target == "zh-TW" : raw == target
     }
 }
 

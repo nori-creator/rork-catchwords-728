@@ -644,7 +644,11 @@ struct WheelCard: View {
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
             profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
-            Task { await profile.update(["target_language": v, "current_level": profile.currentLevel, "level_goal": profile.levelGoal]) }
+            Task {
+                await profile.update(["target_language": v, "current_level": profile.currentLevel, "level_goal": profile.levelGoal])
+                // The dex, album and review show only the words of the language being learned.
+                await dex.load()
+            }
         case .current:
             profile.currentLevel = v
             Task { await profile.update(["current_level": v]) }
