@@ -5,6 +5,11 @@ struct RootView: View {
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
+    @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
+
+    private var needsOnboarding: Bool {
+        !onboardingDone && profile.isLoaded && !profile.onboarded && dex.stickers.isEmpty
+    }
 
     var body: some View {
         ZStack {
@@ -17,7 +22,14 @@ struct RootView: View {
                 AuthView()
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             case .signedIn:
-                MainTabView()
+                ZStack {
+                    MainTabView()
+                    if needsOnboarding {
+                        OnboardingView { withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { onboardingDone = true } }
+                            .transition(.opacity.combined(with: .scale(scale: 1.02)))
+                            .zIndex(1)
+                    }
+                }
                     .transition(.opacity)
                     .task {
                         async let p: Void = profile.load()

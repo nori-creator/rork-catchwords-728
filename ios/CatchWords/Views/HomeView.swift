@@ -5,6 +5,19 @@ struct HomeView: View {
     @Environment(DexStore.self) private var dex
     @Environment(ProfileStore.self) private var profile
     @Environment(AppRouter.self) private var router
+    @State private var writingDay: WritingDay?
+    @AppStorage("album.span") private var spanRaw: String = AlbumSpan.day.rawValue
+
+    private var span: AlbumSpan { AlbumSpan(rawValue: spanRaw) ?? .day }
+
+    /// album-span.ts: past pages bundled by day / week (Monday start, local time) / month.
+    private func pastGroups(today: Date) -> [(key: Date, items: [Sticker])] {
+        let older = dex.stickers.filter { !Calendar.current.isDate($0.takenAt, inSameDayAs: today) }
+        let grouped = Dictionary(grouping: older) { span.start(of: $0.takenAt) }
+        return grouped.keys.sorted(by: >).prefix(span == .day ? 45 : 60).map { k in
+            (k, grouped[k]?.sorted { $0.takenAt > $1.takenAt } ?? [])
+        }
+    }
 
     private var days: [(day: Date, items: [Sticker])] {
         let cal = Calendar.current
@@ -15,7 +28,7 @@ struct HomeView: View {
     var body: some View {
         let today = Calendar.current.startOfDay(for: Date())
         let todayItems = days.first { $0.day == today }?.items ?? []
-        let past = days.filter { $0.day != today }.prefix(45)
+        let past = pastGroups(today: today)
 
         ScrollViewReader { proxy in
             ScrollView {
@@ -23,9 +36,9 @@ struct HomeView: View {
                     Color.clear.frame(height: 64)
                     Bookshelf(stickers: dex.stickers) { month in
                         let cal = Calendar.current
-                        if let target = past.first(where: { cal.isDate($0.day, equalTo: month, toGranularity: .month) }) {
+                        if let target = past.first(where: { cal.isDate($0.key, equalTo: month, toGranularity: .month) }) {
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
-                                proxy.scrollTo(target.day, anchor: .top)
+                                proxy.scrollTo(target.key, anchor: .top)
                             }
                         } else {
                             withAnimation { proxy.scrollTo("today", anchor: .top) }
@@ -50,6 +63,14 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 16)
 
+                    DiaryLine(day: today) { writingDay = WritingDay(date: $0) }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 14)
+
+                    StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+
                     if !past.isEmpty {
                         HStack(spacing: 12) {
                             Rectangle().fill(Color(hex: 0x33291F, opacity: 0.12)).frame(height: 1)
@@ -58,20 +79,40 @@ struct HomeView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 40)
+                        .padding(.bottom, 14)
+
+                        Picker("まとめ方", selection: $spanRaw) {
+                            ForEach(AlbumSpan.allCases) { Text($0.label).tag($0.rawValue) }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 240)
                         .padding(.bottom, 20)
+                        .onChange(of: spanRaw) { _, _ in Haptics.selection() }
 
                         LazyVStack(spacing: 28) {
-                            ForEach(Array(past), id: \.day) { entry in
+                            ForEach(past, id: \.key) { entry in
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text(JPDate.monthDayWeek(entry.day))
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundStyle(Color(hex: 0x33291F))
-                                        .padding(.leading, 6)
+                                    HStack(alignment: .firstTextBaseline) {
+                                        Text(span.heading(entry.key))
+                                            .font(.system(size: 17, weight: .bold))
+                                            .foregroundStyle(Color(hex: 0x33291F))
+                                        Spacer()
+                                        if span != .day {
+                                            Text("\(entry.items.count)語")
+                                                .font(AppFont.mono(12, weight: .semibold))
+                                                .foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
+                                        }
+                                    }
+                                    .padding(.horizontal, 6)
                                     AlbumPage(items: entry.items, isToday: false) { router.detailSticker = $0 } onCamera: {}
+                                    if span == .day {
+                                        DiaryLine(day: entry.key) { writingDay = WritingDay(date: $0) }
+                                    }
                                 }
-                                .id(entry.day)
+                                .id(entry.key)
                             }
                         }
+                        .animation(.spring(response: 0.45, dampingFraction: 0.9), value: spanRaw)
                         .padding(.horizontal, 16)
                     }
                     Color.clear.frame(height: 120)
@@ -81,6 +122,10 @@ struct HomeView: View {
         }
         .background(HomeBackground())
         .overlay(alignment: .top) { header }
+        .sheet(item: $writingDay) { d in
+            DiaryComposer(day: d.date)
+                .presentationDetents([.large])
+        }
     }
 
     private var header: some View {
@@ -101,6 +146,49 @@ struct HomeView: View {
                 .ignoresSafeArea(edges: .top)
         }
     }
+}
+
+/// album-span.ts — weeks start on Monday; keys are local dates (never UTC, never ISO week numbers).
+enum AlbumSpan: String, CaseIterable, Identifiable {
+    case day, week, month
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .day: "日"
+        case .week: "週"
+        case .month: "月"
+        }
+    }
+
+    func start(of d: Date) -> Date {
+        let cal = Calendar.current
+        let day = cal.startOfDay(for: d)
+        switch self {
+        case .day: return day
+        case .week:
+            let back = (cal.component(.weekday, from: day) + 5) % 7
+            return cal.date(byAdding: .day, value: -back, to: day) ?? day
+        case .month:
+            return cal.date(from: cal.dateComponents([.year, .month], from: day)) ?? day
+        }
+    }
+
+    func heading(_ key: Date) -> String {
+        switch self {
+        case .day: return JPDate.monthDayWeek(key)
+        case .week:
+            let end = Calendar.current.date(byAdding: .day, value: 6, to: key) ?? key
+            return "\(JPDate.monthDay(key)) – \(JPDate.monthDay(end))"
+        case .month:
+            let c = Calendar.current.dateComponents([.year, .month], from: key)
+            return "\(c.year ?? 0)年\(c.month ?? 0)月"
+        }
+    }
+}
+
+struct WritingDay: Identifiable {
+    let date: Date
+    var id: String { DiaryStore.key(date) }
 }
 
 struct HomeBackground: View {

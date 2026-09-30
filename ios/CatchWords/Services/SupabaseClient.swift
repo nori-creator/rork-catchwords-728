@@ -95,6 +95,21 @@ final class SupabaseClient {
         )
     }
 
+    /// Merges keys into auth `user_metadata` (the web keeps learning_preferences / notification_preferences there).
+    func updateUserMetadata(_ data: [String: Any]) async throws {
+        try await refreshIfNeeded()
+        guard let baseURL, let token = session?.accessToken,
+              let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.httpMethod = "PUT"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["data": data])
+        let (_, response) = try await perform(req)
+        guard (200..<300).contains(response.statusCode) else { throw APIError.server(response.statusCode, "") }
+    }
+
     func refreshIfNeeded() async throws {
         guard let current = session else { throw APIError.unauthorized }
         guard current.expiresAt.timeIntervalSinceNow < 120 else { return }

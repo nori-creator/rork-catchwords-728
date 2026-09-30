@@ -13,6 +13,9 @@ final class ProfileStore {
     var reviewDailyLimit: Int = 20
     var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 500 : reviewDailyLimit }
     var isSavingAvatar: Bool = false
+    /// `profiles.onboarded` — true once the first-run setup has been finished (on any device).
+    var onboarded: Bool = false
+    var isLoaded: Bool = false
     var message: String?
 
     private let client = SupabaseClient.shared
@@ -36,8 +39,9 @@ final class ProfileStore {
     }
 
     func load() async {
-        guard let uid = client.userId else { return }
-        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit"
+        guard let uid = client.userId else { isLoaded = true; return }
+        defer { isLoaded = true }
+        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit,onboarded"
         var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
         if data == nil {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
@@ -50,6 +54,7 @@ final class ProfileStore {
         if let v = row["current_level"] as? String, !v.isEmpty { currentLevel = v }
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
         if let v = row["review_daily_limit"] as? Int, v >= 0 { reviewDailyLimit = v }
+        onboarded = row["onboarded"] as? Bool ?? false
     }
 
     func update(_ fields: [String: Any]) async {
