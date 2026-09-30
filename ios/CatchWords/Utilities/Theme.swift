@@ -2,27 +2,40 @@ import SwiftUI
 import UIKit
 import CoreText
 
-/// Design tokens ported from the web app's `styles.css` (dark theme, oklch → sRGB).
+/// Design tokens ported from the web app's `styles.css` (light theme `:root`, oklch → sRGB).
+/// The camera keeps the deep-navy "machine" look (`.dark` / camera chrome).
 enum Theme {
-    static let background = Color(hex: 0x060D1A)
-    static let backgroundDeep = Color(hex: 0x02060F)
-    static let card = Color(hex: 0x0D1726)
-    static let surface2 = Color(hex: 0x16223A)
-    static let secondary = Color(hex: 0x132032)
-    static let accent = Color(hex: 0x112D55)
-    static let primary = Color(hex: 0x378EFF)
-    static let primaryBright = Color(hex: 0x0A84FF)
-    static let primaryDeep = Color(hex: 0x0040D0)
-    static let foreground = Color(hex: 0xF2F6F8)
-    static let muted = Color(hex: 0x99A6B8)
-    static let border = Color.white.opacity(0.10)
+    static let background = Color(hex: 0xF9FCFF)
+    static let backgroundDeep = Color(hex: 0xEEF3F9)
+    static let card = Color.white
+    static let surface2 = Color(hex: 0xEDF2F8)
+    static let secondary = Color(hex: 0xEDF2F8)
+    static let accent = Color(hex: 0xD8EEFF)
+    static let primary = Color(hex: 0x0083FF)
+    static let primaryInk = Color(hex: 0x0053D4)
+    static let primaryBright = Color(hex: 0x2A9BFF)
+    static let primaryDeep = Color(hex: 0x0060E0)
+    static let foreground = Color(hex: 0x0B121A)
+    static let muted = Color(hex: 0x5C646F)
+    static let border = Color(hex: 0xE0E5EB)
     static let gold = Color(hex: 0xF4B93C)
     static let cyan = Color(hex: 0x64E0FF)
-    static let destructive = Color(hex: 0xFF5E63)
-    static let ok = Color(hex: 0x2FC183)
-    static let chunkV = Color(hex: 0xFF8C7A)
-    static let chunkO = Color(hex: 0x7EB8F0)
+    static let destructive = Color(hex: 0xE62B34)
+    static let ok = Color(hex: 0x00A95C)
+    static let chunkV = Color(hex: 0xF9343C)
+    static let chunkO = Color(hex: 0x0083FF)
     static let radius: CGFloat = 14
+
+    /// Camera chrome / reward stage.
+    static let navy = Color(hex: 0x0A1328)
+    static let navyDeep = Color(hex: 0x060D1C)
+    static let navyCard = Color(hex: 0x131E37)
+
+    /// memory.ts 6 levels (<30, <50, <70, <85, <95, else).
+    static let memoryLevels: [Color] = [
+        Color(hex: 0xF9262A), Color(hex: 0xF87300), Color(hex: 0xE5A500),
+        Color(hex: 0x46BC24), Color(hex: 0x00B777), Color(hex: 0x0083FF),
+    ]
 
     static let brandGradient = LinearGradient(
         colors: [primaryBright, primaryDeep],
@@ -41,6 +54,17 @@ extension Color {
             opacity: opacity
         )
     }
+}
+
+enum JPDate {
+    private static let md: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = "M月d日"
+        return f
+    }()
+
+    static func monthDay(_ date: Date) -> String { md.string(from: date) }
 }
 
 /// Bundled fonts: Zen Kurenaido (handwritten Japanese captions) and Caveat (handwritten Latin).

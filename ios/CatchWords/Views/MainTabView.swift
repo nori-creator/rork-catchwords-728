@@ -15,7 +15,7 @@ enum AppTab: Int, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .dex: "book.closed"
+        case .dex: "book"
         case .camera: "camera"
         case .settings: "gearshape"
         }
@@ -29,6 +29,10 @@ final class AppRouter {
     var landingStickerId: String?
     var detailSticker: Sticker?
     var showPaywall: Bool = false
+    /// True while the camera "machine" (live preview / selfie / analyzing) fills the screen.
+    var cameraImmersive: Bool = true
+    /// Analyzing and the reward stage take the whole screen (no tab bar).
+    var tabBarHidden: Bool = false
 }
 
 struct MainTabView: View {
@@ -45,9 +49,13 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            CapsuleTabBar(selection: $router.tab, onCamera: router.tab == .camera)
-                .padding(.bottom, 6)
+            if !router.tabBarHidden {
+                CapsuleTabBar(selection: $router.tab, onCamera: router.tab == .camera && router.cameraImmersive)
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.9), value: router.tabBarHidden)
         .environment(router)
         .sheet(item: $router.detailSticker) { sticker in
             WordDetailView(sticker: sticker)
@@ -60,8 +68,8 @@ struct MainTabView: View {
     }
 }
 
-/// Floating capsule measured from the App Store tab bar (TabBar.tsx): 87.6% width, 55pt tall,
-/// full-capsule corners, a bubble exactly one cell wide that slides between cells.
+/// TabBar.tsx: floating capsule (87.6% width, ~55pt, full-capsule corners), a bubble exactly one
+/// cell wide that slides between cells, and the camera as a raised blue disc in the centre.
 /// On the camera it becomes dark glass instead of a paper-like white strip.
 struct CapsuleTabBar: View {
     @Binding var selection: AppTab
@@ -74,45 +82,87 @@ struct CapsuleTabBar: View {
             let width = min(geo.size.width * 0.876, 380)
             HStack(spacing: 0) {
                 ForEach(AppTab.allCases) { tab in
-                    Button {
-                        guard selection != tab else { return }
-                        Haptics.selection()
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) { selection = tab }
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: selection == tab ? tab.icon + ".fill" : tab.icon)
-                                .font(.system(size: 19, weight: .semibold))
-                                .frame(height: 21)
-                            Text(tab.title).font(.system(size: 10, weight: .semibold))
-                        }
-                        .foregroundStyle(selection == tab ? Theme.primary : (onCamera ? .white.opacity(0.75) : Theme.muted))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background {
-                            if selection == tab {
-                                Capsule()
-                                    .fill(Theme.primary.opacity(onCamera ? 0.22 : 0.14))
-                                    .matchedGeometryEffect(id: "bubble", in: bubble)
-                                    .padding(4)
-                            }
-                        }
-                        .contentShape(Rectangle())
+                    if tab == .camera {
+                        cameraCell
+                    } else {
+                        cell(tab)
                     }
-                    .buttonStyle(PressableStyle(scale: 0.92))
-                    .accessibilityLabel(tab.title)
                 }
             }
-            .frame(width: width, height: 58)
+            .frame(width: width, height: 56)
             .background {
                 if onCamera {
-                    Capsule().fill(.black.opacity(0.45)).background(.ultraThinMaterial, in: Capsule())
+                    Capsule().fill(Theme.navyDeep.opacity(0.55)).background(.ultraThinMaterial, in: Capsule())
                 } else {
-                    Capsule().fill(Theme.card.opacity(0.92))
+                    Capsule().fill(.white.opacity(0.9)).background(.regularMaterial, in: Capsule())
                 }
             }
-            .overlay(Capsule().stroke(.white.opacity(onCamera ? 0.14 : 0.08), lineWidth: 1))
-            .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
+            .overlay(Capsule().stroke(onCamera ? .white.opacity(0.12) : Theme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(onCamera ? 0.35 : 0.1), radius: 16, y: 6)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 58)
+        .frame(height: 56)
+        .animation(.easeInOut(duration: 0.25), value: onCamera)
+    }
+
+    private func cell(_ tab: AppTab) -> some View {
+        let isOn = selection == tab
+        return Button { select(tab) } label: {
+            VStack(spacing: 5) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 19, weight: .regular))
+                    .frame(height: 21)
+                Text(tab.title).font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75)))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if isOn {
+                    Capsule()
+                        .fill(Theme.primary.opacity(onCamera ? 0.22 : 0.14))
+                        .matchedGeometryEffect(id: "bubble", in: bubble)
+                        .padding(4)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.92))
+        .accessibilityLabel(tab.title)
+    }
+
+    /// The camera cell: a raised disc on other tabs; on the camera itself it lies flat in the bar.
+    private var cameraCell: some View {
+        let isOn = selection == .camera
+        return Button { select(.camera) } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    if isOn {
+                        Image(systemName: "camera")
+                            .font(.system(size: 19))
+                            .foregroundStyle(Theme.primary)
+                    } else {
+                        Circle()
+                            .fill(Theme.primary)
+                            .frame(width: 50, height: 50)
+                            .shadow(color: Theme.primary.opacity(0.45), radius: 10, y: 4)
+                            .overlay(Image(systemName: "camera").font(.system(size: 20, weight: .semibold)).foregroundStyle(.white))
+                            .offset(y: -14)
+                    }
+                }
+                .frame(height: 21)
+                Text("カメラ").font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75)))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.92))
+        .accessibilityLabel("カメラ")
+    }
+
+    private func select(_ tab: AppTab) {
+        guard selection != tab else { return }
+        Haptics.selection()
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) { selection = tab }
     }
 }

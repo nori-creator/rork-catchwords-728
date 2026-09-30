@@ -85,8 +85,13 @@ struct RewardOverlay: View {
         GeometryReader { geo in
             let side = min(geo.size.width * 0.82, 360)
             ZStack {
-                Color.black.opacity(dim).ignoresSafeArea()
-                RadialGradient(colors: [Theme.primary.opacity(0.45 * dim), .clear], center: .center, startRadius: 20, endRadius: geo.size.width)
+                LinearGradient(colors: [Color(hex: 0x0B2548), Color(hex: 0x0A1F3E)], startPoint: .top, endPoint: .bottom)
+                    .opacity(min(1, dim * 1.2))
+                    .ignoresSafeArea()
+                LightRays(active: particles)
+                    .opacity(min(1, dim * 1.2))
+                    .ignoresSafeArea()
+                Confetti(active: particles)
                     .ignoresSafeArea()
 
                 // Shockwave: a thin ring that passes once (no white flash).
@@ -169,19 +174,16 @@ struct RewardOverlay: View {
     }
 
     private var wordBlock: some View {
-        VStack(spacing: 6) {
-            Text(payload.reading)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(readingGlow ? Theme.cyan : .white.opacity(0.7))
-                .shadow(color: Theme.cyan.opacity(readingGlow ? 0.9 : 0), radius: 8)
+        VStack(spacing: 8) {
             Text(payload.headword)
                 .font(.system(size: 54, weight: .heavy))
                 .foregroundStyle(.white)
                 .blur(radius: wordBlur)
                 .shadow(color: Theme.primary.opacity(0.8), radius: 18)
-            Text(payload.meaning)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
+            Text(payload.reading)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(readingGlow ? Color(hex: 0xBFEFFF) : .white.opacity(0.85))
+                .shadow(color: Theme.cyan.opacity(readingGlow ? 0.7 : 0), radius: 8)
             Label(payload.gate.isReencounter ? "再会！写真を追加しました" : "図鑑に追加",
                   systemImage: payload.gate.isReencounter ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
                 .font(.system(size: 13, weight: .semibold))
@@ -276,6 +278,74 @@ struct RewardOverlay: View {
         withAnimation(.easeIn(duration: 0.34)) { dim = 0 }
         try? await Task.sleep(for: .milliseconds(340))
         onFinish()
+    }
+}
+
+/// Slowly turning god-rays behind the sticker (reward stage).
+struct LightRays: View {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion || !active)) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let c = CGPoint(x: size.width / 2, y: size.height * 0.4)
+                let r = max(size.width, size.height) * 1.2
+                let spin = reduceMotion ? 0 : t * 0.06
+                var g = ctx
+                g.addFilter(.blur(radius: 18))
+                for i in 0..<14 {
+                    let a = Double(i) / 14 * 2 * .pi + spin
+                    let w = 0.07 + 0.03 * sin(Double(i) * 1.7)
+                    var p = Path()
+                    p.move(to: c)
+                    p.addLine(to: CGPoint(x: c.x + cos(a - w) * r, y: c.y + sin(a - w) * r))
+                    p.addLine(to: CGPoint(x: c.x + cos(a + w) * r, y: c.y + sin(a + w) * r))
+                    p.closeSubpath()
+                    let color = i % 2 == 0 ? Color(hex: 0x7FD8FF) : Color(hex: 0x6FE3C8)
+                    g.fill(p, with: .radialGradient(Gradient(colors: [color.opacity(0.0), color.opacity(0.28), color.opacity(0)]),
+                                                    center: c, startRadius: 60, endRadius: r * 0.7))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Paper confetti that bursts once and flutters down.
+struct Confetti: View {
+    let active: Bool
+    @State private var start: Date?
+
+    private static let colors: [Color] = [Color(hex: 0xF4B93C), Color(hex: 0x64E0FF), Color(hex: 0xFF7EB6), Color(hex: 0xA78BFA), Color(hex: 0x4ADE80), .white]
+
+    var body: some View {
+        TimelineView(.animation(paused: start == nil)) { tl in
+            Canvas { ctx, size in
+                guard let start else { return }
+                let t = tl.date.timeIntervalSince(start)
+                guard t < 3.2 else { return }
+                for i in 0..<70 {
+                    let seed = Double(i)
+                    let ang = seed * 2.399
+                    let speed = 180 + (seed * 37).truncatingRemainder(dividingBy: 220)
+                    let x0 = size.width / 2, y0 = size.height * 0.42
+                    let vx = cos(ang) * speed, vy = sin(ang) * speed - 160
+                    let x = x0 + vx * t * 1.1 + sin(t * 3 + seed) * 12
+                    let y = y0 + vy * t + 260 * t * t
+                    let alpha = max(0, 1 - t / 3.2)
+                    var c = ctx
+                    c.translateBy(x: x, y: y)
+                    c.rotate(by: .radians(t * (4 + seed.truncatingRemainder(dividingBy: 5)) + seed))
+                    let w = 5 + seed.truncatingRemainder(dividingBy: 4), h = 3 + seed.truncatingRemainder(dividingBy: 3)
+                    c.fill(Path(CGRect(x: -w / 2, y: -h / 2, width: w, height: h * abs(cos(t * 6 + seed)) + 1)),
+                           with: .color(Self.colors[i % Self.colors.count].opacity(alpha)))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .onChange(of: active) { _, on in if on { start = Date() } }
     }
 }
 

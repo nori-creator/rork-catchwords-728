@@ -54,11 +54,14 @@ final class AIService {
         """
     }
 
-    func detect(image: UIImage) async throws -> [Candidate] {
+    func detect(image: UIImage, textOnly: Bool = false) async throws -> [Candidate] {
         guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
         let dataURL = "data:image/jpeg;base64,\(jpeg.base64EncodedString())"
+        let prompt = textOnly
+            ? Self.detectPrompt + "\n今回はスキャンです。kind=text(写っている文字そのもの)だけを返し、名詞以外の語も写っていれば返してよい。"
+            : Self.detectPrompt
         let content: [[String: Any]] = [
-            ["type": "text", "text": Self.detectPrompt],
+            ["type": "text", "text": prompt],
             ["type": "image_url", "image_url": ["url": dataURL]],
         ]
         let text: String

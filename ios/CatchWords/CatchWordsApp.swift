@@ -17,7 +17,7 @@ struct CatchWordsApp: App {
                 .environment(auth)
                 .environment(dex)
                 .environment(plan)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
                 .tint(Theme.primary)
         }
     }

@@ -15,7 +15,7 @@ struct MetersPanel: View {
                     HStack(alignment: .bottom, spacing: 4) {
                         ForEach(1...5, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(i <= f && animate ? Theme.primary : Color.white.opacity(0.1))
+                                .fill(i <= f && animate ? Theme.primary : Theme.border)
                                 .frame(height: 8 + CGFloat(i) * 5)
                                 .animation(.spring(response: 0.4, dampingFraction: 0.7).delay(Double(i) * 0.06), value: animate)
                         }
@@ -25,7 +25,7 @@ struct MetersPanel: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface2.opacity(0.6), in: .rect(cornerRadius: Theme.radius))
+                .background(Theme.card, in: .rect(cornerRadius: Theme.radius))
             }
             if let r = extras.resolvedRegister {
                 VStack(alignment: .leading, spacing: 10) {
@@ -37,12 +37,12 @@ struct MetersPanel: View {
                                 .frame(height: 6)
                             HStack(spacing: 0) {
                                 ForEach(0..<5, id: \.self) { i in
-                                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 12)
+                                    Rectangle().fill(Theme.muted.opacity(0.35)).frame(width: 1, height: 12)
                                     if i < 4 { Spacer() }
                                 }
                             }
                             Capsule()
-                                .fill(.white)
+                                .fill(Theme.foreground)
                                 .frame(width: 4, height: 26)
                                 .shadow(color: Theme.primary, radius: 5)
                                 .offset(x: pos * (geo.size.width - 4))
@@ -55,7 +55,7 @@ struct MetersPanel: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface2.opacity(0.6), in: .rect(cornerRadius: Theme.radius))
+                .background(Theme.card, in: .rect(cornerRadius: Theme.radius))
             }
         }
         .onAppear { animate = true }

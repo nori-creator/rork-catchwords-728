@@ -27,7 +27,7 @@ struct AuthView: View {
                     } onCompletion: { result in
                         Task { await auth.completeApple(result) }
                     }
-                    .signInWithAppleButtonStyle(.white)
+                    .signInWithAppleButtonStyle(.black)
                     .frame(height: 54)
                     .clipShape(.rect(cornerRadius: 16))
 

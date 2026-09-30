@@ -165,9 +165,11 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     let takenAt: Date
     let captureType: String?
     var word: Word?
+    var lat: Double? = nil
+    var lng: Double? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, caption, word
+        case id, caption, word, lat, lng
         case wordId = "word_id"
         case objectImageUrl = "object_image_url"
         case cutoutImageUrl = "cutout_image_url"
@@ -180,6 +182,22 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     /// One place decides which photo represents a sticker (photo-surface.ts): cutout, then original.
     var heroPath: String? { cutoutImageUrl ?? objectImageUrl }
     var room: Room { Category.room(for: word?.categoryKey) }
+    var categoryKey: String { Category.key(for: word?.categoryKey) }
+}
+
+/// Row of `reviews` (SM-2 state) — read only here; the web app owns the schedule.
+nonisolated struct ReviewState: Codable, Sendable, Hashable {
+    let stickerId: String
+    let ease: Double
+    let intervalDays: Int
+    let lastReviewedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case ease
+        case stickerId = "sticker_id"
+        case intervalDays = "interval_days"
+        case lastReviewedAt = "last_reviewed_at"
+    }
 }
 
 /// A candidate returned by AI detection (scan.functions.ts DetectItemSchema).

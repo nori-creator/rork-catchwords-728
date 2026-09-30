@@ -1,124 +1,182 @@
 import SwiftUI
 
-/// Candidates pinned onto the photo at their AI coordinates, plus a list in the thumb zone.
+/// capture.tsx PickWordPanel: small photo, "写っている物" list (WordCandidateRow), and "違う単語を入力".
 struct CandidatePickerView: View {
     let vm: CaptureViewModel
     @State private var appeared: Bool = false
+    @State private var typed: String = ""
+    @FocusState private var inputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button { vm.reset() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .glassCard(22)
-                }
-                .buttonStyle(PressableStyle())
-                Spacer()
-                Text("どれを捕まえる？")
-                    .font(AppFont.hand(20))
-                    .foregroundStyle(.white)
-                Spacer()
-                Color.clear.frame(width: 44, height: 44)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-
-            if let photo = vm.photo {
-                GeometryReader { geo in
-                    let fit = fittedRect(image: photo.size, in: geo.size)
-                    ZStack(alignment: .topLeading) {
-                        Image(uiImage: photo)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: fit.width, height: fit.height)
-                            .clipShape(.rect(cornerRadius: 22))
-                            .position(x: fit.midX, y: fit.midY)
-                        ForEach(Array(vm.candidates.enumerated()), id: \.element.id) { idx, c in
-                            Button { vm.pick(c) } label: {
-                                PinLabel(text: c.headword)
-                            }
-                            .buttonStyle(PressableStyle(scale: 0.9))
-                            .position(x: fit.minX + fit.width * c.point[0] / 1000,
-                                      y: fit.minY + fit.height * c.point[1] / 1000)
-                            .scaleEffect(appeared ? 1 : 0.2)
-                            .opacity(appeared ? 1 : 0)
-                            .animation(.spring(response: 0.45, dampingFraction: 0.62).delay(Double(idx) * 0.06), value: appeared)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            } else {
-                Spacer()
-            }
-
+        ZStack {
+            AppBackground()
             ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(Array(vm.candidates.enumerated()), id: \.element.id) { idx, c in
-                        Button { vm.pick(c) } label: {
-                            HStack(spacing: 14) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(c.zhuyin).font(.system(size: 11)).foregroundStyle(Theme.muted)
-                                    Text(c.headword).font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(c.meaningJa).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white.opacity(0.9))
-                                    Text(c.pinyin).font(AppFont.mono(12)).foregroundStyle(Theme.muted)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.primary)
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 64)
-                            .glassCard(18)
-                        }
-                        .buttonStyle(PressableStyle())
-                        .offset(y: appeared ? 0 : 30)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.1 + Double(idx) * 0.05), value: appeared)
+                VStack(alignment: .leading, spacing: 14) {
+                    CollectHeader { vm.reset() }
+                    if let photo = vm.photo {
+                        Color.clear
+                            .frame(width: 156, height: 156)
+                            .overlay { Image(uiImage: photo).resizable().scaledToFill().allowsHitTesting(false) }
+                            .clipShape(.rect(cornerRadius: 24, style: .continuous))
+                            .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
+                            .frame(maxWidth: .infinity)
+                            .scaleEffect(appeared ? 1 : 0.9)
+                            .opacity(appeared ? 1 : 0)
                     }
+                    Text("写っている物")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.top, 6)
+                    VStack(spacing: 0) {
+                        ForEach(Array(vm.candidates.enumerated()), id: \.element.id) { idx, c in
+                            row(c)
+                                .opacity(appeared ? 1 : 0)
+                                .offset(y: appeared ? 0 : 14)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.05 + Double(idx) * 0.05), value: appeared)
+                            if idx < vm.candidates.count - 1 { Divider().overlay(Theme.border) }
+                        }
+                    }
+                    .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+
+                    manualInput.padding(.top, 8)
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 100)
+                .padding(.bottom, 110)
             }
-            .frame(maxHeight: 290)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .onAppear { appeared = true }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { appeared = true }
+        }
     }
 
-    private func fittedRect(image: CGSize, in box: CGSize) -> CGRect {
-        guard image.width > 0, image.height > 0 else { return CGRect(origin: .zero, size: box) }
-        let s = min(box.width / image.width, box.height / image.height)
-        let w = image.width * s
-        let h = image.height * s
-        return CGRect(x: (box.width - w) / 2, y: (box.height - h) / 2, width: w, height: h)
+    private func row(_ c: Candidate) -> some View {
+        HStack(spacing: 10) {
+            Button { vm.pick(c) } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 22)
+                    Text(c.meaningJa)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressableStyle(scale: 0.98))
+            if c.alternatives.isEmpty {
+                PronounceCircle(text: c.headword)
+            } else {
+                Menu {
+                    Section("ほかの言い方") {
+                        Button(c.headword) { vm.pick(c) }
+                        ForEach(c.alternatives, id: \.self) { alt in
+                            Button(alt) { vm.search(text: alt, keepPhoto: true) }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("ほかの言い方 \(c.alternatives.count)")
+                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.muted)
+                    .frame(minHeight: 44)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(minHeight: 68)
+    }
+
+    private var manualInput: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            Text("違う単語を入力")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.muted)
+            HStack(spacing: 8) {
+                TextField("", text: $typed, prompt: Text("例: 椅子").foregroundStyle(Theme.muted.opacity(0.7)))
+                    .font(.system(size: 16))
+                    .foregroundStyle(Theme.foreground)
+                    .focused($inputFocused)
+                    .submitLabel(.search)
+                    .onSubmit(submit)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 46)
+                    .background(Theme.background, in: .rect(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.primary.opacity(inputFocused ? 0.6 : 0.25), lineWidth: 1))
+                Button(action: submit) {
+                    HStack(spacing: 6) {
+                        if vm.isLookingUp { ProgressView().controlSize(.small) } else { Image(systemName: "magnifyingglass") }
+                        Text("検索")
+                    }
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.foreground)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 46)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 12))
+                }
+                .buttonStyle(PressableStyle())
+                .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty || vm.isLookingUp)
+            }
+        }
+        .padding(14)
+        .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+    }
+
+    private func submit() {
+        let q = typed.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return }
+        inputFocused = false
+        typed = ""
+        vm.search(text: q, keepPhoto: vm.photo != nil)
     }
 }
 
-struct PinLabel: View {
-    let text: String
-    @State private var pulse: Bool = false
+/// Page header used through the catch flow ("集める").
+struct CollectHeader: View {
+    var onClose: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(text)
-                .font(.system(size: 15, weight: .bold))
+        HStack(spacing: 10) {
+            LogoMark(size: 30)
+            Text("集める")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.muted)
+            Spacer()
+            if let onClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.muted)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("カメラに戻る")
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
+/// The vivid blue pronounce button (PronounceButton tone="hero").
+struct PronounceCircle: View {
+    let text: String
+    var size: CGFloat = 42
+
+    var body: some View {
+        Button { SoundService.shared.speak(text) } label: {
+            Image(systemName: "speaker.wave.2")
+                .font(.system(size: size * 0.4, weight: .semibold))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 34)
-                .background(Theme.primary, in: Capsule())
-                .shadow(color: .black.opacity(0.35), radius: 6, y: 3)
-            Circle()
-                .fill(.white)
-                .frame(width: 10, height: 10)
-                .overlay(Circle().stroke(Theme.primary, lineWidth: 2).scaleEffect(pulse ? 2.4 : 1).opacity(pulse ? 0 : 1))
+                .frame(width: size, height: size)
+                .background(Theme.primary, in: Circle())
+                .shadow(color: Theme.primary.opacity(0.35), radius: 6, y: 3)
+                .frame(minWidth: 44, minHeight: 44)
         }
-        .frame(minWidth: 44, minHeight: 44)
-        .onAppear {
-            withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) { pulse = true }
-        }
+        .buttonStyle(PressableStyle(scale: 0.9))
+        .accessibilityLabel("発音を聞く")
     }
 }

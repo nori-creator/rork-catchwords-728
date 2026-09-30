@@ -8,6 +8,7 @@ struct CatchDraft {
     let details: CardDetails?
     let photo: UIImage
     let cutout: UIImage?
+    let selfie: UIImage?
     let caption: String
     let location: CLLocation?
     let placeName: String?
@@ -34,6 +35,8 @@ final class DexStore {
     var loadError: String?
     var signed: [String: URL] = [:]
     var pending: [PendingCatch] = []
+    /// sticker id → review state (memory badges). Stickers without a review get no badge.
+    var reviews: [String: ReviewState] = [:]
 
     private let client = SupabaseClient.shared
     private let language = "zh-TW"
@@ -51,10 +54,23 @@ final class DexStore {
             stickers = rows
             loadError = nil
             hasLoaded = true
+            await loadReviews()
             await signPaths(for: rows)
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? "図鑑を読み込めませんでした。"
         }
+    }
+
+    private func loadReviews() async {
+        guard let data = try? await client.rest("GET", "reviews?select=sticker_id,ease,interval_days,last_reviewed_at&limit=2000"),
+              let rows = try? SupabaseDate.decoder.decode([ReviewState].self, from: data) else { return }
+        reviews = Dictionary(rows.map { ($0.stickerId, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// Same number the review screen shows (srs.ts retentionNow; origin = last review, else the catch).
+    func memoryPercent(for sticker: Sticker) -> Int? {
+        guard let r = reviews[sticker.id] else { return nil }
+        return MemoryMath.percent(intervalDays: r.intervalDays, ease: r.ease, last: r.lastReviewedAt ?? sticker.takenAt)
     }
 
     func url(for path: String?, preferThumb: Bool = true) -> URL? {
@@ -66,7 +82,7 @@ final class DexStore {
     private func signPaths(for rows: [Sticker]) async {
         var paths: [String] = []
         for s in rows {
-            for p in [s.objectImageUrl, s.cutoutImageUrl].compactMap({ $0 }) where signed[p] == nil {
+            for p in [s.objectImageUrl, s.cutoutImageUrl, s.selfieImageUrl].compactMap({ $0 }) where signed[p] == nil {
                 paths.append(p)
                 paths.append(p + ".thumb.webp")
             }
@@ -105,9 +121,11 @@ final class DexStore {
 
         async let objectPath: String? = uploadJPEG(draft.photo, uid: uid, ts: ts, kind: "object")
         async let cutoutPath: String? = uploadPNG(draft.cutout, uid: uid, ts: ts, kind: "cutout")
+        async let selfiePath: String? = try? uploadJPEG(draft.selfie, uid: uid, ts: ts, kind: "selfie")
         async let wordId: String = ensureWord(draft)
 
         let (obj, cut, wid) = try await (objectPath, cutoutPath, wordId)
+        let selfieRef = await selfiePath
 
         var row: [String: Any] = [
             "user_id": uid,
@@ -118,6 +136,7 @@ final class DexStore {
         ]
         if let obj { row["object_image_url"] = obj }
         if let cut { row["cutout_image_url"] = cut }
+        if let s = selfieRef ?? nil { row["selfie_image_url"] = s }
         let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
         if !caption.isEmpty { row["caption"] = caption }
         if let name = draft.placeName { row["location_name"] = name }
@@ -135,6 +154,7 @@ final class DexStore {
 
         cacheLocal(path: obj, image: draft.photo)
         cacheLocal(path: cut, image: draft.cutout)
+        cacheLocal(path: selfieRef ?? nil, image: draft.selfie)
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
         saveToPhotosIfEnabled(draft.photo)

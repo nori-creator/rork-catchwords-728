@@ -66,15 +66,62 @@ struct PrimaryButton: View {
     }
 }
 
-/// Atmosphere: deep navy with soft blue light pools (never a flat fill).
+/// Atmosphere: near-white paper with a faint blue light pool (never a flat fill).
 struct AppBackground: View {
     var body: some View {
         ZStack {
             Theme.background
-            RadialGradient(colors: [Theme.primary.opacity(0.22), .clear], center: .topTrailing, startRadius: 10, endRadius: 420)
-            RadialGradient(colors: [Theme.cyan.opacity(0.08), .clear], center: .bottomLeading, startRadius: 10, endRadius: 380)
+            RadialGradient(colors: [Theme.primary.opacity(0.07), .clear], center: .topTrailing, startRadius: 10, endRadius: 460)
+            RadialGradient(colors: [Theme.accent.opacity(0.5), .clear], center: .bottomLeading, startRadius: 10, endRadius: 420)
         }
         .ignoresSafeArea()
+    }
+}
+
+/// memory-badge.ts: colour + number only (the level name lives in the accessibility label).
+struct MemoryBadge: View {
+    let percent: Int
+
+    static func level(_ p: Int) -> Int {
+        if p < 30 { return 0 }
+        if p < 50 { return 1 }
+        if p < 70 { return 2 }
+        if p < 85 { return 3 }
+        if p < 95 { return 4 }
+        return 5
+    }
+
+    static let labels = ["忘れかけ", "あやうい", "うろ覚え", "薄れぎみ", "覚えている", "はっきり"]
+
+    var body: some View {
+        let lv = Self.level(percent)
+        let c = Theme.memoryLevels[lv]
+        HStack(spacing: 4) {
+            Circle().fill(c).frame(width: 6, height: 6)
+            Text("\(percent)%")
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(c.mix(with: Theme.foreground, by: 0.4))
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.94), in: Capsule())
+        .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(Self.labels[lv]) \(percent)%")
+    }
+}
+
+/// Pure memory math from srs.ts (retentionNow / stabilityOf).
+nonisolated enum MemoryMath {
+    private static let k: Double = 1 / (2.5 * log(1 / 0.9))
+
+    static func percent(intervalDays: Int, ease: Double, last: Date?, now: Date = Date()) -> Int {
+        guard let last else { return 100 }
+        let dt = now.timeIntervalSince(last) / 86_400
+        guard dt > 0 else { return 100 }
+        let stability = max(0.5, Double(max(1, intervalDays)) * max(1, ease) * k)
+        return Int((max(0, min(100, 100 * exp(-dt / stability)))).rounded())
     }
 }
 

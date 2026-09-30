@@ -1,67 +1,102 @@
 import SwiftUI
 
-/// Calm analyzing state: the photo breathes under a sweeping scan line and converging light ring.
+/// Full-bleed photo with a bright scan line that sweeps up and down, dissolving the image into
+/// glowing motes around it (web: scan-analyzing default). "やめる" top-right, "AIが分析中…" at the bottom.
 struct AnalyzingView: View {
     let photo: UIImage?
+    let onCancel: () -> Void
 
-    @State private var sweep: CGFloat = -1
-    @State private var ring: Bool = false
-    @State private var dots: Int = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var start: Date = Date()
 
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            ZStack {
-                if let photo {
-                    Color.clear
-                        .frame(width: 260, height: 320)
-                        .overlay { Image(uiImage: photo).resizable().scaledToFill().allowsHitTesting(false) }
-                        .clipShape(.rect(cornerRadius: 26))
-                        .overlay {
-                            GeometryReader { geo in
-                                LinearGradient(colors: [.clear, Theme.cyan.opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
-                                    .frame(height: 90)
-                                    .offset(y: sweep * geo.size.height)
-                                    .blendMode(.screen)
-                            }
-                            .clipShape(.rect(cornerRadius: 26))
-                            .allowsHitTesting(false)
-                        }
-                        .overlay(RoundedRectangle(cornerRadius: 26).stroke(.white.opacity(0.18), lineWidth: 1))
-                        .shadow(color: Theme.primary.opacity(0.4), radius: 30, y: 12)
-                } else {
-                    Image(systemName: "character.magnify")
-                        .font(.system(size: 60, weight: .light))
-                        .foregroundStyle(Theme.cyan)
-                        .frame(width: 200, height: 200)
+        ZStack {
+            Theme.navyDeep.ignoresSafeArea()
+            if let photo {
+                Color.clear
+                    .overlay { Image(uiImage: photo).resizable().scaledToFill().allowsHitTesting(false) }
+                    .clipped()
+                    .ignoresSafeArea()
+                    .overlay(Color.black.opacity(0.12).ignoresSafeArea())
+            } else {
+                MachineBackground()
+            }
+
+            TimelineView(.animation(paused: reduceMotion)) { tl in
+                let t = reduceMotion ? 0.9 : tl.date.timeIntervalSince(start)
+                Canvas { ctx, size in ScanField.draw(ctx: ctx, size: size, t: t) }
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: onCancel) {
+                        Text("やめる")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 18)
+                            .frame(minHeight: 44)
+                            .background(.black.opacity(0.25), in: Capsule())
+                            .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
                 }
-                Circle()
-                    .trim(from: 0, to: 0.22)
-                    .stroke(AngularGradient(colors: [.clear, Theme.cyan], center: .center), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(width: 360, height: 360)
-                    .rotationEffect(.degrees(ring ? 360 : 0))
-                    .opacity(0.8)
-            }
-            VStack(spacing: 6) {
-                Text("見つけています" + String(repeating: "・", count: dots))
-                    .font(AppFont.hand(20))
-                    .foregroundStyle(.white)
-                Text("写真の中の物を台湾華語にしています")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-            Spacer()
-            Spacer()
-        }
-        .task {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { sweep = 1 }
-            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) { ring = true }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(420))
-                dots = (dots + 1) % 4
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles").symbolEffect(.pulse, isActive: !reduceMotion)
+                    Text("AIが分析中…")
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.6), radius: 6, y: 1)
+                .padding(.bottom, 60)
             }
         }
+        .onAppear { start = Date() }
+    }
+}
+
+enum ScanField {
+    private static func hash(_ n: Int, _ salt: Int) -> Double {
+        var x = UInt64(truncatingIfNeeded: n &* 374761393 &+ salt &* 668265263)
+        x = (x ^ (x >> 13)) &* 1274126177
+        x ^= x >> 16
+        return Double(x % 10_000) / 10_000
+    }
+
+    static func draw(ctx: GraphicsContext, size: CGSize, t: Double) {
+        let period = 3.2
+        let phase = (t.truncatingRemainder(dividingBy: period)) / period
+        let eased = 0.5 - 0.5 * cos(phase * 2 * .pi)
+        let lineY = size.height * (0.12 + 0.72 * eased)
+        let band = size.height * 0.22
+        let goingDown = phase < 0.5
+
+        for i in 0..<1100 {
+            let bx = hash(i, 1) * size.width
+            let by = hash(i, 2) * size.height
+            let d = by - lineY
+            // Motes trail behind the line (the side it has just passed).
+            let behind = goingDown ? -d : d
+            guard behind > -band * 0.12, behind < band else { continue }
+            let k = 1 - max(0, behind) / band
+            let a = pow(k, 1.6)
+            let wobble = sin(t * 2.2 + Double(i)) * 2.4
+            let lift = (goingDown ? -1.0 : 1.0) * (1 - k) * 10
+            let r = 1.2 + hash(i, 3) * 2.4 * (0.5 + k)
+            let rect = CGRect(x: bx + wobble - r, y: by + lift - r, width: r * 2, height: r * 2)
+            let color = hash(i, 4) > 0.55 ? Color.white : Color(hex: 0xA8E4FF)
+            ctx.fill(Path(ellipseIn: rect), with: .color(color.opacity(a * 0.95)))
+        }
+
+        var glow = ctx
+        glow.addFilter(.blur(radius: 10))
+        glow.fill(Path(CGRect(x: 0, y: lineY - 7, width: size.width, height: 14)), with: .color(Color(hex: 0x9FE3FF).opacity(0.8)))
+        ctx.fill(Path(roundedRect: CGRect(x: 8, y: lineY - 1.5, width: size.width - 16, height: 3), cornerRadius: 1.5),
+                 with: .color(.white))
     }
 }

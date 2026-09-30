@@ -111,13 +111,13 @@ struct WordDetailView: View {
                 .accessibilityLabel("発音を聞く")
                 Spacer()
                 if let level = word?.level {
-                    Text(level).font(AppFont.mono(11, weight: .bold)).foregroundStyle(Theme.cyan)
+                    Text(level).font(AppFont.mono(11, weight: .bold)).foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Theme.accent, in: Capsule())
                 }
             }
             if let p = word?.pinyin, !p.isEmpty {
-                Text(p).font(AppFont.mono(14)).foregroundStyle(Theme.cyan.opacity(0.85))
+                Text(p).font(AppFont.mono(14)).foregroundStyle(Theme.primaryInk)
             }
             HStack(spacing: 8) {
                 if let pos = word?.partOfSpeech, !pos.isEmpty {
