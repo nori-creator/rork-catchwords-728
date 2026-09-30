@@ -52,6 +52,7 @@ final class DexStore {
             let data = try await client.rest("GET", "stickers?select=\(Self.selectColumns)&order=taken_at.desc&limit=500")
             let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
             await loadShelves()
+            await loadAlbumHidden()
             stickers = rows
             loadError = nil
             hasLoaded = true
@@ -359,6 +360,27 @@ final class DexStore {
     }
 
     /// Dictionary error report → `entry_reports` (reports.functions.ts). Lands in the admin review queue.
+    // MARK: - Home album (web album-hidden.functions.ts)
+
+    /// Photos taken off the home album. They stay in the dex; only the album page skips them.
+    var albumHidden: Set<String> = []
+
+    func loadAlbumHidden() async {
+        struct Res: Decodable { let ids: [String] }
+        guard let r = try? await NativeAPI.call("listAlbumHidden", [:], as: Res.self) else { return }
+        albumHidden = Set(r.ids)
+    }
+
+    func setAlbumHidden(_ id: String, hidden: Bool) async {
+        // Update the page at once; roll back if the server refused.
+        if hidden { albumHidden.insert(id) } else { albumHidden.remove(id) }
+        struct Res: Decodable { let saved: Bool }
+        let ok = (try? await NativeAPI.call("setAlbumHidden", ["sticker_id": id, "hidden": hidden], as: Res.self))?.saved ?? false
+        if !ok {
+            if hidden { albumHidden.remove(id) } else { albumHidden.insert(id) }
+        }
+    }
+
     // MARK: - Shelves (web categories.functions.ts)
 
     /// The learner's shelves (`user_shelves`, own rows via RLS). Feeds `Category.custom`.

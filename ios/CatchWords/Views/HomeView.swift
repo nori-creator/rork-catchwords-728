@@ -21,7 +21,7 @@ struct HomeView: View {
 
     private var days: [(day: Date, items: [Sticker])] {
         let cal = Calendar.current
-        let grouped = Dictionary(grouping: dex.stickers) { cal.startOfDay(for: $0.takenAt) }
+        let grouped = Dictionary(grouping: dex.stickers.filter { !dex.albumHidden.contains($0.id) }) { cal.startOfDay(for: $0.takenAt) }
         return grouped.keys.sorted(by: >).map { d in (d, grouped[d]?.sorted { $0.takenAt > $1.takenAt } ?? []) }
     }
 
@@ -72,6 +72,10 @@ struct HomeView: View {
                         .padding(.top, 14)
 
                     StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+
+                    AlbumHiddenTray()
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
 
@@ -462,6 +466,20 @@ struct AlbumPrint: View {
     let onOpen: (Sticker) -> Void
 
     var body: some View {
+        printView
+            // Web: 「ホームアルバムだけから消す。図鑑からは消さない。あとから戻せる」.
+            .contextMenu {
+                Button("この単語をひらく", systemImage: "book") { onOpen(sticker) }
+                Button("アルバムから外す（図鑑には残ります）", systemImage: "eye.slash", role: .destructive) {
+                    Haptics.impact(.light)
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                        Task { await dex.setAlbumHidden(sticker.id, hidden: true) }
+                    }
+                }
+            }
+    }
+
+    private var printView: some View {
         let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
         Button { onOpen(sticker) } label: {
             if path == nil {
@@ -568,6 +586,65 @@ struct HomeAlbum3D: View {
             guard let url = dex.url(for: path, preferThumb: false) else { return }
             let img = await ImageCache.shared.load(url: url, key: path)
             withAnimation(.easeOut(duration: 0.3)) { cover = img }
+        }
+    }
+}
+
+/// Web `album-hidden-tray`: photos taken off the album, each with 「戻す」. Collapsed by default.
+struct AlbumHiddenTray: View {
+    @Environment(DexStore.self) private var dex
+    @State private var open = false
+
+    private var hidden: [Sticker] { dex.stickers.filter { dex.albumHidden.contains($0.id) } }
+
+    var body: some View {
+        if !hidden.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) { open.toggle() }
+                } label: {
+                    HStack {
+                        Image(systemName: "eye.slash")
+                        Text("アルバムから外した写真 \(hidden.count)")
+                        Spacer()
+                        Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0))
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                if open {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 10) {
+                            ForEach(hidden) { s in
+                                VStack(spacing: 6) {
+                                    let path = s.heroPath
+                                    Theme.secondary.frame(width: 84, height: 84)
+                                        .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                                        .clipShape(.rect(cornerRadius: 12))
+                                    Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                                    Button("戻す") {
+                                        Haptics.selection()
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                                            Task { await dex.setAlbumHidden(s.id, hidden: false) }
+                                        }
+                                    }
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .frame(minWidth: 44, minHeight: 32)
+                                }
+                                .frame(width: 84)
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color(hex: 0xFFFBF2).opacity(0.8), in: .rect(cornerRadius: 16, style: .continuous))
         }
     }
 }

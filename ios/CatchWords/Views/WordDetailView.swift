@@ -46,6 +46,7 @@ struct WordDetailView: View {
                     metaCard
                     heroCard
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
+                    EncounterHistoryView(stickerId: current.id)
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
                     ForEach(prefs.visible.filter { hasContent($0) || filling.contains($0) }) { section in
