@@ -95,6 +95,35 @@ struct DexView: View {
     @State private var openMenu: DexFilterMenu?
     @Namespace private var modeBubble
     @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
+    @State private var shelfEdit: ShelfEdit?
+    @State private var deleteShelfKey: String?
+
+    /// Create (key nil) or rename a shelf.
+    struct ShelfEdit: Identifiable {
+        let key: String?
+        var label: String
+        var emoji: String
+        var id: String { key ?? "new" }
+    }
+
+    private func editShelf(_ key: String) {
+        shelfEdit = ShelfEdit(key: key, label: Category.label(for: key), emoji: Category.emoji(for: key))
+    }
+
+    private func saveShelfEdit() {
+        guard let e = shelfEdit else { return }
+        let label = e.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else { return }
+        let emoji = e.emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            do {
+                try await dex.saveShelf(key: e.key, label: String(label.prefix(24)), emoji: emoji.isEmpty ? "📦" : String(emoji.prefix(8)))
+                Haptics.success()
+            } catch {
+                Haptics.warning()
+            }
+        }
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var categoryCounts: [(key: String, count: Int)] {
@@ -357,14 +386,27 @@ struct DexView: View {
                         )
                         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
                     }
-                    ForEach(Category.orderedKeys, id: \.self) { key in
+                    ForEach(Category.allOrderedKeys, id: \.self) { key in
                         let items = filtered.filter { $0.categoryKey == key }
                         if !items.isEmpty {
-                            CategoryShelf(key: key, stickers: items, landedId: landedId, impactTick: impactTick) { s in
+                            CategoryShelf(key: key, stickers: items, landedId: landedId, impactTick: impactTick,
+                                          onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key }) { s in
                                 router.detailSticker = s
                             }
                         }
                     }
+                    Button {
+                        shelfEdit = ShelfEdit(key: nil, label: "", emoji: "📦")
+                    } label: {
+                        Label("自分の棚を作る", systemImage: "plus")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.primaryInk)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Theme.primary.opacity(0.07), in: .rect(cornerRadius: 18, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .strokeBorder(Theme.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
+                    }
+                    .buttonStyle(PressableStyle())
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 120)
@@ -378,13 +420,30 @@ struct DexView: View {
                 if let id = router.landingStickerId { land(id, proxy: proxy) }
             }
         }
+        .alert(shelfEdit?.key == nil ? "自分の棚を作る" : "棚の名前と絵文字",
+               isPresented: Binding(get: { shelfEdit != nil }, set: { if !$0 { shelfEdit = nil } })) {
+            TextField("棚の名前（24文字まで）", text: Binding(get: { shelfEdit?.label ?? "" }, set: { shelfEdit?.label = $0 }))
+            TextField("絵文字", text: Binding(get: { shelfEdit?.emoji ?? "" }, set: { shelfEdit?.emoji = $0 }))
+            Button("キャンセル", role: .cancel) { shelfEdit = nil }
+            Button("保存") { saveShelfEdit(); shelfEdit = nil }
+        } message: {
+            Text(shelfEdit?.key == nil ? "単語の詳細の「棚」から、語をこの棚に移せます。" : "この棚の名前は、あなたの図鑑だけで変わります。")
+        }
+        .confirmationDialog("この棚を消しますか？", isPresented: Binding(get: { deleteShelfKey != nil }, set: { if !$0 { deleteShelfKey = nil } }),
+                            titleVisibility: .visible) {
+            Button("消す（語は元の棚に戻ります）", role: .destructive) {
+                guard let key = deleteShelfKey else { return }
+                deleteShelfKey = nil
+                Task { try? await dex.deleteShelf(key: key) }
+            }
+        }
     }
 
     private var list: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 Color.clear.frame(height: 104)
-                ForEach(Category.orderedKeys, id: \.self) { key in
+                ForEach(Category.allOrderedKeys, id: \.self) { key in
                     let items = filtered.filter { $0.categoryKey == key }
                     if !items.isEmpty {
                         HStack(spacing: 6) {
@@ -438,6 +497,8 @@ struct CategoryShelf: View {
     let stickers: [Sticker]
     let landedId: String?
     let impactTick: Int
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     let onTap: (Sticker) -> Void
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
@@ -449,6 +510,19 @@ struct CategoryShelf: View {
                 Text(Category.label(for: key)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
                 Spacer()
                 Text("\(stickers.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                if onEdit != nil || onDelete != nil {
+                    Menu {
+                        if let onEdit { Button("名前と絵文字を変える", systemImage: "pencil", action: onEdit) }
+                        if let onDelete { Button("この棚を消す", systemImage: "trash", role: .destructive, action: onDelete) }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.muted)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("\(Category.label(for: key))の棚を編集")
+                }
             }
             LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(Array(stickers.enumerated()), id: \.element.id) { idx, s in

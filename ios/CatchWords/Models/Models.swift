@@ -242,10 +242,13 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var word: Word?
     var lat: Double? = nil
     var lng: Double? = nil
+    /// The shelf the learner put this word on (`stickers.shelf_key`); nil = the AI's category.
+    var shelfKey: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
         case wordId = "word_id"
+        case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"
         case cutoutImageUrl = "cutout_image_url"
         case selfieImageUrl = "selfie_image_url"
@@ -256,8 +259,9 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
 
     /// One place decides which photo represents a sticker (photo-surface.ts): cutout, then original.
     var heroPath: String? { cutoutImageUrl ?? objectImageUrl }
-    var room: Room { Category.room(for: word?.categoryKey) }
-    var categoryKey: String { Category.key(for: word?.categoryKey) }
+    var room: Room { Category.room(for: shelfKey ?? word?.categoryKey) }
+    /// Where the word sits in the dex: the learner's shelf first, else the AI's category (web `effectiveShelf`).
+    var categoryKey: String { Category.key(for: shelfKey ?? word?.categoryKey) }
 }
 
 /// Row of `reviews` (SM-2 state) — read only here; the web app owns the schedule.
@@ -490,4 +494,20 @@ nonisolated struct OwnedWord: Codable, Sendable, Hashable {
     }
 
     var takenDate: Date? { SupabaseDate.parse(takenAt) }
+}
+
+
+/// Row of `user_shelves`: a shelf the learner made or renamed (web categories.functions.ts).
+nonisolated struct UserShelf: Codable, Sendable, Hashable {
+    let key: String
+    let label: String
+    let emoji: String
+    let roomKey: String?
+    let roomLabel: String?
+
+    enum CodingKeys: String, CodingKey {
+        case key, label, emoji
+        case roomKey = "room_key"
+        case roomLabel = "room_label"
+    }
 }
