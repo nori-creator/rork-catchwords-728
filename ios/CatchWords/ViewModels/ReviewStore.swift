@@ -43,6 +43,7 @@ final class ReviewStore {
 
     func load(dex: DexStore, limit: Int) async {
         guard client.session != nil else { return }
+        choiceCache = [:]
         isLoading = true
         defer { isLoading = false }
         async let historyTask = loadHistory()
@@ -80,7 +81,18 @@ final class ReviewStore {
     }
 
     /// Distractors from the learner's own dex first (same category preferred), then the fallback pool.
+    /// Choices are drawn once per card. Without this the four buttons reshuffled every time the
+    /// screen redrew — including right after a tap, so the answer you pressed jumped to another slot.
+    @ObservationIgnored private var choiceCache: [String: [QuizChoice]] = [:]
+
     func choices(for card: ReviewCard, dex: DexStore) -> [QuizChoice] {
+        if let cached = choiceCache[card.sticker.id] { return cached }
+        let made = makeChoices(for: card, dex: dex)
+        choiceCache[card.sticker.id] = made
+        return made
+    }
+
+    private func makeChoices(for card: ReviewCard, dex: DexStore) -> [QuizChoice] {
         let correct = QuizChoice(headword: card.sticker.word?.headword ?? "", zhuyin: card.sticker.word?.readingZhuyin)
         let others = dex.stickers.compactMap { s -> (QuizChoice, Bool)? in
             guard let w = s.word, w.headword != correct.headword else { return nil }
