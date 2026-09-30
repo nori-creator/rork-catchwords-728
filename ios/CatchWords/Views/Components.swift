@@ -116,6 +116,10 @@ struct MemoryBadge: View {
 nonisolated enum MemoryMath {
     private static let k: Double = 1 / (2.5 * log(1 / 0.9))
 
+    static func stability(intervalDays: Int, ease: Double) -> Double {
+        max(0.5, Double(max(1, intervalDays)) * max(1, ease) * k)
+    }
+
     static func percent(intervalDays: Int, ease: Double, last: Date?, now: Date = Date()) -> Int {
         guard let last else { return 100 }
         let dt = now.timeIntervalSince(last) / 86_400

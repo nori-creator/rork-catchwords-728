@@ -8,6 +8,8 @@ struct ForgettingCurveSheet: View {
     let sticker: Sticker
     let store: ReviewStore
     let onReviewNow: () -> Void
+    /// Set when shown as the centred card on the review screen (instead of a system sheet).
+    var onClose: (() -> Void)? = nil
 
     @State private var history: [ReviewHistoryRow] = []
     @Environment(\.dismiss) private var dismiss
@@ -24,12 +26,23 @@ struct ForgettingCurveSheet: View {
     var body: some View {
         let pct = dex.memoryPercent(for: sticker) ?? 100
         let lv = MemoryBadge.level(pct)
-        ScrollView {
+        ViewThatFits(in: .vertical) {
+            sheetContent(pct: pct, lv: lv)
+            ScrollView { sheetContent(pct: pct, lv: lv) }
+        }
+        .task { history = await store.history(stickerId: sticker.id) }
+    }
+
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
+    }
+
+    private func sheetContent(pct: Int, lv: Int) -> some View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text(sticker.word?.headword ?? "").font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.foreground)
                     Spacer()
-                    Button { dismiss() } label: {
+                    Button { close() } label: {
                         Image(systemName: "xmark").font(.system(size: 18, weight: .medium)).foregroundStyle(Theme.muted)
                             .frame(width: 44, height: 44)
                     }
@@ -61,8 +74,6 @@ struct ForgettingCurveSheet: View {
                 callout(pct: pct)
             }
             .padding(22)
-        }
-        .task { history = await store.history(stickerId: sticker.id) }
     }
 
     private func legend(color: Color, dashed: Bool, text: String) -> some View {
@@ -174,7 +185,7 @@ struct ForgettingCurveSheet: View {
             Text("いま思い出すと、次に忘れるまでの期間が伸びます。").font(.system(size: 14)).foregroundStyle(Theme.muted)
             if isTime {
                 Button {
-                    dismiss()
+                    close()
                     onReviewNow()
                 } label: {
                     Text("いま復習する").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)

@@ -62,9 +62,11 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var relatedWords: [RelatedWord]?
     var synonyms: [String]?
     var antonyms: [String]?
+    var taiwanNote: String?
 
     enum CodingKeys: String, CodingKey {
         case mnemonic, synonyms, antonyms
+        case taiwanNote = "taiwan_note"
         case relatedWords = "related_words"
         case frequencyLevel = "frequency_level"
         case registerScale = "register_scale"
@@ -101,6 +103,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         relatedWords = (try? c.decodeIfPresent([RelatedWord].self, forKey: .relatedWords)).flatMap { $0 }
         synonyms = (try? c.decodeIfPresent([String].self, forKey: .synonyms)).flatMap { $0 }
         antonyms = (try? c.decodeIfPresent([String].self, forKey: .antonyms)).flatMap { $0 }
+        taiwanNote = (try? c.decodeIfPresent(String.self, forKey: .taiwanNote)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).
@@ -247,18 +250,30 @@ nonisolated struct ReviewHistoryRow: Codable, Sendable, Hashable {
     let score: Int?
     let intervalDaysAfter: Int?
     let easeAfter: Double?
+    let stickerId: String?
 
     enum CodingKeys: String, CodingKey {
         case score
+        case stickerId = "sticker_id"
         case reviewedAt = "reviewed_at"
         case intervalDaysAfter = "interval_days_after"
         case easeAfter = "ease_after"
+    }
+
+    /// Local row appended right after grading (so the overall line moves without a refetch).
+    init?(stickerId: String, reviewedAt: Date, intervalDaysAfter: Int, easeAfter: Double) {
+        self.stickerId = stickerId
+        self.reviewedAt = reviewedAt
+        self.intervalDaysAfter = intervalDaysAfter
+        self.easeAfter = easeAfter
+        self.score = nil
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         reviewedAt = try c.decode(Date.self, forKey: .reviewedAt)
         score = try? c.decodeIfPresent(Int.self, forKey: .score)
+        stickerId = (try? c.decodeIfPresent(String.self, forKey: .stickerId)).flatMap { $0 }
         intervalDaysAfter = try? c.decodeIfPresent(Int.self, forKey: .intervalDaysAfter)
         if let d = try? c.decodeIfPresent(Double.self, forKey: .easeAfter) {
             easeAfter = d

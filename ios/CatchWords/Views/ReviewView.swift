@@ -8,6 +8,9 @@ struct ReviewView: View {
     @State private var store = ReviewStore()
     @State private var legendOpen: Bool = false
     @State private var curveSticker: Sticker?
+    /// Verdict for the current card (nil until a choice is picked).
+    @State private var answer: Bool?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -16,28 +19,61 @@ struct ReviewView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     header
                     MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
+                    if legendOpen {
+                        MemoryOverviewPanel(store: store) { s in
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                     content
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                .padding(.bottom, 120)
+                .padding(.bottom, answer == nil ? 120 : 420)
             }
             .refreshable { await store.load(dex: dex, limit: profile.reviewDailyLimit) }
+        }
+        .overlay(alignment: .bottom) {
+            if let answer, let card = store.current {
+                AnswerPanel(sticker: card.sticker, correct: answer) {
+                    router.detailSticker = card.sticker
+                } onNext: {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { self.answer = nil }
+                    store.advance()
+                }
+                .padding(.bottom, 66)
+                .background(alignment: .bottom) { Color.white.frame(height: 80) }
+                .ignoresSafeArea(edges: .bottom)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .id(card.id)
+            }
+        }
+        .overlay {
+            if let s = curveSticker {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { closeCurve() }
+                    ForgettingCurveSheet(sticker: s, store: store, onReviewNow: {
+                        if let i = store.queue.firstIndex(where: { $0.sticker.id == s.id }), i > store.index, answer == nil {
+                            store.queue.move(fromOffsets: IndexSet(integer: i), toOffset: store.index)
+                        }
+                    }, onClose: { closeCurve() })
+                    .frame(maxHeight: 640)
+                    .background(.white, in: .rect(cornerRadius: 32, style: .continuous))
+                    .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
+                    .padding(.horizontal, 16)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
+                }
+                .zIndex(2)
+            }
         }
         .task {
             if !store.hasLoaded { await store.load(dex: dex, limit: profile.reviewDailyLimit) }
         }
-        .sheet(item: $curveSticker) { s in
-            ForgettingCurveSheet(sticker: s, store: store) {
-                curveSticker = nil
-                if let i = store.queue.firstIndex(where: { $0.sticker.id == s.id }), i >= store.index {
-                    store.queue.move(fromOffsets: IndexSet(integer: i), toOffset: store.index)
-                }
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(.white)
-        }
+    }
+
+    private func closeCurve() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { curveSticker = nil }
     }
 
     private var header: some View {
@@ -78,12 +114,11 @@ struct ReviewView: View {
         } else if !store.hasLoaded {
             ProgressView().frame(maxWidth: .infinity).padding(.top, 80)
         } else if let card = store.current {
-            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker)) { correct, ms in
+            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker), isAnswered: answer != nil) { correct, ms in
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
                 Task { await store.grade(card, correct: correct, responseMs: ms, dex: dex) }
-            } onNext: {
-                store.advance()
             } onBadge: {
-                curveSticker = card.sticker
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = card.sticker }
             }
             .id(card.id)
             .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
@@ -183,8 +218,8 @@ struct QuizCard: View {
     let card: ReviewCard
     let choices: [QuizChoice]
     let percent: Int?
+    let isAnswered: Bool
     let onAnswer: (Bool, Int) -> Void
-    let onNext: () -> Void
     let onBadge: () -> Void
 
     @State private var picked: String?
@@ -224,14 +259,17 @@ struct QuizCard: View {
                 }
             }
 
-            let path = card.sticker.objectImageUrl ?? card.sticker.cutoutImageUrl
-            Theme.secondary
-                .frame(height: 220)
-                .overlay {
-                    StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: .fit)
-                        .allowsHitTesting(false)
-                }
-                .clipShape(.rect(cornerRadius: 22, style: .continuous))
+            if !isAnswered {
+                let path = card.sticker.objectImageUrl ?? card.sticker.cutoutImageUrl
+                Theme.secondary
+                    .frame(height: 220)
+                    .overlay {
+                        StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: .fit)
+                            .allowsHitTesting(false)
+                    }
+                    .clipShape(.rect(cornerRadius: 22, style: .continuous))
+                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
 
             Text("「\(card.sticker.word?.meaningJa ?? "")」はどれ？")
                 .font(.system(size: 17, weight: .bold))
@@ -242,11 +280,6 @@ struct QuizCard: View {
                 ForEach(choices) { c in choiceRow(c) }
             }
             .offset(x: shake)
-
-            if let picked {
-                resultBar(correct: picked == correctHead)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
         .padding(14)
         .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
@@ -270,6 +303,13 @@ struct QuizCard: View {
             .buttonStyle(PressableStyle(scale: 0.97))
             .disabled(revealed)
             HStack {
+                if revealed && (isCorrect || isPicked) {
+                    Image(systemName: isCorrect ? "checkmark" : "xmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(isCorrect ? Theme.ok : Theme.destructive)
+                        .padding(.leading, 18)
+                        .transition(.scale.combined(with: .opacity))
+                }
                 Spacer()
                 PronounceCircle(text: c.headword, size: 40).padding(.trailing, 10)
             }
@@ -277,29 +317,6 @@ struct QuizCard: View {
         .background(fill, in: .rect(cornerRadius: 26, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(stroke, lineWidth: revealed && (isCorrect || isPicked) ? 2 : 1.2))
         .animation(.easeOut(duration: 0.2), value: picked)
-    }
-
-    private func resultBar(correct: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: correct ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(correct ? Theme.ok : Theme.destructive)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(correct ? "正解！" : "正解は「\(correctHead)」").font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.foreground)
-                if let p = card.sticker.word?.pinyin, !p.isEmpty {
-                    Text(p).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                }
-            }
-            Spacer()
-            Button(action: onNext) {
-                Text("次へ").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 22).frame(minHeight: 46)
-                    .background(Theme.primary, in: Capsule())
-            }
-            .buttonStyle(PressableStyle())
-        }
-        .padding(12)
-        .background((correct ? Theme.ok : Theme.destructive).opacity(0.08), in: .rect(cornerRadius: 20))
     }
 
     private func answer(_ c: QuizChoice) {

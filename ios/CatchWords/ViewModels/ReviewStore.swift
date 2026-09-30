@@ -25,6 +25,8 @@ final class ReviewStore {
     var streak: Int = 0
     var doneToday: Int = 0
     var correctCount: Int = 0
+    /// Every review_history row (overall retention line + streak).
+    var allHistory: [ReviewHistoryRow] = []
 
     private let client = SupabaseClient.shared
 
@@ -68,8 +70,9 @@ final class ReviewStore {
     }
 
     private func loadHistory() async {
-        guard let data = try? await client.rest("GET", "review_history?select=reviewed_at&order=reviewed_at.desc&limit=3000"),
+        guard let data = try? await client.rest("GET", "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc&limit=5000"),
               let rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+        allHistory = rows
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)
         let today = SRS.taipeiDay(Date())
@@ -127,8 +130,20 @@ final class ReviewStore {
             ])
         }
         doneToday += 1
+        if let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: next.intervalDays, easeAfter: next.ease) {
+            allHistory.insert(row, at: 0)
+        }
         if streak == 0 || !Calendar.current.isDateInToday(now) { streak = max(streak, 1) }
         await dex.reloadReviews()
+    }
+
+    /// 「全体の記憶率（前後2週間）」 for every sticker that has a review row.
+    func retentionSeries(dex: DexStore) -> (series: [RetentionPoint], today: Int?) {
+        let cards: [RetentionSeries.Card] = dex.stickers.compactMap { s in
+            guard let r = dex.reviews[s.id] else { return nil }
+            return .init(stickerId: s.id, takenAt: s.takenAt, ease: r.ease, intervalDays: r.intervalDays, lastReviewedAt: r.lastReviewedAt)
+        }
+        return RetentionSeries.build(cards: cards, history: allHistory)
     }
 
     func advance() {
