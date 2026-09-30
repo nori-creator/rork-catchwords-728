@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
+    @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
+    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
     @AppStorage("motion.pref") private var motionPref: String = "system"
     @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
@@ -162,6 +164,10 @@ struct SettingsView: View {
                 SettingsToggle(title: "自撮りモード", detail: "単語を撮ったあと、続けてその場の自分を撮る画面に進みます", isOn: $selfieMode)
                 Divider().overlay(Theme.border)
                 SettingsToggle(title: "カメラロールに保存", detail: "撮った写真をスマホの写真アプリにも残します", isOn: $photoSync)
+                Divider().overlay(Theme.border)
+                SettingsToggle(title: "切り抜きモード", detail: "単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます", isOn: $cutoutMode)
+                Divider().overlay(Theme.border)
+                SettingsToggle(title: "3Dの演出", detail: "キャッチの瓶・図鑑の本棚・アルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません", isOn: $fx3D)
             }
         }
     }

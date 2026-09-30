@@ -19,8 +19,15 @@ final class AuthStore {
     var awaitingConfirmation: Bool = false
     var email: String? { SupabaseClient.shared.session?.email }
 
-    /// Development only: enter the app without logging in. Set to false before App Store release.
-    static let devSkipLogin: Bool = true
+    /// Development builds only: enter the app without logging in (anonymous guest).
+    /// App Store builds are Release builds, so this is off there automatically.
+    static let devSkipLogin: Bool = {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }()
     /// True while inside the app without a real account (guest mode).
     var isGuest: Bool = false
 

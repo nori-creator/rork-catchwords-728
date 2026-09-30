@@ -23,6 +23,9 @@ concurrency:
   group: ios-check-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build-and-shoot:
     runs-on: macos-26
@@ -65,10 +68,12 @@ jobs:
                   print(phones[-1]["udid"]); break
           ')
           echo "simulator: $UDID"
+          echo "$UDID" > "$RUNNER_TEMP/udid"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           APP="$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
+          echo "$BUNDLE_ID" > "$RUNNER_TEMP/bundle"
           xcrun simctl install "$UDID" "$APP"
           # 許可ダイアログで画面が隠れないよう、先に許可しておく
           for s in camera microphone photos location; do xcrun simctl privacy "$UDID" grant "$s" "$BUNDLE_ID" || true; done
@@ -84,6 +89,49 @@ jobs:
           kill -INT $REC; wait $REC || true
           # 起動直後に落ちていないか（落ちていれば失敗にする）
           xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID" || { echo "::error::アプリが起動後に終了しました"; exit 1; }
+
+      - name: 見本の画面を撮る（アニメーションはコマ送り）
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/report/previews"
+          mkdir -p "$OUT"
+          UDID=$(cat "$RUNNER_TEMP/udid"); BUNDLE_ID=$(cat "$RUNNER_TEMP/bundle")
+          # 名前 / 待つ秒 / コマ数（0.4 秒おき）
+          for spec in "tabbar 2 1" "picker 2 1" "cutout 1 9" "3d 1 10"; do
+            set -- $spec
+            name=$1; wait_s=$2; frames=$3
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiPreview "$name" || { echo "::warning::$name を開けませんでした"; continue; }
+            sleep "$wait_s"
+            for i in $(seq -w 1 "$frames"); do
+              xcrun simctl io "$UDID" screenshot "$OUT/${name}-${i}.png" >/dev/null 2>&1 || true
+              sleep 0.4
+            done
+          done
+          ls -la "$OUT"
+
+      - name: 見本の画面を ci-previews ブランチに置く（Claude が読める場所）
+        if: always()
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -uo pipefail
+          SRC="$RUNNER_TEMP/report"
+          [ -d "$SRC" ] || exit 0
+          DEST="$RUNNER_TEMP/previews-branch"
+          git clone --quiet --depth 1 --branch ci-previews "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$DEST" 2>/dev/null || {
+            mkdir -p "$DEST" && cd "$DEST" && git init --quiet && git checkout --quiet -b ci-previews && \
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          }
+          cd "$DEST"
+          DIR="runs/$(echo "$HEAD_REF" | tr '/' '_')"
+          rm -rf "$DIR" && mkdir -p "$DIR"
+          cp "$SRC"/*.png "$DIR"/ 2>/dev/null || true
+          [ -d "$SRC/previews" ] && cp "$SRC"/previews/*.png "$DIR"/ 2>/dev/null || true
+          echo "${{ github.sha }}" > "$DIR/COMMIT"
+          git add -A
+          git -c user.name="ios-check" -c user.email="ios-check@users.noreply.github.com" commit --quiet -m "previews for $HEAD_REF @ ${{ github.sha }}" || exit 0
+          git push --quiet origin ci-previews || echo "::warning::ci-previews に置けませんでした"
 
       - name: 結果を保存する
         if: always()

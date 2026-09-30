@@ -473,11 +473,9 @@ struct CaptureView: View {
     /// generated we wait for it; if it failed, nothing is saved.
     private func startCatch() {
         guard reward == nil, vm.picked != nil else { return }
-        if let d = vm.details, let draft = vm.draft(details: d) {
-            runCatch(draft)
-            return
-        }
         Task {
+            // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
+            await vm.awaitCutout()
             guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
                 vm.showToast("カード生成に失敗しました")
                 return

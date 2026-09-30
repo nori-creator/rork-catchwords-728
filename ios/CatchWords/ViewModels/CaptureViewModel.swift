@@ -44,6 +44,8 @@ final class CaptureViewModel {
     var picked: Candidate?
     var details: CardDetails?
     var cutout: UIImage?
+    /// The same lift, aligned with the photo — drives the cut-out animation on the card.
+    var cutoutLift: CutoutService.Lift?
     var isCutting: Bool = false
     var cutoutFailed: Bool = false
     var isLoadingDetails: Bool = false
@@ -89,6 +91,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         cutout = nil
+        cutoutLift = nil
         cutoutFailed = false
         detectOutcome = nil
         searchError = nil
@@ -253,20 +256,27 @@ final class CaptureViewModel {
 
     private struct OwnedCheck: Decodable { let owned: OwnedWord? }
 
+    /// Settings → 切り抜きモード (web `catchSpeed`, default on). Off = keep the photo as the sticker.
+    static let cutoutModeKey = "capture.cutoutMode"
+    static var cutoutMode: Bool { UserDefaults.standard.object(forKey: cutoutModeKey) as? Bool ?? true }
+
+    /// Cut-out mode: cutting starts the moment a word is tapped, never delays the card,
+    /// and is awaited only right before saving (capture.tsx: 図鑑に入れる前に切り抜きが揃っていること).
     func startCutout(for candidate: Candidate?) {
-        guard let photo, cutout == nil, captureType != "scan" else { return }
+        guard Self.cutoutMode, let photo, cutout == nil, captureType != "scan" else { return }
         cutoutTask?.cancel()
         isCutting = true
         cutoutFailed = false
         let point = candidate.flatMap { $0.group == nil && $0.point != [500, 500]
             ? CGPoint(x: $0.point[0] / 1000, y: $0.point[1] / 1000) : nil }
         cutoutTask = Task {
-            let lifted = await CutoutService.liftSubject(from: photo, near: point)
+            let lifted = await CutoutService.liftDetailed(from: photo, near: point)
             guard !Task.isCancelled else { return }
             isCutting = false
             if let lifted {
-                withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) { cutout = lifted }
-                Haptics.impact(.soft)
+                // The card animates from `cutoutLift` (aligned) to `cutout` (the sticker).
+                cutoutLift = lifted
+                cutout = lifted.cropped
             } else {
                 cutoutFailed = true
             }
@@ -276,7 +286,14 @@ final class CaptureViewModel {
     func useOriginal() {
         cutoutTask?.cancel()
         isCutting = false
+        cutoutLift = nil
         withAnimation(.snappy) { cutout = nil }
+    }
+
+    /// Waits for a cut-out that is still running (a failed one simply leaves the photo).
+    func awaitCutout() async {
+        guard isCutting, let task = cutoutTask else { return }
+        await task.value
     }
 
     /// Web: card failure → toast 「カード生成に失敗しました」 and back to the picker.
@@ -365,6 +382,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         cutout = nil
+        cutoutLift = nil
         caption = ""
         placeName = nil
         location = nil

@@ -11,6 +11,8 @@ struct CatchCardView: View {
 
     @State private var showSelfie: Bool = false
     @State private var isCatching: Bool = false
+    /// The cut-out animation has played for the current lift.
+    @State private var revealDone: Bool = false
     @FocusState private var captionFocused: Bool
 
     private var stickerImage: UIImage? {
@@ -42,6 +44,7 @@ struct CatchCardView: View {
         }
         // A failed save or card shows a notice and keeps this card: let the user try again.
         .onChange(of: vm.toast) { _, notice in if notice != nil { isCatching = false } }
+        .onChange(of: vm.cutoutLift == nil) { _, none in if none { revealDone = false } }
     }
 
     private var stickerStage: some View {
@@ -49,7 +52,13 @@ struct CatchCardView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black.opacity(0.06), radius: 18, y: 8)
-            if let img = stickerImage {
+            if let lift = vm.cutoutLift, !revealDone, !showSelfie {
+                CutoutRevealView(lift: lift) {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { revealDone = true }
+                }
+                .padding(8)
+                .transition(.opacity)
+            } else if let img = stickerImage {
                 PeelStickerView(image: img, isCutout: vm.cutout != nil && !showSelfie, disabled: isCatching,
                                 onPeel: catchNow,
                                 onTap: {
@@ -63,7 +72,7 @@ struct CatchCardView: View {
             }
             HStack(spacing: 6) {
                 if vm.isCutting { ProgressView().controlSize(.mini).tint(.white) }
-                Text(vm.isCutting ? "切り抜いています" : "好きな方向にはがしてキャッチ")
+                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? "切り抜いています" : "好きな方向にはがしてキャッチ")
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)

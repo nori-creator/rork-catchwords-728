@@ -1,0 +1,35 @@
+# 3D 素材（Blender）を作り直す
+#
+# blender/catchwords_assets.py を GitHub の Linux 上の Blender 4.5 LTS で実行し、
+# ios/CatchWords/Resources/3D/*.usdz と確認用の絵 blender/previews/*.png を作り直して、
+# 実行したブランチにそのまま入れる。Mac も手元の Blender も要らない。
+#
+# 使い方: Actions → 「3D assets（3D 素材を作り直す）」→ ブランチを選んで Run workflow
+name: 3D assets（3D 素材を作り直す）
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Blender 4.5 LTS（Python モジュール版）を入れる
+        run: pip install "bpy==4.5.*"
+      - name: 3D 素材と確認用の絵を作る
+        run: python blender/catchwords_assets.py --previews
+      - name: ブランチに入れる
+        run: |
+          git add ios/CatchWords/Resources/3D blender/previews
+          if git diff --cached --quiet; then echo "変更なし"; exit 0; fi
+          git -c user.name="3d-assets" -c user.email="3d-assets@users.noreply.github.com" \
+            commit -m "3D 素材を作り直した（blender/catchwords_assets.py）"
+          git push

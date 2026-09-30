@@ -29,11 +29,26 @@ nonisolated enum CutoutService {
     /// Returns a transparent PNG cropped to the subject, or nil when nothing could be lifted.
     static func liftSubject(from image: UIImage, near point: CGPoint? = nil) async -> UIImage? {
         await Task.detached(priority: .userInitiated) {
-            lift(image: image, point: point)
+            lift(image: image, point: point, cropped: true)?.cropped
         }.value
     }
 
-    private static func lift(image source: UIImage, point: CGPoint?) -> UIImage? {
+    /// Both versions of the lift: `cropped` is the sticker that gets saved; `full` is the same
+    /// subject on a transparent canvas the size of `photo`, so it lines up exactly with the photo
+    /// on screen — the cut-out animation fades the background away while the subject stays put.
+    struct Lift: @unchecked Sendable {
+        let cropped: UIImage
+        let full: UIImage
+        let photo: UIImage
+    }
+
+    static func liftDetailed(from image: UIImage, near point: CGPoint? = nil) async -> Lift? {
+        await Task.detached(priority: .userInitiated) {
+            lift(image: image, point: point, cropped: false)
+        }.value
+    }
+
+    private static func lift(image source: UIImage, point: CGPoint?, cropped wantCropOnly: Bool) -> Lift? {
         let image = ImageTools.resized(source, maxSide: 1600)
         guard let cg = image.cgImage else { return nil }
         let request = VNGenerateForegroundInstanceMaskRequest()
@@ -61,15 +76,21 @@ nonisolated enum CutoutService {
             }
         }
 
-        guard let masked = try? result.generateMaskedImage(
-            ofInstances: instances,
-            from: handler,
-            croppedToInstancesExtent: true
-        ) else { return nil }
-        let ci = CIImage(cvPixelBuffer: masked)
         let context = CIContext()
-        guard let out = context.createCGImage(ci, from: ci.extent) else { return nil }
-        return UIImage(cgImage: out)
+        func render(_ crop: Bool) -> UIImage? {
+            guard let masked = try? result.generateMaskedImage(
+                ofInstances: instances,
+                from: handler,
+                croppedToInstancesExtent: crop
+            ) else { return nil }
+            let ci = CIImage(cvPixelBuffer: masked)
+            guard let out = context.createCGImage(ci, from: ci.extent) else { return nil }
+            return UIImage(cgImage: out)
+        }
+        guard let croppedImage = render(true) else { return nil }
+        if wantCropOnly { return Lift(cropped: croppedImage, full: croppedImage, photo: image) }
+        guard let fullImage = render(false) else { return nil }
+        return Lift(cropped: croppedImage, full: fullImage, photo: image)
     }
 }
 
