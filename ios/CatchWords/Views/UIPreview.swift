@@ -33,6 +33,7 @@ struct UIPreviewRoot: View {
             case "album": AlbumPreview()
             case "hero": HeroPickerPreview()
             case "journal": JournalPreview()
+            case "memorial": MemorialPreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -251,6 +252,25 @@ private struct JournalPreview: View {
                 .padding(.top, 50)
         }
         .background(Theme.background)
+    }
+}
+/// The milestone celebration (day count, confetti, photos fanning out).
+private struct MemorialPreview: View {
+    private static let photos: [String] = (0..<7).map { i in
+        let path = "preview/memorial-\(i).jpg"
+        let img = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 380)).image { ctx in
+            let h = CGFloat(i) / 7
+            UIColor(hue: h, saturation: 0.35, brightness: 0.95, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 300, height: 380))
+            UIColor(hue: h, saturation: 0.7, brightness: 0.75, alpha: 1).setFill()
+            ctx.cgContext.fillEllipse(in: CGRect(x: 70, y: 90, width: 160, height: 150))
+        }
+        ImageCache.shared.set(img, for: path)
+        return path
+    }
+
+    var body: some View {
+        MemorialReveal(n: 30, words: 48, photos: Self.photos) {}
     }
 }
 #endif

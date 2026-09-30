@@ -17,6 +17,8 @@ final class ProfileStore {
     var isSavingAvatar: Bool = false
     /// `profiles.onboarded` — true once the first-run setup has been finished (on any device).
     var onboarded: Bool = false
+    /// When the account was made (`profiles.created_at`) — day 1 for the milestone albums.
+    var createdAt: Date?
     var isLoaded: Bool = false
     var message: String?
 
@@ -43,7 +45,7 @@ final class ProfileStore {
     func load() async {
         guard let uid = client.userId else { isLoaded = true; return }
         defer { isLoaded = true }
-        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit,onboarded"
+        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
         var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
         if data == nil {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
@@ -57,6 +59,7 @@ final class ProfileStore {
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
         if let v = row["review_daily_limit"] as? Int, v >= 0 { reviewDailyLimit = v }
         onboarded = row["onboarded"] as? Bool ?? false
+        if let s = row["created_at"] as? String { createdAt = SupabaseDate.parse(s) }
     }
 
     func update(_ fields: [String: Any]) async {

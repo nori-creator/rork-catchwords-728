@@ -8,9 +8,16 @@ struct HomeView: View {
     @State private var writingDay: WritingDay?
     @State private var showJournal = false
     @State private var showStats = false
+    @State private var memorialOpen: Int?
+    @State private var memorialHidden = false
     @AppStorage("album.span") private var spanRaw: String = AlbumSpan.day.rawValue
 
     private var span: AlbumSpan { AlbumSpan(rawValue: spanRaw) ?? .day }
+
+    private struct MemorialDay: Identifiable {
+        let n: Int
+        var id: Int { n }
+    }
 
     /// album-span.ts: past pages bundled by day / week (Monday start, local time) / month.
     private func pastGroups(today: Date) -> [(key: Date, items: [Sticker])] {
@@ -62,6 +69,20 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 18)
                     .id("today")
+
+                    if let n = profile.createdAt.flatMap({ Milestone.today(start: $0) }),
+                       !memorialHidden, !Milestone.wasDismissed(n) {
+                        MemorialBanner(n: n, words: dex.stickers.count, photos: Milestone.highlights(dex.stickers).count) {
+                            Haptics.impact(.medium)
+                            memorialOpen = n
+                        } onDismiss: {
+                            Milestone.dismiss(n)
+                            withAnimation(.snappy) { memorialHidden = true }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 14)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     AlbumPage(items: todayItems, isToday: true) { router.detailSticker = $0 } onCamera: {
                         router.tab = .camera
@@ -148,6 +169,17 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showJournal) {
             JournalHistoryView()
+        }
+        .fullScreenCover(item: Binding(get: { memorialOpen.map(MemorialDay.init) }, set: { memorialOpen = $0?.n })) { m in
+            MemorialAlbumView(n: m.n, words: dex.stickers.count, picks: Milestone.highlights(dex.stickers)) { s in
+                memorialOpen = nil
+                router.detailSticker = s
+            } onClose: {
+                memorialOpen = nil
+            }
+        }
+        .task(id: profile.createdAt) {
+            if let start = profile.createdAt { await Milestone.scheduleNotification(start: start) }
         }
         .sheet(isPresented: $showStats) {
             UserStatsPanel(

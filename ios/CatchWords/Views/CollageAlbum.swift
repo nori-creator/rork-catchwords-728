@@ -10,6 +10,8 @@ struct CollageBoard: View {
     let items: [Sticker]
     let editable: Bool
     let onOpen: (Sticker) -> Void
+    /// Lay every photo out automatically, ignoring positions placed by hand (the memorial album).
+    var autoOnly: Bool = false
 
     @Environment(DexStore.self) private var dex
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -63,7 +65,7 @@ struct CollageBoard: View {
     private func computeLayout() -> (items: [DayLayoutItem], boardH: Double) {
         guard boardW > 0 else { return ([], 1.25) }
         let stickers: [DayLayoutSticker] = items.map { s in
-            var d = dex.albumPlacements[s.id] ?? DayLayoutSticker(id: s.id)
+            var d = (autoOnly ? nil : dex.albumPlacements[s.id]) ?? DayLayoutSticker(id: s.id)
             d.id = s.id
             d.caption = s.caption
             if let p = live[s.id] {
