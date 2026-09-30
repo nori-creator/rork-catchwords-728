@@ -12,6 +12,10 @@ final class JarScene {
     var photo: ModelEntity?
     var stars: [Entity] = []
     private(set) var bloomed = false
+    /// Loading can take longer than the choreography's wait before the bloom. A bloom asked for
+    /// before the models are ready is remembered and played the moment they are (never dropped).
+    private var built = false
+    private var bloomRequested = false
     private var wobble: Task<Void, Never>?
 
     /// Photo height inside the jar (metres). The jar is ~0.22 m tall with its base at y = 0.
@@ -56,10 +60,16 @@ final class JarScene {
             root.addChild(star)
             stars.append(star)
         }
+        built = true
+        if bloomRequested { bloom() }
     }
 
     /// 幕2 bloom: the jar forms around the photo, the photo settles in, the cork drops, stars burst.
     func bloom() {
+        guard built else {
+            bloomRequested = true
+            return
+        }
         guard !bloomed else { return }
         bloomed = true
         if let jar {
