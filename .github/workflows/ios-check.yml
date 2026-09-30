@@ -19,9 +19,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 走っている確認は止めない（止めると見本画面が届かない）。待ちは最新の1つだけ残る。
 concurrency:
   group: ios-check-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
