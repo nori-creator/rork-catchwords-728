@@ -9,6 +9,10 @@ struct AnswerPanel: View {
     let onNext: () -> Void
 
     @Environment(DexStore.self) private var dex
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Drives the entrance: the verdict colour spreads across the band, then the word and buttons rise in.
+    @State private var spread: CGFloat = 0
+    @State private var settled = false
     /// The live word (its meaning arrives in the reader's language after the card was made).
     private var word: Word? { dex.sticker(id: sticker.id)?.word ?? sticker.word }
     private var headword: String { word?.headword ?? "" }
@@ -16,13 +20,25 @@ struct AnswerPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(correct ? L("正解！") : L("もう一度覚えよう"))
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(tint.mix(with: .black, by: 0.25))
-                .padding(.horizontal, 18)
-                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                .background(tint.opacity(0.12))
-                .accessibilityAddTraits(.updatesFrequently)
+            HStack(spacing: 8) {
+                Image(systemName: correct ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .symbolEffect(.bounce, value: settled)
+                Text(correct ? L("正解！") : L("もう一度覚えよう"))
+                    .font(.system(size: 16, weight: .bold))
+            }
+            .foregroundStyle(tint.mix(with: .black, by: 0.25))
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            .background(alignment: .leading) {
+                // The verdict colour spreads from the left edge, like ink soaking in.
+                GeometryReader { geo in
+                    tint.opacity(0.14)
+                        .frame(width: geo.size.width * spread)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
@@ -58,6 +74,17 @@ struct AnswerPanel: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
+            .opacity(settled ? 1 : 0)
+            .offset(y: settled ? 0 : 10)
+        }
+        .onAppear {
+            if reduceMotion {
+                spread = 1
+                settled = true
+                return
+            }
+            withAnimation(.easeOut(duration: 0.32)) { spread = 1 }
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.82).delay(0.08)) { settled = true }
         }
         .background(Theme.card)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))

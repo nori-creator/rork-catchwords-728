@@ -311,6 +311,10 @@
   "en": "Furigana (kana)",
   "zh-TW": "假名注音"
  },
+ "あと{1}語、もう少し": {
+  "en": "{1} words to go — almost there",
+  "zh-TW": "還剩 {1} 個字，再加油"
+ },
  "あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。": {
   "en": "Continue later from “Waiting for analysis” on Home. The moment isn't lost.",
   "zh-TW": "之後可以從首頁的「等待分析」繼續。拍下的那一刻沒有錯過。"
@@ -575,6 +579,10 @@
   "en": "All days",
   "zh-TW": "所有日期"
  },
+ "ぜんぶ覚え直せました": {
+  "en": "You got them all this time",
+  "zh-TW": "全部都重新記住了"
+ },
  "その他": {
   "en": "Something else",
   "zh-TW": "其他"
@@ -675,6 +683,10 @@
   "en": "No past diary entries yet",
   "zh-TW": "還沒有過去的日記"
  },
+ "まちがえた{1}語をもう一度": {
+  "en": "Try again: {1} words you missed",
+  "zh-TW": "再試一次答錯的 {1} 個字"
+ },
  "まれ": {
   "en": "Rare",
   "zh-TW": "少見"
@@ -702,6 +714,10 @@
  "もう一枚撮る": {
   "en": "Take another",
   "zh-TW": "再拍一張"
+ },
+ "もっと復習する": {
+  "en": "Review more",
+  "zh-TW": "再多複習一些"
  },
  "ものと一緒に、もう一枚": {
   "en": "One more, with you",
@@ -2586,6 +2602,10 @@
  "絵文字": {
   "en": "Emoji",
   "zh-TW": "表情符號"
+ },
+ "練習なので、記憶の記録は変わりません。": {
+  "en": "This is practice — your memory record won't change.",
+  "zh-TW": "這是練習，不會改變記憶紀錄。"
  },
  "縦軸＝いま思い出せる確率（写真の右上の%と同じ）": {
   "en": "Vertical axis = chance you can recall it now (same as the % on the photo)",

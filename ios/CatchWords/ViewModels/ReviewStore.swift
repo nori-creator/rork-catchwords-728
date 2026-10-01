@@ -25,6 +25,12 @@ final class ReviewStore {
     var streak: Int = 0
     var doneToday: Int = 0
     var correctCount: Int = 0
+    /// Cards answered wrong in this round (offered again at the end, without recording).
+    var missed: [ReviewCard] = []
+    /// True while going over the missed cards again: nothing is graded or written.
+    var isRetry: Bool = false
+    /// More cards are due than the daily limit let into this round.
+    var moreAvailable: Bool = false
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
 
@@ -60,6 +66,26 @@ final class ReviewStore {
         doneToday = 0
         streak = 0
         allHistory = []
+        missed = []
+        isRetry = false
+        moreAvailable = false
+    }
+
+    /// Go over this round's wrong answers once more. Practice only: the schedule was already updated
+    /// when they were first answered, so a second answer today must not move it again.
+    func startRetry() {
+        guard !missed.isEmpty else { return }
+        choiceCache = [:]
+        queue = missed.shuffled()
+        missed = []
+        index = 0
+        correctCount = 0
+        isRetry = true
+    }
+
+    /// Keep going past the daily limit: the next batch of due cards.
+    func loadMore(dex: DexStore) async {
+        await load(dex: dex, limit: doneToday + 20)
     }
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
@@ -87,7 +113,11 @@ final class ReviewStore {
                 return ReviewCard(review: r, sticker: s)
             }
             await historyTask  // doneToday is now this language's count
-            queue = Array(cards.prefix(max(1, limit - doneToday)))
+            let room = max(1, limit - doneToday)
+            queue = Array(cards.prefix(room))
+            moreAvailable = cards.count > room
+            missed = []
+            isRetry = false
             loadedTarget = NativeAPI.targetLanguage
             index = 0
             correctCount = 0
@@ -146,7 +176,8 @@ final class ReviewStore {
     /// history rows as the web — so a word comes due on the same day on the iPhone and on the web.
     /// If the server cannot be reached, nothing is written locally (a half-graded card would drift).
     func grade(_ card: ReviewCard, correct: Bool, responseMs: Int, dex: DexStore) async {
-        if correct { correctCount += 1 }
+        if correct { correctCount += 1 } else if !missed.contains(where: { $0.id == card.id }) { missed.append(card) }
+        if isRetry { return }
         let r = card.review
         let now = Date()
         guard let rid = r.id else { return }

@@ -12,6 +12,8 @@ struct ReviewView: View {
     @State private var answer: Bool?
     @State private var showWordbooks: Bool = false
     @State private var practiceIndex: Int = 0
+    /// How far the answer sheet has been dragged sideways (swipe left = next card, like the web's SwipeCard).
+    @State private var swipeX: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -40,9 +42,32 @@ struct ReviewView: View {
                 AnswerPanel(sticker: card.sticker, correct: answer) {
                     if !router.tour.isReview { router.detailSticker = card.sticker }
                 } onNext: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { self.answer = nil }
-                    if router.tour.isReview { nextPractice() } else { store.advance() }
+                    goNext()
                 }
+                .offset(x: swipeX)
+                .rotationEffect(.degrees(Double(swipeX) / 40), anchor: .bottom)
+                .gesture(
+                    DragGesture(minimumDistance: 24)
+                        .onChanged { v in
+                            // Only sideways drags move the sheet; the explanation inside still scrolls up and down.
+                            guard abs(v.translation.width) > abs(v.translation.height) else { return }
+                            swipeX = min(40, v.translation.width)
+                        }
+                        .onEnded { v in
+                            if v.translation.width < -90 || v.predictedEndTranslation.width < -220 {
+                                Haptics.selection()
+                                withAnimation(.easeIn(duration: 0.18)) { swipeX = -520 }
+                                Task {
+                                    try? await Task.sleep(for: .milliseconds(170))
+                                    goNext()
+                                    swipeX = 0
+                                }
+                            } else {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { swipeX = 0 }
+                            }
+                        }
+                )
+                .accessibilityAction(named: L("次へ")) { goNext() }
                 .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
                 .background(alignment: .bottom) { Theme.card.frame(height: 80) }
@@ -96,6 +121,11 @@ struct ReviewView: View {
             guard let s, s.word != nil else { return nil }
             return ReviewCard(review: ReviewState(stickerId: s.id, ease: 2.5, intervalDays: 0, repetitions: 0), sticker: s)
         }
+    }
+
+    private func goNext() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { answer = nil }
+        if router.tour.isReview { nextPractice() } else { store.advance() }
     }
 
     private func nextPractice() {
@@ -184,9 +214,16 @@ struct ReviewView: View {
             .id(card.id)
             .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
         } else {
-            ReviewDone(total: store.queue.count, correct: store.correctCount, doneToday: store.doneToday) {
-                router.tab = .camera
-            }
+            ReviewDone(total: store.queue.count, correct: store.correctCount, doneToday: store.doneToday,
+                       missed: store.missed.count, isRetry: store.isRetry, canLoadMore: store.moreAvailable && !store.isRetry,
+                       onRetry: {
+                           withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { store.startRetry() }
+                       },
+                       onMore: {
+                           Task { await store.loadMore(dex: dex) }
+                       },
+                       onCamera: { router.tab = .camera })
+            .id("done-\(store.isRetry)-\(store.queue.count)")
         }
     }
 }
@@ -404,33 +441,136 @@ struct QuizCard: View {
     }
 }
 
+/// The end of a round: the score counts up inside a ring that draws itself, then what to do next —
+/// go over the missed words again (practice, not recorded), keep going past the daily limit, or catch more.
 struct ReviewDone: View {
     let total: Int
     let correct: Int
     let doneToday: Int
+    var missed: Int = 0
+    var isRetry: Bool = false
+    var canLoadMore: Bool = false
+    var onRetry: () -> Void = {}
+    var onMore: () -> Void = {}
     let onCamera: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shownCorrect = 0
+    @State private var ring: CGFloat = 0
+    @State private var appeared = false
+
+    private var rate: CGFloat { total == 0 ? 1 : CGFloat(correct) / CGFloat(total) }
+    private var ringColor: Color { rate >= 0.8 ? Theme.ok : rate >= 0.5 ? Theme.gold : Theme.primary }
+
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: total == 0 ? "checkmark.seal" : "sparkles")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(Theme.primary)
-                .symbolEffect(.bounce, value: total)
-            Text(total == 0 ? L("今日の復習はおしまいです") : L("\(total)問中 \(correct)問 正解"))
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Theme.foreground)
-            Text(total == 0 ? L("新しい単語を撮ると、ここに出てきます。") : L("今日は\(doneToday)回復習しました。"))
-                .font(.system(size: 15)).foregroundStyle(Theme.muted)
-            Button(action: onCamera) {
-                Label(L("単語を撮りに行く"), systemImage: "camera.fill")
-                    .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 24).frame(minHeight: 50)
-                    .background(Theme.primary, in: Capsule())
+        VStack(spacing: 18) {
+            if total == 0 {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 52, weight: .regular))
+                    .foregroundStyle(Theme.primary)
+                    .symbolEffect(.bounce, value: appeared)
+            } else {
+                ZStack {
+                    Circle().stroke(Theme.secondary, lineWidth: 12)
+                    Circle()
+                        .trim(from: 0, to: ring)
+                        .stroke(ringColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: 0) {
+                        Text("\(shownCorrect)")
+                            .font(.system(size: 44, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                            .contentTransition(.numericText(value: Double(shownCorrect)))
+                            .foregroundStyle(Theme.foreground)
+                        Text("/ \(total)")
+                            .font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                            .foregroundStyle(Theme.muted)
+                    }
+                }
+                .frame(width: 140, height: 140)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L("\(total)問中 \(correct)問 正解"))
             }
-            .buttonStyle(PressableStyle())
+
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Theme.foreground)
+                    .multilineTextAlignment(.center)
+                Text(subtitle)
+                    .font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 10) {
+                if missed > 0 {
+                    Button(action: onRetry) {
+                        Label(L("まちがえた\(missed)語をもう一度"), systemImage: "arrow.counterclockwise")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Theme.primary.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                    Text(L("練習なので、記憶の記録は変わりません。"))
+                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                }
+                if canLoadMore {
+                    Button(action: onMore) {
+                        Label(L("もっと復習する"), systemImage: "plus.circle")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Theme.card, in: Capsule())
+                            .overlay(Capsule().stroke(Theme.primary.opacity(0.35), lineWidth: 1.2))
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                Button(action: onCamera) {
+                    Label(L("単語を撮りに行く"), systemImage: "camera.fill")
+                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(Theme.primary, in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
+            }
+            .padding(.horizontal, 8)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 12)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
-        .background(Theme.card, in: .rect(cornerRadius: 28))
+        .padding(.horizontal, 20)
+        .padding(.vertical, 40)
+        .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
+        .task { await play() }
+    }
+
+    private var title: String {
+        if total == 0 { return L("今日の復習はおしまいです") }
+        if isRetry { return missed == 0 ? L("ぜんぶ覚え直せました") : L("あと\(missed)語、もう少し") }
+        return L("\(total)問中 \(correct)問 正解")
+    }
+
+    private var subtitle: String {
+        if total == 0 { return L("新しい単語を撮ると、ここに出てきます。") }
+        return L("今日は\(doneToday)回復習しました。")
+    }
+
+    private func play() async {
+        if reduceMotion || total == 0 {
+            shownCorrect = correct
+            ring = rate
+            appeared = true
+            return
+        }
+        withAnimation(.easeOut(duration: 0.9)) { ring = rate }
+        // Count up one by one, faster for big rounds, a light tick each step.
+        let steps = max(1, correct)
+        let pause = max(25, min(90, 900 / steps))
+        for n in stride(from: 0, through: correct, by: 1) {
+            withAnimation(.snappy(duration: 0.2)) { shownCorrect = n }
+            if n > 0 { Haptics.selection() }
+            try? await Task.sleep(for: .milliseconds(pause))
+        }
+        if rate >= 0.8 { Haptics.success() }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { appeared = true }
     }
 }

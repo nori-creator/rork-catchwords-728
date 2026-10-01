@@ -67,6 +67,7 @@ struct UIPreviewRoot: View {
             case "paywall": PaywallView()
             case "dex": DexView()
             case "wordbook": WordbookView()
+            case "done": DonePreview()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -536,3 +537,14 @@ private struct ReviewPreview: View {
     }
 }
 #endif
+
+/// The end of a review round: score ring, missed words to try again, and "review more".
+private struct DonePreview: View {
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ReviewDone(total: 12, correct: 9, doneToday: 12, missed: 3, isRetry: false, canLoadMore: true) {}
+                .padding(16)
+        }
+    }
+}
