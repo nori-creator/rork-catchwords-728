@@ -388,7 +388,7 @@ struct CaptureView: View {
         .frame(minHeight: 30)
         .background(.white.opacity(0.1), in: Capsule())
         .contentShape(Capsule())
-        .onTapGesture { if !plan.isPro { router.showPaywall = true } }
+        .onTapGesture { if PlanStore.paywallEnabled, !plan.isPro { router.showPaywall = true } }
         .accessibilityLabel(plan.isPro ? "Pro" : L("今日あと\(plan.remainingToday)回"))
     }
 

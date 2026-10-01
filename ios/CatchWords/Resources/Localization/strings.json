@@ -3086,5 +3086,9 @@
  "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。": {
   "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.",
   "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字與照片都能直接使用。"
+ },
+ "このアプリについて": {
+  "en": "About this app",
+  "zh-TW": "關於此 App"
  }
 }

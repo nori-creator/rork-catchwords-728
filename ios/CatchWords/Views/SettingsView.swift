@@ -44,7 +44,7 @@ struct SettingsView: View {
                 notifySection
                 appearanceSection
                 feelSection
-                proSection
+                if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
             .padding(.horizontal, 16)
@@ -228,6 +228,18 @@ struct SettingsView: View {
                 }))
                 .padding(.top, 6)
             }
+        }
+    }
+
+    /// Free-only release: just the legal links (the Pro card has them too).
+    private var legalSection: some View {
+        SettingsCard(title: L("このアプリについて")) {
+            HStack(spacing: 18) {
+                Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+            }
+            .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
+            .frame(minHeight: 44)
         }
     }
 
