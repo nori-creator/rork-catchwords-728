@@ -155,51 +155,13 @@ struct WordbookView: View {
             }
             .frame(maxWidth: .infinity).padding(.top, 40).padding(.horizontal, 20)
         } else {
-            VStack(spacing: 10) {
-                ForEach(store.books) { book in bookRow(book) }
+            WordbookShelf(books: store.books) { book in
+                Haptics.selection()
+                reviewing = book
+            } onDelete: { book in
+                pendingDelete = book
             }
         }
-    }
-
-    private func bookRow(_ book: WordbookSummary) -> some View {
-        let p = book.total == 0 ? 0 : Double(book.learned) / Double(book.total)
-        return Button {
-            Haptics.selection()
-            reviewing = book
-        } label: {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Theme.brandGradient)
-                    .frame(width: 38, height: 54)
-                    .overlay(alignment: .leading) { Rectangle().fill(.white.opacity(0.35)).frame(width: 3).padding(.leading, 5) }
-                    .shadow(color: Theme.primary.opacity(0.3), radius: 4, y: 2)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(book.title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground).lineLimit(1)
-                    HStack(spacing: 8) {
-                        Text(book.due > 0 ? L("今日 \(book.due)語") : L("今日はおしまい"))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(book.due > 0 ? Theme.primaryInk : Theme.muted)
-                        Text(L("覚えた \(book.learned)／\(book.total)")).font(.system(size: 12)).foregroundStyle(Theme.muted).monospacedDigit()
-                    }
-                    GeometryReader { g in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Theme.secondary)
-                            Capsule().fill(Theme.ok).frame(width: max(4, g.size.width * p))
-                        }
-                    }
-                    .frame(height: 4)
-                }
-                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
-            }
-            .padding(14)
-            .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border))
-        }
-        .buttonStyle(PressableStyle(scale: 0.98))
-        .contextMenu {
-            Button(role: .destructive) { pendingDelete = book } label: { Label(L("「\(book.title)」を消す"), systemImage: "trash") }
-        }
-        .accessibilityHint(L("この単語帳を復習する"))
     }
 
     private func read(_ image: UIImage) async {
@@ -532,5 +494,104 @@ struct PageCameraView: View {
         }
         .task { await camera.start() }
         .onDisappear { camera.stop() }
+    }
+}
+
+/// The wordbooks as books standing on wooden shelves: each spine shows the title, today's count at the top,
+/// and how much is learned as a "water level" rising inside it. Spines rise into place one by one.
+struct WordbookShelf: View {
+    let books: [WordbookSummary]
+    let onOpen: (WordbookSummary) -> Void
+    let onDelete: (WordbookSummary) -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+    private let perRow = 5
+
+    var body: some View {
+        let rows = stride(from: 0, to: books.count, by: perRow).map { Array(books[$0..<min($0 + perRow, books.count)]) }
+        VStack(spacing: 22) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
+                VStack(spacing: 0) {
+                    HStack(alignment: .bottom, spacing: 8) {
+                        ForEach(Array(row.enumerated()), id: \.element.id) { i, book in
+                            spine(book)
+                                .offset(y: shown ? 0 : 40)
+                                .opacity(shown ? 1 : 0)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.78).delay(Double(r * perRow + i) * 0.05), value: shown)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    // the plank
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(LinearGradient(colors: [Color(light: 0xD9B58C, dark: 0x6B5038), Color(light: 0xB98E62, dark: 0x4E3826)], startPoint: .top, endPoint: .bottom))
+                        .frame(height: 14)
+                        .shadow(color: .black.opacity(0.18), radius: 6, y: 5)
+                }
+            }
+        }
+        .padding(.top, 6)
+        .onAppear {
+            if reduceMotion { shown = true } else { withAnimation { shown = true } }
+        }
+    }
+
+    private static let colors: [UInt32] = [0x2F6FDB, 0x4C5FD5, 0x168F8C, 0xD9822B, 0xC2416A, 0x3E8E47, 0x7A5AC8]
+
+    private func spine(_ book: WordbookSummary) -> some View {
+        // A steady colour and height per book, so the shelf looks the same every time.
+        let h = book.id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
+        let color = Color(hex: Self.colors[h % Self.colors.count])
+        let height = CGFloat(150 + (h / 7) % 46)
+        let learned = book.total == 0 ? 0 : CGFloat(book.learned) / CGFloat(book.total)
+        return Button { onOpen(book) } label: {
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(color)
+                // learned: a lighter band rising from the bottom
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(.white.opacity(0.22))
+                    .frame(height: max(0, (height - 12) * learned))
+                    .padding(4)
+                VStack(spacing: 6) {
+                    if book.due > 0 {
+                        Text("\(book.due)")
+                            .font(.system(size: 12, weight: .heavy)).monospacedDigit()
+                            .foregroundStyle(color)
+                            .frame(minWidth: 24, minHeight: 24)
+                            .background(.white, in: Circle())
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(width: 24, height: 24)
+                    }
+                    Text(book.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .frame(width: height - 62)
+                        .rotationEffect(.degrees(90))
+                        .frame(width: 30, height: height - 62)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 8)
+                // the bands near the top and bottom of a real spine
+                VStack {
+                    Rectangle().fill(.white.opacity(0.35)).frame(height: 2).padding(.top, 38)
+                    Spacer()
+                    Rectangle().fill(.white.opacity(0.35)).frame(height: 2).padding(.bottom, 14)
+                }
+            }
+            .frame(width: 54, height: height)
+            .shadow(color: color.opacity(0.35), radius: 4, x: 2, y: 2)
+        }
+        .buttonStyle(PressableStyle(scale: 0.95))
+        .contextMenu {
+            Button(role: .destructive) { onDelete(book) } label: { Label(L("「\(book.title)」を消す"), systemImage: "trash") }
+        }
+        .accessibilityLabel(book.title)
+        .accessibilityValue(L("今日 \(book.due)語") + (L10n.lang == "en" ? ", " : L10n.lang == "ja" ? "、" : "，") + L("覚えた \(book.learned)／\(book.total)"))
+        .accessibilityHint(L("この単語帳を復習する"))
     }
 }
