@@ -9,7 +9,9 @@
 #   APPLE_TEAM_ID        … Apple Developer のチーム ID（10 桁の英数字）
 #   ASC_KEY_ID           … App Store Connect API キーの「キー ID」
 #   ASC_ISSUER_ID        … 同じ画面の「Issuer ID」
-#   ASC_KEY_P8_BASE64    … ダウンロードした AuthKey_XXXX.p8 を base64 にした文字列
+#   ASC_KEY_P8           … ダウンロードした AuthKey_XXXX.p8 をメモ帳などで開いた中身をそのまま貼る
+#                          （「-----BEGIN PRIVATE KEY-----」から「-----END PRIVATE KEY-----」まで全部）
+#                          ※ 以前の ASC_KEY_P8_BASE64（base64 にした文字列）でも動く
 #
 # 署名（証明書・プロファイル）は Apple のクラウド署名に任せる
 # （-allowProvisioningUpdates + API キー）。手元に証明書を持たなくてよい。
@@ -39,12 +41,14 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
         run: |
           missing=""
-          for v in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64; do
+          for v in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID; do
             [ -n "${!v}" ] || missing="$missing $v"
           done
+          [ -n "$ASC_KEY_P8" ] || [ -n "$ASC_KEY_P8_BASE64" ] || missing="$missing ASC_KEY_P8"
           if [ -n "$missing" ]; then
             echo "::error::GitHub の Secrets が足りません:$missing（docs/self-managing-ios.md の手順 3）"
             exit 1
@@ -52,10 +56,16 @@ jobs:
 
       - name: API キーを一時ファイルに置く
         env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
         run: |
-          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          if [ -n "$ASC_KEY_P8" ]; then
+            printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          else
+            echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          fi
           chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+          grep -q "BEGIN PRIVATE KEY" "$RUNNER_TEMP/AuthKey.p8" || { echo "::error::ASC_KEY_P8 の中身が .p8 の形ではありません（BEGIN PRIVATE KEY から END PRIVATE KEY まで全部貼ってください）"; exit 1; }
 
       - name: Xcode の版を表示
         run: xcodebuild -version

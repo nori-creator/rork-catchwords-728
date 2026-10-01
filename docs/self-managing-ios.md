@@ -29,7 +29,8 @@
 
 - バンドル ID は **`com.nori.catchwords`**（2026-10-01 に Rork の自動の名前 `app.rork.v075or6kicdigi0jhlze3` から変更。まだ一度も提出していなかったため変えられた）。
 - 一度 App Store Connect に提出すると変えられません（Apple の決まり）。
-- **Apple でサインインのために、Supabase にも同じ ID を登録する**: Supabase の管理画面 → Authentication → Sign In / Providers → Apple → **Client IDs** に `com.nori.catchwords` を足す（カンマ区切り。Web 用の Services ID がある場合はそれを先頭のままにする）。足さないと、iPhone・iPad の「Appleでサインイン」が失敗します。
+- **データベースとログインは Lovable Cloud（Lovable が管理する Supabase）にある。** 自分の Supabase アカウントには入っていないので、Supabase の管理画面は使わない。
+- **iPhone・iPad の「Appleでサインイン」は、ログインの仕組み側にこのバンドル ID を登録するまで失敗する見込み**（ネイティブのアプリの Apple サインインは、アプリのバンドル ID を許可された相手として登録する必要がある）。Lovable Cloud でその登録ができるかは未確認。**それまではメールアドレスとパスワードでログインして確かめる**（Web 版を Google で登録した人は、ログイン画面の「パスワードを忘れた」でパスワードを作ってから入る）。
 
 ### 1-2. Web 版を先に公開する
 
@@ -88,12 +89,9 @@ GitHub のリポジトリ → **Settings** → **Secrets and variables** → **A
 | `APPLE_TEAM_ID` | 2-3 のチーム ID |
 | `ASC_KEY_ID` | 2-2 のキー ID |
 | `ASC_ISSUER_ID` | 2-2 の Issuer ID |
-| `ASC_KEY_P8_BASE64` | .p8 ファイルを base64 という形の文字列にしたもの（下を参照） |
+| `ASC_KEY_P8` | .p8 ファイルをメモ帳などで開いた中身を**そのまま全部**（`-----BEGIN PRIVATE KEY-----` から `-----END PRIVATE KEY-----` まで） |
 
-`.p8` を base64 にするには、Claude に「この .p8 を base64 にして Secrets に入れる手順を教えて」と頼むか、次のどちらかを実行します。
-
-- Windows（PowerShell）: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXX.p8"))`
-- Mac: `base64 -i AuthKey_XXXX.p8`
+（以前の `ASC_KEY_P8_BASE64`（base64 にした文字列）を入れてある場合は、それでも動きます。）
 
 **.p8 の中身はチャットや Issue に貼らないでください。** 入れる場所は GitHub の Secrets だけです。
 
