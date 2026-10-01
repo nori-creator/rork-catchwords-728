@@ -55,6 +55,9 @@ final class SupabaseClient {
         anonKey = AppConfig.supabasePublishableKey
         let cfg = URLSessionConfiguration.default
         cfg.timeoutIntervalForRequest = 30
+        #if DEBUG
+        DemoBackend.configure(cfg)  // -uiDemo: answered offline, never production
+        #endif
         urlSession = URLSession(configuration: cfg)
         if let data = KeychainStore.load(account: sessionAccount) {
             session = try? JSONDecoder().decode(AuthSession.self, from: data)

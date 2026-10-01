@@ -96,7 +96,8 @@ jobs:
           xcrun simctl io "$UDID" recordVideo --codec=h264 "$OUT/launch.mp4" &
           REC=$!
           sleep 2
-          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          # -uiDemo: the offline demo backend answers every request (never production; no stray accounts)
+          xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiDemo zh-TW -uiDemoReset YES
           for t in 3 8 15; do
             sleep $(( t - ${prev:-0} )); prev=$t
             xcrun simctl io "$UDID" screenshot "$OUT/screen-${t}s.png"
@@ -120,7 +121,7 @@ jobs:
             set -- $spec
             name=$1; wait_s=$2; frames=$3
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
-            xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiPreview "$name" || { echo "::warning::$name を開けませんでした"; continue; }
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiPreview "$name" -uiDemo zh-TW || { echo "::warning::$name を開けませんでした"; continue; }
             sleep "$wait_s"
             for i in $(seq -w 1 "$frames"); do
               xcrun simctl io "$UDID" screenshot "$OUT/${name}-${i}.png" >/dev/null 2>&1 || true

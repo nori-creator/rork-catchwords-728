@@ -20,6 +20,9 @@ struct CatchWordsApp: App {
     }
 
     init() {
+        #if DEBUG
+        DemoBackend.install()  // -uiDemo: every request answered offline (UI tests on CI)
+        #endif
         // Settings values renamed to the web's: sound "soft" → "subtle".
         if UserDefaults.standard.string(forKey: "sound.level") == "soft" {
             UserDefaults.standard.set("subtle", forKey: "sound.level")

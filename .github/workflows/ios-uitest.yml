@@ -12,8 +12,8 @@
 # 限界: シミュレーターではカメラと「被写体の切り抜き」は動かない。音声は鳴らない。
 name: iOS UI test（全画面の自動テスト）
 
-# デモ用サーバー（ios/CatchWords/Services/Demo）が入るまでは手動でだけ動かす（本番につながないため）。
 on:
+  pull_request:
   workflow_dispatch:
 
 concurrency:
