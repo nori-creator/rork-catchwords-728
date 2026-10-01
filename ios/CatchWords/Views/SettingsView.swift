@@ -286,7 +286,7 @@ struct SettingsView: View {
 
             deleteZone
 
-            Text("CatchWords for iPhone 1.0")
+            Text("CatchWords for iPhone \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
                 .font(.system(size: 12)).foregroundStyle(Theme.muted)
         }
     }
