@@ -97,6 +97,7 @@ struct DexView: View {
     @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @State private var shelfEdit: ShelfEdit?
     @State private var deleteShelfKey: String?
+    @State private var moveError: String?
 
     /// Create (key nil) or rename a shelf.
     struct ShelfEdit: Identifiable {
@@ -390,7 +391,8 @@ struct DexView: View {
                         let items = filtered.filter { $0.categoryKey == key }
                         if !items.isEmpty {
                             CategoryShelf(key: key, stickers: items, landedId: landedId, impactTick: impactTick,
-                                          onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key }) { s in
+                                          onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key },
+                                          onDrop: { id in drop(id, on: key, proxy: proxy) }) { s in
                                 router.detailSticker = s
                             }
                         }
@@ -407,11 +409,19 @@ struct DexView: View {
                                 .strokeBorder(Theme.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                     }
                     .buttonStyle(PressableStyle())
+                    Text(L("写真を長押ししたまま、別の棚へ動かせます。"))
+                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 120)
             }
             .refreshable { await dex.load() }
+            .alert(L("棚を移せませんでした"), isPresented: Binding(get: { moveError != nil }, set: { if !$0 { moveError = nil } })) {
+                Button(L("閉じる"), role: .cancel) { moveError = nil }
+            } message: {
+                Text(moveError ?? "")
+            }
             .onChange(of: router.landingStickerId) { _, id in
                 guard let id else { return }
                 land(id, proxy: proxy)
@@ -470,6 +480,24 @@ struct DexView: View {
         .refreshable { await dex.load() }
     }
 
+    /// A word dragged onto another shelf: move it there, then let it drop into place like a new catch.
+    /// Moving it back to the AI's own shelf clears the learner's choice instead of pinning it.
+    private func drop(_ id: String, on key: String, proxy: ScrollViewProxy) -> Bool {
+        guard let s = dex.sticker(id: id), s.categoryKey != key else { return false }
+        let aiKey = Category.key(for: s.word?.categoryKey)
+        Haptics.impact(.medium)
+        Task {
+            do {
+                try await dex.move(s, to: key == aiKey ? nil : key)
+                land(id, proxy: proxy)
+            } catch {
+                Haptics.warning()
+                moveError = (error as? LocalizedError)?.errorDescription ?? L("通信できませんでした。電波のよい場所でもう一度お試しください。")
+            }
+        }
+        return true
+    }
+
     private func land(_ id: String, proxy: ScrollViewProxy) {
         categoryFilter = nil
         dayFilter = nil
@@ -499,8 +527,11 @@ struct CategoryShelf: View {
     let impactTick: Int
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    /// A word's id dropped on this shelf; returns whether it was taken.
+    var onDrop: ((String) -> Bool)? = nil
     let onTap: (Sticker) -> Void
 
+    @State private var isTargeted = false
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
@@ -532,9 +563,30 @@ struct CategoryShelf: View {
                         DexCell(sticker: s, isLanding: s.id == landedId, neighborDistance: distance, impactTick: impactTick)
                     }
                     .buttonStyle(PressableStyle(scale: 0.95))
+                    .draggable(s.id) {
+                        DexCell(sticker: s, isLanding: false, neighborDistance: 99, impactTick: 0)
+                            .frame(width: 96)
+                    }
                     .id(s.id)
                 }
             }
+        }
+        .padding(isTargeted ? 8 : 0)
+        .background {
+            if isTargeted {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Theme.primary.opacity(0.08))
+                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(Theme.primary.opacity(0.6), style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
+            }
+        }
+        .animation(.snappy(duration: 0.2), value: isTargeted)
+        .dropDestination(for: String.self) { ids, _ in
+            guard let id = ids.first, let onDrop else { return false }
+            return onDrop(id)
+        } isTargeted: { on in
+            if on && !isTargeted { Haptics.selection() }
+            isTargeted = on
         }
     }
 }

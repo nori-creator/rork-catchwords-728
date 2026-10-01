@@ -1487,6 +1487,10 @@
   "en": "Couldn't load the photo.",
   "zh-TW": "無法讀取照片。"
  },
+ "写真を長押ししたまま、別の棚へ動かせます。": {
+  "en": "Press and hold a photo to drag it to another shelf.",
+  "zh-TW": "長按照片，就能拖到別的書架。"
+ },
  "切り抜いています": {
   "en": "Cutting out",
   "zh-TW": "正在去背"
@@ -2347,6 +2351,10 @@
   "en": "Change shelf. Currently {1}",
   "zh-TW": "更換書架。目前是{1}"
  },
+ "棚を移せませんでした": {
+  "en": "Couldn't move it to that shelf",
+  "zh-TW": "無法移到那個書架"
+ },
  "植物": {
   "en": "Plants",
   "zh-TW": "植物"
@@ -2966,6 +2974,10 @@
  "通信が時間切れになりました。電波の良い場所でもう一度お試しください。": {
   "en": "The connection timed out. Please try again where the signal is better.",
   "zh-TW": "連線逾時。請到訊號較好的地方再試一次。"
+ },
+ "通信できませんでした。電波のよい場所でもう一度お試しください。": {
+  "en": "Couldn't connect. Please try again where the signal is better.",
+  "zh-TW": "無法連線。請到訊號較好的地方再試一次。"
  },
  "通信に時間がかかっています。写真は端末に保存しました。": {
   "en": "The connection is taking too long. Your photo is saved on this device.",

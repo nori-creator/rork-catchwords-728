@@ -630,7 +630,6 @@ final class DexStore {
         Category.custom = Dictionary(rows.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
     }
 
-    /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
     /// Which picture shows this word on its detail page (web setStickerHeroRole; nil = default order).
     func setHeroRole(_ sticker: Sticker, role: String?) async throws {
         struct Saved: Decodable { let saved: Bool }
@@ -645,6 +644,7 @@ final class DexStore {
         }
     }
 
+    /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
     func move(_ sticker: Sticker, to key: String?) async throws {
         _ = try await NativeAPI.call("setStickerCategory", ["sticker_id": sticker.id, "key": key.map { $0 as Any } ?? NSNull()])
         replace(sticker.id) { old in
