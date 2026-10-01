@@ -2,13 +2,9 @@
 CatchWords の 3D 素材を Blender で作る（手作業なし・毎回同じ物ができる）。
 
 作る物（ios/CatchWords/Resources/3D/ に .usdz で書き出す）:
-  SpecimenJar.usdz  （廃止・書き出さない）キャッチの瓶。
-                    名前付きの部品: JarGlass / JarCork / JarRim / JarLabel / JarStage
-  RewardStar.usdz   祝福で飛び散る金の星（立体・面取り）。
   DexBook.usdz      図鑑の本（表紙・背・紙の束）。表紙の色はアプリ側で棚ごとに塗る。
                     名前付きの部品: BookCover / BookSpine / BookPages / BookLabel
-  PhotoAlbum.usdz   リングで綴じたアルバム。
-                    名前付きの部品: AlbumCover / AlbumPages / AlbumRings / AlbumPhoto
+  （瓶・星・アルバムは画面で使わなくなったので作らない。2026-10-01 整理）
 
 使い方（Blender 4.5 LTS。Mac は不要）:
   pip install "bpy==4.5.*"            # Python 3.11
@@ -178,91 +174,6 @@ def export_usdz(filename):
 # ---------------------------------------------------------------- models
 
 
-def build_jar():
-    """キャッチの瓶: 厚みのあるガラス、コルクの栓、首の金属の輪、紙のラベル。高さ約 0.2m。"""
-    glass = material("Glass", srgb(0xDCEFFF), roughness=0.04, alpha=0.22, coat=1.0)
-    cork = material("Cork", srgb(0xB07A45), roughness=0.85)
-    brass = material("Brass", srgb(0xE3B45A), metallic=1.0, roughness=0.28)
-    paper = material("LabelPaper", srgb(0xFFF8EA), roughness=0.9)
-    stage = material("Stage", srgb(0xFFFFFF), roughness=0.6, alpha=0.0)
-
-    # 外側の輪郭（半径, 高さ）。底は丸く、肩で絞り、口で少し開く。
-    profile = [
-        (0.0, 0.0), (0.050, 0.002), (0.066, 0.010), (0.070, 0.030), (0.070, 0.140),
-        (0.066, 0.156), (0.052, 0.168), (0.046, 0.174), (0.046, 0.186), (0.050, 0.190),
-    ]
-    jar = lathe("JarGlass", profile)
-    solid = jar.modifiers.new("Thickness", "SOLIDIFY")
-    solid.thickness = 0.003
-    solid.offset = -1
-    sub = jar.modifiers.new("Smooth", "SUBSURF")
-    sub.levels = 1
-    sub.render_levels = 1
-    apply_modifiers(jar)
-    shade_smooth(jar)
-    assign(jar, glass)
-
-    cork_obj = lathe("JarCork", [(0.0, 0.176), (0.043, 0.176), (0.044, 0.200), (0.050, 0.203),
-                                 (0.050, 0.214), (0.046, 0.218), (0.0, 0.219)])
-    shade_smooth(cork_obj, 60)
-    assign(cork_obj, cork)
-
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.0475, minor_radius=0.0025,
-                                     major_segments=64, minor_segments=12, location=(0, 0, 0.180))
-    rim = bpy.context.active_object
-    rim.name = "JarRim"
-    shade_smooth(rim, 80)
-    assign(rim, brass)
-
-    # ラベル: 胴に巻いた紙（円柱の一部）。
-    label = lathe("JarLabel", [(0.0712, 0.040), (0.0712, 0.070)], segments=64, caps=False)
-    bm = bmesh.new()
-    bm.from_mesh(label.data)
-    # 手前の 140° だけ残す
-    remove = [f for f in bm.faces if abs(math.degrees(math.atan2(f.calc_center_median().y,
-                                                                  f.calc_center_median().x)) + 90) > 70]
-    bmesh.ops.delete(bm, geom=remove, context="FACES")
-    bm.to_mesh(label.data)
-    bm.free()
-    shade_smooth(label, 80)
-    assign(label, paper)
-
-    # 中身（写真）を貼る板の目印。アプリがここに言葉の写真を置く。透明。
-    st = plane("JarStage", (0.10, 0.10), (0, 0, 0.090), rotation=(math.radians(90), 0, 0))
-    assign(st, stage)
-    return [jar, cork_obj, rim, label, st]
-
-
-def build_star():
-    """祝福の金の星: 5 つの角、ふっくらした面取り。幅約 0.06m。"""
-    gold = material("Gold", srgb(0xF4B93C), metallic=1.0, roughness=0.22, emission=srgb(0x5A3A00))
-    mesh = bpy.data.meshes.new("RewardStar")
-    bm = bmesh.new()
-    outer, inner, depth = 0.030, 0.013, 0.008
-    top, bottom = [], []
-    for i in range(10):
-        r = outer if i % 2 == 0 else inner
-        a = math.pi / 2 + i * math.pi / 5
-        top.append(bm.verts.new((r * math.cos(a), r * math.sin(a), depth / 2)))
-        bottom.append(bm.verts.new((r * math.cos(a), r * math.sin(a), -depth / 2)))
-    ct = bm.verts.new((0, 0, depth * 1.6))
-    cb = bm.verts.new((0, 0, -depth * 1.6))
-    for i in range(10):
-        j = (i + 1) % 10
-        bm.faces.new((ct, top[i], top[j]))
-        bm.faces.new((cb, bottom[j], bottom[i]))
-        bm.faces.new((top[i], bottom[i], bottom[j], top[j]))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.to_mesh(mesh)
-    bm.free()
-    star = bpy.data.objects.new("RewardStar", mesh)
-    bpy.context.collection.objects.link(star)
-    bevel(star, 0.0012, segments=2)
-    shade_smooth(star, 35)
-    assign(star, gold)
-    return [star]
-
-
 def build_book():
     """図鑑の本: 布張りの表紙（厚紙）、丸い背、少し小さい紙の束。縦 0.2m。"""
     cloth = material("CoverCloth", srgb(0x2F7FE0), roughness=0.75)
@@ -307,37 +218,6 @@ def build_book():
     return None
 
 
-def build_album():
-    """リング綴じのアルバム: 厚い表紙、3 つの金属リング、写真の窓。"""
-    cover = material("AlbumLeather", srgb(0x8A5A3C), roughness=0.55, coat=0.3)
-    page = material("AlbumPage", srgb(0xF7F1E3), roughness=0.95)
-    steel = material("Steel", srgb(0xD9DDE3), metallic=1.0, roughness=0.18)
-    photo = material("AlbumPhotoMat", srgb(0xFFFFFF), roughness=0.4)
-
-    w, h, t = 0.22, 0.17, 0.030
-    base = box("AlbumCover", (w, t, h), (w / 2, 0, h / 2))
-    bevel(base, 0.004, 3)
-    assign(base, cover)
-    # 紙の束は表紙の内側。右の小口だけ少しのぞかせる。
-    pages = box("AlbumPages", (w - 0.004, t - 0.010, h - 0.012), (w / 2 + 0.004, 0, h / 2))
-    assign(pages, page)
-    for i, z in enumerate((0.035, h / 2, h - 0.035)):
-        bpy.ops.mesh.primitive_torus_add(major_radius=0.014, minor_radius=0.0022, major_segments=40,
-                                         minor_segments=10, location=(0.004, 0, z),
-                                         rotation=(0, 0, 0))
-        ring = bpy.context.active_object
-        ring.name = f"AlbumRings{i}"
-        shade_smooth(ring, 80)
-        assign(ring, steel)
-    win = plane("AlbumPhoto", (0.12, 0.09), (w * 0.56, -t / 2 - 0.0012, h * 0.55),
-                rotation=(math.radians(90), 0, 0))
-    assign(win, photo)
-    return None
-
-
-# ---------------------------------------------------------------- previews
-
-
 def render_preview(name, camera_distance, target_z, angle=(62, 0, 28)):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
@@ -354,7 +234,7 @@ def render_preview(name, camera_distance, target_z, angle=(62, 0, 28)):
     bg.inputs["Strength"].default_value = 0.9
     scene.world = world
 
-    target = Vector((0.06 if name in ("DexBook", "PhotoAlbum") else 0, 0, target_z))
+    target = Vector((0.06 if name == "DexBook" else 0, 0, target_z))
     rx, _, rz = (math.radians(a) for a in angle)
     offset = Vector((math.sin(rz) * math.sin(rx), -math.cos(rz) * math.sin(rx), math.cos(rx))) * camera_distance
     bpy.ops.object.camera_add(location=target + offset)
@@ -384,10 +264,7 @@ def render_preview(name, camera_distance, target_z, angle=(62, 0, 28)):
 # ---------------------------------------------------------------- main
 
 MODELS = [
-    # SpecimenJar (build_jar) は書き出さない: キャッチ演出の瓶は廃止（オーナー指示 2026-09-30）。
-    ("RewardStar", build_star, 0.20, 0.0),
     ("DexBook", build_book, 0.62, 0.10),
-    ("PhotoAlbum", build_album, 0.62, 0.085),
 ]
 
 

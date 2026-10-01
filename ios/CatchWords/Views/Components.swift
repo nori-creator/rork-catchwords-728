@@ -158,28 +158,7 @@ struct StickerImage: View {
     }
 }
 
-struct SectionHeader: View {
-    let title: String
-    var body: some View {
-        Text(title)
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(Theme.muted)
-            .textCase(.uppercase)
-            .tracking(0.6)
-    }
-}
 
-struct CardSurface<Content: View>: View {
-    @ViewBuilder let content: Content
-    var body: some View {
-        content
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.card)
-            .clipShape(.rect(cornerRadius: Theme.radius + 4))
-            .overlay(RoundedRectangle(cornerRadius: Theme.radius + 4).stroke(Theme.border, lineWidth: 1))
-    }
-}
 
 /// Glass fallback for iOS < 26.
 struct GlassBackground: ViewModifier {

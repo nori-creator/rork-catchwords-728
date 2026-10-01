@@ -234,20 +234,6 @@ final class SupabaseClient {
         }
     }
 
-    /// Bulk delete in one bucket (account deletion).
-    func removeObjects(_ paths: [String], bucket: String = "stickers") async throws {
-        guard !paths.isEmpty else { return }
-        try await refreshIfNeeded()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/\(bucket)", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url, timeoutInterval: 60)
-        req.httpMethod = "DELETE"
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["prefixes": paths])
-        _ = try await perform(req)
-    }
 
     /// Public bucket URL (avatars).
     func publicURL(bucket: String, path: String) -> String? {

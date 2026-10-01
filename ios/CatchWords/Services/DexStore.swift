@@ -13,8 +13,6 @@ struct CatchDraft {
     let location: CLLocation?
     let placeName: String?
     let captureType: String
-    /// The spoken one-liner (a local m4a), uploaded after the save.
-    var voiceNote: URL? = nil
 }
 
 enum SaveOutcome {
@@ -57,7 +55,7 @@ final class DexStore {
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
-    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "voice_video_url", "placeholder_image_url", "placeholder_credit"]
+    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit"]
     private static var selectColumns: String {
         ([baseColumns] + optionalColumns + ["word:words(*)"]).joined(separator: ",")
     }
@@ -148,7 +146,6 @@ final class DexStore {
                 paths.append(p)
                 paths.append(p + ".thumb.webp")
             }
-            if let v = s.voiceNotePath, signed[v] == nil { paths.append(v) }
         }
         guard !paths.isEmpty else { return }
         for chunk in stride(from: 0, to: paths.count, by: 200).map({ Array(paths[$0..<min($0 + 200, paths.count)]) }) {
@@ -219,10 +216,6 @@ final class DexStore {
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
         saveToPhotosIfEnabled(draft.photo)
-        if let note = draft.voiceNote {
-            // Never holds up the catch (web: 保存を1ミリ秒も遅くしない).
-            Task { await attachVoiceNote(note, to: sticker.id, uid: uid) }
-        }
         return .created(sticker)
     }
 
@@ -384,72 +377,6 @@ final class DexStore {
             replace(owned.stickerId) { _ in fresh }
         }
         return (res.encounterCount ?? owned.encounterCount + 1, image != nil || cut != nil)
-    }
-
-    private func findWord(headword: String) async throws -> Word? {
-        let data = try await client.rest("GET", "words?language=eq.\(language)&headword=eq.\(Self.enc(headword))&select=*&limit=1")
-        return try JSONDecoder().decode([Word].self, from: data).first
-    }
-
-    private func ensureWord(candidate c: Candidate, details d: CardDetails?) async throws -> String {
-        if let w = try await findWord(headword: c.headword) { return w.id }
-        var extras: Any = [String: Any]()
-        if let e = d?.extras, let data = try? JSONEncoder().encode(e), let obj = try? JSONSerialization.jsonObject(with: data) {
-            extras = obj
-        }
-        var row: [String: Any] = [
-            "language": language,
-            "headword": c.headword,
-            "meaning_ja": c.meaningJa.isEmpty ? c.headword : c.meaningJa,
-            "part_of_speech": c.pos.isEmpty ? NativeAPI.defaultPos : c.pos,
-            "level": d?.level ?? "TOCFL-2",
-            "category_key": d?.categoryKey ?? "other",
-            "extras": extras,
-            "source": "ai",
-            "entry_type": "word",
-        ]
-        if let uid = client.userId { row["created_by"] = uid }
-        if !c.zhuyin.isEmpty { row["reading_zhuyin"] = c.zhuyin }
-        if !c.pinyin.isEmpty { row["pinyin"] = c.pinyin }
-        if let ex = d?.exampleSentence, !ex.isEmpty { row["example_sentence"] = ex }
-        if let tr = d?.exampleTranslation, !tr.isEmpty { row["example_translation"] = tr }
-
-        do {
-            return try await insertWord(row)
-        } catch APIError.server(let code, _) where code == 409 || code == 400 || code == 23503 {
-            if let w = try await findWord(headword: c.headword) { return w.id }
-            row["category_key"] = "other"
-            return try await insertWord(row)
-        }
-    }
-
-    /// Uploads the one-liner to `{user}/{sticker}/voice.mp4` (web voiceNotePath, re-recording
-    /// overwrites) and links it with `setStickerVoiceVideo`.
-    func attachVoiceNote(_ file: URL, to stickerId: String, uid: String) async {
-        defer { try? FileManager.default.removeItem(at: file) }
-        guard let data = try? Data(contentsOf: file), !data.isEmpty, data.count <= 12 * 1024 * 1024 else { return }
-        let path = "\(uid)/\(stickerId)/voice.mp4"
-        struct Saved: Decodable { let saved: Bool }
-        do {
-            try await client.upload(data, path: path, contentType: "audio/mp4", upsert: true)
-            let res = try await NativeAPI.call("setStickerVoiceVideo", ["sticker_id": stickerId, "voice_video_path": path], as: Saved.self)
-            guard res.saved else { return }
-            replace(stickerId) { old in
-                var s = old
-                s.voiceNotePath = path
-                return s
-            }
-            if let map = try? await client.signedURLs(for: [path]) { signed.merge(map) { _, new in new } }
-        } catch {
-            Haptics.warning()
-        }
-    }
-
-    private func insertWord(_ row: [String: Any]) async throws -> String {
-        let data = try await client.rest("POST", "words?select=id", body: row, prefer: "return=representation")
-        guard let arr = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-              let id = arr.first?["id"] as? String else { throw APIError.decoding }
-        return id
     }
 
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
@@ -753,16 +680,6 @@ final class DexStore {
         try await NativeAPI.call("reportAndFixSection", [
             "word_id": wordId, "item": "auto", "candidates": Array(candidates.prefix(24)), "note": String(note.prefix(500)),
         ], as: ReportFix.self, timeout: 90)
-    }
-
-    func report(headword: String, kind: String, note: String) async throws {
-        guard let uid = client.userId else { throw APIError.unauthorized }
-        _ = try await client.rest("POST", "entry_reports", body: [
-            "user_id": uid,
-            "headword": String(headword.prefix(80)),
-            "kind": kind,
-            "note": String(note.prefix(500)),
-        ])
     }
 
     private func replace(_ id: String, _ transform: (Sticker) -> Sticker) {

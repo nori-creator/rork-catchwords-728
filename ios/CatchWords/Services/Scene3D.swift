@@ -9,9 +9,7 @@ import UIKit
 /// to its 2D version instead of showing an empty box.
 enum Scene3D {
     enum Model: String {
-        case star = "RewardStar"
         case book = "DexBook"
-        case album = "PhotoAlbum"
     }
 
     /// 3D effects are on unless the user turned them off or asked for reduced motion.
@@ -27,20 +25,6 @@ enum Scene3D {
     }
 
     // MARK: Materials
-
-    /// Clear glass: nearly transparent, glossy, with a clear coat that catches the key light.
-    static var glass: PhysicallyBasedMaterial {
-        var m = PhysicallyBasedMaterial()
-        m.baseColor = .init(tint: UIColor(red: 0.86, green: 0.94, blue: 1, alpha: 1))
-        m.roughness = .init(floatLiteral: 0.04)
-        m.metallic = .init(floatLiteral: 0)
-        m.clearcoat = .init(floatLiteral: 1)
-        m.clearcoatRoughness = .init(floatLiteral: 0.02)
-        // Thin and clear: back faces culled so the two walls don't stack into milk.
-        m.blending = .transparent(opacity: .init(floatLiteral: 0.14))
-        m.faceCulling = .back
-        return m
-    }
 
     /// Gold that glows a little on its own, so it reads as gold even without reflections.
     static var gold: PhysicallyBasedMaterial {

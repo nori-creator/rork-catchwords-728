@@ -71,8 +71,6 @@ nonisolated enum Category {
         "money": (.marks, "💰"), "document": (.marks, "📄"), "medicine": (.marks, "💊"), "other": (.marks, "✨"),
     ]
 
-    static var allKeys: [String] { meta.keys.sorted() }
-
     /// CATEGORY_META definition order (shelves are grouped by room in this order).
     static let orderedKeys: [String] = [
         "fruit", "vegetable", "drink", "food", "dessert",

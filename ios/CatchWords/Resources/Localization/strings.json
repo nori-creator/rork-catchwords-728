@@ -347,10 +347,6 @@
   "en": "Choose any. We’ll tailor example situations to you.",
   "zh-TW": "可以複選，例句情境會配合你的目標。"
  },
- "いちばん選ばれています": {
-  "en": "Most popular",
-  "zh-TW": "最多人選擇"
- },
  "いつもの時間です。1枚だけでも思い出してみよう": {
   "en": "It's your usual time. Try recalling just one card.",
   "zh-TW": "老時間到了。就算只回想一張也好。"
@@ -458,10 +454,6 @@
  "この写真を単語に追加しました": {
   "en": "Photo added to this word",
   "zh-TW": "已把這張照片加到這個字"
- },
- "この単語をひらく": {
-  "en": "Open this word",
-  "zh-TW": "打開這個單字"
  },
  "この単語を図鑑から削除しますか？": {
   "en": "Delete this word from your collection?",
@@ -615,21 +607,9 @@
   "en": "That word couldn't be found.",
   "zh-TW": "找不到這個單字。"
  },
- "たまに": {
-  "en": "Occasionally",
-  "zh-TW": "偶爾"
- },
- "ときどき": {
-  "en": "Sometimes",
-  "zh-TW": "有時"
- },
  "どこが違いましたか？": {
   "en": "What was wrong?",
   "zh-TW": "哪裡不對？"
- },
- "どちらでも": {
-  "en": "Either",
-  "zh-TW": "都可以"
  },
  "なし": {
   "en": "none",
@@ -719,10 +699,6 @@
   "en": "Try again: {1} words you missed",
   "zh-TW": "再試一次答錯的 {1} 個字"
  },
- "まれ": {
-  "en": "Rare",
-  "zh-TW": "少見"
- },
  "めくる →": {
   "en": "Turn →",
   "zh-TW": "翻頁 →"
@@ -771,17 +747,9 @@
   "en": "Start over",
   "zh-TW": "重來"
  },
- "よく使う度": {
-  "en": "How common",
-  "zh-TW": "常用度"
- },
  "よく使う形": {
   "en": "Most-used pattern",
   "zh-TW": "最常用的形式"
- },
- "よく出会う": {
-  "en": "Often",
-  "zh-TW": "常見"
  },
  "アカウントをお持ちの方はログイン": {
   "en": "Already have an account? Sign in",
@@ -806,10 +774,6 @@
  "アルバムから外した写真 {1}": {
   "en": "Photos removed from the album: {1}",
   "zh-TW": "從相簿移除的照片 {1}"
- },
- "アルバムから外す（図鑑には残ります）": {
-  "en": "Remove from album (stays in your collection)",
-  "zh-TW": "從相簿移除（仍保留在圖鑑中）"
  },
  "アルバムを読み込めませんでした": {
   "en": "Couldn't load your album",
@@ -1198,18 +1162,6 @@
  "一覧を開く": {
   "en": "Open list",
   "zh-TW": "打開列表"
- },
- "一言の録音を聞く": {
-  "en": "Play the voice note",
-  "zh-TW": "聽一句話錄音"
- },
- "一言を止める": {
-  "en": "Pause the voice note",
-  "zh-TW": "暫停一句話"
- },
- "一言を聞く": {
-  "en": "Play the voice note",
-  "zh-TW": "播放一句話"
  },
  "一言メモ（任意）": {
   "en": "A quick note (optional)",
@@ -1791,9 +1743,9 @@
   "en": "Added to your collection!",
   "zh-TW": "已加入圖鑑！"
  },
- "図鑑の本棚とアルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません": {
-  "en": "Shows the collection bookshelf and album in 3D. Not shown when “Reduce Motion” is on",
-  "zh-TW": "以立體方式呈現圖鑑書架和相簿。開啟「減少動態效果」時不顯示"
+ "図鑑の本棚を立体で見せます。「視差効果を減らす」がオンの時は出しません": {
+  "en": "Shows the collection bookshelf in 3D. Not shown when “Reduce Motion” is on",
+  "zh-TW": "以立體方式呈現圖鑑書架。開啟「減少動態效果」時不顯示"
  },
  "図鑑を読み込めませんでした。": {
   "en": "Couldn't load your collection.",
@@ -1819,14 +1771,6 @@
   "en": "Report",
   "zh-TW": "回報"
  },
- "報告に失敗しました": {
-  "en": "Could not send the report",
-  "zh-TW": "回報失敗"
- },
- "報告を受け付けました。確かめてから直します": {
-  "en": "Report received. We'll check it before changing anything",
-  "zh-TW": "已收到回報，確認後會修正"
- },
  "場所でリマインド": {
   "en": "Location reminders",
   "zh-TW": "地點提醒"
@@ -1834,10 +1778,6 @@
  "壁": {
   "en": "Wall",
   "zh-TW": "牆面"
- },
- "声で一言を残す": {
-  "en": "Say your note out loud",
-  "zh-TW": "用聲音留一句話"
  },
  "声で調べる": {
   "en": "Search by voice",
@@ -2167,10 +2107,6 @@
   "en": "When you photograph new words, they show up here.",
   "zh-TW": "拍下新單字後，會出現在這裡。"
  },
- "新しい機能が毎月届きます": {
-  "en": "New features every month",
-  "zh-TW": "每月推出新功能"
- },
  "新規登録": {
   "en": "Sign up",
   "zh-TW": "註冊"
@@ -2194,10 +2130,6 @@
  "日": {
   "en": "days",
   "zh-TW": "天"
- },
- "日ごと": {
-  "en": "By day",
-  "zh-TW": "按日"
  },
  "日付": {
   "en": "Date",
@@ -2279,10 +2211,6 @@
   "en": "Written",
   "zh-TW": "書面語"
  },
- "書き言葉 ⇄ 話し言葉": {
-  "en": "Written ⇄ Spoken",
-  "zh-TW": "書面語 ⇄ 口語"
- },
  "書く": {
   "en": "Write",
   "zh-TW": "寫"
@@ -2326,10 +2254,6 @@
  "月あたり {1}": {
   "en": "{1} per month",
   "zh-TW": "每月 {1}"
- },
- "月ごと": {
-  "en": "By month",
-  "zh-TW": "按月"
  },
  "月に戻る": {
   "en": "Back to month",
@@ -2451,10 +2375,6 @@
   "en": "Next",
   "zh-TW": "下一步"
  },
- "止める（あと{1}秒）": {
-  "en": "Stop ({1}s left)",
-  "zh-TW": "停止（剩 {1} 秒）"
- },
  "正解！": {
   "en": "Correct!",
   "zh-TW": "答對了！"
@@ -2462,10 +2382,6 @@
  "母語": {
   "en": "Your language",
   "zh-TW": "母語"
- },
- "毎日のように": {
-  "en": "Almost daily",
-  "zh-TW": "幾乎每天"
  },
  "比較級": {
   "en": "Comparative",
@@ -2943,10 +2859,6 @@
   "en": "Open Settings",
   "zh-TW": "打開設定"
  },
- "設定アプリでマイクを許可すると録音できます。": {
-  "en": "Allow the microphone in the Settings app to record.",
-  "zh-TW": "在「設定」App 允許使用麥克風即可錄音。"
- },
  "試験対策": {
   "en": "Exam preparation",
   "zh-TW": "考試準備"
@@ -3071,10 +2983,6 @@
   "en": "Week",
   "zh-TW": "週"
  },
- "週ごと": {
-  "en": "By week",
-  "zh-TW": "按週"
- },
  "過去の日記": {
   "en": "Past entries",
   "zh-TW": "以前的日記"
@@ -3122,22 +3030,6 @@
  "金": {
   "en": "Fri",
   "zh-TW": "五"
- },
- "録った一言を捨てる": {
-  "en": "Discard the recording",
-  "zh-TW": "捨棄錄音"
- },
- "録り直す": {
-  "en": "Record again",
-  "zh-TW": "重錄"
- },
- "録れました": {
-  "en": "Recorded",
-  "zh-TW": "已錄好"
- },
- "録音中。タップで止める": {
-  "en": "Recording. Tap to stop",
-  "zh-TW": "錄音中。點一下停止"
  },
  "閉じる": {
   "en": "Close",

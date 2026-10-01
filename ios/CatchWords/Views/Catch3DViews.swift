@@ -94,44 +94,6 @@ struct Bookshelf3DView: View {
 
 // MARK: - Home: the album
 
-/// The Blender-made ring album with the newest photo on its cover, turning slowly.
-struct Album3DView: View {
-    let cover: UIImage?
-
-    @MainActor final class Holder { let pivot = Entity() }
-    @State private var holder = Holder()
-
-    var body: some View {
-        RealityView { content in
-            content.camera = .virtual
-            guard let album = await Scene3D.load(.album) else { return }
-            for ring in ["AlbumRings0", "AlbumRings1", "AlbumRings2"] {
-                Scene3D.paint(album, named: ring, with: Scene3D.gold)
-            }
-            if let cover, let mat = await Scene3D.picture(cover) {
-                Scene3D.paint(album, named: "AlbumPhoto", with: mat)
-            }
-            album.position = [-0.11, 0, 0]
-            holder.pivot.addChild(album)
-            holder.pivot.orientation = simd_quatf(angle: -0.3, axis: [0, 1, 0])
-            content.add(holder.pivot)
-            Scene3D.addStudio(to: content, target: [0, 0.085, 0], distance: 0.62)
-        }
-        // Cancelled automatically when the view goes away.
-        .task {
-            var sign: Float = 1
-            while !Task.isCancelled {
-                var next = holder.pivot.transform
-                next.rotation = simd_quatf(angle: 0.3 * sign, axis: [0, 1, 0])
-                holder.pivot.move(to: next, relativeTo: holder.pivot.parent, duration: 3.2, timingFunction: .easeInOut)
-                sign *= -1
-                try? await Task.sleep(for: .milliseconds(3200))
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
 
 // MARK: - Preview (for the GitHub simulator check; no login needed)
 
@@ -147,9 +109,6 @@ struct Preview3DView: View {
                 Bookshelf3DView(books: [ShelfBook(key: "fruit", count: 12), ShelfBook(key: "drink", count: 7),
                                         ShelfBook(key: "animal", count: 4), ShelfBook(key: "tech", count: 9)],
                                 selected: selected) { selected = $0 }
-                    .background(Theme.card, in: .rect(cornerRadius: 24))
-                Album3DView(cover: CaptureViewModel.textCard(for: L("旅行")))
-                    .frame(height: 220)
                     .background(Theme.card, in: .rect(cornerRadius: 24))
             }
             .padding(16)

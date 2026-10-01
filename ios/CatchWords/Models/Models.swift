@@ -182,9 +182,6 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         return (synonyms ?? []).map { RelatedWord(word: $0, kind: "syn") } + (antonyms ?? []).map { RelatedWord(word: $0, kind: "ant") }
     }
 
-    /// "Draw only what exists" — the web app's rule: a section without content has no header.
-    var hasMeters: Bool { frequencyLevel != nil || resolvedRegister != nil }
-
     /// `register_scale` first, else map the legacy free-text tag (register-scale.ts).
     var resolvedRegister: Int? {
         if let registerScale { return max(-2, min(2, registerScale)) }
@@ -344,8 +341,6 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var shelfKey: String? = nil
     /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
     var heroRole: String? = nil
-    /// The spoken one-liner recorded at the catch (`stickers.voice_video_url`, a storage path).
-    var voiceNotePath: String? = nil
     /// Stand-in picture of a card caught without a photo (`stickers.placeholder_image_url`).
     var placeholderImageUrl: String? = nil
     /// Who made that stand-in picture (`stickers.placeholder_credit`): shown on it, as Unsplash asks.
@@ -363,7 +358,6 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
         case heroRole = "hero_role"
-        case voiceNotePath = "voice_video_url"
         case placeholderImageUrl = "placeholder_image_url"
         case placeholderCredit = "placeholder_credit"
         case wordId = "word_id"
@@ -628,7 +622,6 @@ nonisolated struct OwnedWord: Codable, Sendable, Hashable {
 
     var takenDate: Date? { SupabaseDate.parse(takenAt) }
 }
-
 
 /// Row of `user_shelves`: a shelf the learner made or renamed (web categories.functions.ts).
 nonisolated struct UserShelf: Codable, Sendable, Hashable {

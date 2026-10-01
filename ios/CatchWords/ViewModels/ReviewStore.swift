@@ -89,7 +89,6 @@ final class ReviewStore {
     }
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
-    var isFinished: Bool { hasLoaded && index >= queue.count }
 
     func load(dex: DexStore, limit: Int) async {
         guard client.session != nil else { return }

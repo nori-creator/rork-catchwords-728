@@ -24,12 +24,8 @@ enum Theme {
     static let cyan = Color(hex: 0x64E0FF)
     static let destructive = Color(light: 0xE62B34, dark: 0xFF5E63)
     static let ok = Color(hex: 0x00A95C)
-    static let chunkV = Color(hex: 0xF9343C)
-    static let chunkO = Color(hex: 0x0083FF)
     static let radius: CGFloat = 14
 
-    /// Camera chrome / reward stage.
-    static let navy = Color(hex: 0x0A1328)
     static let navyDeep = Color(hex: 0x060D1C)
     static let navyCard = Color(hex: 0x131E37)
 
@@ -96,8 +92,6 @@ enum JPDate {
     static func slash(_ d: Date) -> String { fmt("M/d", fixed: true).string(from: d) }
     /// 15:36
     static func time(_ d: Date) -> String { fmt("HH:mm", fixed: true).string(from: d) }
-    /// 2026年9月 · September 2026
-    static func yearMonth(_ d: Date) -> String { fmt("yMMMM").string(from: d) }
     /// 2026年 · 2026
     static func year(_ d: Date) -> String { fmt("y").string(from: d) }
     /// 9月 · September (stand-alone month name)
@@ -124,10 +118,6 @@ enum AppFont {
 
     static func hand(_ size: CGFloat) -> Font {
         resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size) ?? .system(size: size, design: .rounded)
-    }
-
-    static func script(_ size: CGFloat) -> Font {
-        resolve(["Caveat-Regular", "CaveatRoman-Regular", "Caveat"], size) ?? .system(size: size, design: .serif).italic()
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {

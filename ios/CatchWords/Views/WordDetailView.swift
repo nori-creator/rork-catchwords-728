@@ -66,9 +66,6 @@ struct WordDetailView: View {
                 VStack(spacing: 16) {
                     if !photos.isEmpty { photoHero }
                     metaCard
-                    if let v = current.voiceNotePath {
-                        VoiceNoteRow(url: dex.url(for: v, preferThumb: false))
-                    }
                     heroCard
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     EncounterHistoryView(stickerId: current.id)
@@ -955,19 +952,6 @@ struct WordDetailView: View {
         }
     }
 
-    private func sendReport(_ kind: String) {
-        let head = headword
-        Task {
-            do {
-                try await dex.report(headword: head, kind: kind, note: "")
-                Haptics.success()
-                showToast(L("報告を受け付けました。確かめてから直します"))
-            } catch {
-                Haptics.warning()
-                showToast(L("報告に失敗しました"))
-            }
-        }
-    }
 
     private func showToast(_ text: String) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }
