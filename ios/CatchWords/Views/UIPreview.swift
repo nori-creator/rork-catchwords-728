@@ -40,6 +40,8 @@ struct UIPreviewRoot: View {
             case "3d": Preview3DView()
             case "cutout": CutoutPreview()
             case "picker": PickerPreview()
+            case "japicker": PickerPreview(learning: "ja")
+            case "enpicker": PickerPreview(learning: "en")
             case "tabbar": TabBarPreview()
             case "reward": RewardPreview()
             case "analyzing":
@@ -147,24 +149,43 @@ private struct CutoutPreview: View {
 
 /// The candidate picker with made-up suggestions (two objects; the first has other names).
 private struct PickerPreview: View {
-    @State private var vm: CaptureViewModel = {
-        let vm = CaptureViewModel()
-        vm.photo = PreviewFixtures.photo
-        func c(_ h: String, _ z: String, _ m: String, _ d: String = "", _ r: String? = nil, _ g: Int) -> Candidate {
-            Candidate(kind: "object", headword: h, zhuyin: z, pinyin: "", meaningJa: m, pos: "名詞",
-                      point: [500, 500], confidence: 0.9, alternatives: [], distinction: d, register: r, group: g)
-        }
-        vm.candidates = [
-            c("芒果", "ㄇㄤˊ ㄍㄨㄛˇ", "マンゴー", "ふだんの言い方", "common", 0),
-            c("愛文芒果", "ㄞˋ ㄨㄣˊ ㄇㄤˊ ㄍㄨㄛˇ", "アーウィンマンゴー", "品種の名前", "specific", 0),
-            c("檨仔", "ㄙㄨㄟˋ ㄚˇ", "マンゴー（台湾語由来）", "年配の人の言い方", "casual", 0),
-            c("盤子", "ㄆㄢˊ ㄗ˙", "お皿", "", nil, 1),
-        ]
-        vm.step = .select
-        return vm
-    }()
+    var learning: String = "zh-TW"
+    @State private var vm = CaptureViewModel()
 
-    var body: some View { CandidatePickerView(vm: vm) }
+    /// headword, reading, meaning in ja / en / zh-TW, distinction in ja / en / zh-TW, register, group
+    private typealias Row = (String, String, [String], [String], String?, Int)
+
+    private var rows: [Row] {
+        switch learning {
+        case "ja":
+            return [("マンゴー", "", ["マンゴー", "mango", "芒果"], ["ふだんの言い方", "the everyday word", "日常說法"], "common", 0),
+                    ("アップルマンゴー", "", ["アップルマンゴー", "apple mango", "蘋果芒果"], ["品種の名前", "a variety", "品種名稱"], "specific", 0),
+                    ("皿", "さら", ["皿", "plate", "盤子"], ["", "", ""], nil, 1)]
+        case "en":
+            return [("mango", "", ["マンゴー", "mango", "芒果"], ["ふだんの言い方", "the everyday word", "日常說法"], "common", 0),
+                    ("Irwin mango", "", ["アーウィンマンゴー", "Irwin mango", "愛文芒果"], ["品種の名前", "a variety", "品種名稱"], "specific", 0),
+                    ("plate", "", ["お皿", "plate", "盤子"], ["", "", ""], nil, 1)]
+        default:
+            return [("芒果", "ㄇㄤˊ ㄍㄨㄛˇ", ["マンゴー", "mango", "芒果"], ["ふだんの言い方", "the everyday word", "日常說法"], "common", 0),
+                    ("愛文芒果", "ㄞˋ ㄨㄣˊ ㄇㄤˊ ㄍㄨㄛˇ", ["アーウィンマンゴー", "Irwin mango", "愛文芒果"], ["品種の名前", "a variety", "品種名稱"], "specific", 0),
+                    ("檨仔", "ㄙㄨㄟˋ ㄚˇ", ["マンゴー（台湾語由来）", "mango (from Taiwanese)", "芒果（台語）"], ["年配の人の言い方", "older people's word", "長輩的說法"], "casual", 0),
+                    ("盤子", "ㄆㄢˊ ㄗ˙", ["お皿", "plate", "盤子"], ["", "", ""], nil, 1)]
+        }
+    }
+
+    var body: some View {
+        CandidatePickerView(vm: vm)
+            .onAppear {
+                NativeAPI.targetLanguage = learning
+                let i = L10n.lang == "en" ? 1 : L10n.lang == "zh-TW" ? 2 : 0
+                vm.photo = PreviewFixtures.photo
+                vm.candidates = rows.map { r in
+                    Candidate(kind: "object", headword: r.0, zhuyin: r.1, pinyin: "", meaningJa: r.2[i], pos: NativeAPI.defaultPos,
+                              point: [500, 500], confidence: 0.9, alternatives: [], distinction: r.3[i], register: r.4, group: r.5)
+                }
+                vm.step = .select
+            }
+    }
 }
 
 /// The full catch celebration with the cut-out sticker, replayed every 7 seconds.
