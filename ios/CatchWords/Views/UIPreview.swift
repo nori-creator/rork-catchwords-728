@@ -51,6 +51,11 @@ struct UIPreviewRoot: View {
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
             case "settings": SettingsView()
+            case "auth": AuthView()
+            case "onboarding": OnboardingView {}
+            case "paywall": PaywallView()
+            case "dex": DexView()
+            case "wordbook": WordbookView()
             default: Text("unknown preview: \(name)")
             }
         }
