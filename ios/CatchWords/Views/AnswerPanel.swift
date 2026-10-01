@@ -69,6 +69,7 @@ struct AnswerPanel: View {
                             .background(Theme.primary, in: .rect(cornerRadius: 16, style: .continuous))
                     }
                     .buttonStyle(PressableStyle(scale: 0.98))
+                    .accessibilityIdentifier("answer.next")
                 }
                 .padding(.top, 2)
             }

@@ -340,6 +340,7 @@ struct CaptureView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
+                .accessibilityIdentifier("camera.mode.\(String(describing: m))")
             }
         }
         .padding(.horizontal, 24)
@@ -424,8 +425,10 @@ struct CaptureView: View {
                     .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     .submitLabel(.search)
                     .onSubmit(runSearch)
+                    .accessibilityIdentifier("search.field")
                 PrimaryButton(title: L("\(NativeAPI.targetName)で調べる"), icon: "magnifyingglass", action: runSearch)
                     .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .accessibilityIdentifier("search.submit")
                 Spacer()
             }
             .padding(20)

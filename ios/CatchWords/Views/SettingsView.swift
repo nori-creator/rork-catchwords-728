@@ -123,12 +123,16 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 label(L("母語"))
                 wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? L("日本語")) { openWheel(.native) }
+                    .accessibilityIdentifier("settings.wheel.native")
                 label(L("学習言語")).padding(.top, 6)
                 wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? L("繁體字（台灣）")) { openWheel(.target) }
+                    .accessibilityIdentifier("settings.wheel.target")
                 label(L("今のレベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
+                    .accessibilityIdentifier("settings.wheel.current")
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
+                    .accessibilityIdentifier("settings.wheel.goal")
                 label(L("発音表記")).padding(.top, 6)
                 if isEnglish {
                     ChoicePills(options: [("ipa-us", L("IPA（アメリカ英語）")), ("ipa-uk", L("IPA（イギリス英語）"))], selection: $readingEn)

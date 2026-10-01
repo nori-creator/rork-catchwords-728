@@ -43,6 +43,7 @@ struct AuthView: View {
                         .frame(maxWidth: .infinity, minHeight: 54)
                         .glassCard(16)
                     }
+                    .accessibilityIdentifier("auth.mail")
                     .buttonStyle(PressableStyle())
 
                     if showMail { mailForm.offset(x: shake).transition(.opacity.combined(with: .move(edge: .top))) }
@@ -178,13 +179,16 @@ struct AuthView: View {
                 .submitLabel(.next)
                 .onSubmit { focused = .password }
                 .fieldStyle()
+                .accessibilityIdentifier("auth.email")
             SecureField("", text: $password, prompt: Text(L("パスワード")).foregroundStyle(Theme.muted))
                 .textContentType(isSignUp ? .newPassword : .password)
                 .focused($focused, equals: .password)
                 .submitLabel(.go)
                 .onSubmit(submit)
                 .fieldStyle()
+                .accessibilityIdentifier("auth.password")
             PrimaryButton(title: isSignUp ? L("新規登録") : L("ログイン"), isLoading: auth.isBusy, action: submit)
+                .accessibilityIdentifier("auth.submit")
             HStack {
                 Button(isSignUp ? L("ログインに切り替え") : L("新規登録はこちら")) {
                     Haptics.selection()
@@ -192,6 +196,7 @@ struct AuthView: View {
                 }
                 .buttonStyle(PressableStyle(scale: 0.97))
                 .contentTransition(.opacity)
+                .accessibilityIdentifier("auth.toggleMode")
                 Spacer()
                 if !isSignUp {
                     Button(L("パスワードを忘れた")) {

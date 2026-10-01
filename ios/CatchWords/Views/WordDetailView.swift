@@ -203,6 +203,7 @@ struct WordDetailView: View {
             }
             .buttonStyle(PressableStyle(scale: 0.9))
             .accessibilityLabel(L("表示する項目と順番"))
+            .accessibilityIdentifier("detail.sections")
             .popover(isPresented: $showSections, arrowEdge: .top) {
                 SectionsPanel(prefs: prefs)
                     .presentationCompactAdaptation(.popover)
@@ -217,6 +218,7 @@ struct WordDetailView: View {
             }
             .buttonStyle(PressableStyle(scale: 0.9))
             .accessibilityLabel(L("閉じる"))
+            .accessibilityIdentifier("detail.close")
         }
         .padding(.horizontal, 16)
         .padding(.top, 22)

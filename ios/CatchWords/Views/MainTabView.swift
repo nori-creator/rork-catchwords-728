@@ -240,6 +240,7 @@ struct CapsuleTabBar: View {
         }
         .buttonStyle(PressableStyle(scale: 0.92))
         .accessibilityLabel(tab.title)
+        .accessibilityIdentifier("tab.\(String(describing: tab))")
     }
 
     /// The camera cell: the same size and height as every other tab, in one row

@@ -101,6 +101,7 @@ struct CandidatePickerView: View {
             VStack(spacing: 0) {
                 ForEach(Array(groups.enumerated()), id: \.element.id) { idx, g in
                     stageOneRow(g)
+                        .accessibilityIdentifier("candidate.\(idx)")
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 14)
                         .animation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.05 + Double(idx) * 0.05), value: appeared)
@@ -177,6 +178,7 @@ struct CandidatePickerView: View {
                         .background(Theme.primary, in: Capsule())
                 }
                 .buttonStyle(PressableStyle())
+                .accessibilityIdentifier("candidate.confirm")
             }
             .padding(16)
             .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))

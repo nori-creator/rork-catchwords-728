@@ -414,6 +414,7 @@ struct QuizCard: View {
             }
             .buttonStyle(PressableStyle(scale: 0.97))
             .disabled(revealed)
+            .accessibilityIdentifier(isCorrect ? "quiz.choice.correct" : "quiz.choice")
             HStack {
                 if revealed && (isCorrect || isPicked) {
                     Image(systemName: isCorrect ? "checkmark" : "xmark")

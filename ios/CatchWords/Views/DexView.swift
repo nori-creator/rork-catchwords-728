@@ -633,6 +633,7 @@ struct CategoryShelf: View {
                         DexCell(sticker: s, isLanding: s.id == landedId, neighborDistance: distance, impactTick: impactTick)
                     }
                     .buttonStyle(PressableStyle(scale: 0.95))
+                    .accessibilityIdentifier("dex.cell")
                     .draggable(s.id) {
                         DexCell(sticker: s, isLanding: false, neighborDistance: 99, impactTick: 0)
                             .frame(width: 96)

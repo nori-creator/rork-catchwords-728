@@ -115,6 +115,7 @@ struct CatchCardView: View {
             }
             .buttonStyle(PressableStyle())
             .disabled(isCatching)
+            .accessibilityIdentifier("card.catch")
         }
     }
 
