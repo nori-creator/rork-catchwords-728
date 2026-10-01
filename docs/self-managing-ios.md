@@ -95,6 +95,16 @@ GitHub のリポジトリ → **Settings** → **Secrets and variables** → **A
 
 **.p8 の中身はチャットや Issue に貼らないでください。** 入れる場所は GitHub の Secrets だけです。
 
+### 2-4b. 端末を1台登録する（最初の1回だけ）
+
+自動の署名は、送る前に一度「開発用」で署名するため、Apple Developer に iPhone か iPad が1台以上登録されている必要があります（無いと「Your team has no devices」で止まる）。
+
+1. iPad の「UDID」（端末ごとの40桁ほどの番号）を調べる
+   - **Mac**: iPad をケーブルでつなぐ → Finder の左に出る iPad を押す → 名前の下の灰色の文字（機種名・シリアル番号）を何回か押すと「UDID」に変わる → 右クリックで「UDID をコピー」
+   - **Windows**: Microsoft Store の「Apple デバイス」アプリを入れる → iPad をケーブルでつなぐ → iPad を選ぶ → シリアル番号を押すと UDID に変わる → コピー
+2. https://developer.apple.com/account → Certificates, IDs & Profiles → **Devices** → 「＋」
+3. Platform: iOS／Device Name: `iPad`／Device ID (UDID): 1 でコピーした番号 → Continue → Register
+
 ### 2-5. Rork なしで1回送ってみる（解約の前に）
 
 1. GitHub → **Actions** → **iOS release（App Store Connect へ送る）** → **Run workflow**。
