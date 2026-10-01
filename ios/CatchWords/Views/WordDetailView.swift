@@ -84,7 +84,7 @@ struct WordDetailView: View {
             )
             .onAppear {
                 if let f = previewFocus {
-                    Task { try? await Task.sleep(for: .milliseconds(400)); proxy.scrollTo(f, anchor: .top) }
+                    Task { try? await Task.sleep(for: .milliseconds(400)); proxy.scrollTo(f.id, anchor: .top) }
                 }
             }
             }
