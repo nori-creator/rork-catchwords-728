@@ -283,7 +283,7 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
             let p = UserDefaults.standard.string(forKey: "photo.pref") ?? "auto"
             return p == "auto" ? nil : p
         }()
-        switch role {
+        return switch role {
         case "object": objectImageUrl ?? cutoutImageUrl ?? placeholderImageUrl
         case "cutout": cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
