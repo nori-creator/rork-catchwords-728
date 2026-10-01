@@ -9,6 +9,9 @@ struct AuthView: View {
     @State private var isSignUp: Bool = false
     @State private var showMail: Bool = false
     @State private var appeared: Bool = false
+    /// Nudges the form sideways when sign-in fails, like a head shake.
+    @State private var shake: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var focused: Field?
 
     private enum Field { case email, password }
@@ -33,6 +36,9 @@ struct AuthView: View {
 
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showMail.toggle() }
+                        if showMail {
+                            Task { try? await Task.sleep(for: .milliseconds(350)); focused = .email }
+                        }
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
@@ -44,19 +50,21 @@ struct AuthView: View {
                     }
                     .buttonStyle(PressableStyle())
 
-                    if showMail { mailForm.transition(.opacity.combined(with: .move(edge: .top))) }
+                    if showMail { mailForm.offset(x: shake).transition(.opacity.combined(with: .move(edge: .top))) }
 
                     if let msg = auth.errorMessage {
                         Label(msg, systemImage: "exclamationmark.circle.fill")
                             .font(.system(size: 13))
                             .foregroundStyle(Theme.destructive)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     if let msg = auth.infoMessage {
                         Label(msg, systemImage: "checkmark.circle.fill")
                             .font(.system(size: 13))
                             .foregroundStyle(Theme.ok)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         if auth.awaitingConfirmation {
                             PrimaryButton(title: L("確認が終わったので、ログインする"), icon: "arrow.right") {
                                 withAnimation(.snappy) {
@@ -72,6 +80,17 @@ struct AuthView: View {
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 24)
+                .animation(.spring(response: 0.38, dampingFraction: 0.86), value: auth.errorMessage)
+                .animation(.spring(response: 0.38, dampingFraction: 0.86), value: auth.infoMessage)
+                .onChange(of: auth.errorMessage) { _, msg in
+                    guard msg != nil, !reduceMotion else { return }
+                    Task {
+                        for x in [12.0, -10, 7, -4, 0] {
+                            withAnimation(.spring(response: 0.08, dampingFraction: 0.4)) { shake = x }
+                            try? await Task.sleep(for: .milliseconds(60))
+                        }
+                    }
+                }
 
                 Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。"))
                     .font(.system(size: 12))
@@ -128,14 +147,19 @@ struct AuthView: View {
             PrimaryButton(title: isSignUp ? L("新規登録") : L("ログイン"), isLoading: auth.isBusy, action: submit)
             HStack {
                 Button(isSignUp ? L("ログインに切り替え") : L("新規登録はこちら")) {
+                    Haptics.selection()
                     withAnimation(.snappy) { isSignUp.toggle() }
                 }
+                .buttonStyle(PressableStyle(scale: 0.97))
+                .contentTransition(.opacity)
                 Spacer()
                 if !isSignUp {
                     Button(L("パスワードを忘れた")) {
                         Task { await auth.resetPassword(email: email) }
                     }
+                    .buttonStyle(PressableStyle(scale: 0.97))
                     .disabled(email.isEmpty)
+                    .transition(.opacity)
                 }
             }
             .font(.system(size: 13, weight: .medium))
