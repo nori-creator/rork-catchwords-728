@@ -18,6 +18,8 @@ struct ScanView: View {
     @State private var items: [ScanItem] = []
     @State private var selected: ScanItem?
     @State private var message: String?
+    /// Mic / speech recognition refused: the message gets a "open Settings" button.
+    @State private var micDenied: Bool = false
     @State private var baseZoom: CGFloat = 1
     @State private var location: CLLocation?
     @State private var tapStart: Date?
@@ -177,6 +179,13 @@ struct ScanView: View {
                 .padding(.horizontal, 24)
                 .contentTransition(.opacity)
                 .animation(.easeInOut(duration: 0.2), value: stage)
+                if micDenied, !speech.isListening, stage == .idle {
+                    Button(L("設定を開く")) {
+                        if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.cyan).frame(minHeight: 44)
+                }
 
                 HStack(alignment: .center) {
                     roundButton(icon: speech.isListening ? "waveform" : "mic.fill", label: L("声で調べる"), active: speech.isListening) { voice() }
@@ -295,10 +304,26 @@ struct ScanView: View {
     }
 
     private func voice() {
-        speech.toggle { text in
-            Task { await lookupVoice(text) }
+        if speech.isListening {
+            speech.stop(deliver: true)
+            return
         }
-        if speech.state == .denied { message = L("マイクと音声認識の使用を設定で許可してください") }
+        Task {
+            // Permission is asked inside `start`; only after it do we know whether it was refused.
+            await speech.start { text in
+                Task { await lookupVoice(text) }
+            }
+            switch speech.state {
+            case .denied:
+                micDenied = true
+                message = L("マイクと音声認識の使用を設定で許可してください")
+            case .unavailable:
+                micDenied = false
+                message = L("この言語の音声認識はこの端末では使えません")
+            default:
+                micDenied = false
+            }
+        }
     }
 
     private func lookupVoice(_ text: String) async {

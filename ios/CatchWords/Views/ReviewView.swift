@@ -207,12 +207,31 @@ struct ReviewView: View {
         } else if let card = store.current {
             QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker), isAnswered: answer != nil) { correct, ms in
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
-                Task { await store.grade(card, correct: correct, responseMs: ms, dex: dex) }
+                Task {
+                    // Not saved (offline, server down): the card comes back to be answered again.
+                    if !(await store.grade(card, correct: correct, responseMs: ms, dex: dex)) {
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = nil }
+                        Haptics.warning()
+                    }
+                }
             } onBadge: {
                 withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = card.sticker }
             }
             .id(card.id)
             .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+            .overlay(alignment: .bottom) {
+                if let err = store.gradeError {
+                    Label(err, systemImage: "wifi.exclamationmark")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .background(Theme.destructive.opacity(0.92), in: .rect(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.gradeError)
         } else {
             ReviewDone(total: store.queue.count, correct: store.correctCount, doneToday: store.doneToday,
                        missed: store.missed.count, isRetry: store.isRetry, canLoadMore: store.moreAvailable && !store.isRetry,

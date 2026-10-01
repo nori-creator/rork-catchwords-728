@@ -33,7 +33,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func placeName(for location: CLLocation) async -> String? {
-        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location, preferredLocale: Locale(identifier: "ja_JP"))
+        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location, preferredLocale: L10n.locale)
         guard let p = placemarks?.first else { return nil }
         let parts = [p.locality, p.subLocality ?? p.name].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " ")

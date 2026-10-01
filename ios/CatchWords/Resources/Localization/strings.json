@@ -3090,5 +3090,25 @@
  "このアプリについて": {
   "en": "About this app",
   "zh-TW": "關於此 App"
+ },
+ "採点を保存できませんでした。もう一度答えてください。": {
+  "en": "Couldn't save your answer. Please answer again.",
+  "zh-TW": "無法儲存作答。請再作答一次。"
+ },
+ "採点を保存できませんでした。もう一度答えてください。\n{1}": {
+  "en": "Couldn't save your answer. Please answer again.\n{1}",
+  "zh-TW": "無法儲存作答。請再作答一次。\n{1}"
+ },
+ "保存に時間がかかっています。そのままお待ちください。": {
+  "en": "Saving is taking a while. Please wait.",
+  "zh-TW": "儲存需要一些時間，請稍候。"
+ },
+ "この言語の音声認識はこの端末では使えません": {
+  "en": "Speech recognition for this language isn't available on this device",
+  "zh-TW": "此裝置無法使用這個語言的語音辨識"
+ },
+ "削除できませんでした。通信を確かめてください。": {
+  "en": "Couldn't delete. Please check your connection.",
+  "zh-TW": "無法刪除。請確認網路連線。"
  }
 }
