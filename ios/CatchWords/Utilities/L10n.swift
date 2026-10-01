@@ -71,6 +71,43 @@ nonisolated enum L10n {
         return obj
     }()
 
+    /// A translation from the table, or nil when there is none (ja returns the key itself).
+    static func translation(_ key: String, in code: String? = nil) -> String? {
+        let c = code ?? lang
+        if c == "ja" { return key }
+        if let t = table[key]?[c], !t.isEmpty { return t }
+        return nil
+    }
+
+    /// Text that came from outside the app (a server error, a database message). Shown only when it
+    /// is written in the display language — a known server sentence is translated, anything else in
+    /// another language is replaced by `fallback`, so a message never mixes languages on screen.
+    static func readerSafe(_ text: String, fallback: String) -> String {
+        let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.isEmpty { return fallback }
+        if let t = translation(s), lang != "ja" { return t }
+        return looksLike(s, lang) ? s : fallback
+    }
+
+    /// Whether `text` reads as the given display language (same rules as the web's
+    /// `looksWrongForReader`, inverted): ja has kana; en has no CJK; zh-TW has Han and no kana.
+    static func looksLike(_ text: String, _ code: String) -> Bool {
+        var kana = 0, han = 0, latin = 0
+        for u in text.unicodeScalars {
+            switch u.value {
+            case 0x3041...0x309F, 0x30A0...0x30FA: kana += 1
+            case 0x3400...0x4DBF, 0x4E00...0x9FFF: han += 1
+            case 0x41...0x5A, 0x61...0x7A: latin += 1
+            default: break
+            }
+        }
+        switch code {
+        case "ja": return kana > 0 || (han == 0 && latin == 0)
+        case "zh-TW": return kana == 0 && (han > 0 || latin == 0)
+        default: return kana + han == 0 || latin > (kana + han) * 3
+        }
+    }
+
     static func text(_ key: String, in code: String? = nil) -> String {
         let c = code ?? lang
         if c == "ja" { return key }

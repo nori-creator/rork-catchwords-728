@@ -55,6 +55,10 @@
   "en": "The AI finds the wrong item, checks it against the dictionary and fixes only that item.",
   "zh-TW": "AI 會找出錯誤的項目，對照字典後只修正該項目。"
  },
+ "AIが項目を生成できませんでした。もう一度お試しください": {
+  "en": "The AI couldn't write this section. Please try again.",
+  "zh-TW": "AI 無法產生這個項目，請再試一次。"
+ },
  "AIによる推定": {
   "en": "AI estimate",
   "zh-TW": "AI 推測"
@@ -155,6 +159,10 @@
   "en": "You caught “{2}” at {1}. Do you remember it?",
   "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
  },
+ "{1}のアルバム": {
+  "en": "{1} album",
+  "zh-TW": "{1}的相簿"
+ },
  "{1}の日記": {
   "en": "Diary for {1}",
   "zh-TW": "{1}的日記"
@@ -191,14 +199,6 @@
   "en": "Photo taken on encounter #{1}",
   "zh-TW": "第 {1} 次拍的照片"
  },
- "{1}年": {
-  "en": "{1}",
-  "zh-TW": "{1}年"
- },
- "{1}年{2}月": {
-  "en": "{2}/{1}",
-  "zh-TW": "{1}年{2}月"
- },
  "{1}日前にキャッチしました": {
   "en": "Caught {1} days ago",
   "zh-TW": "{1} 天前捕捉"
@@ -210,14 +210,6 @@
  "{1}日間で{2}語。思い出の{3}枚をまとめました": {
   "en": "{2} words in {1} days. We gathered {3} memorable photos.",
   "zh-TW": "{1} 天收集了 {2} 個單字。整理了 {3} 張回憶。"
- },
- "{1}月": {
-  "en": "{1}",
-  "zh-TW": "{1}月"
- },
- "{1}月のアルバム": {
-  "en": "{1} album",
-  "zh-TW": "{1}月的相簿"
  },
  "{1}枚": {
   "en": "{1} photos",
@@ -323,6 +315,10 @@
   "en": "Recalling it now makes the memory last longer.",
   "zh-TW": "現在回想，下次忘記前的時間會變長。"
  },
+ "うまくいきませんでした。もう一度お試しください。": {
+  "en": "Something went wrong. Please try again.",
+  "zh-TW": "發生問題了，請再試一次。"
+ },
  "うろ覚え": {
   "en": "Fuzzy",
   "zh-TW": "記得模糊"
@@ -371,6 +367,14 @@
   "en": "Adding this photo to your dex…",
   "zh-TW": "正在把這張加進圖鑑…"
  },
+ "このカードは削除できません": {
+  "en": "This card can't be deleted.",
+  "zh-TW": "無法刪除這張卡片。"
+ },
+ "このカードは編集できません": {
+  "en": "This card can't be edited.",
+  "zh-TW": "無法編輯這張卡片。"
+ },
  "このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。": {
   "en": "No words could be read from this page. Take a brighter photo of the part where the words are listed.",
   "zh-TW": "無法從這一頁讀取單字。請在明亮處拍攝列出單字的部分。"
@@ -378,6 +382,10 @@
  "このメールアドレスは登録済みです。ログインしてください。": {
   "en": "This email is already registered. Please log in.",
   "zh-TW": "這個電子郵件已經註冊過了。請登入。"
+ },
+ "この写真からは単語を読み取れませんでした。明るい所で、まっすぐ撮ってみてください。": {
+  "en": "No words could be read from this photo. Try again in good light, shooting straight on.",
+  "zh-TW": "無法從這張照片讀出單字。請在明亮處正面拍攝。"
  },
  "この写真が指す単語だけを変えます。中身は新しく作ります。": {
   "en": "Only the word for this photo changes. Its contents are made anew.",
@@ -398,6 +406,10 @@
  "この単語を図鑑から削除しますか？": {
   "en": "Delete this word from your collection?",
   "zh-TW": "要從圖鑑中刪除這個單字嗎？"
+ },
+ "この単語を編集する権限がありません": {
+  "en": "You don't have permission to edit this word.",
+  "zh-TW": "你沒有編輯這個單字的權限。"
  },
  "この単語帳を復習する": {
   "en": "Review this wordbook",
@@ -478,6 +490,10 @@
  "この語の誤りを報告": {
   "en": "Report an error in this entry",
   "zh-TW": "回報這個字的錯誤"
+ },
+ "この語を編集する権限がありません": {
+  "en": "You don't have permission to edit this word.",
+  "zh-TW": "你沒有編輯這個單字的權限。"
  },
  "これまで": {
   "en": "So far",
@@ -751,6 +767,14 @@
   "en": "Pick from calendar",
   "zh-TW": "從月曆選擇"
  },
+ "カードが見つかりません": {
+  "en": "Card not found.",
+  "zh-TW": "找不到卡片。"
+ },
+ "カードの形が整いませんでした。もう一度お試しください。": {
+  "en": "The card came back incomplete. Please try again.",
+  "zh-TW": "卡片內容不完整，請再試一次。"
+ },
  "カード生成に失敗しました": {
   "en": "Couldn't build the card",
   "zh-TW": "字卡產生失敗"
@@ -791,6 +815,10 @@
   "en": "Subscriptions renew automatically unless canceled at least 24 hours before the end of the period. You can cancel anytime in your App Store account settings.",
   "zh-TW": "除非在期間結束前 24 小時取消，訂閱會自動續訂。可以隨時在 App Store 帳號設定中取消。"
  },
+ "サーバで失敗しました。": {
+  "en": "The server ran into a problem.",
+  "zh-TW": "伺服器發生錯誤。"
+ },
  "サーバーに接続できませんでした（8秒）。電波の良い場所でもう一度お試しください。": {
   "en": "Couldn't reach the server (8 seconds). Please try again where the signal is better.",
   "zh-TW": "無法連上伺服器（8 秒）。請到訊號較好的地方再試一次。"
@@ -830,6 +858,10 @@
  "ステッカー": {
   "en": "Sticker",
   "zh-TW": "貼紙"
+ },
+ "ステッカーが見つかりません": {
+  "en": "Sticker not found.",
+  "zh-TW": "找不到貼紙。"
  },
  "スピーカーを押すと、発音を聞けます。": {
   "en": "Tap the speaker to hear it.",
@@ -926,6 +958,10 @@
  "プロフィール": {
   "en": "Profile",
   "zh-TW": "個人檔案"
+ },
+ "プロフィールが見つかりません": {
+  "en": "Profile not found.",
+  "zh-TW": "找不到個人資料。"
  },
  "プロフィール写真": {
   "en": "Profile photo",
@@ -1259,6 +1295,10 @@
   "en": "Couldn't save.",
   "zh-TW": "儲存失敗。"
  },
+ "候補の形が整いませんでした。もう一度お試しください。": {
+  "en": "The suggestions came back incomplete. Please try again.",
+  "zh-TW": "候選內容不完整，請再試一次。"
+ },
  "元の写真": {
   "en": "Photo",
   "zh-TW": "原本的照片"
@@ -1430,6 +1470,10 @@
  "単語が並んだページを、まっすぐ明るい所で撮ってください。並んでいる語をまとめて取り込みます。": {
   "en": "Shoot a page of listed words, straight on and well lit. Every word on it comes in at once.",
   "zh-TW": "請在光線充足的地方，正面拍下排列著單字的那一頁。上面的單字會一次全部匯入。"
+ },
+ "単語が見つかりません": {
+  "en": "Word not found.",
+  "zh-TW": "找不到單字。"
  },
  "単語の詳細で、この写真を表紙にします。": {
   "en": "This photo becomes the cover on the word's page.",
@@ -2255,9 +2299,17 @@
   "en": "Reason: {1}",
   "zh-TW": "原因：{1}"
  },
+ "画像のAI読み込みに失敗しました": {
+  "en": "The AI couldn't read the image.",
+  "zh-TW": "AI 讀取圖片失敗。"
+ },
  "画像をタップで自撮りにフリップ": {
   "en": "Tap the photo to flip to your selfie",
   "zh-TW": "點圖片翻到自拍"
+ },
+ "画像を読み取れませんでした": {
+  "en": "Couldn't read the image.",
+  "zh-TW": "無法讀取圖片。"
  },
  "画面の明るさ": {
   "en": "Light / dark",
@@ -2591,6 +2643,10 @@
   "en": "your settings",
   "zh-TW": "設定"
  },
+ "設定を保存できませんでした": {
+  "en": "Couldn't save your settings.",
+  "zh-TW": "無法儲存設定。"
+ },
  "設定を開く": {
   "en": "Open Settings",
   "zh-TW": "打開設定"
@@ -2674,6 +2730,10 @@
  "追加の例文": {
   "en": "More examples",
   "zh-TW": "更多例句"
+ },
+ "送った内容の形が違います。アプリを最新にしてください。": {
+  "en": "The request was in an unexpected format. Please update the app.",
+  "zh-TW": "送出的資料格式不符，請將 App 更新到最新版本。"
  },
  "通信が時間切れになりました。電波の良い場所でもう一度お試しください。": {
   "en": "The connection timed out. Please try again where the signal is better.",
@@ -2806,6 +2866,10 @@
  "項目": {
   "en": "Sections",
   "zh-TW": "項目"
+ },
+ "項目の再生成は Pro 限定です": {
+  "en": "Regenerating sections is a Pro feature.",
+  "zh-TW": "重新產生項目為 Pro 專屬功能。"
  },
  "額縁": {
   "en": "Picture frame",

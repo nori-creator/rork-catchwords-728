@@ -113,7 +113,7 @@ final class CaptureViewModel {
             async let loc = LocationService.shared.current()
             do {
                 let found = textOnly
-                    ? try await AIService.shared.detect(image: image, textOnly: true)
+                    ? try await AIService.shared.detectScan(image: image)
                     : try await AIService.shared.suggest(image: image)
                 guard token == runToken else { return }
                 detectOutcome = .success(found)

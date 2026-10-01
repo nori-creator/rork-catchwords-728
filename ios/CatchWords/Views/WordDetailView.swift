@@ -100,7 +100,7 @@ struct WordDetailView: View {
                 }
             }
         }
-        .task(id: current.wordId) { await autoFill() }
+        .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
         .onAppear { applyHeroRole(animated: false) }
         .sheet(isPresented: $pickingHero) {
             HeroPhotoPickerSheet(sticker: current) { role in
@@ -693,6 +693,14 @@ struct WordDetailView: View {
     /// Web AutoFillSections: visible sections that are still empty are written by the server in
     /// parallel (free, `only_if_empty`), then revealed together — never one by one popping in.
     private func autoFill() async {
+        // First this reader's own explanation (written in their display language); while it is being
+        // written, the empty sections show as filling instead of another language's notes.
+        let target = word?.language ?? NativeAPI.targetLanguage
+        await dex.loadExplanation(wordId: current.wordId, target: target) { on in
+            withAnimation(.easeOut(duration: 0.2)) {
+                filling = on ? Set(prefs.visible.filter { $0 != .realUsage && !hasContent($0) }) : []
+            }
+        }
         let missing = prefs.visible.filter { $0 != .realUsage && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId

@@ -50,7 +50,7 @@ struct HomeView: View {
                 }
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text(L("\(cal.component(.month, from: today))月のアルバム"))
+                    Text(L("\(JPDate.month(today))のアルバム"))
                         .font(.system(size: 20, weight: .heavy))
                         .foregroundStyle(Color(hex: 0x33291F))
                     Spacer()
@@ -184,8 +184,7 @@ enum AlbumSpan: String, CaseIterable, Identifiable {
             let end = Calendar.current.date(byAdding: .day, value: 6, to: key) ?? key
             return "\(JPDate.monthDay(key)) – \(JPDate.monthDay(end))"
         case .month:
-            let c = Calendar.current.dateComponents([.year, .month], from: key)
-            return L("\(c.year ?? 0)年\(c.month ?? 0)月")
+            return JPDate.yearMonth(key)
         }
     }
 }

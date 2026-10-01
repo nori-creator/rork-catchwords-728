@@ -14,13 +14,13 @@ nonisolated struct Word: Codable, Sendable, Hashable {
     let headword: String
     let readingZhuyin: String?
     let pinyin: String?
-    let meaningJa: String
+    var meaningJa: String
     let partOfSpeech: String?
     let categoryKey: String?
     let level: String?
     let exampleSentence: String?
-    let exampleTranslation: String?
-    let extras: WordExtras?
+    var exampleTranslation: String?
+    var extras: WordExtras?
     /// `words.language` (null on old rows = 台湾華語).
     let language: String?
 
@@ -80,9 +80,12 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var trivia: String?
     var usageNote: String?
     var synonymDiff: String?
+    /// Which display language these notes were written in (`explain_lang`; empty on old rows).
+    var explainLang: String?
 
     enum CodingKeys: String, CodingKey {
         case mnemonic, synonyms, antonyms, etymology, radicals, trivia
+        case explainLang = "explain_lang"
         case taiwanNote = "taiwan_note"
         case examplesExtra = "examples_extra"
         case pronunciationTips = "pronunciation_tips"
@@ -134,6 +137,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         trivia = (try? c.decodeIfPresent(String.self, forKey: .trivia)).flatMap { $0 }
         usageNote = (try? c.decodeIfPresent(String.self, forKey: .usageNote)).flatMap { $0 }
         synonymDiff = (try? c.decodeIfPresent(String.self, forKey: .synonymDiff)).flatMap { $0 }
+        explainLang = (try? c.decodeIfPresent(String.self, forKey: .explainLang)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).

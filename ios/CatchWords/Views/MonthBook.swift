@@ -481,7 +481,7 @@ struct MonthBookSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(String(Calendar.current.component(.year, from: month)))
                         .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
-                    Text(L("\(Calendar.current.component(.month, from: month))月のアルバム"))
+                    Text(L("\(JPDate.month(month))のアルバム"))
                         .font(.system(size: 24, weight: .heavy)).foregroundStyle(Color(hex: 0x33291F))
                 }
                 Spacer()

@@ -34,9 +34,9 @@ struct DexCalendarView: View {
         return VStack(spacing: 12) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L("\(String(cal.component(.year, from: month)))年"))
+                    Text(JPDate.year(month))
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
-                    Text(L("\(cal.component(.month, from: month))月"))
+                    Text(JPDate.month(month))
                         .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.primaryInk)
                     Text(L("\(monthItems.count)枚・\(dayCount)日"))
                         .font(.system(size: 12, weight: .semibold)).monospacedDigit()

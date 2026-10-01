@@ -42,6 +42,17 @@ final class DexStore {
 
     private let client = SupabaseClient.shared
     private var language: String { NativeAPI.targetLanguage }
+
+    // MARK: Reader language (word_explanations)
+    /// word id → the shared `words` row as stored, before choosing what this reader sees.
+    private var sharedWords: [String: Word] = [:]
+    /// word id → this reader's explanation (for `readerKey`).
+    private var explanations: [String: ReaderLanguage.Explanation] = [:]
+    /// word id → the meaning written in the reader's language (`getReaderMeanings`).
+    private var readerMeanings: [String: String] = [:]
+    /// The display language the two tables above were read for.
+    private var readerKey = ""
+
     private static let baseColumns =
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
@@ -76,7 +87,7 @@ final class DexStore {
             await loadAlbumHidden()
             await loadAlbumPlacements()
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
-            stickers = rows.filter { $0.word?.matches(language) ?? true }
+            stickers = present(rows.filter { $0.word?.matches(language) ?? true })
             loadError = nil
             hasLoaded = true
             await loadReviews()
@@ -214,7 +225,123 @@ final class DexStore {
     private func fetchSticker(id: String) async throws -> Sticker {
         let data = try await selectStickers { "stickers?id=eq.\(id)&select=\($0)&limit=1" }
         guard let s = try SupabaseDate.decoder.decode([Sticker].self, from: data).first else { throw APIError.decoding }
+        return present([s])[0]
+    }
+
+    // MARK: - Reader language
+
+    /// Remembers the shared words and returns the stickers as this reader should see them.
+    private func present(_ rows: [Sticker]) -> [Sticker] {
+        for s in rows { if let w = s.word { sharedWords[s.wordId] = w } }
+        if readerKey != L10n.lang {
+            readerKey = L10n.lang
+            explanations = [:]
+            readerMeanings = [:]
+        }
+        let out = rows.map(applyReader)
+        let missing = Set(rows.map(\.wordId)).subtracting(readerMeanings.keys)
+        if !missing.isEmpty { Task { await loadReaderMeanings(Array(missing)) } }
+        return out
+    }
+
+    private func applyReader(_ s: Sticker) -> Sticker {
+        guard let shared = sharedWords[s.wordId] ?? s.word else { return s }
+        var s = s
+        s.word = ReaderLanguage.resolve(shared, explanation: explanations[s.wordId],
+                                        readerMeaning: readerMeanings[s.wordId], reader: L10n.lang)
         return s
+    }
+
+    /// The display language changed: drop what was read for the old one and read again.
+    func readerLanguageChanged() {
+        guard readerKey != L10n.lang else { return }
+        readerKey = L10n.lang
+        explanations = [:]
+        readerMeanings = [:]
+        stickers = stickers.map(applyReader)
+        let ids = Array(Set(stickers.map(\.wordId)))
+        Task { await loadReaderMeanings(ids) }
+    }
+
+    /// web `getReaderMeanings`: the meanings written in the reader's language, 200 words at a time.
+    private func loadReaderMeanings(_ ids: [String]) async {
+        let lang = L10n.lang
+        var i = 0
+        while i < ids.count {
+            let chunk = Array(ids[i..<min(i + 200, ids.count)])
+            i += 200
+            guard let got = try? await NativeAPI.call("getReaderMeanings", ["word_ids": chunk, "explain_lang": lang],
+                                                      as: [String: String].self, timeout: 30),
+                  lang == L10n.lang else { continue }
+            for id in chunk { readerMeanings[id] = got[id] ?? "" }
+        }
+        guard lang == L10n.lang else { return }
+        stickers = stickers.map(applyReader)
+    }
+
+    /// web StickerSheet: read this reader's explanation of the word; when there is none for exactly
+    /// this reader, write one (`generateCard` → `updateWordExtras`, which files it under the reader's
+    /// key on the server). Returns while generation runs in the background via `onGenerating`.
+    func loadExplanation(wordId: String, target: String, onGenerating: @escaping (Bool) -> Void) async {
+        struct Res: Decodable { let picked: ReaderLanguage.Explanation?; let unavailable: Bool? }
+        let lang = L10n.lang
+        let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: target)
+        guard let r = try? await NativeAPI.call("getWordExplanation", ["word_id": wordId, "explain_lang": lang, "l1": l1],
+                                                as: Res.self, timeout: 20),
+              lang == L10n.lang else { return }
+        if let p = r.picked { explanations[wordId] = p } else { explanations.removeValue(forKey: wordId) }
+        stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
+        if r.unavailable == true { return }
+        guard ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1) else { return }
+        guard let shared = sharedWords[wordId] else { return }
+        onGenerating(true)
+        defer { onGenerating(false) }
+        await generateExplanation(word: shared, shown: r.picked, lang: lang, l1: l1)
+        guard lang == L10n.lang,
+              let again = try? await NativeAPI.call("getWordExplanation", ["word_id": wordId, "explain_lang": lang, "l1": l1],
+                                                    as: Res.self, timeout: 20),
+              let p = again.picked else { return }
+        explanations[wordId] = p
+        stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
+    }
+
+    private func generateExplanation(word: Word, shown: ReaderLanguage.Explanation?, lang: String, l1: String) async {
+        guard let raw = try? await NativeAPI.call("generateCard", ["headword": word.headword, "targetLanguage": word.language ?? language], timeout: 60),
+              let card = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+              var fresh = card["extras"] as? [String: Any] else { return }
+        // Keep what is already on screen and only fill what was empty (web keepShownFields), so the
+        // chunks the learner is reading do not swap into different ones when the new notes arrive.
+        if let shownRaw = await shownExtras(wordId: word.id, shown: shown, lang: lang, l1: l1) {
+            let filled: (Any) -> Bool = { v in
+                if let a = v as? [Any] { return !a.isEmpty }
+                if let s = v as? String { return !s.trimmingCharacters(in: .whitespaces).isEmpty }
+                return !(v is NSNull)
+            }
+            for (k, v) in shownRaw where filled(v) && k != "explain_lang" && k != "explain_l1" { fresh[k] = v }
+        }
+        var data: [String: Any] = ["word_id": word.id, "extras": fresh]
+        // Shared columns are written only when they are really missing (web shouldWriteSharedColumns).
+        let missing = [word.meaningJa, word.readingZhuyin ?? word.pinyin ?? "", word.exampleSentence ?? ""]
+            .contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+        if missing {
+            var patch: [String: Any] = [:]
+            for k in ["reading_zhuyin", "pinyin", "part_of_speech", "level", "example_sentence", "example_translation", "meaning_ja"] {
+                if let v = card[k] as? String, !v.isEmpty { patch[k] = v }
+            }
+            if !patch.isEmpty { data["patch"] = patch }
+        }
+        _ = try? await NativeAPI.call("updateWordExtras", data, timeout: 30)
+    }
+
+    /// The extras the learner is looking at right now, raw (only when they are this reader's own or the
+    /// shared ones written in the reader's language).
+    private func shownExtras(wordId: String, shown: ReaderLanguage.Explanation?, lang: String, l1: String) async -> [String: Any]? {
+        if shown != nil { return nil }
+        guard let data = try? await client.rest("GET", "words?id=eq.\(wordId)&select=extras&limit=1"),
+              let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let ex = rows.first?["extras"] as? [String: Any] else { return nil }
+        let mark = (ex["explain_lang"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+        return mark.isEmpty || mark == lang ? ex : nil
     }
 
     /// Re-encounter (web `recordReencounter`): this photo is added to the word you already own,
@@ -608,6 +735,9 @@ final class DexStore {
 
     func reset() {
         stickers = []
+        sharedWords = [:]
+        explanations = [:]
+        readerMeanings = [:]
         signed = [:]
         hasLoaded = false
     }

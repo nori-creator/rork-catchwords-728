@@ -56,6 +56,7 @@ final class ProfileStore {
         displayName = row["display_name"] as? String ?? ""
         avatarURL = row["avatar_url"] as? String
         nativeLanguage = row["native_language"] as? String ?? "ja"
+        ReaderLanguage.native = row["native_language"] as? String
         // The display language follows the account (set on the web or another device too).
         if let ui = row["ui_language"] as? String, !ui.isEmpty {
             L10n.set(ui)

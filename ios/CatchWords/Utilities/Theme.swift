@@ -98,6 +98,10 @@ enum JPDate {
     static func time(_ d: Date) -> String { fmt("HH:mm", fixed: true).string(from: d) }
     /// 2026年9月 · September 2026
     static func yearMonth(_ d: Date) -> String { fmt("yMMMM").string(from: d) }
+    /// 2026年 · 2026
+    static func year(_ d: Date) -> String { fmt("y").string(from: d) }
+    /// 9月 · September (stand-alone month name)
+    static func month(_ d: Date) -> String { fmt("LLLL").string(from: d) }
     /// SEPTEMBER (the book spine's decorative month name, always English)
     static func monthName(_ d: Date) -> String {
         let f = DateFormatter()

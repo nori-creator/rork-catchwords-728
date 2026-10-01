@@ -20,10 +20,10 @@ nonisolated enum APIError: LocalizedError {
         case .unauthorized: L("ログインの有効期限が切れました。もう一度ログインしてください。")
         case .timeout: L("通信が時間切れになりました。電波の良い場所でもう一度お試しください。")
         case .offline: L("インターネットに接続できません。")
-        case .server(let code, let msg): msg.isEmpty ? L("サーバーエラー（\(code)）") : msg
+        case .server(let code, let msg): L10n.readerSafe(msg, fallback: L("サーバーエラー（\(code)）"))
         case .decoding: L("データの読み込みに失敗しました。")
-        case .message(let m): m
-        case .limit(let m): m
+        case .message(let m): L10n.readerSafe(m, fallback: L("うまくいきませんでした。もう一度お試しください。"))
+        case .limit(let m): L10n.readerSafe(m, fallback: Self.dailyCapMessage)
         }
     }
 
