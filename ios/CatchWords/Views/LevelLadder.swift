@@ -122,28 +122,7 @@ struct LevelLadder: View {
                     Text(scale.id).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
                         .padding(.bottom, 16)
                     ForEach(["A", "B", "C"], id: \.self) { b in
-                        VStack(spacing: 2) {
-                            HStack(alignment: .bottom, spacing: 4) {
-                                ForEach((1...6).filter { Self.band($0) == b }, id: \.self) { s in
-                                    VStack(spacing: 3) {
-                                        UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                                            .fill(Self.colors[s - 1])
-                                            .frame(width: scale.id == "TOCFL" ? 16 : 22,
-                                                   height: CGFloat(10 + (0.35 + 0.65 * Double(s - 1) / 5) * 18))
-                                            .opacity(s == active ? 1 : 0.25)
-                                            .overlay(
-                                                UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                                                    .stroke(Theme.foreground, lineWidth: s == active ? 2 : 0)
-                                                    .padding(-1.5)
-                                            )
-                                        Text(scale.labels[s - 1])
-                                            .font(.system(size: 10, weight: s == active ? .bold : .regular))
-                                            .foregroundStyle(s == active ? Theme.foreground : Theme.muted)
-                                    }
-                                }
-                            }
-                            Text(b).font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.muted)
-                        }
+                        bandColumn(b, active: active)
                     }
                     Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.muted)
                         .padding(.bottom, 16)
@@ -161,6 +140,36 @@ struct LevelLadder: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(scale.id) \(label(active))")
         .accessibilityHint(L("段階を閉じる"))
+    }
+
+    private func bandColumn(_ band: String, active: Int) -> some View {
+        let steps: [Int] = (1...6).filter { Self.band($0) == band }
+        return VStack(spacing: 2) {
+            HStack(alignment: .bottom, spacing: 4) {
+                ForEach(steps, id: \.self) { s in
+                    stepBar(s, active: active)
+                }
+            }
+            Text(band).font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.muted)
+        }
+    }
+
+    private func stepBar(_ s: Int, active: Int) -> some View {
+        let on: Bool = s == active
+        let width: CGFloat = scale.id == "TOCFL" ? 16 : 22
+        let ratio: Double = 0.35 + 0.65 * Double(s - 1) / 5
+        let height: CGFloat = CGFloat(10 + ratio * 18)
+        let shape = UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
+        return VStack(spacing: 3) {
+            shape
+                .fill(Self.colors[s - 1])
+                .frame(width: width, height: height)
+                .opacity(on ? 1 : 0.25)
+                .overlay(shape.stroke(Theme.foreground, lineWidth: on ? 2 : 0).padding(-1.5))
+            Text(scale.labels[s - 1])
+                .font(.system(size: 10, weight: on ? .bold : .regular))
+                .foregroundStyle(on ? Theme.foreground : Theme.muted)
+        }
     }
 }
 
