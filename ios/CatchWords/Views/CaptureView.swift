@@ -445,7 +445,6 @@ struct CaptureView: View {
 
     private func flash() {
         Haptics.impact(.rigid)
-        SoundService.shared.play(.snap, volume: 0.7)
         withAnimation(.easeOut(duration: 0.05)) { shutterFlash = true }
         Task {
             try? await Task.sleep(for: .milliseconds(90))

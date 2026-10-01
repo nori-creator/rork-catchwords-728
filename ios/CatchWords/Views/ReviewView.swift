@@ -426,7 +426,6 @@ struct QuizCard: View {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { picked = c.headword }
         if ok {
             Haptics.success()
-            SoundService.shared.play(.snap, volume: 0.5)
             SoundService.shared.speak(correctHead)
         } else {
             Haptics.warning()

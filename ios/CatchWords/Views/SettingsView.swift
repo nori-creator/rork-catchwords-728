@@ -222,7 +222,7 @@ struct SettingsView: View {
                     options: [("off", L("オフ")), ("subtle", L("控えめ")), ("full", L("しっかり"))],
                     selection: Binding(get: { soundLevel }, set: { v in
                         soundLevel = v
-                        if v != "off" { SoundService.shared.play(.impact) }
+                        if v != "off" { SoundService.shared.play(.landBounce) }
                     })
                 )
                 SettingsToggle(title: L("振動"), detail: nil, isOn: Binding(get: { haptics }, set: { v in

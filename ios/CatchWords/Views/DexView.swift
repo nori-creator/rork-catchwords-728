@@ -510,7 +510,7 @@ struct DexView: View {
             try? await Task.sleep(for: .milliseconds(200))
             landedId = id
             try? await Task.sleep(for: .milliseconds(420))
-            SoundService.shared.play(.impact, volume: 0.5)
+            SoundService.shared.play(.landBounce)
             Haptics.impact(.heavy)
             impactTick += 1
             try? await Task.sleep(for: .milliseconds(1400))
