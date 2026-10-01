@@ -3286,5 +3286,9 @@
  "一言を聞く": {
   "en": "Play the voice note",
   "zh-TW": "播放一句話"
+ },
+ "解析待ちの写真が{1}枚あります": {
+  "en": "{1} photos waiting for analysis",
+  "zh-TW": "有 {1} 張照片等待分析"
  }
 }

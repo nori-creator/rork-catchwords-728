@@ -129,6 +129,8 @@ struct CaptureView: View {
             ScanView()
         }
         .sheet(isPresented: $showTextSearch) { textSearchSheet }
+        .onAppear { takePendingRequest() }
+        .onChange(of: router.openPending) { _, _ in takePendingRequest() }
         .sheet(isPresented: $showPending) {
             PendingListView { item in
                 showPending = false
@@ -137,6 +139,13 @@ struct CaptureView: View {
             }
             .presentationDetents([.medium, .large])
         }
+    }
+
+    private func takePendingRequest() {
+        guard router.openPending else { return }
+        router.openPending = false
+        dex.refreshPending()
+        if !dex.pending.isEmpty { showPending = true }
     }
 
     private func syncChrome() {

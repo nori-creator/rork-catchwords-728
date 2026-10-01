@@ -26,6 +26,7 @@ struct CatchWordsApp: App {
         }
         AppFont.registerAll()
         SoundService.shared.configure()
+        NotificationRouter.shared.install()
     }
 
     var body: some Scene {

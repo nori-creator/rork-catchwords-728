@@ -49,6 +49,29 @@ struct HomeView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
+                // Photos kept at the shutter whose analysis has not finished (web Home pending banner).
+                if !dex.pending.isEmpty {
+                    Button {
+                        router.openPending = true
+                        router.tab = .camera
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "hourglass").font(.system(size: 15, weight: .semibold))
+                            Text(L("解析待ちの写真が\(dex.pending.count)枚あります"))
+                                .font(.system(size: 14, weight: .semibold))
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color(hex: 0x33291F))
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 48)
+                        .background(Color(hex: 0xF3D98A, opacity: 0.45), in: .rect(cornerRadius: 14))
+                    }
+                    .buttonStyle(PressableStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 14)
+                }
+
                 HStack(alignment: .firstTextBaseline) {
                     Text(L("\(JPDate.month(today))のアルバム"))
                         .font(.system(size: 20, weight: .heavy))
