@@ -472,28 +472,26 @@ final class DexStore {
         guard let path = await uploadPNG(image, uid: uid, ts: ts, kind: "cutout") else {
             throw APIError.message(L("切り抜きの保存に失敗しました。"))
         }
-        _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["cutout_image_url": path])
+        _ = try await NativeAPI.call("attachStickerCutout", ["sticker_id": sticker.id, "cutout_path": path])
         ImageCache.shared.set(image, for: path)
         replace(sticker.id) { old in
-            Sticker(
-                id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: path,
-                selfieImageUrl: old.selfieImageUrl, caption: old.caption, locationName: old.locationName,
-                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng, shelfKey: old.shelfKey
-            )
+            var s = old
+            s.cutoutImageUrl = path
+            return s
         }
     }
 
     /// Saves the sticker's one-line note (ひと言). Empty clears it.
     func updateCaption(_ sticker: Sticker, caption: String) async throws {
-        let trimmed = caption.trimmingCharacters(in: .whitespacesAndNewlines)
-        let value: Any = trimmed.isEmpty ? NSNull() : trimmed
-        _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["caption": value])
+        // The server keeps 500 characters (stickers.functions.ts CAPTION_MAX).
+        let trimmed = String(caption.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        _ = try await NativeAPI.call("updateStickerCaption", ["sticker_id": sticker.id, "caption": trimmed])
+        // Change only the caption: rebuilding the sticker field by field dropped the chosen picture,
+        // the stand-in image and its credit until the next reload.
         replace(sticker.id) { old in
-            Sticker(
-                id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: old.cutoutImageUrl,
-                selfieImageUrl: old.selfieImageUrl, caption: trimmed.isEmpty ? nil : trimmed, locationName: old.locationName,
-                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng, shelfKey: old.shelfKey
-            )
+            var s = old
+            s.caption = trimmed.isEmpty ? nil : trimmed
+            return s
         }
     }
 
@@ -687,8 +685,9 @@ final class DexStore {
         stickers[i] = transform(stickers[i])
     }
 
+    /// Web `deleteSticker`: the row and its photo files (and thumbnails) go together.
     func delete(_ sticker: Sticker) async throws {
-        _ = try await client.rest("DELETE", "stickers?id=eq.\(sticker.id)")
+        _ = try await NativeAPI.call("deleteSticker", ["sticker_id": sticker.id])
         stickers.removeAll { $0.id == sticker.id }
     }
 
