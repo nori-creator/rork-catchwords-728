@@ -282,12 +282,7 @@ struct BookSpine: View {
         VStack(spacing: 6) {
             Rectangle().fill(Color(hex: 0xE8C66A).opacity(0.8)).frame(height: 1.5)
             Text(String(year)).font(.system(size: 7, weight: .bold, design: .serif)).foregroundStyle(Color(hex: 0xF3D98A))
-            Text(JPDate.monthName(month))
-                .font(.system(size: 9, weight: .bold, design: .serif))
-                .foregroundStyle(Color(hex: 0xF3D98A))
-                .fixedSize()
-                .rotationEffect(.degrees(90))
-                .frame(width: 14, height: 56)
+            spineMonth
             Spacer(minLength: 0)
             Text("\(count)")
                 .font(.system(size: 7, weight: .bold))
@@ -304,7 +299,29 @@ struct BookSpine: View {
             in: .rect(cornerRadius: 3)
         )
         .shadow(color: .black.opacity(0.35), radius: 2, x: 2)
-        .accessibilityLabel(L("\(JPDate.monthName(month)) \(count)語"))
+        .accessibilityLabel(L("\(JPDate.month(month)) \(count)語"))
+    }
+
+    /// The month on the spine in the display language: English runs along the spine, Japanese and
+    /// Chinese stand upright one character under another (縦書き).
+    @ViewBuilder private var spineMonth: some View {
+        if L10n.lang == "en" {
+            Text(JPDate.monthName(month))
+                .font(.system(size: 9, weight: .bold, design: .serif))
+                .foregroundStyle(Color(hex: 0xF3D98A))
+                .fixedSize()
+                .rotationEffect(.degrees(90))
+                .frame(width: 14, height: 56)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(JPDate.month(month).enumerated()), id: \.offset) { _, ch in
+                    Text(String(ch))
+                }
+            }
+            .font(.system(size: 10, weight: .bold, design: .serif))
+            .foregroundStyle(Color(hex: 0xF3D98A))
+            .frame(width: 14, height: 56)
+        }
     }
 }
 

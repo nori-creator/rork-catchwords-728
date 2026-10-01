@@ -22,6 +22,8 @@ final class ReviewStore {
     var isLoading: Bool = false
     var hasLoaded: Bool = false
     var loadError: String?
+    /// Shown when an answer could not be saved (the card is not counted and comes back).
+    var gradeNotice: String?
     var streak: Int = 0
     var doneToday: Int = 0
     var correctCount: Int = 0
@@ -91,7 +93,14 @@ final class ReviewStore {
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
 
     func load(dex: DexStore, limit: Int) async {
-        guard client.session != nil else { return }
+        // Local guest (no account): nothing to review, but the screen must leave its spinner.
+        guard client.session != nil else {
+            queue = []
+            moreAvailable = false
+            loadError = nil
+            hasLoaded = true
+            return
+        }
         choiceCache = [:]
         isLoading = true
         defer { isLoading = false }
@@ -191,6 +200,12 @@ final class ReviewStore {
             "blur_seen": false,
             "response_ms": max(0, responseMs),
         ], as: Graded.self, timeout: 20)
+        guard graded != nil else {
+            // Not recorded on the server: the card stays due and is not counted as done today.
+            gradeNotice = L("答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。")
+            return
+        }
+        gradeNotice = nil
         let intervalAfter = graded?.intervalDays.map { Int($0.rounded()) } ?? r.intervalDays
         doneToday += 1
         if graded != nil,

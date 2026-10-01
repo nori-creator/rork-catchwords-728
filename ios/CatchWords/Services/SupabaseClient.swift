@@ -86,11 +86,21 @@ final class SupabaseClient {
         try storeSession(json)
     }
 
-    func signInWithApple(idToken: String, nonce: String) async throws {
-        let json = try await authRequest(
-            path: "token?grant_type=id_token",
-            body: ["provider": "apple", "id_token": idToken, "nonce": nonce]
-        )
+    /// Takes over a session the web signed in (`/native-auth`): asks whose token it is, then keeps it.
+    func adoptSession(accessToken: String, refreshToken: String, expiresIn: Double?) async throws {
+        guard let baseURL, let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await perform(req)
+        guard (200..<300).contains(response.statusCode),
+              let user = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { throw APIError.unauthorized }
+        let json: [String: Any] = [
+            "access_token": accessToken,
+            "refresh_token": refreshToken,
+            "expires_in": max(60, expiresIn ?? 3600),
+            "user": user,
+        ]
         try storeSession(json)
     }
 

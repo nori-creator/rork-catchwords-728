@@ -43,7 +43,7 @@ struct CatchCardView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         // A failed save or card shows a notice and keeps this card: let the user try again.
-        .onChange(of: vm.toast) { _, notice in if notice != nil { isCatching = false } }
+        .onChange(of: vm.toastCount) { _, _ in isCatching = false }
         .onChange(of: vm.cutoutLift == nil) { _, none in if none { revealDone = false } }
     }
 

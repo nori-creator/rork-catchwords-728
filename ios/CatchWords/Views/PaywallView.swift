@@ -72,15 +72,18 @@ struct PaywallView: View {
                         }
                     }
                     plans
-                    PrimaryButton(title: plan.products.isEmpty ? L("読み込み中…") : L("Proをはじめる"), icon: "sparkles",
+                    PrimaryButton(title: buyTitle, icon: plan.products.isEmpty && !plan.isLoadingProducts ? "arrow.clockwise" : "sparkles",
                                   isLoading: plan.isPurchasing, sheen: true) {
-                        guard let product = plan.products.first(where: { $0.id == selectedID }) ?? plan.products.first else { return }
+                        guard let product = plan.products.first(where: { $0.id == selectedID }) ?? plan.products.first else {
+                            Task { await plan.loadProducts() }   // the prices could not be read: try again
+                            return
+                        }
                         Task {
                             await plan.purchase(product)
                             if plan.isPro { dismiss() }
                         }
                     }
-                    .disabled(plan.products.isEmpty)
+                    .disabled(plan.isLoadingProducts)
                     if let msg = plan.message {
                         Text(msg).font(.system(size: 13)).foregroundStyle(Theme.muted)
                             .multilineTextAlignment(.center)
@@ -110,6 +113,11 @@ struct PaywallView: View {
         }
     }
 
+    private var buyTitle: String {
+        if !plan.products.isEmpty { return L("Proをはじめる") }
+        return plan.isLoadingProducts ? L("読み込み中…") : L("もう一度読み込む")
+    }
+
     /// How much cheaper the yearly plan is than 12 months of the monthly one, from the real store prices.
     private var yearlySaving: Int? {
         guard let y = plan.products.first(where: { $0.subscription?.subscriptionPeriod.unit == .year }),
@@ -124,8 +132,13 @@ struct PaywallView: View {
     private var plans: some View {
         if plan.products.isEmpty {
             VStack(spacing: 6) {
-                ProgressView().tint(Theme.muted)
-                Text(L("年額 ¥7,800 / 月額 ¥980（予定）")).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                if plan.isLoadingProducts {
+                    ProgressView().tint(Theme.muted)
+                } else {
+                    Text(L("App Store の価格を読み込めませんでした。通信を確かめて、もう一度お試しください。"))
+                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(minHeight: 80)
         } else {

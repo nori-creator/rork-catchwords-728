@@ -573,10 +573,11 @@ struct WheelCard: View {
     @State private var value: String = ""
     @State private var appeared: Bool = false
 
+    /// The native (display) language and the learning language are never the same (as in onboarding).
     private var options: [(value: String, label: String)] {
         switch field {
-        case .native: ProfileStore.nativeOptions
-        case .target: ProfileStore.targetOptions
+        case .native: ProfileStore.nativeOptions.filter { $0.value != profile.targetLanguage }
+        case .target: ProfileStore.targetOptions.filter { $0.value != L10n.lang }
         case .current, .goal: ProfileStore.levels(for: profile.targetLanguage)
         }
     }
@@ -593,12 +594,12 @@ struct WheelCard: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).ignoresSafeArea()
-                .onTapGesture(perform: onClose)
+                .onTapGesture(perform: close)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(field.title).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
                     Spacer()
-                    Button(action: onClose) {
+                    Button(action: close) {
                         Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
                             .frame(width: 44, height: 44)
                     }
@@ -609,8 +610,8 @@ struct WheelCard: View {
                 }
                 .pickerStyle(.wheel)
                 .frame(height: 150)
-                .onChange(of: value) { _, v in commit(v) }
-                Button(action: onClose) {
+                .onChange(of: value) { _, _ in Haptics.selection() }
+                Button(action: close) {
                     Text(L("閉じる")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(Theme.primary, in: Capsule())
@@ -629,9 +630,15 @@ struct WheelCard: View {
         }
     }
 
+    /// The choice is saved once, when the card closes — not on every tick of the wheel (each save
+    /// switches the app's language and reloads the dex).
+    private func close() {
+        commit(value)
+        onClose()
+    }
+
     private func commit(_ v: String) {
-        guard !v.isEmpty, v != initial else { return }
-        Haptics.selection()
+        guard !v.isEmpty, v != initial, options.contains(where: { $0.value == v }) else { return }
         switch field {
         case .native:
             profile.nativeLanguage = v

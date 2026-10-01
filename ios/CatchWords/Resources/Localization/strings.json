@@ -3082,5 +3082,37 @@
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",
   "zh-TW": "（沒有讀到意思）"
+ },
+ "App Store の価格を読み込めませんでした。通信を確かめて、もう一度お試しください。": {
+  "en": "Couldn't load App Store prices. Check your connection and try again.",
+  "zh-TW": "無法載入 App Store 的價格。請確認網路連線後再試一次。"
+ },
+ "削除できませんでした。もう一度お試しください。": {
+  "en": "Couldn't delete it. Please try again.",
+  "zh-TW": "無法刪除，請再試一次。"
+ },
+ "保存できませんでした。もう一度お試しください。": {
+  "en": "Couldn't save it. Please try again.",
+  "zh-TW": "無法儲存，請再試一次。"
+ },
+ "棚を移せませんでした。もう一度お試しください。": {
+  "en": "Couldn't move it to that shelf. Please try again.",
+  "zh-TW": "無法移到那個書架，請再試一次。"
+ },
+ "答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。": {
+  "en": "Your answer couldn't be saved. Check your connection (this card will come up again).",
+  "zh-TW": "無法記錄你的答案。請確認網路連線（這張卡片之後會再出現）。"
+ },
+ "Appleでサインイン": {
+  "en": "Sign in with Apple",
+  "zh-TW": "使用 Apple 登入"
+ },
+ "Googleで続ける": {
+  "en": "Continue with Google",
+  "zh-TW": "使用 Google 繼續"
+ },
+ "ログインに失敗しました。もう一度お試しください。": {
+  "en": "Sign-in failed. Please try again.",
+  "zh-TW": "登入失敗，請再試一次。"
  }
 }

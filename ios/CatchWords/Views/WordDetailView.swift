@@ -104,7 +104,7 @@ struct WordDetailView: View {
                 let text = captionDraft
                 Task {
                     do { try await dex.updateCaption(current, caption: text); Haptics.success() }
-                    catch { Haptics.warning() }
+                    catch { Haptics.warning(); showToast(L("保存できませんでした。もう一度お試しください。")) }
                 }
             }
         }
@@ -158,8 +158,13 @@ struct WordDetailView: View {
         .confirmationDialog(L("この単語を図鑑から削除しますか？"), isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(L("削除"), role: .destructive) {
                 Task {
-                    try? await dex.delete(current)
-                    dismiss()
+                    do {
+                        try await dex.delete(current)
+                        dismiss()
+                    } catch {
+                        Haptics.warning()
+                        showToast(L("削除できませんでした。もう一度お試しください。"))
+                    }
                 }
             }
         }
@@ -503,7 +508,7 @@ struct WordDetailView: View {
         let keys = Category.allOrderedKeys.filter { used.contains($0) || !Category.isBuiltin($0) || $0 == aiKey }
         return Menu {
             Button {
-                Task { try? await dex.move(current, to: nil); Haptics.selection() }
+                Task { await moveShelf(to: nil) }
             } label: {
                 Label(L("\(Category.emoji(for: aiKey)) \(Category.label(for: aiKey))（AIのおすすめ）"),
                       systemImage: current.shelfKey == nil ? "checkmark" : "sparkles")
@@ -511,7 +516,7 @@ struct WordDetailView: View {
             Section(L("ほかの棚")) {
                 ForEach(keys.filter { $0 != aiKey }, id: \.self) { key in
                     Button {
-                        Task { try? await dex.move(current, to: key); Haptics.selection() }
+                        Task { await moveShelf(to: key) }
                     } label: {
                         if current.shelfKey == key {
                             Label("\(Category.emoji(for: key)) \(Category.label(for: key))", systemImage: "checkmark")
@@ -617,12 +622,19 @@ struct WordDetailView: View {
         }
     }
 
-    private var placeChip: some View {
-        let name = current.locationName.flatMap { $0.isEmpty ? nil : $0 } ?? L("撮影地")
-        return Button {
+    @ViewBuilder private var placeChip: some View {
+        if mapsURL != nil { placeButton }
+    }
+
+    private var placeButton: some View {
+        Button {
             if let url = mapsURL { openURL(url) }
         } label: {
-            Label(name, systemImage: "mappin.and.ellipse")
+            Label {
+                LocalizedPlaceText(lat: current.lat, lng: current.lng, saved: current.locationName, fallback: L("撮影地"))
+            } icon: {
+                Image(systemName: "mappin.and.ellipse")
+            }
                 .font(.system(size: 14, weight: .semibold))
                 .lineLimit(1)
                 .foregroundStyle(Theme.primaryInk)
@@ -631,7 +643,6 @@ struct WordDetailView: View {
                 .background(Theme.primary.opacity(0.1), in: Capsule())
         }
         .buttonStyle(PressableStyle(scale: 0.95))
-        .disabled(mapsURL == nil)
     }
 
     private var mapsURL: URL? {
@@ -952,6 +963,16 @@ struct WordDetailView: View {
         }
     }
 
+
+    private func moveShelf(to key: String?) async {
+        do {
+            try await dex.move(current, to: key)
+            Haptics.selection()
+        } catch {
+            Haptics.warning()
+            showToast(L("棚を移せませんでした。もう一度お試しください。"))
+        }
+    }
 
     private func showToast(_ text: String) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }

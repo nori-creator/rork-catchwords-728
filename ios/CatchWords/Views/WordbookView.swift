@@ -282,6 +282,7 @@ struct WordbookReviewView: View {
     @State private var index: Int = 0
     @State private var correct: Int = 0
     @State private var picked: String?
+    @State private var saveFailed: Bool = false
     @State private var isLoading: Bool = true
     @State private var error: String?
     @Environment(\.dismiss) private var dismiss
@@ -332,7 +333,8 @@ struct WordbookReviewView: View {
 
     private func makeChoices() {
         guard let c = current else { return }
-        let others = pool.filter { $0 != c.headword }.shuffled().prefix(3)
+        // Each wrong option once (the same word can sit in two books).
+        let others = Array(Set(pool.filter { $0 != c.headword })).shuffled().prefix(3)
         choices = ([c.headword] + others).shuffled()
         picked = nil
     }
@@ -365,6 +367,11 @@ struct WordbookReviewView: View {
                 ForEach(choices, id: \.self) { c in choiceButton(c, card: card) }
             }
             Spacer(minLength: 0)
+            if saveFailed {
+                Text(L("答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。"))
+                    .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    .multilineTextAlignment(.center)
+            }
             if picked != nil {
                 PrimaryButton(title: index + 1 < cards.count ? L("次へ") : L("結果を見る"), icon: "arrow.right") {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { index += 1 }
@@ -387,7 +394,12 @@ struct WordbookReviewView: View {
             if ok { correct += 1; Haptics.success() } else { Haptics.warning() }
             SoundService.shared.speak(card.headword)
             Task {
-                do { try await store.grade(card, correct: ok) } catch { }
+                do {
+                    try await store.grade(card, correct: ok)
+                    saveFailed = false
+                } catch {
+                    saveFailed = true
+                }
             }
         } label: {
             HStack {

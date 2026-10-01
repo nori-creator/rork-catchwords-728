@@ -114,9 +114,11 @@ struct AnswerPanel: View {
     private var measures: [MeasureWord] {
         Array((word?.extras?.measureWords ?? []).filter { !$0.word.trimmingCharacters(in: .whitespaces).isEmpty }.prefix(2))
     }
+    /// The Taiwan note is a Mandarin-only section (the detail shows it for zh-TW only); either note is shown
+    /// only when it is written in the display language.
     private var note: String {
-        let t = (word?.extras?.taiwanNote ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? (word?.extras?.usageContext ?? "").trimmingCharacters(in: .whitespacesAndNewlines) : t
+        let taiwan = learningLang == "zh-TW" ? word?.extras?.taiwanNote : nil
+        return ReaderLanguage.shown(taiwan, word?.extras?.usageContext, source: headword)
     }
 
     @ViewBuilder
@@ -152,11 +154,14 @@ struct AnswerPanel: View {
                 Text(m).font(.system(size: 15)).foregroundStyle(Theme.foreground)
             }
         }
-        if let ex = word?.exampleSentence, !ex.isEmpty {
+        // An example is shown only when it is in the learning language (as on the detail), its translation
+        // only when it is in the display language.
+        if let ex = word?.exampleSentence, !ex.isEmpty, LanguageRules.isIn(ex, target: learningLang) {
             section(L("例文"), tone: Color(hex: 0x312E81), bg: Theme.secondary.opacity(0.6)) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ex).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
-                    if let tr = word?.exampleTranslation, !tr.isEmpty {
+                    let tr = ReaderLanguage.shown(word?.exampleTranslation, source: ex)
+                    if !tr.isEmpty {
                         Text(tr).font(.system(size: 13)).foregroundStyle(Theme.muted)
                     }
                 }

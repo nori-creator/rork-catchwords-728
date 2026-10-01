@@ -8,6 +8,7 @@ struct OnboardingView: View {
     let onFinish: () -> Void
 
     @Environment(ProfileStore.self) private var profile
+    @Environment(AuthStore.self) private var auth
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Stage: Int { case intro, questions, notifications, ready }
@@ -25,6 +26,7 @@ struct OnboardingView: View {
     @State private var isSaving: Bool = false
     @State private var showMenu: Bool = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
+    @AppStorage("reading.ja") private var readingJa: String = "kana"
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("haptics.enabled") private var hapticsOn: Bool = true
 
@@ -312,13 +314,18 @@ struct OnboardingView: View {
                         ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
                     }
                     Picker(L("学ぶ言語"), selection: $targetLanguage) {
-                        ForEach(Self.targets, id: \.id) { Text($0.label).tag($0.id) }
+                        ForEach(Self.targets.filter { $0.id != uiLanguage }, id: \.id) { Text($0.label).tag($0.id) }
                     }
-                    if targetLanguage != "en" {
+                    // The same choices as 設定 › 発音表記 for each learning language (English has none).
+                    if targetLanguage == "zh-TW" {
                         Picker(L("読みの表記"), selection: $readingPref) {
-                            Text(L("注音")).tag("zhuyin")
-                            Text(L("拼音")).tag("pinyin")
-                            Text(L("両方")).tag("both")
+                            Text(L("ㄅㄆㄇ 注音")).tag("zhuyin")
+                            Text(L("abc ピンイン")).tag("pinyin")
+                        }
+                    } else if targetLanguage == "ja" {
+                        Picker(L("読みの表記"), selection: $readingJa) {
+                            Text(L("あ ふりがな")).tag("kana")
+                            Text(L("abc ローマ字")).tag("romaji")
                         }
                     }
                 }
@@ -370,9 +377,12 @@ struct OnboardingView: View {
 
     // MARK: - Finish
 
+    /// 「ログイン」: leave the session this guide was running in and open the sign-in screen, so the
+    /// learner can enter the account they already have.
     private func finishToLogin() {
         UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
         onFinish()
+        auth.signOut()
     }
 
     private func finish() async {

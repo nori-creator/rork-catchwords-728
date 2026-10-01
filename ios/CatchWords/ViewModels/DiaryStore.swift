@@ -143,7 +143,7 @@ final class DiaryStore {
             message = nil
             return true
         } catch let APIError.limit(m) {
-            message = m
+            message = L10n.readerSafe(m, fallback: APIError.dailyCapMessage)
             return false
         } catch {
             message = (error as? LocalizedError)?.errorDescription.map { L("添削失敗: \($0)") } ?? L("添削失敗")

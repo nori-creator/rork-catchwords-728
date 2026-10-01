@@ -22,6 +22,15 @@ struct ReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     header
+                    if let note = store.gradeNotice {
+                        Label(note, systemImage: "exclamationmark.icloud")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.foreground.opacity(0.85))
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Theme.secondary, in: .rect(cornerRadius: 14))
+                            .transition(.opacity)
+                    }
                     MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
                     if legendOpen {
                         MemoryOverviewPanel(store: store) { s in

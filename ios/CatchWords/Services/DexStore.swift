@@ -52,7 +52,7 @@ final class DexStore {
     private var readerKey = ""
 
     private static let baseColumns =
-        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
+        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,lat,lng,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
     nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit"]
@@ -75,7 +75,12 @@ final class DexStore {
 
     func load() async {
         pending = PendingQueue.shared.all()
-        guard client.session != nil else { return }
+        // Local guest (no account): an empty dex, not a skeleton that never ends.
+        guard client.session != nil else {
+            loadError = nil
+            hasLoaded = true
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {

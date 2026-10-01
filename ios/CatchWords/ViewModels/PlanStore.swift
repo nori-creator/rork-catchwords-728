@@ -41,8 +41,13 @@ final class PlanStore {
         await refreshServerPlan()
     }
 
+    /// True while the App Store prices are being fetched; false with no products = they could not be read.
+    var isLoadingProducts: Bool = false
+
     func loadProducts() async {
-        guard products.isEmpty else { return }
+        guard products.isEmpty, !isLoadingProducts else { return }
+        isLoadingProducts = true
+        defer { isLoadingProducts = false }
         let loaded = (try? await Product.products(for: Self.productIDs)) ?? []
         products = loaded.sorted { ($0.subscription?.subscriptionPeriod.unit == .year ? 0 : 1) < ($1.subscription?.subscriptionPeriod.unit == .year ? 0 : 1) }
     }

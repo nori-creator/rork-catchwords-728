@@ -736,8 +736,13 @@ struct DexCoverFlow: View {
                 Spacer(minLength: 4)
                 HStack(spacing: 8) {
                     Text(JPDate.monthDay(s.takenAt))
-                    if let place = s.locationName, !place.isEmpty {
-                        Label(place, systemImage: "mappin").lineLimit(1)
+                    if s.lat != nil || !(s.locationName ?? "").isEmpty {
+                        Label {
+                            LocalizedPlaceText(lat: s.lat, lng: s.lng, saved: s.locationName)
+                        } icon: {
+                            Image(systemName: "mappin")
+                        }
+                        .lineLimit(1)
                     }
                 }
                 .font(.system(size: 12)).foregroundStyle(Theme.muted)
@@ -1028,9 +1033,13 @@ struct DexMapView: View {
                                     Text(v.timeLabel)
                                         .font(.system(size: 17, weight: .bold)).monospacedDigit()
                                         .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
-                                    if let place = v.placeName {
-                                        Label(place, systemImage: "mappin")
-                                            .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
+                                    if v.coordinate != nil || v.placeName != nil {
+                                        Label {
+                                            LocalizedPlaceText(lat: v.coordinate?.latitude, lng: v.coordinate?.longitude, saved: v.placeName)
+                                        } icon: {
+                                            Image(systemName: "mappin")
+                                        }
+                                        .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
                                     }
                                 }
                                 ForEach(v.items) { s in
@@ -1139,7 +1148,7 @@ struct DexMapView: View {
 /// One stop on the day map: catches taken close together in time and place.
 struct MapVisit: Identifiable {
     var items: [Sticker]
-    var id: String { items.first?.id ?? UUID().uuidString }
+    var id: String { items.first?.id ?? "visit-empty" }
     var start: Date { items.first?.takenAt ?? Date() }
     var end: Date { items.last?.takenAt ?? Date() }
 

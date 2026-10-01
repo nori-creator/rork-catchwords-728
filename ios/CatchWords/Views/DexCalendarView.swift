@@ -156,8 +156,13 @@ struct DexCalendarView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(s.word?.headword ?? "").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
                                 Text(s.word?.meaningJa ?? "").font(.system(size: 13)).foregroundStyle(Theme.muted)
-                                if let place = s.locationName {
-                                    Label(place, systemImage: "mappin").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                                if s.lat != nil || !(s.locationName ?? "").isEmpty {
+                                    Label {
+                                        LocalizedPlaceText(lat: s.lat, lng: s.lng, saved: s.locationName)
+                                    } icon: {
+                                        Image(systemName: "mappin")
+                                    }
+                                    .font(.system(size: 11)).foregroundStyle(Theme.muted)
                                 }
                                 if let cap = s.caption, !cap.isEmpty {
                                     Text(cap).font(AppFont.hand(14)).foregroundStyle(Theme.foreground.opacity(0.8)).lineLimit(2)

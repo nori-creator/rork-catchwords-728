@@ -181,3 +181,22 @@ extension View {
         modifier(GlassBackground(cornerRadius: radius, tint: tint))
     }
 }
+
+/// A saved place in the current display language (the name saved at capture time can be in another one).
+struct LocalizedPlaceText: View {
+    let lat: Double?
+    let lng: Double?
+    let saved: String?
+    var fallback: String = ""
+    @State private var name: String?
+
+    private var savedName: String? { saved.flatMap { $0.isEmpty ? nil : $0 } }
+
+    var body: some View {
+        // With coordinates the saved name (maybe another language) is never shown; the lookup replaces it.
+        Text(name ?? (lat == nil ? savedName : nil) ?? fallback)
+            .task(id: "\(lat ?? 0),\(lng ?? 0),\(L10n.lang)") {
+                name = await LocationService.shared.localizedName(lat: lat, lng: lng, saved: savedName)
+            }
+    }
+}
