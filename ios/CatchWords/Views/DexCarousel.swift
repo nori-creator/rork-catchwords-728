@@ -79,7 +79,10 @@ struct DexCoverFlow: View {
                 .position(x: width / 2, y: 16 + ch - w * 0.12 + w * 0.25)
                 .allowsHitTesting(false)
             ForEach(range, id: \.self) { i in
-                slot(i, pos: pos, stageWidth: width, stageHeight: stageH, cardWidth: w)
+                // `stickers` can shrink (a delete) between computing the range and drawing it.
+                if stickers.indices.contains(i) {
+                    slot(i, pos: pos, stageWidth: width, stageHeight: stageH, cardWidth: w)
+                }
             }
         }
         .frame(width: width, height: stageH, alignment: .topLeading)
