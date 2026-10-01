@@ -144,10 +144,13 @@ nonisolated enum LanguageRules {
         case "ja":
             s = s.replacingOccurrences(of: "^[A-ZＡ-Ｚ]{1,2}(?=[ァ-ヺー])", with: "", options: .regularExpression)  // l10n-ignore (pattern)
             guard !s.isEmpty else { return false }
-            let jaOnly = s.unicodeScalars.allSatisfy { isKana($0.value) || isHan($0.value) || $0.value == 0x30FC || $0.value == 0x3005 }
-            return jaOnly
+            let jaOnly = s.unicodeScalars.allSatisfy { isKana($0.value) || isHan($0.value) || [0x30FC, 0x3005, 0x3006].contains($0.value) }
+            // At least one real kana or kanji (not a word made only of ー or 〆).
+            let real = s.unicodeScalars.contains { (isKana($0.value) && $0.value != 0x30FC) || isHan($0.value) }
+            return jaOnly && real
         default:
-            return c.han > 0 && c.kana == 0 && c.latin == 0 && c.hangul == 0
+            // Han only — no kana, Latin, Hangul, Cyrillic or anything else.
+            return c.han > 0 && s.unicodeScalars.allSatisfy { isHan($0.value) || $0.value == 0x3007 }
         }
     }
 

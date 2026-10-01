@@ -67,10 +67,16 @@ nonisolated enum ReaderLanguage {
         /// web `hasExtrasContent`: anything beyond the language marks.
         var hasContent: Bool {
             guard let e = extras else { return false }
-            return !(e.usageChunks ?? []).isEmpty || !(e.examplesExtra ?? []).isEmpty || !(e.measureWords ?? []).isEmpty
-                || !(e.relatedWords ?? []).isEmpty || !(e.synonyms ?? []).isEmpty || !(e.antonyms ?? []).isEmpty
-                || [e.mnemonic, e.taiwanNote, e.pronunciationTips, e.studyTips, e.etymology, e.radicals, e.trivia,
-                    e.usageNote, e.synonymDiff, e.usageContext].contains { !($0 ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
+            let lists: [Int] = [e.usageChunks?.count ?? 0, e.examplesExtra?.count ?? 0, e.measureWords?.count ?? 0,
+                                e.relatedWords?.count ?? 0, e.synonyms?.count ?? 0, e.antonyms?.count ?? 0,
+                                e.phrasalVerbs?.count ?? 0, e.kanjiBreakdown?.count ?? 0, e.conjugation?.count ?? 0,
+                                e.counters?.count ?? 0]
+            if lists.contains(where: { $0 > 0 }) { return true }
+            if e.forms != nil || e.countability != nil || e.stress != nil { return true }
+            let texts: [String?] = [e.mnemonic, e.taiwanNote, e.pronunciationTips, e.studyTips, e.etymology, e.radicals,
+                                    e.trivia, e.usageNote, e.synonymDiff, e.usageContext, e.cultureNote, e.pitchAccent,
+                                    e.politeness, e.wordOrigin, e.japanNote]
+            return texts.contains { !($0 ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
         }
     }
 
@@ -155,9 +161,15 @@ nonisolated enum ReaderLanguage {
         }
         let notes: [WritableKeyPath<WordExtras, String?>] = [\.mnemonic, \.taiwanNote, \.pronunciationTips, \.studyTips,
                                                               \.etymology, \.trivia, \.usageNote, \.synonymDiff, \.usageContext, \.radicals,
-                                                              \.cultureNote, \.politeness, \.pitchAccent, \.wordOrigin, \.japanNote]
+                                                              \.cultureNote, \.japanNote]
         for kp in notes where looksWrong(e[keyPath: kp], reader: reader) {
             e[keyPath: kp] = nil
+        }
+        // Japanese-card notes cite the word's kana unquoted (「は↘し＝頭高型」): judge them without kana.
+        let kanaCiting: [WritableKeyPath<WordExtras, String?>] = [\.pitchAccent, \.politeness, \.wordOrigin]
+        for kp in kanaCiting {
+            let t = String((e[keyPath: kp] ?? "").unicodeScalars.filter { !LanguageRules.isKana($0.value) }.map(Character.init))
+            if looksWrong(t, reader: reader) { e[keyPath: kp] = nil }
         }
         return e
     }

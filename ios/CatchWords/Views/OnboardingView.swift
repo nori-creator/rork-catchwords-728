@@ -16,7 +16,8 @@ struct OnboardingView: View {
     @State private var step: Int = 0
     @State private var forward: Bool = true
     @State private var uiLanguage: String = L10n.lang
-    @State private var targetLanguage: String = "zh-TW"
+    /// Never the display language itself (a zh-TW device starts on English).
+    @State private var targetLanguage: String = L10n.lang == "zh-TW" ? "en" : "zh-TW"
     @State private var minutes: Int = 10
     @State private var goals: Set<String> = []
     @State private var interests: Set<String> = []
@@ -304,7 +305,11 @@ struct OnboardingView: View {
                         .font(.footnote).foregroundStyle(Theme.muted)
                 }
                 Section(L("言語")) {
-                    Picker(L("表示言語"), selection: Binding(get: { uiLanguage }, set: { uiLanguage = $0; L10n.set($0) })) {
+                    Picker(L("表示言語"), selection: Binding(get: { uiLanguage }, set: { picked in
+                        uiLanguage = picked
+                        if targetLanguage == picked { targetLanguage = Self.targets.first { $0.id != picked }?.id ?? "zh-TW" }
+                        L10n.set(picked)
+                    })) {
                         ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
                     }
                     Picker(L("学ぶ言語"), selection: $targetLanguage) {

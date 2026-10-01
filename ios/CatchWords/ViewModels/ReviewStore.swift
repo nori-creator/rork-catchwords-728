@@ -57,6 +57,9 @@ final class ReviewStore {
         hasLoaded = false
         choiceCache = [:]
         loadedTarget = ""
+        doneToday = 0
+        streak = 0
+        allHistory = []
     }
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
@@ -73,7 +76,7 @@ final class ReviewStore {
             let enc = DexStore.enc(now)
             let data = try await client.rest(
                 "GET",
-                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=1000"
+                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=5000"
             )
             let rows = try SupabaseDate.decoder.decode([ReviewState].self, from: data)
             if dex.stickers.isEmpty { await dex.load() }
@@ -83,6 +86,7 @@ final class ReviewStore {
                 guard let s = dex.sticker(id: r.stickerId), s.word != nil else { return nil }
                 return ReviewCard(review: r, sticker: s)
             }
+            await historyTask  // doneToday is now this language's count
             queue = Array(cards.prefix(max(1, limit - doneToday)))
             loadedTarget = NativeAPI.targetLanguage
             index = 0
@@ -91,8 +95,8 @@ final class ReviewStore {
             hasLoaded = true
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? L("復習を読み込めませんでした。")
+            await historyTask
         }
-        await historyTask
     }
 
     private func loadHistory(dex: DexStore) async {
@@ -101,7 +105,7 @@ final class ReviewStore {
         // Streak, today's count and the retention line: this learning language's words only.
         if dex.stickers.isEmpty { await dex.load() }
         let mine = Set(dex.stickers.map(\.id))
-        if !mine.isEmpty { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
+        if dex.hasLoaded { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)

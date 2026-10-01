@@ -103,42 +103,46 @@ nonisolated enum L10n {
 
     /// Whether `s` is one of the app's own sentences in the display language (a table value, with any
     /// `{n}` filled in) — e.g. an error the app wrote with `L(...)` and passed through `APIError`.
+    /// Never true for text in another script than the screen's (so server text can't pass as ours).
     static func isOwnText(_ s: String) -> Bool {
         let c = lang
-        if c == "ja" { return table[s] != nil || ownPatterns(c).contains { $0.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil } }
-        if ownValues(c).contains(s) { return true }
-        return ownPatterns(c).contains { $0.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil }
+        let n = LanguageRules.counts(s)
+        if c == "en", n.cjk > 0 { return false }
+        if c == "zh-TW", n.kana > 0 { return false }
+        guard let own = ownText[c] else { return false }
+        if own.values.contains(s) { return true }
+        let range = NSRange(s.startIndex..., in: s)
+        return own.patterns.contains { $0.firstMatch(in: s, range: range) != nil }
     }
 
-    nonisolated(unsafe) private static var valueCache: [String: Set<String>] = [:]
-    nonisolated(unsafe) private static var patternCache: [String: [NSRegularExpression]] = [:]
-
-    private static func ownValues(_ c: String) -> Set<String> {
-        if let v = valueCache[c] { return v }
-        let v = Set(table.values.compactMap { $0[c] })
-        valueCache[c] = v
-        return v
-    }
-
-    /// Templates with `{n}` as anchored patterns (`{1}` matches anything).
-    private static func ownPatterns(_ c: String) -> [NSRegularExpression] {
-        if let p = patternCache[c] { return p }
-        let templates = c == "ja" ? Array(table.keys) : table.values.compactMap { $0[c] }
-        let p: [NSRegularExpression] = templates.filter {
-            // Only templates with enough fixed text to identify them ("{1}、{2}" would match anything).
-            $0.contains("{1}") && $0.replacingOccurrences(of: "\\{[0-9]\\}", with: "", options: .regularExpression).count >= 4
-        }.compactMap { t in
-            // Placeholders become a marker first, so escaping can't touch them.
-            let marked = t.replacingOccurrences(of: "\\{[0-9]\\}", with: "\u{1}", options: .regularExpression)
-            let pattern = NSRegularExpression.escapedPattern(for: marked).replacingOccurrences(of: "\u{1}", with: ".+")
-            return try? NSRegularExpression(pattern: "^" + pattern + "$", options: [.dotMatchesLineSeparators])
+    /// Per language: every table value, and every template with `{n}` as an anchored pattern (a filled
+    /// value is 1–40 characters on one line). English templates also match their singular form ("1 word").
+    /// Built once (a `static let` is initialised thread-safely).
+    private static let ownText: [String: (values: Set<String>, patterns: [NSRegularExpression])] = {
+        var out: [String: (values: Set<String>, patterns: [NSRegularExpression])] = [:]
+        for c in supported {
+            let templates = c == "ja" ? Array(table.keys) : table.values.compactMap { $0[c] }
+            var forms = templates
+            if c == "en" {
+                for t in templates {
+                    var one = t
+                    for (many, single) in plurals { one = one.replacingOccurrences(of: "} " + many, with: "} " + single) }
+                    if one != t { forms.append(one) }
+                }
+            }
+            let patterns: [NSRegularExpression] = forms.filter {
+                // Only templates with enough fixed text to identify them ("{1}、{2}" would match anything).
+                $0.contains("{1}") && $0.replacingOccurrences(of: "\\{[0-9]\\}", with: "", options: .regularExpression).count >= 4
+            }.compactMap { t in
+                // Placeholders become a marker first, so escaping can't touch them.
+                let marked = t.replacingOccurrences(of: "\\{[0-9]\\}", with: "\u{1}", options: .regularExpression)
+                let pattern = NSRegularExpression.escapedPattern(for: marked).replacingOccurrences(of: "\u{1}", with: "[^\\n]{1,40}")
+                return try? NSRegularExpression(pattern: "^" + pattern + "$")
+            }
+            out[c] = (Set(templates), patterns)
         }
-        patternCache[c] = p
-        return p
-    }
-
-    /// Whether `text` reads as the given display language (LanguageRules R7).
-    static func looksLike(_ text: String, _ code: String) -> Bool { LanguageRules.readsAs(text, code) }
+        return out
+    }()
 
     static func text(_ key: String, in code: String? = nil) -> String {
         let c = code ?? lang

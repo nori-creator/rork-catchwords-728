@@ -1030,7 +1030,7 @@ struct WordDetailView: View {
 
     private var countabilityCard: some View {
         let c = extras?.countability
-        let kind: String = switch c?.kind {
+        let kind: String = switch c?.kind ?? "" {
         case "uncountable": L("数えられない（不可算）")
         case "both": L("意味によって両方")
         default: L("数えられる（可算）")

@@ -1042,5 +1042,41 @@
   "hanOnlyOk": null,
   "expect": true,
   "why": "日本語の行の日本語はそのまま"
+ },
+ {
+  "id": "REV2-a",
+  "rule": "R15",
+  "fn": "headwordOk",
+  "text": "ーー",
+  "reader": null,
+  "target": "ja",
+  "source": null,
+  "hanOnlyOk": null,
+  "expect": false,
+  "why": "長音だけの語は日本語の見出し語ではない（レビュー指摘）"
+ },
+ {
+  "id": "REV2-b",
+  "rule": "R15",
+  "fn": "headwordOk",
+  "text": "〆切",
+  "reader": null,
+  "target": "ja",
+  "source": null,
+  "hanOnlyOk": null,
+  "expect": true,
+  "why": "〆を含む日本語は通す（Web の JA_ONLY と同じ）"
+ },
+ {
+  "id": "REV2-c",
+  "rule": "R15",
+  "fn": "headwordOk",
+  "text": "Привет",
+  "reader": null,
+  "target": "zh-TW",
+  "source": null,
+  "hanOnlyOk": null,
+  "expect": false,
+  "why": "キリル文字は台湾華語ではない（レビュー指摘）"
  }
 ]

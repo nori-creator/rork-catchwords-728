@@ -53,7 +53,7 @@ struct SectionsPanel: View {
                     .foregroundStyle(.white)
                     .frame(width: 26, height: 26)
                     .background(on ? Theme.primary : Theme.muted.opacity(0.4), in: Circle())
-                Text(section.title)
+                Text(section.title(for: prefs.target))
                     .font(.system(size: 15, weight: on ? .semibold : .regular))
                     .foregroundStyle(on ? Theme.foreground : Theme.muted)
                     .lineLimit(1)
@@ -66,7 +66,7 @@ struct SectionsPanel: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L("\(section.title)、\(on ? L("表示中") : L("非表示"))"))
+        .accessibilityLabel(L("\(section.title(for: prefs.target))、\(on ? L("表示中") : L("非表示"))"))
         .accessibilityHint(L("タップで切り替え。並べ替えは右の取っ手を使います"))
     }
 }

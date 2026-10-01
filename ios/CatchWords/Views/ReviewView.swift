@@ -71,6 +71,7 @@ struct ReviewView: View {
             }
         }
         .task {
+            if store.hasLoaded, store.loadedTarget != NativeAPI.targetLanguage { store.reset() }
             if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
         // R5 「学習言語台湾華語なのに英語の4択が表示されてる」: a switched learning language starts a fresh queue.
