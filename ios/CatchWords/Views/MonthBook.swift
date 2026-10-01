@@ -21,6 +21,8 @@ struct MonthBookView: View {
     var onCamera: (() -> Void)? = nil
     /// DEBUG preview only: slides and turns by itself so the simulator frames show the motion.
     var autoplay: Bool = false
+    /// DEBUG preview only: hold the right page part-way through its turn (0…1) to photograph it.
+    var frozenTurn: CGFloat? = nil
 
     private enum Side { case left, right }
 
@@ -56,6 +58,7 @@ struct MonthBookView: View {
             guard !didStart else { return }
             didStart = true
             index = startAtEnd ? max(0, days.count - 1) : 0
+            if let frozenTurn { side = .right; turn = frozenTurn }
         }
         .onChange(of: days.count) { old, new in
             // A new day appeared (first catch of the day): stay on the page you were reading,

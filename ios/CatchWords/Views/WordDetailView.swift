@@ -242,7 +242,7 @@ struct WordDetailView: View {
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            LinearGradient(colors: [Color(hex: 0xEAF3FE), .white], startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(colors: [Color(light: 0xEAF3FE, dark: 0x0F2442), Theme.card], startPoint: .topLeading, endPoint: .bottomTrailing),
             in: .rect(cornerRadius: 28, style: .continuous)
         )
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))

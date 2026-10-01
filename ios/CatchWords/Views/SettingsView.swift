@@ -392,7 +392,7 @@ struct SettingsView: View {
                 Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 20).frame(minHeight: 56)
-            .background(LinearGradient(colors: [.white, Color(hex: 0xEEF5FF)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            .background(LinearGradient(colors: [Theme.card, Color(light: 0xEEF5FF, dark: 0x132032)], startPoint: .topLeading, endPoint: .bottomTrailing),
                         in: .rect(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.primary.opacity(0.2), lineWidth: 1))
             .shadow(color: Theme.primary.opacity(0.06), radius: 6, y: 3)
@@ -521,7 +521,7 @@ struct ChoicePills: View {
                         .padding(.horizontal, 4)
                         .background {
                             Capsule()
-                                .fill(LinearGradient(colors: [.white, Color(hex: 0xF1F6FD)], startPoint: .top, endPoint: .bottom))
+                                .fill(LinearGradient(colors: [Theme.card, Color(light: 0xF1F6FD, dark: 0x16202F)], startPoint: .top, endPoint: .bottom))
                                 .overlay(Capsule().stroke(Color(hex: 0xC9DDF5), lineWidth: 1))
                             if on {
                                 Capsule()

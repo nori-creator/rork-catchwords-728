@@ -35,7 +35,9 @@ struct UIPreviewRoot: View {
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
             case "book": BookPreview()
+            case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
+            case "settings": SettingsView()
             default: Text("unknown preview: \(name)")
             }
         }
@@ -279,6 +281,7 @@ private struct MemorialPreview: View {
 }
 /// The month book: slides to the diary page, then turns the page to the next day (autoplay).
 private struct BookPreview: View {
+    var frozenTurn: CGFloat? = nil
     private static let days: [BookDay] = {
         let cal = Calendar.current
         let words = [("芒果", "マンゴー"), ("盤子", "お皿"), ("咖啡", "コーヒー"), ("雨傘", "傘"), ("花", "花")]
@@ -310,7 +313,8 @@ private struct BookPreview: View {
 
     var body: some View {
         VStack {
-            MonthBookView(days: Self.days, startAtEnd: false, onOpen: { _ in }, onWrite: { _ in }, autoplay: true)
+            MonthBookView(days: Self.days, startAtEnd: false, onOpen: { _ in }, onWrite: { _ in },
+                          autoplay: frozenTurn == nil, frozenTurn: frozenTurn)
                 .frame(height: 600)
                 .padding(.horizontal, 12)
         }

@@ -50,7 +50,7 @@ struct CatchCardView: View {
     private var stickerStage: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
+                .fill(LinearGradient(colors: [Theme.card, Theme.secondary], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black.opacity(0.06), radius: 18, y: 8)
             if let lift = vm.cutoutLift, !revealDone, !showSelfie {
                 CutoutRevealView(lift: lift) {

@@ -36,6 +36,9 @@ struct CatchWordsApp: App {
                 UIPreviewRoot(name: preview.hasSuffix("-dark") ? String(preview.dropLast(5)) : preview)
                     .environment(dex)
                     .environment(diary)
+                    .environment(auth)
+                    .environment(plan)
+                    .environment(profile)
                     .preferredColorScheme(preview.hasSuffix("-dark") ? .dark : .light)
             } else {
                 app
