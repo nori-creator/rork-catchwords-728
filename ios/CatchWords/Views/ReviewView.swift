@@ -278,6 +278,8 @@ struct QuizCard: View {
     @State private var shake: CGFloat = 0
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
+    /// The meaning as it is now (read in the reader's language after the card was made).
+    private var liveMeaning: String { (dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "" }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -322,7 +324,7 @@ struct QuizCard: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }
 
-            Text((card.sticker.word?.meaningJa ?? "").isEmpty ? L("この写真の物はどれ？") : L("「\(card.sticker.word?.meaningJa ?? "")」はどれ？"))
+            Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)

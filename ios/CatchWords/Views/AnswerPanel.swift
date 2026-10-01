@@ -8,7 +8,9 @@ struct AnswerPanel: View {
     let onDex: () -> Void
     let onNext: () -> Void
 
-    private var word: Word? { sticker.word }
+    @Environment(DexStore.self) private var dex
+    /// The live word (its meaning arrives in the reader's language after the card was made).
+    private var word: Word? { dex.sticker(id: sticker.id)?.word ?? sticker.word }
     private var headword: String { word?.headword ?? "" }
     private var tint: Color { correct ? Theme.ok : Theme.destructive }
 

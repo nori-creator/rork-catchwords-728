@@ -271,18 +271,22 @@ final class DexStore {
             let chunk = Array(ids[i..<min(i + 200, ids.count)])
             i += 200
             guard let got = try? await NativeAPI.call("getReaderMeanings", ["word_ids": chunk, "explain_lang": lang],
-                                                      as: [String: String].self, timeout: 30),
+                                                      as: [String: String?].self, timeout: 30),
                   lang == L10n.lang else { continue }
-            for id in chunk { readerMeanings[id] = got[id] ?? "" }
+            for id in chunk { readerMeanings[id] = (got[id] ?? nil) ?? "" }
         }
         guard lang == L10n.lang else { return }
         stickers = stickers.map(applyReader)
     }
 
+    /// Words whose explanation is being written for this reader right now (the detail page shows
+    /// those sections as filling). Owned by the store, so leaving the page does not cancel it.
+    private(set) var generatingWords: Set<String> = []
+
     /// web StickerSheet: read this reader's explanation of the word; when there is none for exactly
     /// this reader, write one (`generateCard` → `updateWordExtras`, which files it under the reader's
-    /// key on the server). Returns while generation runs in the background via `onGenerating`.
-    func loadExplanation(wordId: String, target: String, onGenerating: @escaping (Bool) -> Void) async {
+    /// key on the server) in the background.
+    func loadExplanation(wordId: String, target: String) async {
         struct Res: Decodable { let picked: ReaderLanguage.Explanation?; let unavailable: Bool? }
         let lang = L10n.lang
         let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: target)
@@ -292,17 +296,19 @@ final class DexStore {
         if let p = r.picked { explanations[wordId] = p } else { explanations.removeValue(forKey: wordId) }
         stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
         if r.unavailable == true { return }
-        guard ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1) else { return }
-        guard let shared = sharedWords[wordId] else { return }
-        onGenerating(true)
-        defer { onGenerating(false) }
-        await generateExplanation(word: shared, shown: r.picked, lang: lang, l1: l1)
-        guard lang == L10n.lang,
-              let again = try? await NativeAPI.call("getWordExplanation", ["word_id": wordId, "explain_lang": lang, "l1": l1],
-                                                    as: Res.self, timeout: 20),
-              let p = again.picked else { return }
-        explanations[wordId] = p
-        stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
+        guard ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1),
+              let shared = sharedWords[wordId], !generatingWords.contains(wordId) else { return }
+        generatingWords.insert(wordId)
+        Task {
+            defer { generatingWords.remove(wordId) }
+            await generateExplanation(word: shared, shown: r.picked, lang: lang, l1: l1)
+            guard lang == L10n.lang,
+                  let again = try? await NativeAPI.call("getWordExplanation", ["word_id": wordId, "explain_lang": lang, "l1": l1],
+                                                        as: Res.self, timeout: 20),
+                  let p = again.picked else { return }
+            explanations[wordId] = p
+            stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
+        }
     }
 
     private func generateExplanation(word: Word, shown: ReaderLanguage.Explanation?, lang: String, l1: String) async {
@@ -341,7 +347,7 @@ final class DexStore {
               let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
               let ex = rows.first?["extras"] as? [String: Any] else { return nil }
         let mark = (ex["explain_lang"] as? String ?? "").trimmingCharacters(in: .whitespaces)
-        return mark.isEmpty || mark == lang ? ex : nil
+        return mark == lang ? ex : nil
     }
 
     /// Re-encounter (web `recordReencounter`): this photo is added to the word you already own,

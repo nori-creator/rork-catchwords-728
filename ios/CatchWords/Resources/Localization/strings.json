@@ -271,6 +271,10 @@
   "en": "✦ Corrected",
   "zh-TW": "✦ 修改後"
  },
+ "、取得済み": {
+  "en": ", collected",
+  "zh-TW": "，已收集"
+ },
  "「{1}」のこと": {
   "en": "about “{1}”",
   "zh-TW": "關於「{1}」"
@@ -446,6 +450,10 @@
  "この型が使えます": {
   "en": "Patterns you can use",
   "zh-TW": "可以用這些句型"
+ },
+ "この場所": {
+  "en": "this place",
+  "zh-TW": "這個地方"
  },
  "この意味の語はどれ": {
   "en": "Which word means this",
@@ -2607,6 +2615,10 @@
   "en": "Sections & order",
   "zh-TW": "要顯示的項目與順序"
  },
+ "表示中": {
+  "en": "shown",
+  "zh-TW": "顯示中"
+ },
  "表示名": {
   "en": "Display name",
   "zh-TW": "顯示名稱"
@@ -2914,6 +2926,10 @@
  "集める": {
   "en": "Catch",
   "zh-TW": "收集"
+ },
+ "非表示": {
+  "en": "hidden",
+  "zh-TW": "已隱藏"
  },
  "靴": {
   "en": "Shoes",

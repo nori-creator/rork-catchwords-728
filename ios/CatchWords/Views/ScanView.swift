@@ -407,7 +407,7 @@ struct ScanTag: View {
             .offset(y: bob ? -3 : 3)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel(L("\(item.headword)、\(item.meaning)\(owned ? "、取得済み" : "")"))
+        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + (owned ? L("、取得済み") : ""))
         .scaleEffect(isTop ? 1.08 : 1)
         .zIndex(isTop ? 1 : 0)
         .onAppear {

@@ -38,6 +38,7 @@ def scan(src):
             q = 3 if multi else 1
             j = i + q
             depth = 0
+            inner = []  # (from, to) of each interpolation, scanned for nested literals below
             while j < n:
                 if src[j] == "\\" and j + 1 < n:
                     if src[j + 1] == "(":
@@ -55,6 +56,7 @@ def scan(src):
                                     k2 += 2 if src[k2] == "\\" else 1
                                 k = k2
                             k += 1
+                        inner.append((j + 2, k - 1))
                         j = k
                         continue
                     j += 2
@@ -68,6 +70,10 @@ def scan(src):
                 j += 1
             end = j + q
             yield i, end, src[i + q:j], multi
+            # Literals nested inside \( … ) are shown too (e.g. `\(on ? "表示中" : "")`).
+            for a, b in inner:
+                for s0, e0, body0, m0 in scan(src[a:b]):
+                    yield a + s0, a + e0, body0, m0
             i = end
             continue
         i += 1

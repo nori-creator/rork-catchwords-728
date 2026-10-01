@@ -63,7 +63,7 @@ struct WordDetailView: View {
                     EncounterHistoryView(stickerId: current.id)
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
-                    ForEach(prefs.visible.filter { hasContent($0) || filling.contains($0) }) { section in
+                    ForEach(prefs.visible.filter { hasContent($0) || isFilling($0) }) { section in
                         if hasContent(section) {
                             sectionView(section)
                                 .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
@@ -249,10 +249,15 @@ struct WordDetailView: View {
         .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
 
+    /// Being written right now: one section (auto-fill) or the reader's whole explanation.
+    private func isFilling(_ s: CardSection) -> Bool {
+        filling.contains(s) || (s != .realUsage && dex.generatingWords.contains(current.wordId))
+    }
+
     private func posLabel(_ pos: String) -> String {
         let map: [String: String] = ["N": L("名詞"), "V": L("動詞"), "VS": L("状態動詞"), "ADV": L("副詞"), "M": L("量詞"), "PREP": L("前置詞")]
         if let ja = map[pos.uppercased()] { return "\(pos) · \(ja)" }
-        return pos
+        return L10n.translation(pos) ?? (ReaderLanguage.looksWrong(pos, reader: L10n.lang) ? "" : pos)
     }
 
     // MARK: - Photo hero (flips to the selfie like a card)
@@ -697,14 +702,13 @@ struct WordDetailView: View {
         // First this reader's own explanation (written in their display language); while it is being
         // written, the empty sections show as filling instead of another language's notes.
         let target = word?.language ?? NativeAPI.targetLanguage
-        await dex.loadExplanation(wordId: current.wordId, target: target) { on in
-            withAnimation(.easeOut(duration: 0.2)) {
-                filling = on ? Set(prefs.visible.filter { $0 != .realUsage && !hasContent($0) }) : []
-            }
-        }
+        await dex.loadExplanation(wordId: current.wordId, target: target)
+        // A whole explanation is being written for this reader: its sections arrive together.
+        guard !Task.isCancelled, !dex.generatingWords.contains(current.wordId) else { return }
         let missing = prefs.visible.filter { $0 != .realUsage && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId
+        guard !Task.isCancelled else { return }
         withAnimation(.easeOut(duration: 0.2)) { filling = Set(missing) }
         await withTaskGroup(of: Void.self) { group in
             for section in missing {
@@ -714,6 +718,7 @@ struct WordDetailView: View {
             }
         }
         await dex.reload(stickerId: current.id)
+        guard !Task.isCancelled else { return }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { filling = [] }
     }
 

@@ -493,7 +493,7 @@ struct CaptureView: View {
             headword: draft.candidate.headword,
             reading: draft.candidate.zhuyin,
             pinyin: draft.candidate.pinyin,
-            meaning: draft.candidate.meaningJa,
+            meaning: ReaderLanguage.shown(draft.candidate.meaningJa),
             // PRODUCT.md: no arbitrary rarity. Every catch gets the same lift.
             rarity: 0,
             gate: gate

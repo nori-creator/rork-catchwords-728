@@ -64,7 +64,7 @@ nonisolated enum L10n {
     }
 
     /// key (Japanese) → [language code: text]
-    nonisolated(unsafe) private static var table: [String: [String: String]] = {
+    private static let table: [String: [String: String]] = {
         guard let url = Bundle.main.url(forResource: "strings", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: [String: String]] else { return [:] }
@@ -136,7 +136,7 @@ nonisolated struct LKey: ExpressibleByStringInterpolation, Sendable {
         args = s.args
     }
 
-    struct Interpolation: StringInterpolationProtocol {
+    nonisolated struct Interpolation: StringInterpolationProtocol {
         var key = ""
         var args: [String] = []
 
@@ -159,7 +159,7 @@ nonisolated func L(_ k: LKey, in code: String) -> String { L10n.fill(L10n.text(k
 
 extension L10n {
     /// English counted nouns that follow a number ("{1} words"); "1 words" becomes "1 word".
-    private static let plurals = ["words": "word", "days": "day", "photos": "photo", "times": "time", "cards": "card",
+    nonisolated private static let plurals = ["words": "word", "days": "day", "photos": "photo", "times": "time", "cards": "card",
                                   "stickers": "sticker", "items": "item", "reviews": "review", "books": "book",
                                   "minutes": "minute", "hours": "hour", "pages": "page", "entries": "entry"]
 

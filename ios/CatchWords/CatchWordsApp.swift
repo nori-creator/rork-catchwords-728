@@ -31,10 +31,9 @@ struct CatchWordsApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if let preview = UIPreview.requested {
+            if let p = UIPreview.parsed {
                 // "<scene>-dark" photographs the same scene in the dark appearance;
                 // "-en" / "-zh" in another display language.
-                let p = UIPreview.parse(preview)
                 UIPreviewRoot(name: p.scene)
                     .environment(\.locale, L10n.locale)
                     .environment(dex)

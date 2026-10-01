@@ -25,7 +25,7 @@ nonisolated enum ReaderLanguage {
 
     // MARK: - looksWrongForReader (note-language.ts)
 
-    private static func isKana(_ v: UInt32) -> Bool { (0x3041...0x309F).contains(v) || (0x30A0...0x30FA).contains(v) }
+    private static func isKana(_ v: UInt32) -> Bool { (0x3041...0x309F).contains(v) || (0x30A0...0x30FF).contains(v) }
     private static func isHan(_ v: UInt32) -> Bool { (0x3400...0x4DBF).contains(v) || (0x4E00...0x9FFF).contains(v) || v == 0x3005 }
     private static func isHangul(_ v: UInt32) -> Bool { (0xAC00...0xD7AF).contains(v) }
     private static func isLatin(_ v: UInt32) -> Bool { (0x41...0x5A).contains(v) || (0x61...0x7A).contains(v) }
@@ -52,7 +52,8 @@ nonisolated enum ReaderLanguage {
             if han == 0, kana == 0, latin >= 5 { return true }
             return mostlyLatin
         case "zh-TW":
-            if kana > 0 { return true }
+            // Japanese: kana makes up a real part of it (a Chinese note may quote one kana word).
+            if kana >= 2, kana * 3 >= han { return true }
             if han == 0, latin >= 5 { return true }
             return mostlyLatin
         case "en":
@@ -73,7 +74,7 @@ nonisolated enum ReaderLanguage {
 
     // MARK: - Explanation rows (word_explanations)
 
-    struct Explanation: Decodable, Sendable, Hashable {
+    nonisolated struct Explanation: Decodable, Sendable, Hashable {
         let explainLang: String
         let l1: String
         let meaning: String
@@ -139,25 +140,26 @@ nonisolated enum ReaderLanguage {
         e.examplesExtra = e.examplesExtra?.map { x in
             var x = x
             if looksWrong(x.ja, reader: reader, source: x.zh) { x.ja = "" }
+            if looksWrong(x.scene, reader: reader, hanOnlyOk: true) { x.scene = "" }
             return x
         }
         e.usageChunks = e.usageChunks?.map { c in
             var c = c
-            if looksWrong(c.ja, reader: reader) { c.ja = "" }
+            if looksWrong(c.ja, reader: reader, hanOnlyOk: true) { c.ja = "" }
             return c
         }
         e.measureWords = e.measureWords?.map { m in
             var m = m
-            if looksWrong(m.note, reader: reader) { m.note = "" }
+            if looksWrong(m.note, reader: reader, hanOnlyOk: true) { m.note = "" }
             return m
         }
         e.relatedWords = e.relatedWords?.map { r in
             var r = r
-            if looksWrong(r.note, reader: reader) { r.note = "" }
+            if looksWrong(r.note, reader: reader, hanOnlyOk: true) { r.note = "" }
             return r
         }
         let notes: [WritableKeyPath<WordExtras, String?>] = [\.mnemonic, \.taiwanNote, \.pronunciationTips, \.studyTips,
-                                                              \.etymology, \.trivia, \.usageNote, \.synonymDiff, \.usageContext]
+                                                              \.etymology, \.trivia, \.usageNote, \.synonymDiff, \.usageContext, \.radicals]
         for kp in notes where looksWrong(e[keyPath: kp], reader: reader) {
             e[keyPath: kp] = nil
         }

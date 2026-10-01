@@ -270,9 +270,12 @@ private struct ScaffoldCard: View {
                         Text(p.questionZh)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Theme.foreground)
-                        Text(p.questionJa)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.muted)
+                        let q = ReaderLanguage.shown(p.questionJa, source: p.questionZh, hanOnlyOk: false)
+                        if !q.isEmpty {
+                            Text(q)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Theme.muted)
+                        }
                         if let id = p.stickerId, let head = scaffold.captures.first(where: { $0.id == id })?.headword {
                             Text(L("「\(head)」のこと"))
                                 .font(.system(size: 11, weight: .medium))
@@ -301,7 +304,7 @@ private struct ScaffoldCard: View {
                                 .background(Theme.primary.opacity(0.1), in: Capsule())
                         }
                         .buttonStyle(PressableStyle())
-                        .accessibilityHint(pt.ja)
+                        .accessibilityHint(ReaderLanguage.shown(pt.ja, source: pt.zh))
                     }
                 }
                 Text(L("押すと下に入ります")).font(.system(size: 11)).foregroundStyle(Theme.muted)

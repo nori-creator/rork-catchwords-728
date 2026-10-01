@@ -151,7 +151,7 @@ struct CatchCardView: View {
     /// The card's meaning once it arrives (reader language, scrubbed), else the candidate's.
     private func meaning(_ c: Candidate) -> String {
         let m = vm.details?.raw?["meaning_ja"]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return m.isEmpty ? c.meaningJa : m
+        return ReaderLanguage.shown(m, c.meaningJa)
     }
 
     private var captionField: some View {

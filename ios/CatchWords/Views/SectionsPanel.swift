@@ -66,7 +66,7 @@ struct SectionsPanel: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L("\(section.title)、\(on ? "表示中" : "非表示")"))
+        .accessibilityLabel(L("\(section.title)、\(on ? L("表示中") : L("非表示"))"))
         .accessibilityHint(L("タップで切り替え。並べ替えは右の取っ手を使います"))
     }
 }

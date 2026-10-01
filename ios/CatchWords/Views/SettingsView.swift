@@ -644,6 +644,7 @@ struct WheelCard: View {
         switch field {
         case .native:
             profile.nativeLanguage = v
+            ReaderLanguage.native = v
             withAnimation(.easeInOut(duration: 0.25)) { L10n.set(v) }   // the whole app switches now
             // The web derives native_language from ui_language and saves both (settings.tsx).
             Task { await profile.update(["native_language": v, "ui_language": v]) }

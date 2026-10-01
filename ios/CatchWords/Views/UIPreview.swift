@@ -12,6 +12,9 @@ enum UIPreview {
         #endif
     }
 
+    /// The requested scene, parsed once (it sets the display language, so never during a redraw).
+    static let parsed: (scene: String, dark: Bool)? = requested.map(parse)
+
     /// "settings-en-dark" → scene "settings", English, dark. Sets the display language as a side effect.
     static func parse(_ raw: String) -> (scene: String, dark: Bool) {
         var parts = raw.split(separator: "-").map(String.init)
