@@ -94,7 +94,6 @@ struct DexView: View {
     @State private var impactTick: Int = 0
     @State private var openMenu: DexFilterMenu?
     @Namespace private var modeBubble
-    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @State private var shelfEdit: ShelfEdit?
     @State private var deleteShelfKey: String?
     @State private var moveError: String?
@@ -161,7 +160,7 @@ struct DexView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                AppBackground()
+                if mode == .cover { DexGalleryBackdrop() } else { AppBackground() }
                 content
                 if openMenu != nil {
                     Color.black.opacity(0.001)
@@ -373,20 +372,6 @@ struct DexView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     Color.clear.frame(height: 108)
-                    if fx3D && !reduceMotion && categoryCounts.count > 1 {
-                        // 図鑑の本棚: one Blender book per category (most words first). Tap = filter.
-                        Bookshelf3DView(
-                            books: categoryCounts.prefix(6).map { ShelfBook(key: $0.key, count: $0.count) },
-                            selected: categoryFilter
-                        ) { key in
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) { categoryFilter = key }
-                        }
-                        .background(
-                            LinearGradient(colors: [Color(hex: 0xFFF7EC), Color(hex: 0xF3E6D2)], startPoint: .top, endPoint: .bottom),
-                            in: .rect(cornerRadius: 24, style: .continuous)
-                        )
-                        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
-                    }
                     ForEach(Category.allOrderedKeys, id: \.self) { key in
                         let items = filtered.filter { $0.categoryKey == key }
                         if !items.isEmpty {
@@ -660,150 +645,6 @@ struct DexCell: View {
                 }
             }
             .accessibilityLabel(sticker.word?.headword ?? "")
-    }
-}
-
-/// DexCoverFlow: large white cards (photo + ruby headword + meaning + date) that snap and tilt,
-/// a page dot row, and a thumbnail strip under them.
-struct DexCoverFlow: View {
-    @Environment(DexStore.self) private var dex
-    let stickers: [Sticker]
-    let onOpen: (Sticker) -> Void
-
-    @State private var current: String?
-
-    var body: some View {
-        VStack(spacing: 14) {
-            GeometryReader { geo in
-                let w = geo.size.width * 0.62
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 14) {
-                        ForEach(stickers) { s in
-                            VStack(spacing: 6) {
-                                Button { onOpen(s) } label: { card(s, width: w) }
-                                    .buttonStyle(PressableStyle(scale: 0.98))
-                                reflection(s, width: w)
-                            }
-                                .scrollTransition(axis: .horizontal) { content, phase in
-                                    content
-                                        .scaleEffect(phase.isIdentity ? 1 : 0.88)
-                                        .rotation3DEffect(.degrees(phase.value * -22), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
-                                        .opacity(phase.isIdentity ? 1 : 0.75)
-                                }
-                                .id(s.id)
-                        }
-                    }
-                    .scrollTargetLayout()
-                }
-                .contentMargins(.horizontal, (geo.size.width - w) / 2, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
-                .scrollPosition(id: $current)
-                .onChange(of: current) { _, _ in Haptics.selection() }
-            }
-            .frame(height: 480)
-
-            pageDots
-            thumbnails
-            Spacer(minLength: 0)
-        }
-        .onAppear { if current == nil { current = stickers.first?.id } }
-    }
-
-    private func card(_ s: Sticker, width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            let path = s.objectImageUrl ?? s.cutoutImageUrl
-            Theme.secondary
-                .frame(width: width, height: width * 0.98)
-                .overlay {
-                    StickerImage(path: path, url: dex.url(for: path), contentMode: s.objectImageUrl == nil ? .fit : .fill)
-                        .allowsHitTesting(false)
-                }
-                .clipped()
-                .overlay(alignment: .topLeading) {
-                    Text("\(Category.emoji(for: s.categoryKey)) \(Category.label(for: s.categoryKey))")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.black.opacity(0.45), in: Capsule())
-                        .padding(8)
-                }
-                .overlay(alignment: .topTrailing) {
-                    if let p = dex.memoryPercent(for: s) { MemoryBadge(percent: p).padding(8) }
-                }
-            VStack(alignment: .leading, spacing: 6) {
-                ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 24, weight: .semibold, pinyin: s.word?.pinyin)
-                Text(s.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.foreground.opacity(0.85)).lineLimit(1)
-                Spacer(minLength: 4)
-                HStack(spacing: 8) {
-                    Text(JPDate.monthDay(s.takenAt))
-                    if let place = s.locationName, !place.isEmpty {
-                        Label(place, systemImage: "mappin").lineLimit(1)
-                    }
-                }
-                .font(.system(size: 12)).foregroundStyle(Theme.muted)
-            }
-            .padding(14)
-            .frame(width: width, alignment: .leading)
-            .frame(maxHeight: .infinity, alignment: .top)
-        }
-        .frame(width: width, height: 400)
-        .background(Theme.card)
-        .clipShape(.rect(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
-    }
-
-    /// Mirrored, fading copy of the card's bottom edge (the "floor" reflection in DexCoverFlow).
-    private func reflection(_ s: Sticker, width: CGFloat) -> some View {
-        card(s, width: width)
-            .scaleEffect(x: 1, y: -1)
-            .frame(width: width, height: 64, alignment: .top)
-            .clipped()
-            .mask(LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom))
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-
-    private var pageDots: some View {
-        let idx = stickers.firstIndex { $0.id == current } ?? 0
-        let count = min(stickers.count, 7)
-        let start = max(0, min(idx - count / 2, stickers.count - count))
-        return HStack(spacing: 10) {
-            ForEach(0..<count, id: \.self) { i in
-                Circle()
-                    .fill(start + i == idx ? Theme.primary : Theme.border)
-                    .frame(width: 8, height: 8)
-            }
-        }
-        .animation(.snappy, value: idx)
-    }
-
-    private var thumbnails: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 8) {
-                    ForEach(stickers) { s in
-                        let path = s.objectImageUrl ?? s.cutoutImageUrl
-                        Button {
-                            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { current = s.id }
-                        } label: {
-                            Theme.secondary.frame(width: 50, height: 50)
-                                .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
-                                .clipShape(.rect(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(current == s.id ? Theme.primary : .clear, lineWidth: 2.5))
-                                .opacity(current == s.id ? 1 : 0.7)
-                        }
-                        .buttonStyle(PressableStyle(scale: 0.92))
-                        .id(s.id)
-                    }
-                }
-            }
-            .contentMargins(.horizontal, 16, for: .scrollContent)
-            .frame(height: 56)
-            .onChange(of: current) { _, id in
-                guard let id else { return }
-                withAnimation { proxy.scrollTo(id, anchor: .center) }
-            }
-        }
     }
 }
 

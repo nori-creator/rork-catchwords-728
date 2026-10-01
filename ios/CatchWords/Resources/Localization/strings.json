@@ -31,14 +31,6 @@
   "en": "Take one photo",
   "zh-TW": "拍一張照片"
  },
- "3D プレビュー": {
-  "en": "3D preview",
-  "zh-TW": "3D 預覽"
- },
- "3Dの演出": {
-  "en": "3D effects",
-  "zh-TW": "3D 效果"
- },
  "4択クイズ": {
   "en": "Multiple choice",
   "zh-TW": "四選一測驗"
@@ -1718,10 +1710,6 @@
  "図鑑に追加しました！": {
   "en": "Added to your collection!",
   "zh-TW": "已加入圖鑑！"
- },
- "図鑑の本棚を立体で見せます。「視差効果を減らす」がオンの時は出しません": {
-  "en": "Shows the collection bookshelf in 3D. Not shown when “Reduce Motion” is on",
-  "zh-TW": "以立體方式呈現圖鑑書架。開啟「減少動態效果」時不顯示"
  },
  "図鑑を読み込めませんでした。": {
   "en": "Couldn't load your collection.",
