@@ -6,15 +6,20 @@ final class ProfileStore {
     var displayName: String = ""
     var avatarURL: String?
     var nativeLanguage: String = "ja"
-    var targetLanguage: String = "zh-TW"
+    var targetLanguage: String = "zh-TW" {
+        didSet { NativeAPI.targetLanguage = ["en", "ja"].contains(targetLanguage) ? targetLanguage : "zh-TW" }
+    }
     var currentLevel: String = "TOCFL-1"
     var levelGoal: String = "TOCFL-2"
     /// 0 = 無制限 (review-batch.ts).
     var reviewDailyLimit: Int = 20
-    var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 500 : reviewDailyLimit }
+    /// 無制限 = every due card (1000 is the most one REST read returns).
+    var effectiveReviewLimit: Int { reviewDailyLimit == 0 ? 1000 : reviewDailyLimit }
     var isSavingAvatar: Bool = false
     /// `profiles.onboarded` — true once the first-run setup has been finished (on any device).
     var onboarded: Bool = false
+    /// When the account was made (`profiles.created_at`) — day 1 for the milestone albums.
+    var createdAt: Date?
     var isLoaded: Bool = false
     var message: String?
 
@@ -22,26 +27,33 @@ final class ProfileStore {
 
     static let levelOptions: [(value: String, label: String)] = (1...6).map { ("TOCFL-\($0)", "TOCFL Level \($0)") }
     static let cefrOptions: [(value: String, label: String)] = ["A1", "A2", "B1", "B2", "C1", "C2"].map { ($0, "CEFR \($0)") }
-    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體字（台灣）")]
-    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "繁體字（台灣）"), ("en", "English")]
+    // Language names in their own language (an autonym never changes with the display language).
+    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體中文")]  // l10n-ignore (autonyms)
+    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "台灣華語"), ("en", "English"), ("ja", "日本語")]  // l10n-ignore (autonyms)
+    /// level-scale.ts JLPT_SCALE: six steps like TOCFL and CEFR; step 6 is "beyond N1".
+    static let jlptOptions: [(value: String, label: String)] = ["N5", "N4", "N3", "N2", "N1", "N1+"].map { ("JLPT-\($0)", "JLPT \($0)") }
 
-    /// TOCFL for 台湾華語, CEFR for English (level-scale.ts).
+    /// TOCFL for 台湾華語, CEFR for English, JLPT for Japanese (level-scale.ts).
     static func levels(for target: String) -> [(value: String, label: String)] {
-        target == "en" ? cefrOptions : levelOptions
+        switch target {
+        case "en": cefrOptions
+        case "ja": jlptOptions
+        default: levelOptions
+        }
     }
 
-    /// Re-maps a stored level onto the other scale by step (TOCFL-4 ⇄ B2).
+    /// Re-maps a stored level onto the other scale by step (TOCFL-4 ⇄ B2 ⇄ JLPT-N2).
     static func remap(_ value: String, to target: String) -> String {
         let all = levels(for: target)
         if all.contains(where: { $0.value == value }) { return value }
-        let step = (levelOptions.firstIndex { $0.value == value } ?? cefrOptions.firstIndex { $0.value == value }) ?? 0
+        let step = [levelOptions, cefrOptions, jlptOptions].lazy.compactMap { list in list.firstIndex { $0.value == value } }.first ?? 0
         return all[min(step, all.count - 1)].value
     }
 
     func load() async {
         guard let uid = client.userId else { isLoaded = true; return }
         defer { isLoaded = true }
-        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit,onboarded"
+        let full = "display_name,avatar_url,native_language,ui_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
         var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
         if data == nil {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
@@ -50,11 +62,18 @@ final class ProfileStore {
         displayName = row["display_name"] as? String ?? ""
         avatarURL = row["avatar_url"] as? String
         nativeLanguage = row["native_language"] as? String ?? "ja"
+        ReaderLanguage.native = (row["native_language"] as? String).map { L10n.normalize($0) }
+        // The display language follows the account (set on the web or another device too).
+        if let ui = row["ui_language"] as? String, !ui.isEmpty {
+            L10n.set(ui)
+            nativeLanguage = L10n.lang
+        }
         targetLanguage = row["target_language"] as? String ?? "zh-TW"
         if let v = row["current_level"] as? String, !v.isEmpty { currentLevel = v }
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
         if let v = row["review_daily_limit"] as? Int, v >= 0 { reviewDailyLimit = v }
         onboarded = row["onboarded"] as? Bool ?? false
+        if let s = row["created_at"] as? String { createdAt = SupabaseDate.parse(s) }
     }
 
     func update(_ fields: [String: Any]) async {
@@ -65,7 +84,7 @@ final class ProfileStore {
             _ = try await client.rest("PATCH", "profiles?id=eq.\(uid)", body: body)
             message = nil
         } catch {
-            message = "保存できませんでした。通信を確かめてください。"
+            message = L("保存できませんでした。通信を確かめてください。")
         }
     }
 
@@ -81,7 +100,7 @@ final class ProfileStore {
             await update(["avatar_url": url])
             avatarURL = url
         } catch {
-            message = "写真を保存できませんでした。"
+            message = L("写真を保存できませんでした。")
         }
     }
 
@@ -92,7 +111,7 @@ final class ProfileStore {
     /// Deleting only the rows left a live login behind (App Store Review Guideline 5.1.1(v)).
     /// The user has typed 「削除」 on the settings screen; that is the confirmation the server requires.
     func deleteAccount() async throws {
-        _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)
+        _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)  // l10n-ignore (server keyword)
     }
 
     func clearAvatar() async {

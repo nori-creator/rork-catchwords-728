@@ -45,7 +45,7 @@ struct ReviewView: View {
                 }
                 .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
-                .background(alignment: .bottom) { Color.white.frame(height: 80) }
+                .background(alignment: .bottom) { Theme.card.frame(height: 80) }
                 .ignoresSafeArea(edges: .bottom)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .id(card.id)
@@ -62,7 +62,7 @@ struct ReviewView: View {
                         }
                     }, onClose: { closeCurve() })
                     .frame(maxHeight: 640)
-                    .background(.white, in: .rect(cornerRadius: 32, style: .continuous))
+                    .background(Theme.card, in: .rect(cornerRadius: 32, style: .continuous))
                     .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
                     .padding(.horizontal, 16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
@@ -71,7 +71,17 @@ struct ReviewView: View {
             }
         }
         .task {
+            if store.hasLoaded, store.loadedTarget != NativeAPI.targetLanguage { store.reset() }
             if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+        }
+        // R5 「学習言語台湾華語なのに英語の4択が表示されてる」: a switched learning language starts a fresh queue.
+        .onChange(of: profile.targetLanguage) { _, _ in
+            store.reset()
+            // The dex is re-read for the new language first, so no old-language card slips in.
+            Task {
+                await dex.load()
+                await store.load(dex: dex, limit: profile.effectiveReviewLimit)
+            }
         }
         .fullScreenCover(isPresented: $showWordbooks) {
             WordbookView()
@@ -106,8 +116,8 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("きょうの復習").font(.system(size: 30, weight: .heavy)).foregroundStyle(Theme.foreground)
-                    Text(store.streak > 0 ? "復習が\(store.streak)日続いています" : "今日から復習を始めましょう")
+                    Text(L("きょうの復習")).font(.system(size: 30, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(store.streak > 0 ? L("復習が\(store.streak)日続いています") : L("今日から復習を始めましょう"))
                         .font(.system(size: 14)).foregroundStyle(Theme.muted)
                 }
                 Spacer()
@@ -122,7 +132,7 @@ struct ReviewView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "books.vertical")
-                    Text("単語帳で復習する")
+                    Text(L("単語帳で復習する"))
                     Spacer()
                     Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
                 }
@@ -158,7 +168,7 @@ struct ReviewView: View {
         } else if let err = store.loadError, store.queue.isEmpty {
             VStack(spacing: 12) {
                 Label(err, systemImage: "wifi.exclamationmark").foregroundStyle(Theme.foreground)
-                Button("もう一度読み込む") { Task { await store.load(dex: dex, limit: profile.effectiveReviewLimit) } }
+                Button(L("もう一度読み込む")) { Task { await store.load(dex: dex, limit: profile.effectiveReviewLimit) } }
                     .foregroundStyle(Theme.primary)
             }
             .frame(maxWidth: .infinity).padding(.top, 60)
@@ -216,7 +226,7 @@ struct MemoryBar: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("記憶の内訳")
+            .accessibilityLabel(L("記憶の内訳"))
 
             if isOpen {
                 FlowRow {
@@ -278,6 +288,8 @@ struct QuizCard: View {
     @State private var shake: CGFloat = 0
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
+    /// The meaning as it is now (read in the reader's language after the card was made).
+    private var liveMeaning: String { (dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "" }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -288,7 +300,7 @@ struct QuizCard: View {
                         .foregroundStyle(.white)
                         .frame(width: 26, height: 26)
                         .background(Theme.primary, in: Circle())
-                    Text("4択クイズ").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    Text(L("4択クイズ")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
                 }
                 .padding(.leading, 4).padding(.trailing, 12).padding(.vertical, 4)
                 .background(Theme.secondary, in: Capsule())
@@ -306,7 +318,7 @@ struct QuizCard: View {
                         .frame(minHeight: 44)
                     }
                     .buttonStyle(PressableStyle(scale: 0.92))
-                    .accessibilityLabel("忘却曲線を見る")
+                    .accessibilityLabel(L("忘却曲線を見る"))
                 }
             }
 
@@ -322,7 +334,7 @@ struct QuizCard: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }
 
-            Text("「\(card.sticker.word?.meaningJa ?? "")」はどれ？")
+            Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
@@ -333,7 +345,7 @@ struct QuizCard: View {
             .offset(x: shake)
         }
         .padding(14)
-        .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
         .onAppear { started = Date() }
@@ -404,13 +416,13 @@ struct ReviewDone: View {
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(Theme.primary)
                 .symbolEffect(.bounce, value: total)
-            Text(total == 0 ? "今日の復習はおしまいです" : "\(total)問中 \(correct)問 正解")
+            Text(total == 0 ? L("今日の復習はおしまいです") : L("\(total)問中 \(correct)問 正解"))
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.foreground)
-            Text(total == 0 ? "新しい単語を撮ると、ここに出てきます。" : "今日は\(doneToday)回復習しました。")
+            Text(total == 0 ? L("新しい単語を撮ると、ここに出てきます。") : L("今日は\(doneToday)回復習しました。"))
                 .font(.system(size: 15)).foregroundStyle(Theme.muted)
             Button(action: onCamera) {
-                Label("単語を撮りに行く", systemImage: "camera.fill")
+                Label(L("単語を撮りに行く"), systemImage: "camera.fill")
                     .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
                     .padding(.horizontal, 24).frame(minHeight: 50)
                     .background(Theme.primary, in: Capsule())
@@ -419,6 +431,6 @@ struct ReviewDone: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
-        .background(.white, in: .rect(cornerRadius: 28))
+        .background(Theme.card, in: .rect(cornerRadius: 28))
     }
 }

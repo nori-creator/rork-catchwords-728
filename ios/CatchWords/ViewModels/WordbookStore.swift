@@ -26,7 +26,7 @@ final class WordbookStore {
                 let list = byBook[id] ?? []
                 return WordbookSummary(
                     id: id,
-                    title: (d["title"] as? String) ?? "単語帳",
+                    title: (d["title"] as? String) ?? L("単語帳"),
                     createdAt: (d["created_at"] as? String).flatMap(SupabaseDate.parse) ?? Date(),
                     total: list.count,
                     due: list.filter(\.isDue).count,
@@ -35,7 +35,7 @@ final class WordbookStore {
             }
             loadError = nil
         } catch {
-            loadError = (error as? LocalizedError)?.errorDescription ?? "単語帳の一覧を読み込めませんでした。"
+            loadError = (error as? LocalizedError)?.errorDescription ?? L("単語帳の一覧を読み込めませんでした。")
         }
         hasLoaded = true
     }
@@ -45,7 +45,7 @@ final class WordbookStore {
     func create(title: String, entries: [WordbookEntryDraft]) async throws -> Int {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let cleaned = Wordbook.clean(entries)
-        guard !cleaned.isEmpty else { throw APIError.message("入れる語がありません") }
+        guard !cleaned.isEmpty else { throw APIError.message(L("入れる語がありません")) }
         let today = SRS.taipeiDay(Date())
         let data = try await client.rest(
             "POST", "wordbooks?select=id",
@@ -53,7 +53,7 @@ final class WordbookStore {
             prefer: "return=representation"
         )
         guard let id = ((try JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first?["id"]) as? String else {
-            throw APIError.message("単語帳を作れませんでした")
+            throw APIError.message(L("単語帳を作れませんでした"))
         }
         let rows: [[String: Any]] = cleaned.map { e in
             [
@@ -82,7 +82,13 @@ final class WordbookStore {
             "wordbook_entries?wordbook_id=eq.\(bookId)&select=id,wordbook_id,headword,reading_zhuyin,pinyin,meaning_ja,ease,interval_days,repetitions,due_at,last_reviewed_at&order=due_at.asc&limit=200"
         )
         let all = try SupabaseDate.decoder.decode([WordbookEntry].self, from: data)
-        return (Array(all.filter(\.isDue).prefix(limit)), all.map(\.headword))
+        // Not in the order the page was read (owner): overdue cards first by how overdue they are,
+        // new cards in random order, and the session itself shuffled.
+        let due = all.filter(\.isDue)
+        let reviewed = due.filter { $0.lastReviewedAt != nil }
+        let fresh = due.filter { $0.lastReviewedAt == nil }.shuffled()
+        let batch = Array((reviewed + fresh).prefix(limit)).shuffled()
+        return (batch, all.map(\.headword))
     }
 
     /// gradeWordbookEntry: same SRS as the dex (correct=5, wrong=2).

@@ -8,9 +8,9 @@ import Foundation
 /// - The Supabase publishable key is the `anon` role. It is meant to be public;
 ///   every row is protected by RLS (`auth.uid() = user_id`).
 /// - No secret (AI keys etc.) may ever be placed here. AI goes through the web
-///   server (`/api/native-ai`), which holds the keys.
+///   server (`/api/native-fn`), which holds the keys.
 enum AppConfig {
-    /// The published Lovable web app. Its server hosts `/api/native-ai`.
+    /// The published Lovable web app. Its server hosts `/api/native-fn`.
     nonisolated static let webBaseURL = URL(string: "https://catchwords.lovable.app")!
 
     nonisolated static let supabaseURL = "https://arjicopbmvseztldpxpk.supabase.co"

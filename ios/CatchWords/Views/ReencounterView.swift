@@ -17,7 +17,7 @@ struct ReencounterView: View {
                     CollectHeader { vm.reset() }
                     if let owned = vm.owned { card(owned) }
                     Button { vm.reset() } label: {
-                        Label("別のものを撮る", systemImage: "camera")
+                        Label(L("別のものを撮る"), systemImage: "camera")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Theme.foreground)
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -42,7 +42,7 @@ struct ReencounterView: View {
                         .overlay { Image(uiImage: photo).resizable().scaledToFill().allowsHitTesting(false) }
                         .clipShape(.rect(cornerRadius: 24, style: .continuous))
                 }
-                Text("再会！")
+                Text(L("再会！"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.primaryInk)
                     .padding(.horizontal, 14)
@@ -51,11 +51,11 @@ struct ReencounterView: View {
                     .padding(12)
             }
             HStack {
-                ZhuyinWordView(headword: owned.headword, zhuyin: owned.readingZhuyin, size: 34, weight: .bold)
+                ZhuyinWordView(headword: owned.headword, zhuyin: owned.readingZhuyin, size: 34, weight: .bold, pinyin: owned.pinyin)
                 Spacer()
                 PronounceCircle(text: owned.headword, size: 44)
             }
-            Text(owned.meaningJa)
+            Text(ReaderLanguage.shown(owned.meaningJa))
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(Theme.foreground)
             Text(metLine(owned))
@@ -63,11 +63,11 @@ struct ReencounterView: View {
                 .foregroundStyle(Theme.muted)
             status
             if vm.reencFailed {
-                PrimaryButton(title: "写真の追加を再試行", icon: "arrow.clockwise", isLoading: isSaving) {
+                PrimaryButton(title: L("写真の追加を再試行"), icon: "arrow.clockwise", isLoading: isSaving) {
                     Task { await record() }
                 }
             } else if vm.reencCount != nil {
-                PrimaryButton(title: "図鑑で見る", icon: "books.vertical") { onSeeInDex(owned.stickerId) }
+                PrimaryButton(title: L("図鑑で見る"), icon: "books.vertical") { onSeeInDex(owned.stickerId) }
             }
         }
         .padding(16)
@@ -96,19 +96,19 @@ struct ReencounterView: View {
     }
 
     private var statusText: String {
-        if vm.reencFailed { return "記録に失敗しました" }
-        if vm.reencPhotoSaved { return "この写真を単語に追加しました" }
-        if let n = vm.reencCount { return "再会\(n)回目" }
-        return "この1枚を図鑑に足しています…"
+        if vm.reencFailed { return L("記録に失敗しました") }
+        if vm.reencPhotoSaved { return L("この写真を単語に追加しました") }
+        if let n = vm.reencCount { return L("再会\(n)回目") }
+        return L("この1枚を図鑑に足しています…")
     }
 
     /// cap.reencBefore + reencAt/reencOn + reencAfter: 「この言葉、{date}に{place}でゲットしています。」
     private func metLine(_ owned: OwnedWord) -> String {
         let date = owned.takenDate.map { $0.formatted(.dateTime.year().month().day()) } ?? ""
         if let place = owned.locationName, !place.isEmpty {
-            return "この言葉、\(date)に\(place)でゲットしています。"
+            return L("この言葉、\(date)に\(place)でゲットしています。")
         }
-        return "この言葉、\(date)にゲットしています。"
+        return L("この言葉、\(date)にゲットしています。")
     }
 
     private func record() async {
@@ -128,7 +128,7 @@ struct ReencounterView: View {
             Haptics.success()
         } catch {
             vm.reencFailed = true
-            vm.showToast("記録に失敗しました")
+            vm.showToast(L("記録に失敗しました"))
             Haptics.warning()
         }
     }

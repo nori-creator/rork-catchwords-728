@@ -12,18 +12,19 @@ struct SettingsView: View {
 
     @AppStorage("photos.sync") private var photoSync: Bool = true
     @AppStorage("haptics.enabled") private var haptics: Bool = true
-    @AppStorage("sound.level") private var soundLevel: String = "soft"
+    @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
+    @AppStorage("reading.ja") private var readingJa: String = "kana"
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
-    @AppStorage("motion.pref") private var motionPref: String = "system"
+    @AppStorage("motion.pref") private var motionPref: String = "full"
     @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
-    @AppStorage(ReminderService.timesKey) private var reminderTimes: String = "20:00"
+    @AppStorage(ReminderService.timesKey) private var reminderTimes: String = ReminderService.defaultTime
     @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
 
     @State private var avatarItem: PhotosPickerItem?
@@ -31,7 +32,6 @@ struct SettingsView: View {
     @FocusState private var nameFocused: Bool
     @State private var wheel: WheelField?
     @State private var notifyDenied: Bool = false
-    @State private var themeNote: Bool = false
     @State private var deleteOpen: Bool = false
     @State private var deleteText: String = ""
     @State private var isDeleting: Bool = false
@@ -74,22 +74,22 @@ struct SettingsView: View {
                 avatarItem = nil
             }
         }
-        .confirmationDialog("サインアウトしますか？", isPresented: $confirmSignOut, titleVisibility: .visible) {
-            Button("サインアウト", role: .destructive) { auth.signOut() }
+        .confirmationDialog(L("サインアウトしますか？"), isPresented: $confirmSignOut, titleVisibility: .visible) {
+            Button(L("サインアウト"), role: .destructive) { auth.signOut() }
         }
     }
 
     // MARK: - Sections
 
     private var profileSection: some View {
-        SettingsCard(title: "プロフィール") {
+        SettingsCard(title: L("プロフィール")) {
             VStack(alignment: .leading, spacing: 12) {
-                label("プロフィール写真")
+                label(L("プロフィール写真"))
                 HStack(spacing: 14) {
                     AvatarView(url: profile.avatarURL, size: 60)
                         .overlay { if profile.isSavingAvatar { ProgressView() } }
                     PhotosPicker(selection: $avatarItem, matching: .images) {
-                        Text(profile.avatarURL == nil ? "選ぶ" : "変更")
+                        Text(profile.avatarURL == nil ? L("選ぶ") : L("変更"))
                             .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
                             .padding(.horizontal, 18).frame(minHeight: 46)
                             .background(Color(hex: 0xF3F7FC), in: Capsule())
@@ -97,18 +97,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(PressableStyle())
                     if profile.avatarURL != nil {
-                        Button("外す") { Task { await profile.clearAvatar() } }
+                        Button(L("外す")) { Task { await profile.clearAvatar() } }
                             .font(.system(size: 16)).foregroundStyle(Theme.muted)
                             .frame(minWidth: 44, minHeight: 44)
                     }
                 }
-                label("表示名").padding(.top, 4)
-                TextField("名前", text: $nameDraft)
+                label(L("表示名")).padding(.top, 4)
+                TextField(L("名前"), text: $nameDraft)
                     .font(.system(size: 17))
                     .focused($nameFocused)
                     .submitLabel(.done)
                     .padding(.horizontal, 14).frame(minHeight: 48)
-                    .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+                    .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
                     .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
                     .onSubmit(saveName)
@@ -120,21 +120,23 @@ struct SettingsView: View {
     private var languageSection: some View {
         let isEnglish = profile.targetLanguage == "en"
         let levels = ProfileStore.levels(for: profile.targetLanguage)
-        return SettingsCard(title: "言語") {
+        return SettingsCard(title: L("言語")) {
             VStack(alignment: .leading, spacing: 10) {
-                label("母語")
-                wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? "日本語") { openWheel(.native) }
-                label("学習言語").padding(.top, 6)
-                wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? "繁體字（台灣）") { openWheel(.target) }
-                label("今のレベル").padding(.top, 6)
+                label(L("母語"))
+                wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? L("日本語")) { openWheel(.native) }
+                label(L("学習言語")).padding(.top, 6)
+                wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? L("繁體字（台灣）")) { openWheel(.target) }
+                label(L("今のレベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
-                label("目標レベル").padding(.top, 6)
+                label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
-                label("発音表記").padding(.top, 6)
+                label(L("発音表記")).padding(.top, 6)
                 if isEnglish {
-                    ChoicePills(options: [("us", "IPA アメリカ"), ("uk", "IPA イギリス")], selection: $ipaPref)
+                    ChoicePills(options: [("us", L("IPA アメリカ")), ("uk", L("IPA イギリス"))], selection: $ipaPref)
+                } else if profile.targetLanguage == "ja" {
+                    ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
                 } else {
-                    ChoicePills(options: [("zhuyin", "ㄅㄆㄇ 注音"), ("pinyin", "abc ピンイン")], selection: $readingPref)
+                    ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: $readingPref)
                 }
                 if let m = profile.message {
                     Text(m).font(.footnote).foregroundStyle(Theme.destructive)
@@ -144,13 +146,15 @@ struct SettingsView: View {
     }
 
     private var studySection: some View {
-        SettingsCard(title: "学習設定") {
+        SettingsCard(title: L("学習設定")) {
             VStack(alignment: .leading, spacing: 10) {
-                label("表示するタイプ")
-                ChoicePills(options: [("object", "元の写真"), ("selfie", "自撮り")], selection: $photoPref)
-                label("1日の復習枚数").padding(.top, 6)
+                label(L("表示するタイプ"))
+                // Web photo-pref: which picture shows on home, dex and review when a word has no choice of its own.
+                // iOS keeps 切り抜き (cut-out mode is iOS's own).
+                ChoicePills(options: [("object", L("元の写真")), ("cutout", L("切り抜き")), ("selfie", L("自撮り"))], selection: $photoPref)
+                label(L("1日の復習枚数")).padding(.top, 6)
                 ChoicePills(
-                    options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", "無制限")],
+                    options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", L("無制限"))],
                     selection: Binding(
                         get: { String(profile.reviewDailyLimit) },
                         set: { v in
@@ -161,33 +165,33 @@ struct SettingsView: View {
                     )
                 )
                 Divider().overlay(Theme.border).padding(.top, 8)
-                SettingsToggle(title: "自撮りモード", detail: "単語を撮ったあと、続けてその場の自分を撮る画面に進みます", isOn: $selfieMode)
+                SettingsToggle(title: L("自撮りモード"), detail: L("単語を撮ったあと、続けてその場の自分を撮る画面に進みます"), isOn: $selfieMode)
                 Divider().overlay(Theme.border)
-                SettingsToggle(title: "カメラロールに保存", detail: "撮った写真をスマホの写真アプリにも残します", isOn: $photoSync)
+                SettingsToggle(title: L("カメラロールに保存"), detail: L("撮った写真をスマホの写真アプリにも残します"), isOn: $photoSync)
                 Divider().overlay(Theme.border)
-                SettingsToggle(title: "切り抜きモード", detail: "単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます", isOn: $cutoutMode)
+                SettingsToggle(title: L("切り抜きモード"), detail: L("単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます"), isOn: $cutoutMode)
                 Divider().overlay(Theme.border)
-                SettingsToggle(title: "3Dの演出", detail: "キャッチの瓶・図鑑の本棚・アルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません", isOn: $fx3D)
+                SettingsToggle(title: L("3Dの演出"), detail: L("図鑑の本棚とアルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません"), isOn: $fx3D)
             }
         }
     }
 
     private var notifySection: some View {
-        SettingsCard(title: "通知") {
+        SettingsCard(title: L("通知")) {
             VStack(alignment: .leading, spacing: 10) {
-                label("復習の通知")
+                label(L("復習の通知"))
                 ChoicePills(
-                    options: [("off", "オフ"), ("ai", "自動"), ("custom", "時刻を指定")],
+                    options: [("off", L("オフ")), ("ai", L("自動")), ("custom", L("時刻を指定"))],
                     selection: Binding(get: { reminderMode }, set: { setReminderMode($0) })
                 )
                 if reminderMode == "custom" { timesEditor.transition(.opacity.combined(with: .move(edge: .top))) }
                 if notifyDenied {
-                    notice("通知が許可されていません。iPhoneの「設定」→「CatchWords」→「通知」から許可してください。")
+                    notice(L("通知が許可されていません。iPhoneの「設定」→「CatchWords」→「通知」から許可してください。"))
                 }
                 Divider().overlay(Theme.border).padding(.top, 8)
                 SettingsToggle(
-                    title: "場所でリマインド",
-                    detail: "単語を撮った場所の近くに来ると、その単語を通知で思い出させます",
+                    title: L("場所でリマインド"),
+                    detail: L("単語を撮った場所の近くに来ると、その単語を通知で思い出させます"),
                     isOn: Binding(get: { placeRemind }, set: { setPlaceRemind($0) })
                 )
             }
@@ -196,23 +200,20 @@ struct SettingsView: View {
     }
 
     private var appearanceSection: some View {
-        SettingsCard(title: "外観") {
+        SettingsCard(title: L("外観")) {
             VStack(alignment: .leading, spacing: 10) {
-                label("画面の明るさ")
+                label(L("画面の明るさ"))
                 ChoicePills(
-                    options: [("light", "ライト"), ("dark", "ダーク"), ("system", "システム")],
+                    options: [("light", L("ライト")), ("dark", L("ダーク")), ("system", L("システム"))],
                     selection: Binding(get: { themePref }, set: { v in
-                        themePref = v
-                        withAnimation { themeNote = v != "light" }
+                        withAnimation(.easeInOut(duration: 0.35)) { themePref = v }
                     })
                 )
-                if themeNote {
-                    Text("ダーク表示は次のアップデートで対応します。今はライトで表示されます。")
-                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
-                }
-                label("アニメーション").padding(.top, 6)
-                ChoicePills(options: [("system", "自動"), ("full", "見せる"), ("reduce", "減らす")], selection: $motionPref)
-                label("ホームの壁紙").padding(.top, 10)
+                Text(L("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。"))
+                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                label(L("アニメーション")).padding(.top, 6)
+                ChoicePills(options: [("system", L("自動")), ("full", L("見せる")), ("reduce", L("減らす"))], selection: $motionPref)
+                label(L("ホームの壁紙")).padding(.top, 10)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
                     ForEach(Wallpaper.allCases) { w in
                         WallpaperSwatch(kind: w, isSelected: wallRaw == w.rawValue) {
@@ -226,17 +227,17 @@ struct SettingsView: View {
     }
 
     private var feelSection: some View {
-        SettingsCard(title: "音と手ざわり") {
+        SettingsCard(title: L("音と手ざわり")) {
             VStack(alignment: .leading, spacing: 10) {
-                label("効果音")
+                label(L("効果音"))
                 ChoicePills(
-                    options: [("off", "オフ"), ("soft", "控えめ"), ("full", "しっかり")],
+                    options: [("off", L("オフ")), ("subtle", L("控えめ")), ("full", L("しっかり"))],
                     selection: Binding(get: { soundLevel }, set: { v in
                         soundLevel = v
                         if v != "off" { SoundService.shared.play(.impact) }
                     })
                 )
-                SettingsToggle(title: "振動", detail: nil, isOn: Binding(get: { haptics }, set: { v in
+                SettingsToggle(title: L("振動"), detail: nil, isOn: Binding(get: { haptics }, set: { v in
                     haptics = v
                     if v { Haptics.impact(.medium) }
                 }))
@@ -249,13 +250,13 @@ struct SettingsView: View {
         SettingsCard(title: "CatchWords Pro") {
             VStack(alignment: .leading, spacing: 10) {
                 if plan.isPro {
-                    Text("Pro をご利用中です").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
-                    Text("撮影は無制限です").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    Text(L("Pro をご利用中です")).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(L("撮影は無制限です")).font(.system(size: 13)).foregroundStyle(Theme.muted)
                 } else {
-                    Text(PlanStore.catchLimitEnabled ? "今日あと\(plan.remainingToday)回撮れます" : "ベータ期間中は撮影回数の制限はありません")
+                    Text(PlanStore.catchLimitEnabled ? L("今日あと\(plan.remainingToday)回撮れます") : L("ベータ期間中は撮影回数の制限はありません"))
                         .font(.system(size: 15)).foregroundStyle(Theme.muted)
                     Button { router.showPaywall = true } label: {
-                        Text("Proにアップグレード").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                        Text(L("Proにアップグレード")).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(pillFill, in: Capsule())
                             .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
@@ -263,9 +264,9 @@ struct SettingsView: View {
                     .buttonStyle(PressableStyle())
                 }
                 HStack(spacing: 18) {
-                    Button("購入を復元") { Task { await plan.restore() } }
-                    Link("利用規約", destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                    Link("プライバシー", destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                    Button(L("購入を復元")) { Task { await plan.restore() } }
+                    Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                    Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
                 }
                 .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
                 .frame(minHeight: 44)
@@ -277,10 +278,10 @@ struct SettingsView: View {
     private var accountButtons: some View {
         VStack(spacing: 20) {
             Button { confirmSignOut = true } label: {
-                Label("サインアウト", systemImage: "rectangle.portrait.and.arrow.right")
+                Label(L("サインアウト"), systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(.white, in: Capsule())
+                    .background(Theme.card, in: Capsule())
                     .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
                     .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
             }
@@ -294,13 +295,14 @@ struct SettingsView: View {
     }
 
     private var deleteZone: some View {
-        let armed = ["削除", "DELETE", "刪除"].contains(deleteText.trimmingCharacters(in: .whitespaces).uppercased())
+        let armed = ["削除", "DELETE", "刪除"].contains(  // l10n-ignore (accepted confirm words)
+           deleteText.trimmingCharacters(in: .whitespaces).uppercased())
         return VStack(alignment: .leading, spacing: 12) {
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { deleteOpen.toggle() }
             } label: {
                 HStack {
-                    Text("アカウントを削除").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(hex: 0xB42329))
+                    Text(L("アカウントを削除")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(hex: 0xB42329))
                     Spacer()
                     Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color(hex: 0xB42329).opacity(0.7))
@@ -310,18 +312,18 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             if deleteOpen {
-                Text("撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。")
+                Text(L("撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。"))
                     .font(.system(size: 13)).foregroundStyle(Theme.muted)
-                Text("確認のため「削除」と入力してください").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
-                TextField("削除", text: $deleteText)
+                Text(L("確認のため「削除」と入力してください")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                TextField(L10n.lang == "en" ? "DELETE" : L("削除"), text: $deleteText)  // the confirm word itself
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(minHeight: 46)
-                    .background(.white, in: .rect(cornerRadius: 14))
+                    .background(Theme.card, in: .rect(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
                 Button { Task { await deleteAccount() } } label: {
                     HStack(spacing: 8) {
                         if isDeleting { ProgressView().tint(.white) } else { Image(systemName: "trash") }
-                        Text(isDeleting ? "削除しています…" : "完全に削除する")
+                        Text(isDeleting ? L("削除しています…") : L("完全に削除する"))
                     }
                     .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -333,7 +335,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
-        .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 26, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
     }
 
@@ -342,7 +344,7 @@ struct SettingsView: View {
         return VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(times.enumerated()), id: \.offset) { i, t in
                 HStack {
-                    DatePicker("通知の時刻", selection: Binding(
+                    DatePicker(L("通知の時刻"), selection: Binding(
                         get: { Self.date(from: t) },
                         set: { d in
                             var list = times
@@ -356,14 +358,14 @@ struct SettingsView: View {
                             Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
                                 .frame(width: 44, height: 44)
                         }
-                        .accessibilityLabel("この時刻を消す")
+                        .accessibilityLabel(L("この時刻を消す"))
                     }
                     Spacer()
                 }
             }
             if times.count < 3 {
-                Button { saveTimes(times + ["20:00"]) } label: {
-                    Label("時刻を追加", systemImage: "plus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primary)
+                Button { saveTimes(times + [ReminderService.defaultTime]) } label: {
+                    Label(L("時刻を追加"), systemImage: "plus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primary)
                         .frame(minHeight: 44)
                 }
             }
@@ -394,7 +396,7 @@ struct SettingsView: View {
                 Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 20).frame(minHeight: 56)
-            .background(LinearGradient(colors: [.white, Color(hex: 0xEEF5FF)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            .background(LinearGradient(colors: [Theme.card, Color(light: 0xEEF5FF, dark: 0x132032)], startPoint: .topLeading, endPoint: .bottomTrailing),
                         in: .rect(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.primary.opacity(0.2), lineWidth: 1))
             .shadow(color: Theme.primary.opacity(0.06), radius: 6, y: 3)
@@ -430,13 +432,18 @@ struct SettingsView: View {
             }
             notifyDenied = false
             reminderMode = mode
-            await ReminderService.applyReview(mode: mode, times: ReminderService.parseTimes(reminderTimes))
+            let times = ReminderService.parseTimes(reminderTimes)
+            await ReminderService.applyReview(mode: mode, times: times, due: dex.upcomingDueTimes)
+            await ReminderService.saveToAccount(mode: mode, times: times)
         }
     }
 
     private func saveTimes(_ list: [String]) {
         reminderTimes = list.joined(separator: ",")
-        Task { await ReminderService.applyReview(mode: reminderMode, times: list) }
+        Task {
+            await ReminderService.applyReview(mode: reminderMode, times: list, due: dex.upcomingDueTimes)
+            await ReminderService.saveToAccount(mode: reminderMode, times: list)
+        }
     }
 
     private func setPlaceRemind(_ on: Bool) {
@@ -460,7 +467,7 @@ struct SettingsView: View {
             auth.signOut()
         } catch {
             isDeleting = false
-            deleteError = "削除できませんでした。通信を確かめて、もう一度お試しください。"
+            deleteError = L("削除できませんでした。通信を確かめて、もう一度お試しください。")
         }
     }
 
@@ -488,7 +495,7 @@ struct SettingsCard<Content: View>: View {
             content
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.white, in: .rect(cornerRadius: 26, style: .continuous))
+                .background(Theme.card, in: .rect(cornerRadius: 26, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
         }
     }
@@ -518,7 +525,7 @@ struct ChoicePills: View {
                         .padding(.horizontal, 4)
                         .background {
                             Capsule()
-                                .fill(LinearGradient(colors: [.white, Color(hex: 0xF1F6FD)], startPoint: .top, endPoint: .bottom))
+                                .fill(LinearGradient(colors: [Theme.card, Color(light: 0xF1F6FD, dark: 0x16202F)], startPoint: .top, endPoint: .bottom))
                                 .overlay(Capsule().stroke(Color(hex: 0xC9DDF5), lineWidth: 1))
                             if on {
                                 Capsule()
@@ -561,10 +568,10 @@ enum WheelField: Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .native: "母語"
-        case .target: "学習言語"
-        case .current: "今のレベル"
-        case .goal: "目標レベル"
+        case .native: L("母語")
+        case .target: L("学習言語")
+        case .current: L("今のレベル")
+        case .goal: L("目標レベル")
         }
     }
 }
@@ -574,6 +581,7 @@ struct WheelCard: View {
     let field: WheelField
     let profile: ProfileStore
     let onClose: () -> Void
+    @Environment(DexStore.self) private var dex
     @State private var value: String = ""
     @State private var appeared: Bool = false
 
@@ -606,7 +614,7 @@ struct WheelCard: View {
                         Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
                             .frame(width: 44, height: 44)
                     }
-                    .accessibilityLabel("閉じる")
+                    .accessibilityLabel(L("閉じる"))
                 }
                 Picker(field.title, selection: $value) {
                     ForEach(options, id: \.value) { o in Text(o.label).tag(o.value) }
@@ -615,14 +623,14 @@ struct WheelCard: View {
                 .frame(height: 150)
                 .onChange(of: value) { _, v in commit(v) }
                 Button(action: onClose) {
-                    Text("閉じる").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text(L("閉じる")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(Theme.primary, in: Capsule())
                 }
                 .buttonStyle(PressableStyle())
             }
             .padding(.horizontal, 20).padding(.vertical, 16)
-            .background(.white, in: .rect(cornerRadius: 28, style: .continuous))
+            .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
             .shadow(color: .black.opacity(0.2), radius: 30, y: 12)
             .padding(.horizontal, 20)
             .scaleEffect(appeared ? 1 : 0.94)
@@ -639,12 +647,21 @@ struct WheelCard: View {
         switch field {
         case .native:
             profile.nativeLanguage = v
-            Task { await profile.update(["native_language": v]) }
+            ReaderLanguage.native = v
+            withAnimation(.easeInOut(duration: 0.25)) { L10n.set(v) }   // the whole app switches now
+            // The web derives native_language from ui_language and saves both (settings.tsx).
+            Task { await profile.update(["native_language": v, "ui_language": v]) }
         case .target:
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
             profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
-            Task { await profile.update(["target_language": v, "current_level": profile.currentLevel, "level_goal": profile.levelGoal]) }
+            Task {
+                // Language first, on its own (web: a rejected level column must not undo the language).
+                await profile.update(["target_language": v])
+                await profile.update(["current_level": profile.currentLevel, "level_goal": profile.levelGoal])
+                // The dex, album and review show only the words of the language being learned.
+                await dex.load()
+            }
         case .current:
             profile.currentLevel = v
             Task { await profile.update(["current_level": v]) }

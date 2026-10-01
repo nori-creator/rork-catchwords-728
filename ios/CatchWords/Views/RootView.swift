@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
 
     private var needsOnboarding: Bool {
@@ -26,6 +27,7 @@ struct RootView: View {
                     MainTabView()
                     if needsOnboarding {
                         OnboardingView { withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { onboardingDone = true } }
+                            .environment(\.colorScheme, .light)
                             .transition(.opacity.combined(with: .scale(scale: 1.02)))
                             .zIndex(1)
                     }
@@ -36,6 +38,8 @@ struct RootView: View {
                         await dex.load()
                         await p
                         await plan.bootstrap()
+                        await ReminderService.loadFromAccount()
+                        await ReminderService.refresh(due: dex.upcomingDueTimes)
                     }
             case .failed(let reason):
                 ConnectionFailedView(reason: reason) {
@@ -47,6 +51,18 @@ struct RootView: View {
         .task { await auth.bootstrap() }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut { dex.reset() }
+        }
+        // Meanings and notes follow the display language too (read again in the new one).
+        .onChange(of: LanguageState.shared.lang) { _, _ in
+            dex.readerLanguageChanged()
+            // Scheduled reminders were written in the old language: write them again (N1).
+            Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // おまかせ reminders follow yesterday's first open and the cards coming due.
+            guard phase == .active, auth.phase == .signedIn else { return }
+            ReminderService.recordAppOpen()
+            Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
     }
 }
@@ -79,7 +95,7 @@ struct ConnectionFailedView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
-            PrimaryButton(title: "もう一度試す", icon: "arrow.clockwise", action: retry)
+            PrimaryButton(title: L("もう一度試す"), icon: "arrow.clockwise", action: retry)
                 .frame(maxWidth: 260)
         }
         .padding(32)

@@ -20,9 +20,9 @@ enum CameraMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .search: "検索"
-        case .photo: "撮影"
-        case .scan: "スキャン"
+        case .search: L("検索")
+        case .photo: L("撮影")
+        case .scan: L("スキャン")
         }
     }
     var shutterIcon: String {
@@ -53,6 +53,8 @@ final class CaptureViewModel {
     /// The owned-word check runs between the tap and the card (capture.tsx:905-919).
     var isCheckingOwned: Bool = false
     var caption: String = ""
+    /// The spoken one-liner next to the memo (web VoiceCaptionButton).
+    let voiceNote = VoiceNoteRecorder()
     var placeName: String?
     var location: CLLocation?
     var captureType: String = "photo"
@@ -104,14 +106,14 @@ final class CaptureViewModel {
         if let rid = restoredPendingId {
             pendingId = rid
         } else if pendingId == nil {
-            pendingId = PendingQueue.shared.add(image: image, reason: "解析中", lat: nil, lng: nil)?.id
+            pendingId = PendingQueue.shared.add(image: image, reason: L("解析中"), lat: nil, lng: nil)?.id
         }
 
         Task {
             async let loc = LocationService.shared.current()
             do {
                 let found = textOnly
-                    ? try await AIService.shared.detect(image: image, textOnly: true)
+                    ? try await AIService.shared.detectScan(image: image)
                     : try await AIService.shared.suggest(image: image)
                 guard token == runToken else { return }
                 detectOutcome = .success(found)
@@ -165,8 +167,8 @@ final class CaptureViewModel {
     }
 
     static func reason(_ error: Error) -> String {
-        if case .timeout? = error as? APIError { return "通信に時間がかかっています。写真は端末に保存しました。" }
-        return (error as? LocalizedError)?.errorDescription ?? "解析に失敗しました。"
+        if case .timeout? = error as? APIError { return L("通信に時間がかかっています。写真は端末に保存しました。") }
+        return (error as? LocalizedError)?.errorDescription ?? L("解析に失敗しました。")
     }
 
     /// Typed search (`suggestWordCandidates`). One result goes straight on; several go to the picker.
@@ -217,7 +219,7 @@ final class CaptureViewModel {
     }
 
     /// input.notTargetLang (web i18n), with the learning language filled in.
-    static let notTargetLang = "台湾華語の単語が見つかりませんでした。別の言い方で調べてみてください。"
+    static var notTargetLang: String { L("学習している言語の単語が見つかりませんでした。別の言い方で調べてみてください。") }
 
     /// Tap on a word: first ask the server whether it is already in the dex (re-encounter),
     /// then show the card. Card details keep generating in the background.
@@ -311,7 +313,7 @@ final class CaptureViewModel {
             if let d {
                 withAnimation(.easeOut(duration: 0.3)) { details = d }
             } else if step == .card {
-                showToast("カード生成に失敗しました")
+                showToast(L("カード生成に失敗しました"))
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
                     step = candidates.isEmpty ? .camera : .select
                 }
@@ -331,7 +333,8 @@ final class CaptureViewModel {
         let base = photo ?? Self.textCard(for: picked.headword)
         return CatchDraft(
             candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
-            caption: caption, location: location, placeName: placeName, captureType: captureType
+            caption: caption, location: location, placeName: placeName, captureType: captureType,
+            voiceNote: voiceNote.detachedCopy()
         )
     }
 
@@ -384,6 +387,7 @@ final class CaptureViewModel {
         cutout = nil
         cutoutLift = nil
         caption = ""
+        voiceNote.discard()
         placeName = nil
         location = nil
         restoredPendingId = nil

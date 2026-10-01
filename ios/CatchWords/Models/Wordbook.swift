@@ -127,7 +127,7 @@ nonisolated enum Wordbook {
         var byHead: [String: WordbookEntryDraft] = [:]
         for r in raw {
             let head = squash(r.headword)
-            guard !head.isEmpty, head.hasHan else { continue }
+            guard !head.isEmpty, head.isIn(target: NativeAPI.targetLanguage) else { continue }
             if var existing = byHead[head] {
                 existing.readingZhuyin = existing.readingZhuyin ?? clean(r.readingZhuyin)
                 existing.pinyin = existing.pinyin ?? clean(r.pinyin)
@@ -145,7 +145,7 @@ nonisolated enum Wordbook {
     /// wordbookTitle: suggested → today's date → "単語帳", capped.
     static func title(_ suggested: String?, fallback: String) -> String {
         let s = squash(suggested)
-        let base = !s.isEmpty ? s : (!squash(fallback).isEmpty ? squash(fallback) : "単語帳")
+        let base = !s.isEmpty ? s : (!squash(fallback).isEmpty ? squash(fallback) : L("単語帳"))
         return String(base.prefix(maxTitleChars))
     }
 }

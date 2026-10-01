@@ -29,7 +29,7 @@ struct CatchCardView: View {
                     stickerStage.tourAnchor(.peel)
                     actions
                     if vm.selfie != nil {
-                        Text("画像をタップで自撮りにフリップ")
+                        Text(L("画像をタップで自撮りにフリップ"))
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                     }
@@ -50,7 +50,7 @@ struct CatchCardView: View {
     private var stickerStage: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
+                .fill(LinearGradient(colors: [Theme.card, Theme.secondary], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black.opacity(0.06), radius: 18, y: 8)
             if let lift = vm.cutoutLift, !revealDone, !showSelfie {
                 CutoutRevealView(lift: lift) {
@@ -72,7 +72,7 @@ struct CatchCardView: View {
             }
             HStack(spacing: 6) {
                 if vm.isCutting { ProgressView().controlSize(.mini).tint(.white) }
-                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? "切り抜いています" : "好きな方向にはがしてキャッチ")
+                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? L("切り抜いています") : L("好きな方向にはがしてキャッチ"))
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)
@@ -91,7 +91,7 @@ struct CatchCardView: View {
             Button {
                 vm.reset()
             } label: {
-                Text("やり直す")
+                Text(L("やり直す"))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 50)
@@ -106,7 +106,7 @@ struct CatchCardView: View {
                     } else {
                         Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold))
                     }
-                    Text("図鑑に追加").font(.system(size: 16, weight: .semibold))
+                    Text(L("図鑑に追加")).font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -120,7 +120,7 @@ struct CatchCardView: View {
 
     private func headwordCard(_ c: Candidate) -> some View {
         HStack {
-            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 30, weight: .semibold)
+            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 30, weight: .semibold, pinyin: c.pinyin)
             Spacer()
             PronounceCircle(text: c.headword, size: 44)
         }
@@ -138,7 +138,7 @@ struct CatchCardView: View {
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
                     .background(Theme.primary, in: Circle())
-                Text("意味").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                Text(L("意味")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
             }
             Text(meaning(c)).font(.system(size: 22, weight: .medium)).foregroundStyle(Theme.foreground)
         }
@@ -151,13 +151,13 @@ struct CatchCardView: View {
     /// The card's meaning once it arrives (reader language, scrubbed), else the candidate's.
     private func meaning(_ c: Candidate) -> String {
         let m = vm.details?.raw?["meaning_ja"]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return m.isEmpty ? c.meaningJa : m
+        return ReaderLanguage.shown(m, c.meaningJa)
     }
 
     private var captionField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("一言メモ（任意）").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.muted)
-            TextField("", text: $vm.caption, prompt: Text("今の気持ちや場所をメモ…").foregroundStyle(Theme.muted.opacity(0.7)), axis: .vertical)
+            Text(L("一言メモ（任意）")).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.muted)
+            TextField("", text: $vm.caption, prompt: Text(L("今の気持ちや場所をメモ…")).foregroundStyle(Theme.muted.opacity(0.7)), axis: .vertical)
                 .font(AppFont.hand(18))
                 .foregroundStyle(Theme.foreground)
                 .focused($captionFocused)
@@ -165,6 +165,8 @@ struct CatchCardView: View {
                 .padding(14)
                 .background(Theme.card, in: .rect(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+            VoiceNoteButton(recorder: vm.voiceNote)
+                .padding(.top, 2)
             if let place = vm.placeName {
                 Label(place, systemImage: "mappin.and.ellipse")
                     .font(.system(size: 12))

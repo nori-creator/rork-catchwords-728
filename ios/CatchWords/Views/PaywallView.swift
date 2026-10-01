@@ -11,10 +11,10 @@ struct PaywallView: View {
     @State private var float: Bool = false
 
     private let benefits: [(String, String, String)] = [
-        ("infinity", "撮影・キャッチが無制限", "1日3回の上限がなくなります"),
-        ("scissors", "被写体の切り抜きも無制限", "iPhoneの写真と同じ切り抜きで図鑑が美しく"),
-        ("wand.and.stars", "解説の作り直し", "気になるカードをいつでも作り直せます"),
-        ("heart.fill", "開発を応援", "新しい機能が毎月届きます"),
+        ("infinity", L("撮影・キャッチが無制限"), L("1日3回の上限がなくなります")),
+        ("scissors", L("被写体の切り抜きも無制限"), L("iPhoneの写真と同じ切り抜きで図鑑が美しく")),
+        ("wand.and.stars", L("解説の作り直し"), L("気になるカードをいつでも作り直せます")),
+        ("heart.fill", L("開発を応援"), L("新しい機能が毎月届きます")),
     ]
 
     var body: some View {
@@ -30,7 +30,7 @@ struct PaywallView: View {
                                 .frame(width: 44, height: 44)
                                 .background(Theme.card, in: Circle())
                         }
-                        .accessibilityLabel("閉じる")
+                        .accessibilityLabel(L("閉じる"))
                     }
                     ZStack {
                         Circle().fill(Theme.primary.opacity(0.25)).frame(width: 180).blur(radius: 40)
@@ -44,10 +44,10 @@ struct PaywallView: View {
                     }
                     .frame(height: 150)
                     VStack(spacing: 8) {
-                        Text("街じゅうを、図鑑にしよう。")
+                        Text(L("街じゅうを、図鑑にしよう。"))
                             .font(.system(size: 26, weight: .bold))
                             .foregroundStyle(Theme.foreground)
-                        Text(plan.remainingToday == 0 ? "今日の無料キャッチ（3回）を使い切りました。" : "Proなら、見つけた瞬間に何度でも。")
+                        Text(plan.remainingToday == 0 ? L("今日の無料キャッチ（3回）を使い切りました。") : L("Proなら、見つけた瞬間に何度でも。"))
                             .font(AppFont.hand(17))
                             .foregroundStyle(Theme.muted)
                             .multilineTextAlignment(.center)
@@ -71,7 +71,7 @@ struct PaywallView: View {
                         }
                     }
                     plans
-                    PrimaryButton(title: plan.products.isEmpty ? "読み込み中…" : "Proをはじめる", icon: "sparkles",
+                    PrimaryButton(title: plan.products.isEmpty ? L("読み込み中…") : L("Proをはじめる"), icon: "sparkles",
                                   isLoading: plan.isPurchasing, sheen: true) {
                         guard let product = plan.products.first(where: { $0.id == selectedID }) ?? plan.products.first else { return }
                         Task {
@@ -84,13 +84,13 @@ struct PaywallView: View {
                         Text(msg).font(.system(size: 13)).foregroundStyle(Theme.muted)
                     }
                     HStack(spacing: 18) {
-                        Button("購入を復元") { Task { await plan.restore(); if plan.isPro { dismiss() } } }
-                        Link("利用規約", destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                        Link("プライバシー", destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                        Button(L("購入を復元")) { Task { await plan.restore(); if plan.isPro { dismiss() } } }
+                        Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                        Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.muted)
-                    Text("サブスクリプションは期間終了の24時間前までに解約しない限り自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。")
+                    Text(L("サブスクリプションは期間終了の24時間前までに解約しない限り自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。"))
                         .font(.system(size: 10))
                         .foregroundStyle(Theme.muted.opacity(0.8))
                         .multilineTextAlignment(.center)
@@ -111,7 +111,7 @@ struct PaywallView: View {
         if plan.products.isEmpty {
             VStack(spacing: 6) {
                 ProgressView().tint(Theme.muted)
-                Text("年額 ¥7,800 / 月額 ¥980（予定）").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                Text(L("年額 ¥7,800 / 月額 ¥980（予定）")).font(.system(size: 12)).foregroundStyle(Theme.muted)
             }
             .frame(minHeight: 80)
         } else {
@@ -129,9 +129,9 @@ struct PaywallView: View {
                                 .foregroundStyle(selected ? Theme.primary : Theme.muted)
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
-                                    Text(isYearly ? "年額プラン" : "月額プラン").font(.system(size: 16, weight: .bold))
+                                    Text(isYearly ? L("年額プラン") : L("月額プラン")).font(.system(size: 16, weight: .bold))
                                     if isYearly {
-                                        Text("いちばん選ばれています")
+                                        Text(L("いちばん選ばれています"))
                                             .font(.system(size: 10, weight: .bold))
                                             .foregroundStyle(.black)
                                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -139,7 +139,7 @@ struct PaywallView: View {
                                     }
                                 }
                                 if isYearly {
-                                    Text("月あたり \((product.price / 12).formatted(product.priceFormatStyle))")
+                                    Text(L("月あたり \((product.price / 12).formatted(product.priceFormatStyle))"))
                                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
                                 }
                             }

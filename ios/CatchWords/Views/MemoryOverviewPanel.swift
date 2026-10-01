@@ -26,19 +26,19 @@ struct MemoryOverviewPanel: View {
                 .frame(height: min(CGFloat(list.count) * 50 + 12, 330))
                 .scrollIndicators(.visible)
 
-                Text("タップで単語ごとの忘却曲線と「いつ忘れるか」の予測が見られます")
+                Text(L("タップで単語ごとの忘却曲線と「いつ忘れるか」の予測が見られます"))
                     .font(.system(size: 12)).foregroundStyle(Theme.muted)
                     .padding(.top, 8)
             }
             Divider().overlay(Theme.border).padding(.vertical, 12)
-            Text("全体の記憶率（前後2週間）")
+            Text(L("全体の記憶率（前後2週間）"))
                 .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
             RetentionMiniChart(data: store.retentionSeries(dex: dex))
                 .frame(height: 150)
                 .padding(.top, 6)
         }
         .padding(14)
-        .background(.white, in: .rect(cornerRadius: 24, style: .continuous))
+        .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }
@@ -87,26 +87,26 @@ struct RetentionMiniChart: View {
         let first = data.series.first?.date ?? Date()
         let last = data.series.last?.date ?? Date()
         if data.series.isEmpty {
-            Text("復習を始めると、ここに記憶率の推移が出ます")
+            Text(L("復習を始めると、ここに記憶率の推移が出ます"))
                 .font(.system(size: 13)).foregroundStyle(Theme.muted)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             Chart {
                 ForEach(past) { p in
-                    LineMark(x: .value("日", p.date), y: .value("%", p.value ?? 0), series: .value("s", "past"))
+                    LineMark(x: .value("date", p.date), y: .value("%", p.value ?? 0), series: .value("s", "past"))
                         .foregroundStyle(LinearGradient(colors: [Theme.primary, Theme.memoryLevels[4]], startPoint: .leading, endPoint: .trailing))
                         .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 }
                 ForEach(future) { p in
-                    LineMark(x: .value("日", p.date), y: .value("%", p.value ?? 0), series: .value("s", "future"))
+                    LineMark(x: .value("date", p.date), y: .value("%", p.value ?? 0), series: .value("s", "future"))
                         .foregroundStyle(Theme.memoryLevels[3])
                         .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [6, 5]))
                 }
                 if let t = data.today {
-                    PointMark(x: .value("日", Date()), y: .value("%", Double(t)))
+                    PointMark(x: .value("date", Date()), y: .value("%", Double(t)))
                         .symbol { Circle().fill(Theme.primary).overlay(Circle().stroke(.white, lineWidth: 2)).frame(width: 13, height: 13) }
                         .annotation(position: .top, spacing: 4) {
-                            Text("今日 \(t)%").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.foreground)
+                            Text(L("今日 \(t)%")).font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.foreground)
                         }
                 }
             }
@@ -121,7 +121,7 @@ struct RetentionMiniChart: View {
                 AxisMarks(values: [first, Date(), last]) { v in
                     AxisValueLabel(anchor: .top) {
                         if let d = v.as(Date.self) {
-                            Text(abs(d.timeIntervalSinceNow) < 3600 ? "今日" : JPDate.slash(d))
+                            Text(abs(d.timeIntervalSinceNow) < 3600 ? L("今日") : JPDate.slash(d))
                                 .font(.system(size: 11)).foregroundStyle(Theme.muted)
                         }
                     }

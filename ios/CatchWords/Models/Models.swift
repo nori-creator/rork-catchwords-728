@@ -14,16 +14,18 @@ nonisolated struct Word: Codable, Sendable, Hashable {
     let headword: String
     let readingZhuyin: String?
     let pinyin: String?
-    let meaningJa: String
+    var meaningJa: String
     let partOfSpeech: String?
     let categoryKey: String?
     let level: String?
     let exampleSentence: String?
-    let exampleTranslation: String?
-    let extras: WordExtras?
+    var exampleTranslation: String?
+    var extras: WordExtras?
+    /// `words.language` (null on old rows = 台湾華語).
+    let language: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, headword, pinyin, level, extras
+        case id, headword, pinyin, level, extras, language
         case readingZhuyin = "reading_zhuyin"
         case meaningJa = "meaning_ja"
         case partOfSpeech = "part_of_speech"
@@ -45,6 +47,13 @@ nonisolated struct Word: Codable, Sendable, Hashable {
         exampleSentence = try? c.decodeIfPresent(String.self, forKey: .exampleSentence)
         exampleTranslation = try? c.decodeIfPresent(String.self, forKey: .exampleTranslation)
         extras = try? c.decodeIfPresent(WordExtras.self, forKey: .extras)
+        language = try? c.decodeIfPresent(String.self, forKey: .language)
+    }
+
+    /// Same rule as the web's `matchesTargetLanguage` (language-filter.ts): an empty language is 台湾華語.
+    func matches(_ target: String) -> Bool {
+        let raw = (language ?? "").trimmingCharacters(in: .whitespaces)
+        return raw.isEmpty ? target == "zh-TW" : raw == target
     }
 }
 
@@ -71,9 +80,35 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var trivia: String?
     var usageNote: String?
     var synonymDiff: String?
+    /// Which display language these notes were written in (`explain_lang`; empty on old rows).
+    var explainLang: String?
+    // English cards (target-profile.ts EN sections).
+    var forms: WordForms?
+    var countability: Countability?
+    var stress: StressInfo?
+    var phrasalVerbs: [PhrasalVerb]?
+    var cultureNote: String?
+    var etymologyRelatives: [NotedWord]?
+    // Japanese cards (target-profile.ts JA sections).
+    var kanjiBreakdown: [KanjiPart]?
+    var pitchAccent: String?
+    var conjugation: [ConjugationRow]?
+    var politeness: String?
+    var counters: [CounterWord]?
+    var wordOrigin: String?
+    var japanNote: String?
 
     enum CodingKeys: String, CodingKey {
         case mnemonic, synonyms, antonyms, etymology, radicals, trivia
+        case explainLang = "explain_lang"
+        case forms, countability, stress, conjugation, politeness, counters
+        case phrasalVerbs = "phrasal_verbs"
+        case cultureNote = "culture_note"
+        case etymologyRelatives = "etymology_relatives"
+        case kanjiBreakdown = "kanji_breakdown"
+        case pitchAccent = "pitch_accent"
+        case wordOrigin = "word_origin"
+        case japanNote = "japan_note"
         case taiwanNote = "taiwan_note"
         case examplesExtra = "examples_extra"
         case pronunciationTips = "pronunciation_tips"
@@ -125,6 +160,20 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         trivia = (try? c.decodeIfPresent(String.self, forKey: .trivia)).flatMap { $0 }
         usageNote = (try? c.decodeIfPresent(String.self, forKey: .usageNote)).flatMap { $0 }
         synonymDiff = (try? c.decodeIfPresent(String.self, forKey: .synonymDiff)).flatMap { $0 }
+        explainLang = (try? c.decodeIfPresent(String.self, forKey: .explainLang)).flatMap { $0 }
+        forms = (try? c.decodeIfPresent(WordForms.self, forKey: .forms)).flatMap { $0 }
+        countability = (try? c.decodeIfPresent(Countability.self, forKey: .countability)).flatMap { $0 }
+        stress = (try? c.decodeIfPresent(StressInfo.self, forKey: .stress)).flatMap { $0 }
+        phrasalVerbs = (try? c.decodeIfPresent([PhrasalVerb].self, forKey: .phrasalVerbs)).flatMap { $0 }
+        cultureNote = (try? c.decodeIfPresent(String.self, forKey: .cultureNote)).flatMap { $0 }
+        etymologyRelatives = (try? c.decodeIfPresent([NotedWord].self, forKey: .etymologyRelatives)).flatMap { $0 }
+        kanjiBreakdown = (try? c.decodeIfPresent([KanjiPart].self, forKey: .kanjiBreakdown)).flatMap { $0 }
+        pitchAccent = (try? c.decodeIfPresent(String.self, forKey: .pitchAccent)).flatMap { $0 }
+        conjugation = (try? c.decodeIfPresent([ConjugationRow].self, forKey: .conjugation)).flatMap { $0 }
+        politeness = (try? c.decodeIfPresent(String.self, forKey: .politeness)).flatMap { $0 }
+        counters = (try? c.decodeIfPresent([CounterWord].self, forKey: .counters)).flatMap { $0 }
+        wordOrigin = (try? c.decodeIfPresent(String.self, forKey: .wordOrigin)).flatMap { $0 }
+        japanNote = (try? c.decodeIfPresent(String.self, forKey: .japanNote)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).
@@ -140,9 +189,9 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var resolvedRegister: Int? {
         if let registerScale { return max(-2, min(2, registerScale)) }
         guard let tag = registerTag, !tag.isEmpty else { return nil }
-        if tag.contains("口語") && tag.contains("書面") { return 0 }
-        if tag.contains("口語") { return -1 }
-        if tag.contains("書面") { return 1 }
+        if tag.contains("口語") && tag.contains("書面") { return 0 }  // l10n-ignore (matching data)
+        if tag.contains("口語") { return -1 }  // l10n-ignore (matching data)
+        if tag.contains("書面") { return 1 }  // l10n-ignore (matching data)
         return nil
     }
 }
@@ -222,6 +271,90 @@ nonisolated struct ExampleExtra: Codable, Sendable, Hashable {
     }
 }
 
+/// A lenient string field (missing or null → "").
+private extension KeyedDecodingContainer {
+    nonisolated func str(_ k: Key) -> String { ((try? decodeIfPresent(String.self, forKey: k)) ?? nil) ?? "" }
+}
+
+/// extras.forms (English inflections; from the dictionary).
+nonisolated struct WordForms: Codable, Sendable, Hashable {
+    var plural = "", past = "", pastParticiple = "", ing = "", third = "", comparative = "", superlative = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        plural = c.str(.plural); past = c.str(.past); pastParticiple = c.str(.pastParticiple); ing = c.str(.ing)
+        third = c.str(.third); comparative = c.str(.comparative); superlative = c.str(.superlative)
+    }
+    var isEmpty: Bool { [plural, past, pastParticiple, ing, third, comparative, superlative].allSatisfy(\.isEmpty) }
+}
+
+/// extras.countability: countable / uncountable / both, the article and a note.
+nonisolated struct Countability: Codable, Sendable, Hashable {
+    var kind = "countable", article = "", note = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kind = c.str(.kind).isEmpty ? "countable" : c.str(.kind); article = c.str(.article); note = c.str(.note)
+    }
+}
+
+/// extras.stress: syllables and which one is stressed.
+nonisolated struct StressInfo: Codable, Sendable, Hashable {
+    var syllables: [String] = []
+    var primary: Int?
+    var secondary: Int?
+    var note = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        syllables = ((try? c.decodeIfPresent([String].self, forKey: .syllables)) ?? nil) ?? []
+        primary = (try? c.decodeIfPresent(Int.self, forKey: .primary)) ?? nil
+        secondary = (try? c.decodeIfPresent(Int.self, forKey: .secondary)) ?? nil
+        note = c.str(.note)
+    }
+}
+
+nonisolated struct PhrasalVerb: Codable, Sendable, Hashable {
+    var phrase = "", meaning = "", example = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        phrase = c.str(.phrase); meaning = c.str(.meaning); example = c.str(.example)
+    }
+}
+
+/// A related word with a short note (etymology relatives).
+nonisolated struct NotedWord: Codable, Sendable, Hashable {
+    var word = "", note = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        word = c.str(.word); note = c.str(.note)
+    }
+}
+
+/// extras.kanji_breakdown: one kanji, its meaning, on (katakana) and kun (hiragana) readings.
+nonisolated struct KanjiPart: Codable, Sendable, Hashable {
+    var kanji = "", meaning = "", on = "", kun = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kanji = c.str(.kanji); meaning = c.str(.meaning); on = c.str(.on); kun = c.str(.kun)
+    }
+}
+
+/// extras.conjugation: the form's name (reader's language) and the Japanese form.
+nonisolated struct ConjugationRow: Codable, Sendable, Hashable {
+    var form = "", text = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        form = c.str(.form); text = c.str(.text)
+    }
+}
+
+/// extras.counters: 一本 / いっぽん / when to use it.
+nonisolated struct CounterWord: Codable, Sendable, Hashable {
+    var word = "", reading = "", note = ""
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        word = c.str(.word); reading = c.str(.reading); note = c.str(.note)
+    }
+}
+
 nonisolated struct MeasureWord: Codable, Sendable, Hashable {
     var word: String
     var zhuyin: String?
@@ -242,10 +375,22 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var word: Word?
     var lat: Double? = nil
     var lng: Double? = nil
+    /// The shelf the learner put this word on (`stickers.shelf_key`); nil = the AI's category.
+    var shelfKey: String? = nil
+    /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
+    var heroRole: String? = nil
+    /// The spoken one-liner recorded at the catch (`stickers.voice_video_url`, a storage path).
+    var voiceNotePath: String? = nil
+    /// Stand-in picture of a card caught without a photo (`stickers.placeholder_image_url`).
+    var placeholderImageUrl: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
+        case heroRole = "hero_role"
+        case voiceNotePath = "voice_video_url"
+        case placeholderImageUrl = "placeholder_image_url"
         case wordId = "word_id"
+        case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"
         case cutoutImageUrl = "cutout_image_url"
         case selfieImageUrl = "selfie_image_url"
@@ -254,10 +399,25 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         case captureType = "capture_type"
     }
 
-    /// One place decides which photo represents a sticker (photo-surface.ts): cutout, then original.
-    var heroPath: String? { cutoutImageUrl ?? objectImageUrl }
-    var room: Room { Category.room(for: word?.categoryKey) }
-    var categoryKey: String { Category.key(for: word?.categoryKey) }
+    /// One place decides which photo represents a sticker (photo-surface.ts): the learner's choice,
+    /// else the cut-out, else the original.
+    var heroPath: String? {
+        // The word's own choice first, else 設定 › 表示するタイプ (web: hero_role ?? resolvePrefer(pref)).
+        let role = heroRole ?? { () -> String? in
+            let p = UserDefaults.standard.string(forKey: "photo.pref") ?? "auto"
+            return p == "auto" ? nil : p
+        }()
+        return switch role {
+        case "object": objectImageUrl ?? cutoutImageUrl ?? placeholderImageUrl
+        case "cutout": cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        case "placeholder": placeholderImageUrl ?? cutoutImageUrl ?? objectImageUrl
+        default: cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        }
+    }
+    var room: Room { Category.room(for: shelfKey ?? word?.categoryKey) }
+    /// Where the word sits in the dex: the learner's shelf first, else the AI's category (web `effectiveShelf`).
+    var categoryKey: String { Category.key(for: shelfKey ?? word?.categoryKey) }
 }
 
 /// Row of `reviews` (SM-2 state) — read only here; the web app owns the schedule.
@@ -397,7 +557,7 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
             ?? (try? c.decode(String.self, forKey: .readingZhuyin)) ?? ""
         pinyin = (try? c.decode(String.self, forKey: .pinyin)) ?? ""
         meaningJa = (try? c.decode(String.self, forKey: .meaningJa)) ?? ""
-        pos = (try? c.decode(String.self, forKey: .pos)) ?? "名詞"
+        pos = (try? c.decode(String.self, forKey: .pos)) ?? ""
         var p = (try? c.decode([Double].self, forKey: .point)) ?? [500, 500]
         if p.count < 2 { p = [500, 500] }
         if p[0] <= 1 && p[1] <= 1 { p = [p[0] * 1000, p[1] * 1000] }
@@ -490,4 +650,20 @@ nonisolated struct OwnedWord: Codable, Sendable, Hashable {
     }
 
     var takenDate: Date? { SupabaseDate.parse(takenAt) }
+}
+
+
+/// Row of `user_shelves`: a shelf the learner made or renamed (web categories.functions.ts).
+nonisolated struct UserShelf: Codable, Sendable, Hashable {
+    let key: String
+    let label: String
+    let emoji: String
+    let roomKey: String?
+    let roomLabel: String?
+
+    enum CodingKeys: String, CodingKey {
+        case key, label, emoji
+        case roomKey = "room_key"
+        case roomLabel = "room_label"
+    }
 }

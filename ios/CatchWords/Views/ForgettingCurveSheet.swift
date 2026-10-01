@@ -46,7 +46,7 @@ struct ForgettingCurveSheet: View {
                         Image(systemName: "xmark").font(.system(size: 18, weight: .medium)).foregroundStyle(Theme.muted)
                             .frame(width: 44, height: 44)
                     }
-                    .accessibilityLabel("閉じる")
+                    .accessibilityLabel(L("閉じる"))
                 }
                 HStack(spacing: 12) {
                     HStack(spacing: 5) {
@@ -56,15 +56,15 @@ struct ForgettingCurveSheet: View {
                     .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                    Text("復習 **\(history.count)** 回").font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    Text(LocalizedStringKey(L("復習 **\(history.count)** 回"))).font(.system(size: 15)).foregroundStyle(Theme.muted)
                 }
-                Text("縦軸＝いま思い出せる確率（写真の右上の%と同じ）").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                Text(L("縦軸＝いま思い出せる確率（写真の右上の%と同じ）")).font(.system(size: 13)).foregroundStyle(Theme.muted)
                 HStack(spacing: 14) {
-                    legend(color: Theme.ok, dashed: false, text: "これまで")
-                    legend(color: Color(hex: 0xF59E0B), dashed: true, text: "復習しなかったら")
+                    legend(color: Theme.ok, dashed: false, text: L("これまで"))
+                    legend(color: Color(hex: 0xF59E0B), dashed: true, text: L("復習しなかったら"))
                     HStack(spacing: 5) {
                         Circle().stroke(Theme.primary, lineWidth: 2).frame(width: 10, height: 10)
-                        Text("復習した日")
+                        Text(L("復習した日"))
                     }
                 }
                 .font(.system(size: 13)).foregroundStyle(Theme.muted)
@@ -126,25 +126,25 @@ struct ForgettingCurveSheet: View {
         let d = curveData
         return Chart {
             ForEach(d.past) { p in
-                AreaMark(x: .value("日", p.date), y: .value("%", p.value), series: .value("s", p.series))
+                AreaMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", p.series))
                     .foregroundStyle(LinearGradient(colors: [Theme.primary.opacity(0.1), Theme.primary.opacity(0.02)], startPoint: .top, endPoint: .bottom))
-                LineMark(x: .value("日", p.date), y: .value("%", p.value), series: .value("s", p.series))
+                LineMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", p.series))
                     .foregroundStyle(Theme.ok)
                     .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
             }
             ForEach(d.future) { p in
-                LineMark(x: .value("日", p.date), y: .value("%", p.value), series: .value("s", "future"))
+                LineMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", "future"))
                     .foregroundStyle(LinearGradient(colors: [Theme.ok, Color(hex: 0xF59E0B), Color(hex: 0xEA580C)], startPoint: .leading, endPoint: .trailing))
                     .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 5]))
             }
             ForEach(d.reviews) { p in
-                PointMark(x: .value("日", p.date), y: .value("%", p.value))
-                    .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(.white)).frame(width: 13, height: 13) }
+                PointMark(x: .value("date", p.date), y: .value("%", p.value))
+                    .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(Theme.card)).frame(width: 13, height: 13) }
             }
-            PointMark(x: .value("日", d.today.date), y: .value("%", d.today.value))
+            PointMark(x: .value("date", d.today.date), y: .value("%", d.today.value))
                 .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(d.today.value))]).overlay(Circle().stroke(.white, lineWidth: 2.5)).frame(width: 18, height: 18) }
                 .annotation(position: .topTrailing, spacing: 2) {
-                    Text("今日 \(Int(d.today.value))%").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(L("今日 \(Int(d.today.value))%")).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.foreground)
                 }
         }
         .chartYScale(domain: 0...100)
@@ -158,7 +158,7 @@ struct ForgettingCurveSheet: View {
             AxisMarks(values: .automatic(desiredCount: 4)) { v in
                 AxisValueLabel {
                     if let date = v.as(Date.self) {
-                        Text(Calendar.current.isDateInToday(date) ? "今日" : JPDate.slash(date)).font(.system(size: 12))
+                        Text(Calendar.current.isDateInToday(date) ? L("今日") : JPDate.slash(date)).font(.system(size: 12))
                     }
                 }
             }
@@ -177,18 +177,18 @@ struct ForgettingCurveSheet: View {
         let daysLeft = max(0, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: dropDate)).day ?? 0)
         let isTime = pct < 95
         VStack(alignment: .leading, spacing: 10) {
-            Text(isTime ? "今が復習どき" : "まだしっかり覚えています").font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+            Text(isTime ? L("今が復習どき") : L("まだしっかり覚えています")).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
             if pct >= 70 {
-                Text("復習しないと \(JPDate.slash(dropDate))（\(daysLeft)日後）に「うろ覚え」になります")
+                Text(L("復習しないと \(JPDate.slash(dropDate))（\(daysLeft)日後）に「うろ覚え」になります"))
                     .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
             }
-            Text("いま思い出すと、次に忘れるまでの期間が伸びます。").font(.system(size: 14)).foregroundStyle(Theme.muted)
+            Text(L("いま思い出すと、次に忘れるまでの期間が伸びます。")).font(.system(size: 14)).foregroundStyle(Theme.muted)
             if isTime {
                 Button {
                     close()
                     onReviewNow()
                 } label: {
-                    Text("いま復習する").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text(L("いま復習する")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
                         .padding(.horizontal, 26).frame(minHeight: 50)
                         .background(Theme.primary, in: Capsule())
                 }

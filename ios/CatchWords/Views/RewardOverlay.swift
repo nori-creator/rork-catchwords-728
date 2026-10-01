@@ -57,10 +57,6 @@ struct RewardOverlay: View {
     let onFinish: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
-
-    /// The Blender jar replaces the flat photo at the bloom (never with reduced motion).
-    private var use3D: Bool { fx3D && !reduceMotion }
 
     @State private var dim: Double = 0
     @State private var scaleX: CGFloat = 1
@@ -116,7 +112,7 @@ struct RewardOverlay: View {
                     .opacity(ringOpacity)
                     .offset(y: -geo.size.height * 0.06)
 
-                ParticleBurst(active: particles && !use3D)
+                ParticleBurst(active: particles)
                     .frame(width: side * 1.6, height: side * 1.6)
                     .offset(y: -geo.size.height * 0.06)
 
@@ -142,10 +138,6 @@ struct RewardOverlay: View {
                 .offset(y: side * 0.5 + shadowDrop)
                 .scaleEffect(1 + shadowDrop / 120)
 
-            if use3D {
-                JarCatch3DView(image: payload.image, bloom: particles)
-                    .frame(width: side * 1.3, height: side * 1.3)
-            } else {
             Group {
                 if payload.isCutout {
                     Image(uiImage: payload.image).resizable().scaledToFit()
@@ -175,7 +167,6 @@ struct RewardOverlay: View {
                 .allowsHitTesting(false)
             }
             .shadow(color: Theme.primary.opacity(0.55), radius: 30)
-            }
         }
         .scaleEffect(x: scale * scaleX * (breathe ? 1.005 : 0.995), y: scale * scaleY * (breathe ? 1.005 : 0.995))
         .rotationEffect(.degrees(tilt))
@@ -193,7 +184,7 @@ struct RewardOverlay: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(readingGlow ? Color(hex: 0xBFEFFF) : .white.opacity(0.85))
                 .shadow(color: Theme.cyan.opacity(readingGlow ? 0.7 : 0), radius: 8)
-            Label(payload.gate.isReencounter ? "再会！写真を追加しました" : "図鑑に追加",
+            Label(payload.gate.isReencounter ? L("再会！写真を追加しました") : L("図鑑に追加"),
                   systemImage: payload.gate.isReencounter ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(payload.gate.isReencounter ? Theme.gold : Theme.ok)
@@ -242,6 +233,8 @@ struct RewardOverlay: View {
         withAnimation(.easeIn(duration: 0.22)) { ringOpacity = 1 }
         withAnimation(.easeInOut(duration: 0.5)) { ringProgress = 1 }
         try? await Task.sleep(for: .milliseconds(380))
+        // Core Haptics: the rumble rises through the compression and lands on the release (~0.22 s).
+        HapticPatterns.shared.bloom()
         withAnimation(.easeIn(duration: 0.14)) { scale *= 0.975 }
         try? await Task.sleep(for: .milliseconds(140))
         // 80–120ms full stop before the release.
@@ -255,7 +248,7 @@ struct RewardOverlay: View {
         particles = true
         SoundService.shared.play(.impact)
         try? await Task.sleep(for: .milliseconds(30))
-        Haptics.impact(.heavy)
+        if !HapticPatterns.shared.isAvailable { Haptics.impact(.heavy) }
 
         // At ~90% of bloom: voice + word + medium haptic + light sweep on the SAME frame.
         try? await Task.sleep(for: .milliseconds(190))
@@ -371,7 +364,9 @@ struct ParticleBurst: View {
         let isStar: Bool
     }
 
-    private let particles: [Particle] = (0..<22).map { i in
+    /// Drawn once (State): a plain `let` was re-randomized whenever the parent redrew, so the
+    /// stars jumped to new directions mid-flight.
+    @State private var particles: [Particle] = (0..<22).map { i in
         Particle(
             id: i,
             angle: Double(i) / 22 * 360 + Double.random(in: -8...8),
@@ -399,7 +394,7 @@ struct ParticleBurst: View {
                             y: active ? sin(p.angle * .pi / 180) * r * p.distance : 0)
                     .scaleEffect(active ? 0.3 : 1)
                     .opacity(active ? 0 : 1)
-                    .animation(.easeOut(duration: Double.random(in: 0.7...1.1)), value: active)
+                    .animation(.easeOut(duration: 0.7 + Double(p.id % 5) * 0.1), value: active)
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)

@@ -21,15 +21,19 @@ struct ScanView: View {
     @State private var baseZoom: CGFloat = 1
     @State private var location: CLLocation?
     @State private var tapStart: Date?
+    /// Web rankScanCandidates: the one most worth learning glows; names doubtful as Taiwan usage get "?".
+    @State private var topId: String?
+    @State private var doubtful: Set<String> = []
+    @State private var touched = false
 
     enum Stage: Equatable {
         case idle, sensing, reading, matching
         var label: String {
             switch self {
             case .idle: ""
-            case .sensing: "シーンを感知しています"
-            case .reading: "対象を解析しています"
-            case .matching: "辞書と照合しています"
+            case .sensing: L("シーンを感知しています")
+            case .reading: L("対象を解析しています")
+            case .matching: L("辞書と照合しています")
             }
         }
     }
@@ -42,7 +46,9 @@ struct ScanView: View {
                     preview
                     if let frame, !items.isEmpty {
                         ForEach(items) { item in
-                            ScanTag(item: item, owned: dex.owns(headword: item.headword)) {
+                            ScanTag(item: item, owned: dex.owns(headword: item.headword),
+                                    isTop: item.id == topId, isDoubtful: doubtful.contains(item.id)) {
+                                touched = true
                                 tapStart = Date()
                                 Haptics.selection()
                                 selected = item
@@ -94,15 +100,15 @@ struct ScanView: View {
         case .denied:
             VStack(spacing: 12) {
                 Image(systemName: "camera.fill").font(.system(size: 30)).foregroundStyle(.white.opacity(0.6))
-                Text("カメラの使用が許可されていません").foregroundStyle(.white)
-                Button("設定を開く") {
+                Text(L("カメラの使用が許可されていません")).foregroundStyle(.white)
+                Button(L("設定を開く")) {
                     if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
                 }
                 .foregroundStyle(Theme.cyan).frame(minHeight: 44)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.navyCard)
         case .unavailable:
-            Text("カメラが見つかりません").foregroundStyle(.white.opacity(0.8))
+            Text(L("カメラが見つかりません")).foregroundStyle(.white.opacity(0.8))
                 .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.navyCard)
         default:
             if let frame, !items.isEmpty {
@@ -135,14 +141,14 @@ struct ScanView: View {
                     Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
                 }
-                .accessibilityLabel("閉じる")
+                .accessibilityLabel(L("閉じる"))
                 Spacer()
-                Text("かざす").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                Text(L("かざす")).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
                 Spacer()
                 Text(String(format: "%.1f×", camera.zoom))
                     .font(AppFont.mono(13, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
-                    .accessibilityLabel("ズーム \(String(format: "%.1f", camera.zoom))倍")
+                    .accessibilityLabel(L("ズーム \(String(format: "%.1f", camera.zoom))倍"))
             }
             .padding(.horizontal, 16)
             Spacer()
@@ -150,15 +156,15 @@ struct ScanView: View {
             VStack(spacing: 14) {
                 Group {
                     if speech.isListening {
-                        Text(speech.transcript.isEmpty ? "話しかけてください" : speech.transcript)
+                        Text(speech.transcript.isEmpty ? L("話しかけてください") : speech.transcript)
                     } else if stage != .idle {
                         Text(stage.label)
                     } else if let message {
                         Text(message)
                     } else if !items.isEmpty {
-                        Text("札を押すと意味と発音が出ます")
+                        Text(L("札を押すと意味と発音が出ます"))
                     } else {
-                        Text("看板や物にかざして、ボタンを押してください")
+                        Text(L("看板や物にかざして、ボタンを押してください"))
                     }
                 }
                 .font(.system(size: 14, weight: .medium))
@@ -169,7 +175,7 @@ struct ScanView: View {
                 .animation(.easeInOut(duration: 0.2), value: stage)
 
                 HStack(alignment: .center) {
-                    roundButton(icon: speech.isListening ? "waveform" : "mic.fill", label: "声で調べる", active: speech.isListening) { voice() }
+                    roundButton(icon: speech.isListening ? "waveform" : "mic.fill", label: L("声で調べる"), active: speech.isListening) { voice() }
                     Spacer()
                     Button { scanOrReset() } label: {
                         ZStack {
@@ -186,9 +192,9 @@ struct ScanView: View {
                     }
                     .buttonStyle(PressableStyle(scale: 0.9))
                     .disabled(stage != .idle || camera.state != .running)
-                    .accessibilityLabel(items.isEmpty ? "スキャン" : "もう一度")
+                    .accessibilityLabel(items.isEmpty ? L("スキャン") : L("もう一度"))
                     Spacer()
-                    roundButton(icon: "arrow.triangle.2.circlepath.camera", label: "カメラ切替", active: false) {
+                    roundButton(icon: "arrow.triangle.2.circlepath.camera", label: L("カメラ切替"), active: false) {
                         camera.toggle()
                         baseZoom = 1
                     }
@@ -214,8 +220,30 @@ struct ScanView: View {
 
     // MARK: - Actions
 
+    /// Asked after the tags are already up, so scanning never waits for it; silently skipped on failure.
+    private func rank(_ list: [ScanItem]) async {
+        guard list.count >= 2 else { return }
+        struct Ranked: Decodable { let order: [Int]?; let doubtful: [Int]? }
+        let payload: [[String: Any]] = list.prefix(24).map { it in
+            ["headword": String(it.headword.prefix(40)), "meaning": String(it.meaning.prefix(80)),
+             "kind": String(it.candidate.kind.prefix(12)), "confidence": min(1, max(0, it.candidate.confidence)),
+             "owned": dex.owns(headword: it.headword)]
+        }
+        guard let r = try? await NativeAPI.call("rankScanCandidates", ["items": payload], as: Ranked.self, timeout: 8),
+              items.map(\.id) == list.map(\.id) else { return }
+        let doubt = Set((r.doubtful ?? []).compactMap { $0 < list.count ? list[$0].id : nil })
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            doubtful = doubt
+            if !touched, let first = r.order?.first(where: { $0 < list.count && !doubt.contains(list[$0].id) }) {
+                topId = list[first].id
+            }
+        }
+        if topId != nil, !touched { Haptics.selection() }
+    }
+
     private func scanOrReset() {
         if !items.isEmpty {
+            topId = nil; doubtful = []; touched = false
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items = []; frame = nil; message = nil }
             return
         }
@@ -223,7 +251,7 @@ struct ScanView: View {
     }
 
     private func scan() async {
-        guard let shot = await camera.capture() else { message = "フレームを取得できませんでした"; return }
+        guard let shot = await camera.capture() else { message = L("フレームを取得できませんでした"); return }
         Haptics.impact(.medium)
         message = nil
         stage = .sensing
@@ -231,11 +259,10 @@ struct ScanView: View {
             try? await Task.sleep(for: .milliseconds(700))
             if !Task.isCancelled, stage == .sensing { stage = .reading }
         }
-        let t0 = Date()
         do {
-            let found = try await AIService.shared.detect(image: shot)
+            let found = try await AIService.shared.detectScan(image: shot, lat: location?.coordinate.latitude,
+                                                              lng: location?.coordinate.longitude)
             stageTimer.cancel()
-            let detectMs = Int(Date().timeIntervalSince(t0) * 1000)
             stage = .matching
             let dict = await Dictionary.lookup(found.map(\.headword))
             let merged = found.map { c in ScanItem(candidate: c, entry: dict[c.headword]) }
@@ -243,12 +270,12 @@ struct ScanView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { items = merged }
             stage = .idle
             Haptics.success()
-            ScanLog.detected(merged, detectMs: detectMs, location: location)
+            Task { await rank(merged) }
         } catch {
             stageTimer.cancel()
             stage = .idle
             Haptics.warning()
-            message = (error as? LocalizedError)?.errorDescription ?? "検出に失敗しました"
+            message = (error as? LocalizedError)?.errorDescription ?? L("検出に失敗しました")
         }
     }
 
@@ -256,7 +283,7 @@ struct ScanView: View {
         speech.toggle { text in
             Task { await lookupVoice(text) }
         }
-        if speech.state == .denied { message = "マイクと音声認識の使用を設定で許可してください" }
+        if speech.state == .denied { message = L("マイクと音声認識の使用を設定で許可してください") }
     }
 
     private func lookupVoice(_ text: String) async {
@@ -270,7 +297,7 @@ struct ScanView: View {
             selected = item
             SoundService.shared.speak(item.headword)
         } catch {
-            message = (error as? LocalizedError)?.errorDescription ?? "その言葉が見つかりませんでした。"
+            message = (error as? LocalizedError)?.errorDescription ?? L("その言葉が見つかりませんでした。")
         }
     }
 
@@ -281,7 +308,7 @@ struct ScanView: View {
             let unique = Array(Set(heads.filter { !$0.isEmpty }))
             guard !unique.isEmpty else { return [:] }
             let list = unique.map { "\"\($0)\"" }.joined(separator: ",")
-            let q = "dictionary_entries?select=headword,zhuyin,pinyin,meaning_ja,pos,tocfl_level,source&language=eq.zh-TW&headword=in.(\(list))"
+            let q = "dictionary_entries?select=headword,zhuyin,pinyin,meaning_ja,pos,tocfl_level,source&language=eq.\(NativeAPI.targetLanguage)&headword=in.(\(list))"
             guard let path = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                   let data = try? await SupabaseClient.shared.rest("GET", path, timeout: 4),
                   let rows = try? JSONDecoder().decode([DictEntry].self, from: data) else { return [:] }
@@ -317,7 +344,7 @@ struct ScanItem: Identifiable, Hashable {
     var point: [Double] { candidate.point }
     var zhuyin: String { entry?.zhuyin ?? candidate.zhuyin }
     var pinyin: String { entry?.pinyin ?? candidate.pinyin }
-    var meaning: String { entry?.meaningJa ?? candidate.meaningJa }
+    var meaning: String { ReaderLanguage.shown(entry?.meaningJa, candidate.meaningJa) }
     var isVerified: Bool { entry?.source == "verified" }
 
     /// Candidate with dictionary values so the saved card reads the same as the tag.
@@ -327,28 +354,18 @@ struct ScanItem: Identifiable, Hashable {
     }
 }
 
-/// Silent log to `scan_events` (detect_ms / tap_to_audio_ms), never blocks the UI.
+/// Silent scan funnel log, never blocks the UI. Detection rows are written by the web's `detectScan`
+/// itself; taps and catches mark those same rows (web `markScanTap` / `markScanCaught`), so nothing is
+/// counted twice.
 enum ScanLog {
-    static func detected(_ items: [ScanItem], detectMs: Int, location: CLLocation?) {
-        guard let uid = SupabaseClient.shared.userId, !items.isEmpty else { return }
-        let rows: [[String: Any]] = items.map { i in
-            var r: [String: Any] = [
-                "user_id": uid, "headword": i.headword, "meaning_ja": i.meaning,
-                "kind": i.candidate.kind == "text" ? "text" : "object",
-                "confidence": i.candidate.confidence, "detect_ms": detectMs,
-            ]
-            if let l = location { r["lat"] = l.coordinate.latitude; r["lng"] = l.coordinate.longitude }
-            return r
-        }
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: rows) }
+    static func tapped(_ item: ScanItem, ms: Int?) {
+        var d: [String: Any] = ["headword": item.headword]
+        if let ms { d["tap_to_audio_ms"] = max(0, ms) }
+        Task { _ = try? await NativeAPI.call("markScanTap", d, timeout: 10) }
     }
 
-    static func tapped(_ item: ScanItem, ms: Int?) {
-        guard let uid = SupabaseClient.shared.userId else { return }
-        var r: [String: Any] = ["user_id": uid, "headword": item.headword, "meaning_ja": item.meaning,
-                                "kind": item.candidate.kind == "text" ? "text" : "object", "tapped": true]
-        if let ms { r["tap_to_audio_ms"] = ms }
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: r) }
+    static func caught(_ item: ScanItem) {
+        Task { _ = try? await NativeAPI.call("markScanCaught", ["headword": item.headword], timeout: 10) }
     }
 }
 
@@ -356,15 +373,23 @@ enum ScanLog {
 struct ScanTag: View {
     let item: ScanItem
     let owned: Bool
+    var isTop: Bool = false
+    var isDoubtful: Bool = false
     let onTap: () -> Void
     @State private var bob: Bool = false
+    @State private var glow: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+                    // Fixed ink: the tag is always a white label on the camera, in light and dark.
+                    Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Color(hex: 0x0B121A))
+                    if isDoubtful {
+                        Text("?").font(.system(size: 13, weight: .heavy)).foregroundStyle(Color(hex: 0xB45309))
+                            .accessibilityLabel(L("台湾での言い方として不確か"))
+                    }
                     if owned {
                         Image(systemName: "checkmark.seal.fill").font(.system(size: 12)).foregroundStyle(Theme.ok)
                     }
@@ -372,8 +397,9 @@ struct ScanTag: View {
                 .padding(.horizontal, 14)
                 .frame(minHeight: 40)
                 .background(.white, in: Capsule())
-                .overlay(Capsule().stroke(Theme.primary.opacity(0.5), lineWidth: 1.5))
-                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                .overlay(Capsule().stroke(isTop ? Theme.gold : Theme.primary.opacity(0.5), lineWidth: isTop ? 2.5 : 1.5))
+                .shadow(color: isTop ? Theme.gold.opacity(glow ? 0.8 : 0.3) : .black.opacity(0.3), radius: isTop ? 14 : 8, y: 4)
+                .opacity(isDoubtful ? 0.78 : 1)
                 Circle().fill(Theme.cyan).frame(width: 10, height: 10)
                     .overlay(Circle().stroke(.white, lineWidth: 2))
                     .shadow(color: Theme.cyan, radius: 6)
@@ -381,10 +407,13 @@ struct ScanTag: View {
             .offset(y: bob ? -3 : 3)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel("\(item.headword)、\(item.meaning)\(owned ? "、取得済み" : "")")
+        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + (owned ? L("、取得済み") : ""))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
+        .scaleEffect(isTop ? 1.08 : 1)
+        .zIndex(isTop ? 1 : 0)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.6))) { bob = true }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glow = true }
         }
     }
 }
@@ -425,28 +454,29 @@ struct ScanCatchSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
-                ZhuyinWordView(headword: item.headword, zhuyin: item.zhuyin, size: 36, weight: .heavy)
+                ZhuyinWordView(headword: item.headword, zhuyin: item.zhuyin, size: 36, weight: .heavy, pinyin: item.pinyin)
                 Spacer()
                 PronounceCircle(text: item.headword, size: 48)
             }
             if !item.pinyin.isEmpty {
                 Text(item.pinyin).font(.system(size: 14)).foregroundStyle(Theme.muted)
             }
-            Text(item.meaning).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+            Text(item.meaning).font(.system(size: 20, weight: .semibold))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
+                    .foregroundStyle(Theme.foreground)
             HStack(spacing: 6) {
                 if item.isVerified {
-                    Label("検証済み", systemImage: "checkmark.seal").foregroundStyle(Theme.ok)
+                    Label(L("検証済み"), systemImage: "checkmark.seal").foregroundStyle(Theme.ok)
                 } else {
-                    Label("AIによる推定", systemImage: "sparkles").foregroundStyle(Theme.muted)
+                    Label(L("AIによる推定"), systemImage: "sparkles").foregroundStyle(Theme.muted)
                 }
                 if dex.owns(headword: item.headword) {
-                    Text("・取得済み").foregroundStyle(Theme.primaryInk)
+                    Text(L("・取得済み")).foregroundStyle(Theme.primaryInk)
                 }
             }
             .font(.system(size: 12, weight: .medium))
             if let error { Text(error).font(.system(size: 13)).foregroundStyle(Theme.destructive) }
             Spacer(minLength: 0)
-            PrimaryButton(title: "キャッチする", icon: "sparkles", isLoading: isSaving, sheen: true) { caught() }
+            PrimaryButton(title: L("キャッチする"), icon: "sparkles", isLoading: isSaving, sheen: true) { caught() }
         }
         .padding(20)
         .background(Theme.background)
@@ -454,7 +484,7 @@ struct ScanCatchSheet: View {
 
     private func caught() {
         guard plan.canCatch else { router.showPaywall = true; return }
-        guard let frame else { error = "フレームを取得できませんでした"; return }
+        guard let frame else { error = L("フレームを取得できませんでした"); return }
         isSaving = true
         Task {
             defer { isSaving = false }
@@ -476,17 +506,9 @@ struct ScanCatchSheet: View {
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
             } catch {
                 Haptics.warning()
-                self.error = (error as? LocalizedError)?.errorDescription ?? "保存に失敗しました。"
+                self.error = (error as? LocalizedError)?.errorDescription ?? L("保存に失敗しました。")
             }
         }
     }
 }
 
-extension ScanLog {
-    static func caught(_ item: ScanItem) {
-        guard let uid = SupabaseClient.shared.userId else { return }
-        let r: [String: Any] = ["user_id": uid, "headword": item.headword, "meaning_ja": item.meaning,
-                                "kind": item.candidate.kind == "text" ? "text" : "object", "tapped": true, "caught": true]
-        Task { _ = try? await SupabaseClient.shared.rest("POST", "scan_events", body: r) }
-    }
-}

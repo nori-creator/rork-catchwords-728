@@ -91,7 +91,7 @@ struct MemoryBadge: View {
         return 5
     }
 
-    static let labels = ["忘れかけ", "あやうい", "うろ覚え", "薄れぎみ", "覚えている", "はっきり"]
+    static var labels: [String] { [L("忘れかけ"), L("あやうい"), L("うろ覚え"), L("薄れぎみ"), L("覚えている"), L("はっきり")] }
 
     var body: some View {
         let lv = Self.level(percent)
@@ -105,7 +105,7 @@ struct MemoryBadge: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 4)
-        .background(Color.white.opacity(0.94), in: Capsule())
+        .background(Theme.card.opacity(0.94), in: Capsule())
         .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(Self.labels[lv]) \(percent)%")

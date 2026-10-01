@@ -4,139 +4,139 @@ import SwiftUI
 struct HomeView: View {
     @Environment(DexStore.self) private var dex
     @Environment(ProfileStore.self) private var profile
+    @Environment(DiaryStore.self) private var diary
     @Environment(AppRouter.self) private var router
     @State private var writingDay: WritingDay?
-    @AppStorage("album.span") private var spanRaw: String = AlbumSpan.day.rawValue
-
-    private var span: AlbumSpan { AlbumSpan(rawValue: spanRaw) ?? .day }
-
-    /// album-span.ts: past pages bundled by day / week (Monday start, local time) / month.
-    private func pastGroups(today: Date) -> [(key: Date, items: [Sticker])] {
-        let older = dex.stickers.filter { !Calendar.current.isDate($0.takenAt, inSameDayAs: today) }
-        let grouped = Dictionary(grouping: older) { span.start(of: $0.takenAt) }
-        return grouped.keys.sorted(by: >).prefix(span == .day ? 45 : 60).map { k in
-            (k, grouped[k]?.sorted { $0.takenAt > $1.takenAt } ?? [])
-        }
+    @State private var showJournal = false
+    @State private var showStats = false
+    @State private var memorialOpen: Int?
+    @State private var memorialHidden = false
+    @State private var openMonth: MonthOpen?
+    private struct MonthOpen: Identifiable {
+        let month: Date
+        var id: Date { month }
     }
 
-    private var days: [(day: Date, items: [Sticker])] {
-        let cal = Calendar.current
-        let grouped = Dictionary(grouping: dex.stickers) { cal.startOfDay(for: $0.takenAt) }
-        return grouped.keys.sorted(by: >).map { d in (d, grouped[d]?.sorted { $0.takenAt > $1.takenAt } ?? []) }
+    private struct MemorialDay: Identifiable {
+        let n: Int
+        var id: Int { n }
     }
 
     var body: some View {
-        let today = Calendar.current.startOfDay(for: Date())
-        let todayItems = days.first { $0.day == today }?.items ?? []
-        let past = pastGroups(today: today)
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
 
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: 64)
-                    Bookshelf(stickers: dex.stickers) { month in
-                        let cal = Calendar.current
-                        if let target = past.first(where: { cal.isDate($0.key, equalTo: month, toGranularity: .month) }) {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
-                                proxy.scrollTo(target.key, anchor: .top)
-                            }
-                        } else {
-                            withAnimation { proxy.scrollTo("today", anchor: .top) }
-                        }
-                    }
-                    .padding(.bottom, 28)
+        ScrollView {
+            VStack(spacing: 0) {
+                Color.clear.frame(height: 64)
+                // Past months stand on the shelf; this month's book lies open below.
+                Bookshelf(stickers: dex.stickers.filter { !cal.isDate($0.takenAt, equalTo: today, toGranularity: .month) }) { month in
+                    openMonth = MonthOpen(month: month)
+                }
+                .padding(.bottom, 22)
 
-                    HomeAlbum3D(sticker: todayItems.first ?? dex.stickers.first)
-                        .padding(.bottom, 8)
-
-                    VStack(spacing: 2) {
-                        Text(JPDate.weekday(today))
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Theme.primaryInk)
-                        Text(JPDate.monthDay(today))
-                            .font(.system(size: 50, weight: .heavy))
-                            .foregroundStyle(Color(hex: 0x33291F))
-                            .monospacedDigit()
-                    }
-                    .padding(.bottom, 18)
-                    .id("today")
-
-                    AlbumPage(items: todayItems, isToday: true) { router.detailSticker = $0 } onCamera: {
-                        router.tab = .camera
+                if let n = profile.createdAt.flatMap({ Milestone.today(start: $0) }),
+                   !memorialHidden, !Milestone.wasDismissed(n) {
+                    MemorialBanner(n: n, words: dex.stickers.count, photos: Milestone.highlights(dex.stickers).count) {
+                        Haptics.impact(.medium)
+                        memorialOpen = n
+                    } onDismiss: {
+                        Milestone.dismiss(n)
+                        withAnimation(.snappy) { memorialHidden = true }
                     }
                     .padding(.horizontal, 16)
-                    .tourAnchor(.album)
-
-                    DiaryLine(day: today) { writingDay = WritingDay(date: $0) }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-
-                    StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-
-                    if !past.isEmpty {
-                        HStack(spacing: 12) {
-                            Rectangle().fill(Color(hex: 0x33291F, opacity: 0.12)).frame(height: 1)
-                            Text("これまでのページ").font(.system(size: 13)).foregroundStyle(Color(hex: 0x33291F, opacity: 0.55)).fixedSize()
-                            Rectangle().fill(Color(hex: 0x33291F, opacity: 0.12)).frame(height: 1)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 40)
-                        .padding(.bottom, 14)
-
-                        Picker("まとめ方", selection: $spanRaw) {
-                            ForEach(AlbumSpan.allCases) { Text($0.label).tag($0.rawValue) }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 240)
-                        .padding(.bottom, 20)
-                        .onChange(of: spanRaw) { _, _ in Haptics.selection() }
-
-                        LazyVStack(spacing: 28) {
-                            ForEach(past, id: \.key) { entry in
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(span.heading(entry.key))
-                                            .font(.system(size: 17, weight: .bold))
-                                            .foregroundStyle(Color(hex: 0x33291F))
-                                        Spacer()
-                                        if span != .day {
-                                            Text("\(entry.items.count)語")
-                                                .font(AppFont.mono(12, weight: .semibold))
-                                                .foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
-                                        }
-                                    }
-                                    .padding(.horizontal, 6)
-                                    AlbumPage(items: entry.items, isToday: false) { router.detailSticker = $0 } onCamera: {}
-                                    if span == .day {
-                                        DiaryLine(day: entry.key) { writingDay = WritingDay(date: $0) }
-                                    }
-                                }
-                                .id(entry.key)
-                            }
-                        }
-                        .animation(.spring(response: 0.45, dampingFraction: 0.9), value: spanRaw)
-                        .padding(.horizontal, 16)
-                    }
-                    Color.clear.frame(height: 120)
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+
+                HStack(alignment: .firstTextBaseline) {
+                    Text(L("\(JPDate.month(today))のアルバム"))
+                        .font(.system(size: 20, weight: .heavy))
+                        .foregroundStyle(Color(hex: 0x33291F))
+                    Spacer()
+                    Text(L("横にスワイプでページをめくる"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 8)
+
+                MonthBookView(
+                    days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
+                    startAtEnd: true,
+                    onOpen: { router.detailSticker = $0 },
+                    onWrite: { writingDay = WritingDay(date: $0) },
+                    onCamera: { router.tab = .camera }
+                )
+                .frame(height: max(520, UIScreen.main.bounds.height * 0.66))
+                .padding(.horizontal, 12)
+                .tourAnchor(.album)
+
+                Button { showJournal = true } label: {
+                    Label(L("過去の日記と添削"), systemImage: "books.vertical")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.7))
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(PressableStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 22)
+                .padding(.top, 8)
+
+                StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+
+                AlbumHiddenTray()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                Color.clear.frame(height: 120)
             }
-            .refreshable { await dex.load() }
         }
+        .refreshable { await dex.load() }
         .background(HomeBackground())
         .overlay(alignment: .top) { header }
         .sheet(item: $writingDay) { d in
             DiaryComposer(day: d.date)
                 .presentationDetents([.large])
         }
+        .sheet(isPresented: $showJournal) {
+            JournalHistoryView()
+        }
+        .fullScreenCover(item: $openMonth) { m in
+            MonthBookSheet(month: m.month) { s in
+                openMonth = nil
+                router.detailSticker = s
+            }
+        }
+        .fullScreenCover(item: Binding(get: { memorialOpen.map(MemorialDay.init) }, set: { memorialOpen = $0?.n })) { m in
+            MemorialAlbumView(n: m.n, words: dex.stickers.count, picks: Milestone.highlights(dex.stickers)) { s in
+                memorialOpen = nil
+                router.detailSticker = s
+            } onClose: {
+                memorialOpen = nil
+            }
+        }
+        .task(id: profile.createdAt) {
+            if let start = profile.createdAt { await Milestone.scheduleNotification(start: start) }
+        }
+        .sheet(isPresented: $showStats) {
+            UserStatsPanel(
+                onSettings: { showStats = false; router.tab = .settings },
+                onReview: { showStats = false; router.tab = .review }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(32)
+        }
     }
 
     private var header: some View {
         HStack(spacing: 12) {
-            Button { router.tab = .settings } label: { AvatarView(url: profile.avatarURL, size: 38) }
+            Button { Haptics.selection(); showStats = true } label: { AvatarView(url: profile.avatarURL, size: 38) }
                 .buttonStyle(PressableStyle(scale: 0.92))
-                .accessibilityLabel("設定")
+                .accessibilityLabel(L("あなたの記録"))
             Text("CatchWords")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(Theme.muted)
@@ -158,9 +158,9 @@ enum AlbumSpan: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .day: "日"
-        case .week: "週"
-        case .month: "月"
+        case .day: L("日ごと")
+        case .week: L("週ごと")
+        case .month: L("月ごと")
         }
     }
 
@@ -184,8 +184,7 @@ enum AlbumSpan: String, CaseIterable, Identifiable {
             let end = Calendar.current.date(byAdding: .day, value: 6, to: key) ?? key
             return "\(JPDate.monthDay(key)) – \(JPDate.monthDay(end))"
         case .month:
-            let c = Calendar.current.dateComponents([.year, .month], from: key)
-            return "\(c.year ?? 0)年\(c.month ?? 0)月"
+            return JPDate.yearMonth(key)
         }
     }
 }
@@ -244,7 +243,7 @@ struct Bookshelf: View {
 
             HStack(alignment: .bottom, spacing: 2) {
                 if months.isEmpty {
-                    Text("最初の1冊はまだ白紙です")
+                    Text(L("先月までの本がここに並びます"))
                         .font(AppFont.hand(15))
                         .foregroundStyle(.white.opacity(0.75))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -330,7 +329,7 @@ struct BookSpine: View {
             in: .rect(cornerRadius: 3)
         )
         .shadow(color: .black.opacity(0.35), radius: 2, x: 2)
-        .accessibilityLabel("\(JPDate.monthName(month)) \(count)語")
+        .accessibilityLabel(L("\(JPDate.monthName(month)) \(count)語"))
     }
 }
 
@@ -376,12 +375,12 @@ struct AlbumPage: View {
         VStack(spacing: 0) {
             if items.isEmpty {
                 VStack(spacing: 16) {
-                    Text("今日のページはまだ白紙です。")
+                    Text(L("今日のページはまだ白紙です。"))
                         .font(AppFont.hand(20))
                         .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
                     if isToday {
                         Button(action: onCamera) {
-                            Label("今日の1枚を撮る", systemImage: "camera.fill")
+                            Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 22)
@@ -394,7 +393,8 @@ struct AlbumPage: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 260)
             } else {
-                layout
+                // Web album-day-layout: the same collage (and the same hand-placed positions) as the web.
+                CollageBoard(items: items, editable: isToday, onOpen: onOpen)
             }
         }
         .padding(14 + wall.inset)
@@ -462,6 +462,21 @@ struct AlbumPrint: View {
     let onOpen: (Sticker) -> Void
 
     var body: some View {
+        printView
+            // Web: 「ホームアルバムだけから消す。図鑑からは消さない。あとから戻せる」.
+            .contextMenu {
+                Button(L("この単語をひらく"), systemImage: "book") { onOpen(sticker) }
+                Button(L("アルバムから外す（図鑑には残ります）"), systemImage: "eye.slash", role: .destructive) {
+                    Haptics.impact(.light)
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                        Task { await dex.setAlbumHidden(sticker.id, hidden: true) }
+                    }
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var printView: some View {
         let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
         Button { onOpen(sticker) } label: {
             if path == nil {
@@ -514,7 +529,7 @@ struct AlbumPrint: View {
             }
         }
         .buttonStyle(PressableStyle(scale: 0.97))
-        .accessibilityLabel(sticker.word?.headword ?? "写真")
+        .accessibilityLabel(sticker.word?.headword ?? L("写真"))
     }
 }
 
@@ -568,6 +583,65 @@ struct HomeAlbum3D: View {
             guard let url = dex.url(for: path, preferThumb: false) else { return }
             let img = await ImageCache.shared.load(url: url, key: path)
             withAnimation(.easeOut(duration: 0.3)) { cover = img }
+        }
+    }
+}
+
+/// Web `album-hidden-tray`: photos taken off the album, each with 「戻す」. Collapsed by default.
+struct AlbumHiddenTray: View {
+    @Environment(DexStore.self) private var dex
+    @State private var open = false
+
+    private var hidden: [Sticker] { dex.stickers.filter { dex.albumHidden.contains($0.id) } }
+
+    var body: some View {
+        if !hidden.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) { open.toggle() }
+                } label: {
+                    HStack {
+                        Image(systemName: "eye.slash")
+                        Text(L("アルバムから外した写真 \(hidden.count)"))
+                        Spacer()
+                        Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0))
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                if open {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 10) {
+                            ForEach(hidden) { s in
+                                VStack(spacing: 6) {
+                                    let path = s.heroPath
+                                    Theme.secondary.frame(width: 84, height: 84)
+                                        .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                                        .clipShape(.rect(cornerRadius: 12))
+                                    Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                                    Button(L("戻す")) {
+                                        Haptics.selection()
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                                            Task { await dex.setAlbumHidden(s.id, hidden: false) }
+                                        }
+                                    }
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .frame(minWidth: 44, minHeight: 32)
+                                }
+                                .frame(width: 84)
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color(hex: 0xFFFBF2).opacity(0.8), in: .rect(cornerRadius: 16, style: .continuous))
         }
     }
 }

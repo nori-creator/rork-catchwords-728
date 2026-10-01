@@ -9,7 +9,6 @@ import UIKit
 /// to its 2D version instead of showing an empty box.
 enum Scene3D {
     enum Model: String {
-        case jar = "SpecimenJar"
         case star = "RewardStar"
         case book = "DexBook"
         case album = "PhotoAlbum"
@@ -37,8 +36,9 @@ enum Scene3D {
         m.metallic = .init(floatLiteral: 0)
         m.clearcoat = .init(floatLiteral: 1)
         m.clearcoatRoughness = .init(floatLiteral: 0.02)
-        m.blending = .transparent(opacity: .init(floatLiteral: 0.2))
-        m.faceCulling = .none
+        // Thin and clear: back faces culled so the two walls don't stack into milk.
+        m.blending = .transparent(opacity: .init(floatLiteral: 0.14))
+        m.faceCulling = .back
         return m
     }
 
@@ -63,12 +63,30 @@ enum Scene3D {
 
     /// A picture that is always fully lit (photos and labels must keep their real colours).
     static func picture(_ image: UIImage) async -> UnlitMaterial? {
-        guard let cg = image.normalizedOrientation().cgImage,
+        guard let cg = textureImage(image),
               let tex = try? await TextureResource(image: cg, options: .init(semantic: .color)) else { return nil }
         var m = UnlitMaterial()
         m.color = .init(tint: .white, texture: .init(tex))
         m.blending = .transparent(opacity: .init(floatLiteral: 1))
         return m
+    }
+
+    /// Redraws into a plain 8-bit sRGB bitmap (≤1024 px, orientation applied). Camera photos and
+    /// renderer images can be wide-gamut/extended-range or 3× scale, which texture loading may refuse.
+    static func textureImage(_ image: UIImage) -> CGImage? {
+        let px = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        guard px.width > 0, px.height > 0 else { return nil }
+        let k = min(1, 1024 / max(px.width, px.height))
+        let w = max(1, Int(px.width * k)), h = max(1, Int(px.height * k))
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        UIGraphicsPushContext(ctx)
+        ctx.translateBy(x: 0, y: CGFloat(h))
+        ctx.scaleBy(x: 1, y: -1)
+        image.draw(in: CGRect(x: 0, y: 0, width: w, height: h))
+        UIGraphicsPopContext()
+        return ctx.makeImage()
     }
 
     /// Paints every mesh under the entity named `name` (Blender object names survive the export).
@@ -126,7 +144,7 @@ enum Scene3D {
                                                       .foregroundColor: UIColor(red: 0.07, green: 0.13, blue: 0.24, alpha: 1),
                                                       .paragraphStyle: center])
             if let count {
-                ("\(count)語" as NSString).draw(in: CGRect(x: 20, y: 290, width: size.width - 40, height: 60),
+                (L("\(count)語") as NSString).draw(in: CGRect(x: 20, y: 290, width: size.width - 40, height: 60),
                                                withAttributes: [.font: UIFont.systemFont(ofSize: 42, weight: .semibold),
                                                                 .foregroundColor: tint,
                                                                 .paragraphStyle: center])

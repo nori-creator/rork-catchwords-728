@@ -8,6 +8,10 @@ enum SFX: String, CaseIterable {
     case slide = "el-gallery-slide"
     case sting = "el-celebrate-sting"
     case analyzeLoop = "el-analyze-loop"
+    // ElevenLabs SFX (eleven_text_to_sound_v2), trimmed and normalized for these moments:
+    case jarCork = "el-jar-cork"        // cork lands in the glass jar: soft pop + bright clink
+    case cutTrace = "el-cut-trace"      // scissors round the outline (cut-out mode)
+    case stickerLift = "el-sticker-lift" // the cut sticker peels up off the page
 
     var gain: Float {
         switch self {
@@ -17,6 +21,9 @@ enum SFX: String, CaseIterable {
         case .slide: 1.2
         case .sting: 1.1
         case .analyzeLoop: 0.9
+        case .jarCork: 0.9
+        case .cutTrace: 0.7
+        case .stickerLift: 0.8
         }
     }
 
@@ -34,13 +41,39 @@ final class SoundService {
 
     private var players: [SFX: AVAudioPlayer] = [:]
     private let synthesizer = AVSpeechSynthesizer()
-    private lazy var voice: AVSpeechSynthesisVoice? = Self.pickVoice()
+    private var voiceCache: [String: AVSpeechSynthesisVoice?] = [:]
+    /// The device voice for a language (zh-TW / en / ja), picked once.
+    private func voice(for lang: String) -> AVSpeechSynthesisVoice? {
+        if let v = voiceCache[lang] { return v }
+        let v = Self.pickVoice(Self.bcp47(lang))
+        voiceCache[lang] = v
+        return v
+    }
+
+    /// The language a text is read in — from the text itself, so a word is never read in another
+    /// language's voice (R6): kana → Japanese, Latin only → English, Han → the learning language
+    /// (Japanese learners read kanji in Japanese, everyone else in Taiwan Mandarin).
+    static func language(of text: String) -> String {
+        let c = LanguageRules.counts(text)
+        if c.kana > 0 { return "ja" }
+        if c.han == 0, c.latin > 0 { return "en" }
+        return NativeAPI.targetLanguage == "ja" ? "ja" : "zh-TW"
+    }
+
+    static func bcp47(_ lang: String) -> String {
+        switch lang {
+        case "en": "en-US"
+        case "ja": "ja-JP"
+        default: "zh-TW"
+        }
+    }
 
     private var levelMultiplier: Float {
-        switch UserDefaults.standard.string(forKey: "sound.level") ?? "full" {
+        // Same values and default as the web (cw-sound-level: off / subtle / full, default subtle).
+        switch UserDefaults.standard.string(forKey: "sound.level") ?? "subtle" {
         case "off": 0
-        case "soft": 0.45
-        default: 0.8
+        case "full": 0.8
+        default: 0.45   // "subtle" (and the old iOS value "soft")
         }
     }
 
@@ -79,9 +112,102 @@ final class SoundService {
         }
     }
 
-    /// Always the same zh-TW voice for the same device (never falls back to a "close" language).
+    // MARK: - Pronunciation (the web's server voice)
+
+    /// The same voice as the web (`synthesizeSpeech`: the developer-chosen TTS provider, cached in the
+    /// `tts` bucket). Each text is fetched once and kept on the device, so repeats are instant and offline.
+    /// Only when the server is slow (>2.5 s) or unreachable does the device voice speak instead —
+    /// pressing the button must never be silent.
+    private var voicePlayer: AVAudioPlayer?
+    private var inflight: [String: Task<Data?, Never>] = [:]
+    private var speakToken = 0
+
+    private static let ttsDir: URL = {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("tts", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    private static func cacheURL(for text: String) -> URL {
+        let key = text.unicodeScalars.reduce(into: UInt64(1469598103934665603)) { h, c in
+            h = (h ^ UInt64(c.value)) &* 1099511628211
+        }
+        return ttsDir.appendingPathComponent("\(language(of: text))-\(String(key, radix: 16)).mp3")
+    }
+
+    /// Warm the cache (e.g. when candidates appear) so the first tap plays at once.
+    func prefetch(_ text: String) {
+        guard !text.isEmpty else { return }
+        _ = audio(for: text)
+    }
+
+    private func audio(for text: String) -> Task<Data?, Never> {
+        if let t = inflight[text] { return t }
+        let file = Self.cacheURL(for: text)
+        let task = Task<Data?, Never> {
+            if let d = try? Data(contentsOf: file) { return d }
+            struct Res: Decodable {
+                let audioURL: String?
+                let locked: Bool?
+                enum CodingKeys: String, CodingKey { case locked, audioURL = "audio_url" }
+            }
+            guard let res = try? await NativeAPI.call(
+                "synthesizeSpeech", ["text": String(text.prefix(400)), "language": Self.language(of: text)],
+                as: Res.self, timeout: 20
+            ), res.locked != true, let raw = res.audioURL else { return nil }
+            let data: Data?
+            if raw.hasPrefix("data:"), let comma = raw.firstIndex(of: ",") {
+                data = Data(base64Encoded: String(raw[raw.index(after: comma)...]))
+            } else if let url = URL(string: raw) {
+                data = try? await URLSession.shared.data(from: url).0
+            } else {
+                data = nil
+            }
+            if let data, !data.isEmpty { try? data.write(to: file, options: .atomic) }
+            return data
+        }
+        inflight[text] = task
+        Task {
+            _ = await task.value
+            inflight[text] = nil
+        }
+        return task
+    }
+
     func speak(_ text: String) {
-        guard !text.isEmpty, let voice else { return }
+        guard !text.isEmpty else { return }
+        speakToken += 1
+        let token = speakToken
+        voicePlayer?.stop()
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        let task = audio(for: text)
+        Task {
+            // Whichever comes first: the audio, or 2.5 s of waiting (then the device voice speaks,
+            // and the fetch keeps going so the next tap is instant).
+            let data: Data? = await withTaskGroup(of: Data?.self) { group in
+                group.addTask { await task.value }
+                group.addTask {
+                    try? await Task.sleep(for: .milliseconds(2500))
+                    return nil
+                }
+                let first: Data?? = await group.next()
+                group.cancelAll()
+                return first ?? nil
+            }
+            guard token == speakToken else { return }
+            if let data, let player = try? AVAudioPlayer(data: data) {
+                voicePlayer = player
+                player.volume = 1
+                player.play()
+            } else {
+                speakOnDevice(text)
+            }
+        }
+    }
+
+    /// Device voice fallback: always the text's own language's voice (never a "close" language).
+    private func speakOnDevice(_ text: String) {
+        guard let voice = voice(for: Self.language(of: text)) else { return }
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = voice
@@ -99,13 +225,13 @@ final class SoundService {
         return player
     }
 
-    private static func pickVoice() -> AVSpeechSynthesisVoice? {
+    private static func pickVoice(_ lang: String) -> AVSpeechSynthesisVoice? {
         let voices = AVSpeechSynthesisVoice.speechVoices()
-            .filter { $0.language == "zh-TW" }
+            .filter { $0.language == lang }
             .sorted { lhs, rhs in
                 if lhs.quality != rhs.quality { return lhs.quality.rawValue > rhs.quality.rawValue }
                 return lhs.identifier < rhs.identifier
             }
-        return voices.first ?? AVSpeechSynthesisVoice(language: "zh-TW")
+        return voices.first ?? AVSpeechSynthesisVoice(language: lang)
     }
 }

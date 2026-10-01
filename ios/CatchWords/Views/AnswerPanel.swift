@@ -8,13 +8,15 @@ struct AnswerPanel: View {
     let onDex: () -> Void
     let onNext: () -> Void
 
-    private var word: Word? { sticker.word }
+    @Environment(DexStore.self) private var dex
+    /// The live word (its meaning arrives in the reader's language after the card was made).
+    private var word: Word? { dex.sticker(id: sticker.id)?.word ?? sticker.word }
     private var headword: String { word?.headword ?? "" }
     private var tint: Color { correct ? Theme.ok : Theme.destructive }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(correct ? "正解！" : "もう一度覚えよう")
+            Text(correct ? L("正解！") : L("もう一度覚えよう"))
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(tint.mix(with: .black, by: 0.25))
                 .padding(.horizontal, 18)
@@ -24,7 +26,7 @@ struct AnswerPanel: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
-                    ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 26, weight: .bold)
+                    ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 26, weight: .bold, pinyin: word?.pinyin)
                     Spacer(minLength: 0)
                     PronounceCircle(text: headword, size: 46)
                 }
@@ -34,17 +36,17 @@ struct AnswerPanel: View {
 
                 HStack(spacing: 10) {
                     Button(action: onDex) {
-                        Label("図鑑で見る", systemImage: "book")
+                        Label(L("図鑑で見る"), systemImage: "book")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Theme.foreground)
                             .labelStyle(TintedIconLabel())
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+                            .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(PressableStyle(scale: 0.98))
                     Button(action: onNext) {
-                        Text("次へ")
+                        Text(L("次へ"))
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -57,7 +59,7 @@ struct AnswerPanel: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
         }
-        .background(.white)
+        .background(Theme.card)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
         .overlay(alignment: .top) {
             UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
@@ -91,7 +93,7 @@ struct AnswerPanel: View {
                     if !related.isEmpty { relatedSection }
                     if !measures.isEmpty { measureSection }
                     if !note.isEmpty {
-                        section("知っておくと得", tone: Color(hex: 0x134E4A), bg: Color(hex: 0xF0FDFA)) {
+                        section(L("知っておくと得"), tone: Color(hex: 0x134E4A), bg: Color(hex: 0xF0FDFA)) {
                             Text(note).font(.system(size: 14)).foregroundStyle(Theme.foreground).lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -110,12 +112,12 @@ struct AnswerPanel: View {
     @ViewBuilder
     private var fallback: some View {
         if let m = word?.meaningJa, !m.isEmpty {
-            section("意味", tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
+            section(L("意味"), tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
                 Text(m).font(.system(size: 15)).foregroundStyle(Theme.foreground)
             }
         }
         if let ex = word?.exampleSentence, !ex.isEmpty {
-            section("例文", tone: Color(hex: 0x312E81), bg: Theme.secondary.opacity(0.6)) {
+            section(L("例文"), tone: Color(hex: 0x312E81), bg: Theme.secondary.opacity(0.6)) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ex).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
                     if let tr = word?.exampleTranslation, !tr.isEmpty {
@@ -128,7 +130,7 @@ struct AnswerPanel: View {
 
     private var chunkSection: some View {
         let kinds = Set(chunks.flatMap { $0.parts.map { ChunkKind(pos: $0.pos) } })
-        return section("よく使う形", tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
+        return section(L("よく使う形"), tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(chunks.enumerated()), id: \.offset) { _, chunk in
                     HStack(alignment: .center, spacing: 8) {
@@ -153,7 +155,7 @@ struct AnswerPanel: View {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 4) {
                             Circle().fill(k.ink).frame(width: 7, height: 7)
-                            Text(k.label).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword))).font(.system(size: 11)).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -177,7 +179,7 @@ struct AnswerPanel: View {
     }
 
     private var relatedSection: some View {
-        section("一緒に覚える語", tone: Color(hex: 0x312E81), bg: Color(hex: 0xEEF2FF)) {
+        section(L("一緒に覚える語"), tone: Color(hex: 0x312E81), bg: Color(hex: 0xEEF2FF)) {
             VStack(alignment: .leading, spacing: 7) {
                 ForEach(related, id: \.word) { r in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -194,9 +196,9 @@ struct AnswerPanel: View {
 
     private func kindTag(_ kind: String) -> some View {
         let (label, bg, ink): (String, UInt32, UInt32) = switch kind {
-        case "syn": ("似", 0xA7F3D0, 0x064E3B)
-        case "ant": ("反", 0xFECDD3, 0x881337)
-        default: ("関", 0xE2E8F0, 0x0F172A)
+        case "syn": (L("似"), 0xA7F3D0, 0x064E3B)
+        case "ant": (L("反"), 0xFECDD3, 0x881337)
+        default: (L("関"), 0xE2E8F0, 0x0F172A)
         }
         return Text(label)
             .font(.system(size: 11, weight: .bold))
@@ -206,7 +208,7 @@ struct AnswerPanel: View {
     }
 
     private var measureSection: some View {
-        section("量詞", tone: Color(hex: 0x78350F), bg: Color(hex: 0xFFFBEB)) {
+        section(L("量詞"), tone: Color(hex: 0x78350F), bg: Color(hex: 0xFFFBEB)) {
             FlowRow(spacing: 12) {
                 ForEach(measures, id: \.word) { m in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {

@@ -19,9 +19,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 走っている確認は止めない（止めると見本画面が届かない）。待ちは最新の1つだけ残る。
 concurrency:
   group: ios-check-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -33,8 +34,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 表示の言語が混ざらないか確かめる（訳のない日本語があれば失敗）
+        run: |
+          python3 scripts/check_l10n.py
+          python3 scripts/check_server_text.py
+
+      - name: 言語の混在の規則を、過去の事例すべてで確かめる（docs/language-rules.md）
+        run: |
+          swiftc -O ios/CatchWords/Utilities/LanguageRules.swift ios/LanguageRules/main.swift -o "$RUNNER_TEMP/language-rules"
+          "$RUNNER_TEMP/language-rules" ios/LanguageRules/cases.json
+
       - name: Xcode の版を表示
         run: xcodebuild -version
+
+      - name: シミュレーターを先に起動する（組み立てと並べて、待ち時間を短くする）
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
+          for rt in runtimes:
+              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
+              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[-1]["udid"]); break
+          ')
+          echo "$UDID" > "$RUNNER_TEMP/udid"
+          xcrun simctl boot "$UDID" || true
 
       - name: シミュレーター用に組み立てる
         working-directory: ios
@@ -49,7 +75,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             SYMROOT="$RUNNER_TEMP/build" \
             | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
-          test -d "$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
+          grep -q "BUILD SUCCEEDED" "$RUNNER_TEMP/build.log" || { grep -E "error:" "$RUNNER_TEMP/build.log" | head -20; echo "::error::組み立てに失敗しました（上の error: を見てください）"; exit 1; }
 
       - name: シミュレーターで起動して撮影する
         run: |
@@ -57,19 +83,9 @@ jobs:
           OUT="$RUNNER_TEMP/report"
           mkdir -p "$OUT"
           # 入っている iPhone シミュレーターのうち、最も新しい iOS の「iPhone 1x Pro」系を選ぶ
-          UDID=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          d = json.load(sys.stdin)["devices"]
-          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
-          for rt in runtimes:
-              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
-              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
-              if phones:
-                  print(phones[-1]["udid"]); break
-          ')
+          # 組み立ての前に起動を始めてある（下の「シミュレーターを先に起動する」）。ここでは待つだけ。
+          UDID=$(cat "$RUNNER_TEMP/udid")
           echo "simulator: $UDID"
-          echo "$UDID" > "$RUNNER_TEMP/udid"
-          xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           APP="$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
@@ -96,8 +112,8 @@ jobs:
           OUT="$RUNNER_TEMP/report/previews"
           mkdir -p "$OUT"
           UDID=$(cat "$RUNNER_TEMP/udid"); BUNDLE_ID=$(cat "$RUNNER_TEMP/bundle")
-          # 名前 / 待つ秒 / コマ数（0.4 秒おき）
-          for spec in "tabbar 2 1" "picker 2 1" "cutout 1 9" "3d 1 10"; do
+          # 名前 / 待つ秒 / コマ数（撮影の間隔はおよそ 0.4〜0.6 秒）
+          for spec in "tabbar 2 1" "picker 2 1" "cutout 0 12" "reward 0 14" "3d 2 8" "analyzing 0 6" "album 2 1" "hero 2 1" "journal 2 1" "memorial 0 10" "hero-dark 2 1" "journal-dark 2 1" "tabbar-dark 2 1" "book 1 14" "bookturn 2 1" "detail 3 1" "detail-dark 3 1" "settings 2 1" "settings-dark 2 1" "settings-en 2 1" "settings-zh 2 1" "detail-en 3 1" "detail-zh 3 1" "journal-en 2 1" "journal-zh 2 1" "bookturn-en 2 1" "hero-zh 2 1" "auth-en 2 1" "auth-zh 2 1" "onboarding-en 3 1" "onboarding-zh 3 1" "paywall-en 2 1" "paywall-zh 2 1" "dex-en 2 1" "dex-zh 2 1" "wordbook-en 2 1" "wordbook-zh 2 1" "jadetail-en 3 1" "jadetail-zh 3 1" "endetail-ja 3 1" "endetail-zh 3 1" "quiz-en 2 1" "answer-en 2 1" "answer-zh 2 1" "jaquiz-en 2 1" "jaquiz-zh 2 1" "enanswer-ja 2 1" "enanswer-zh 2 1" "picker-en 2 1" "japicker-en 2 1" "japicker-zh 2 1" "enpicker-ja 2 1" "enpicker-zh 2 1"; do
             set -- $spec
             name=$1; wait_s=$2; frames=$3
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true

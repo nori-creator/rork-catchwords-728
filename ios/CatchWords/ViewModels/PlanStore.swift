@@ -77,14 +77,14 @@ final class PlanStore {
                     Haptics.success()
                 }
             case .pending:
-                message = "購入の承認待ちです。"
+                message = L("購入の承認待ちです。")
             case .userCancelled:
                 break
             @unknown default:
                 break
             }
         } catch {
-            message = "購入を完了できませんでした。"
+            message = L("購入を完了できませんでした。")
         }
     }
 
@@ -94,7 +94,7 @@ final class PlanStore {
         try? await AppStore.sync()
         await refreshEntitlements()
         await refreshServerPlan()
-        message = isPro ? "Proを復元しました。" : "復元できる購入が見つかりませんでした。"
+        message = isPro ? L("Proを復元しました。") : L("復元できる購入が見つかりませんでした。")
     }
 
     func recordCatch() {

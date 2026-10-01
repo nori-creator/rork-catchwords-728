@@ -1,0 +1,3122 @@
+{
+ "-ing 形": {
+  "en": "-ing form",
+  "zh-TW": "-ing 形"
+ },
+ "1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る": {
+  "en": "1. Tap “Open Settings” below\n2. Turn on “Camera” and come back to this screen",
+  "zh-TW": "1. 點下方的「打開設定」\n2. 開啟「相機」後回到這個畫面"
+ },
+ "1日3回の上限がなくなります": {
+  "en": "No more 3-a-day limit",
+  "zh-TW": "不再有每天 3 次的限制"
+ },
+ "1日、どれくらい\n学びたい？": {
+  "en": "A little time,\nevery day.",
+  "zh-TW": "每天想學多久？"
+ },
+ "1日の利用上限に達しました。24時間以内に自動で回復します。": {
+  "en": "You've reached today's limit. It resets automatically within 24 hours.",
+  "zh-TW": "已達今日使用上限，24 小時內會自動恢復。"
+ },
+ "1日の学習時間": {
+  "en": "Daily study time",
+  "zh-TW": "每天的學習時間"
+ },
+ "1日の復習枚数": {
+  "en": "Cards per day",
+  "zh-TW": "每天複習的張數"
+ },
+ "1枚撮ってみましょう": {
+  "en": "Take one photo",
+  "zh-TW": "拍一張照片"
+ },
+ "3D プレビュー": {
+  "en": "3D preview",
+  "zh-TW": "3D 預覽"
+ },
+ "3Dの演出": {
+  "en": "3D effects",
+  "zh-TW": "3D 效果"
+ },
+ "4択クイズ": {
+  "en": "Multiple choice",
+  "zh-TW": "四選一測驗"
+ },
+ "8:00 と 20:00": {
+  "en": "8:00 and 20:00",
+  "zh-TW": "8:00 和 20:00"
+ },
+ "AIから候補が返りませんでした。もう一度お試しください。": {
+  "en": "The AI returned no suggestions. Please try again.",
+  "zh-TW": "AI 沒有回傳候選詞。請再試一次。"
+ },
+ "AIが分析中…": {
+  "en": "AI is analyzing…",
+  "zh-TW": "AI 分析中…"
+ },
+ "AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。": {
+  "en": "The AI finds the wrong item, checks it against the dictionary and fixes only that item.",
+  "zh-TW": "AI 會找出錯誤的項目，對照字典後只修正該項目。"
+ },
+ "AIが項目を生成できませんでした。もう一度お試しください": {
+  "en": "The AI couldn't write this section. Please try again.",
+  "zh-TW": "AI 無法產生這個項目，請再試一次。"
+ },
+ "AIによる推定": {
+  "en": "AI estimate",
+  "zh-TW": "AI 推測"
+ },
+ "AIに添削してもらう": {
+  "en": "Ask AI to review",
+  "zh-TW": "請 AI 幫忙修改"
+ },
+ "AIの解析に失敗しました（{1}）": {
+  "en": "The AI analysis failed ({1}).",
+  "zh-TW": "AI 分析失敗（{1}）"
+ },
+ "AIの返事を読み取れませんでした。もう一度試してください。写真は残っています。": {
+  "en": "Could not read the AI's reply. Please try again; your photo is kept.",
+  "zh-TW": "無法讀取 AI 的回覆。請再試一次，照片仍保留著。"
+ },
+ "Appleでのログインに失敗しました。": {
+  "en": "Sign in with Apple failed.",
+  "zh-TW": "使用 Apple 登入失敗。"
+ },
+ "Dcardで見る": {
+  "en": "See it on Dcard",
+  "zh-TW": "在 Dcard 上看"
+ },
+ "IPA アメリカ": {
+  "en": "IPA (US)",
+  "zh-TW": "IPA 美式"
+ },
+ "IPA イギリス": {
+  "en": "IPA (UK)",
+  "zh-TW": "IPA 英式"
+ },
+ "Instagram で見る": {
+  "en": "See it on Instagram",
+  "zh-TW": "在 Instagram 上看"
+ },
+ "Pro をご利用中です": {
+  "en": "You're on Pro",
+  "zh-TW": "你正在使用 Pro"
+ },
+ "Proなら、見つけた瞬間に何度でも。": {
+  "en": "With Pro, catch as often as you find things.",
+  "zh-TW": "有了 Pro，發現的瞬間就能隨時捕捉。"
+ },
+ "Proにアップグレード": {
+  "en": "Upgrade to Pro",
+  "zh-TW": "升級為 Pro"
+ },
+ "Proをはじめる": {
+  "en": "Start Pro",
+  "zh-TW": "開始 Pro"
+ },
+ "Proを復元しました。": {
+  "en": "Pro has been restored.",
+  "zh-TW": "已恢復 Pro。"
+ },
+ "Redditで見る": {
+  "en": "See it on Reddit",
+  "zh-TW": "在 Reddit 上看"
+ },
+ "Threads で見る": {
+  "en": "See it on Threads",
+  "zh-TW": "在 Threads 上看"
+ },
+ "Weblio辞書": {
+  "en": "Weblio Dictionary",
+  "zh-TW": "Weblio 辭典"
+ },
+ "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
+  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
+  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字和照片都能直接使用。\n用 Google 註冊的人，可以在登入畫面的「忘記密碼」為同一個帳號設定密碼。"
+ },
+ "Xで見る": {
+  "en": "See it on X",
+  "zh-TW": "在 X 上看"
+ },
+ "Yahoo!知恵袋で見る": {
+  "en": "See it on Yahoo! Chiebukuro",
+  "zh-TW": "在 Yahoo!知恵袋 上看"
+ },
+ "YouGlishで発音例": {
+  "en": "Pronunciation samples on YouGlish",
+  "zh-TW": "在 YouGlish 聽發音範例"
+ },
+ "YouTubeで聞く": {
+  "en": "Hear it on YouTube",
+  "zh-TW": "在 YouTube 上聽"
+ },
+ "abc ピンイン": {
+  "en": "abc Pinyin",
+  "zh-TW": "abc 拼音"
+ },
+ "abc ローマ字": {
+  "en": "abc Romaji",
+  "zh-TW": "abc 羅馬字"
+ },
+ "iPhoneの写真と同じ切り抜きで図鑑が美しく": {
+  "en": "The same cut-outs as iPhone Photos make your collection beautiful",
+  "zh-TW": "和 iPhone 照片相同的去背，讓圖鑑更漂亮"
+ },
+ "{1} {2}語": {
+  "en": "{1} · {2} words",
+  "zh-TW": "{1} {2} 個單字"
+ },
+ "{1} {2}（AIのおすすめ）": {
+  "en": "{1} {2} (AI pick)",
+  "zh-TW": "{1} {2}（AI 推薦）"
+ },
+ "{1}、{2}": {
+  "en": "{1}, {2}",
+  "zh-TW": "{1}，{2}"
+ },
+ "{1}、{2}{3}": {
+  "en": "{1}, {2}{3}",
+  "zh-TW": "{1}，{2}{3}"
+ },
+ "{1}、{2}語": {
+  "en": "{1}, {2} words",
+  "zh-TW": "{1}，{2} 個單字"
+ },
+ "{1}で「{2}」をキャッチしました。覚えていますか？": {
+  "en": "You caught “{2}” at {1}. Do you remember it?",
+  "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
+ },
+ "{1}で調べる": {
+  "en": "Look it up in {1}",
+  "zh-TW": "用{1}查"
+ },
+ "{1}のアルバム": {
+  "en": "{1} album",
+  "zh-TW": "{1}的相簿"
+ },
+ "{1}の日記": {
+  "en": "Diary for {1}",
+  "zh-TW": "{1}的日記"
+ },
+ "{1}の日記が保存されていません": {
+  "en": "Your diary for {1} hasn't been saved",
+  "zh-TW": "{1}的日記尚未儲存"
+ },
+ "{1}の棚を編集": {
+  "en": "Edit the {1} shelf",
+  "zh-TW": "編輯「{1}」書架"
+ },
+ "{1}を作っています": {
+  "en": "Making {1}",
+  "zh-TW": "正在製作{1}"
+ },
+ "{1}を作り直す": {
+  "en": "Regenerate {1}",
+  "zh-TW": "重新製作{1}"
+ },
+ "{1}分": {
+  "en": "{1} min",
+  "zh-TW": "{1} 分鐘"
+ },
+ "{1}問中 {2}問 正解": {
+  "en": "{2} of {1} correct",
+  "zh-TW": "{1} 題中答對 {2} 題"
+ },
+ "{1}回目": {
+  "en": "#{1}",
+  "zh-TW": "第 {1} 次"
+ },
+ "{1}回目に撮った写真": {
+  "en": "Photo taken on encounter #{1}",
+  "zh-TW": "第 {1} 次拍的照片"
+ },
+ "{1}日前にキャッチしました": {
+  "en": "Caught {1} days ago",
+  "zh-TW": "{1} 天前捕捉"
+ },
+ "{1}日目の記念アルバムができました": {
+  "en": "Your day-{1} memorial album is ready",
+  "zh-TW": "第 {1} 天的紀念相簿完成了"
+ },
+ "{1}日間で{2}語。思い出の{3}枚をまとめました": {
+  "en": "{2} words in {1} days. We gathered {3} memorable photos.",
+  "zh-TW": "{1} 天收集了 {2} 個單字。整理了 {3} 張回憶。"
+ },
+ "{1}枚": {
+  "en": "{1} photos",
+  "zh-TW": "{1} 張"
+ },
+ "{1}枚・{2}日": {
+  "en": "{1} photos · {2} days",
+  "zh-TW": "{1} 張、{2} 天"
+ },
+ "{1}語": {
+  "en": "{1} words",
+  "zh-TW": "{1} 個單字"
+ },
+ "{1}語を取り込みました": {
+  "en": "Imported {1} words",
+  "zh-TW": "已匯入 {1} 個單字"
+ },
+ "{1}語を取り込む": {
+  "en": "Import {1} words",
+  "zh-TW": "匯入 {1} 個單字"
+ },
+ "{1}語を集めました": {
+  "en": "You've collected {1} words",
+  "zh-TW": "收集了 {1} 個單字"
+ },
+ "{1}／{2} 正解": {
+  "en": "{1}/{2} correct",
+  "zh-TW": "答對 {1}／{2}"
+ },
+ "→ 日記": {
+  "en": "→ Diary",
+  "zh-TW": "→ 日記"
+ },
+ "✦ 添削後": {
+  "en": "✦ Corrected",
+  "zh-TW": "✦ 修改後"
+ },
+ "、取得済み": {
+  "en": ", collected",
+  "zh-TW": "，已收集"
+ },
+ "「{1}」のこと": {
+  "en": "about “{1}”",
+  "zh-TW": "關於「{1}」"
+ },
+ "「{1}」はどれ？": {
+  "en": "Which one is “{1}”?",
+  "zh-TW": "哪一個是「{1}」？"
+ },
+ "「{1}」を外す": {
+  "en": "Remove “{1}”",
+  "zh-TW": "移除「{1}」"
+ },
+ "「{1}」を消す": {
+  "en": "Delete “{1}”",
+  "zh-TW": "刪除「{1}」"
+ },
+ "「{1}」を直しました": {
+  "en": "Fixed “{1}”",
+  "zh-TW": "已修正「{1}」"
+ },
+ "「{1}」を語ごと消します。戻せません。": {
+  "en": "Deletes “{1}” with all its words. This can't be undone.",
+  "zh-TW": "會連同單字一起刪除「{1}」。無法復原。"
+ },
+ "あ ふりがな": {
+  "en": "Furigana (kana)",
+  "zh-TW": "假名注音"
+ },
+ "あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。": {
+  "en": "Continue later from “Waiting for analysis” on Home. The moment isn't lost.",
+  "zh-TW": "之後可以從首頁的「等待分析」繼續。拍下的那一刻沒有錯過。"
+ },
+ "あなた": {
+  "en": "You",
+  "zh-TW": "你"
+ },
+ "あなたのペースで。あとから変更できます。": {
+  "en": "Go at your own pace. You can change this later.",
+  "zh-TW": "依照自己的步調，之後可以調整。"
+ },
+ "あなたの記録": {
+  "en": "Your stats",
+  "zh-TW": "你的紀錄"
+ },
+ "あやうい": {
+  "en": "Shaky",
+  "zh-TW": "有點危險"
+ },
+ "いくつでも選べます。例文の場面をあなたに合わせます。": {
+  "en": "Choose any. We’ll tailor example situations to you.",
+  "zh-TW": "可以複選，例句情境會配合你的目標。"
+ },
+ "いちばん選ばれています": {
+  "en": "Most popular",
+  "zh-TW": "最多人選擇"
+ },
+ "いつもの時間です。1枚だけでも思い出してみよう": {
+  "en": "It's your usual time. Try recalling just one card.",
+  "zh-TW": "老時間到了。就算只回想一張也好。"
+ },
+ "いますぐもう一度試す": {
+  "en": "Try again now",
+  "zh-TW": "現在就再試一次"
+ },
+ "いま復習する": {
+  "en": "Review now",
+  "zh-TW": "現在複習"
+ },
+ "いま思い出すと、次に忘れるまでの期間が伸びます。": {
+  "en": "Recalling it now makes the memory last longer.",
+  "zh-TW": "現在回想，下次忘記前的時間會變長。"
+ },
+ "うまくいきませんでした。もう一度お試しください。": {
+  "en": "Something went wrong. Please try again.",
+  "zh-TW": "發生問題了，請再試一次。"
+ },
+ "うろ覚え": {
+  "en": "Fuzzy",
+  "zh-TW": "記得模糊"
+ },
+ "おまかせ": {
+  "en": "Automatic",
+  "zh-TW": "自動"
+ },
+ "おめでとう": {
+  "en": "Congratulations",
+  "zh-TW": "恭喜"
+ },
+ "おもちゃ": {
+  "en": "Toys",
+  "zh-TW": "玩具"
+ },
+ "お店": {
+  "en": "Shops",
+  "zh-TW": "店家"
+ },
+ "お金": {
+  "en": "Money",
+  "zh-TW": "金錢"
+ },
+ "かざして調べる": {
+  "en": "Point to look up",
+  "zh-TW": "對準物品查詢"
+ },
+ "かざす": {
+  "en": "Point",
+  "zh-TW": "對準"
+ },
+ "きょうの復習": {
+  "en": "Today's review",
+  "zh-TW": "今天的複習"
+ },
+ "くわしい名前": {
+  "en": "Specific name",
+  "zh-TW": "具體名稱"
+ },
+ "ここで覚えた単語": {
+  "en": "A word you learned here",
+  "zh-TW": "在這裡學到的單字"
+ },
+ "この1枚を図鑑に足しています…": {
+  "en": "Adding this photo to your dex…",
+  "zh-TW": "正在把這張加進圖鑑…"
+ },
+ "このカードは削除できません": {
+  "en": "This card can't be deleted.",
+  "zh-TW": "無法刪除這張卡片。"
+ },
+ "このカードは編集できません": {
+  "en": "This card can't be edited.",
+  "zh-TW": "無法編輯這張卡片。"
+ },
+ "このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。": {
+  "en": "No words could be read from this page. Take a brighter photo of the part where the words are listed.",
+  "zh-TW": "無法從這一頁讀取單字。請在明亮處拍攝列出單字的部分。"
+ },
+ "このメールアドレスは登録済みです。ログインしてください。": {
+  "en": "This email is already registered. Please log in.",
+  "zh-TW": "這個電子郵件已經註冊過了。請登入。"
+ },
+ "この写真からは単語を読み取れませんでした。明るい所で、まっすぐ撮ってみてください。": {
+  "en": "No words could be read from this photo. Try again in good light, shooting straight on.",
+  "zh-TW": "無法從這張照片讀出單字。請在明亮處正面拍攝。"
+ },
+ "この写真が指す単語だけを変えます。中身は新しく作ります。": {
+  "en": "Only the word for this photo changes. Its contents are made anew.",
+  "zh-TW": "只更改這張照片對應的單字。內容會重新製作。"
+ },
+ "この写真では切り抜けませんでした。": {
+  "en": "Couldn't cut out from this photo.",
+  "zh-TW": "這張照片無法去背。"
+ },
+ "この写真の物はどれ？": {
+  "en": "Which one is in this photo?",
+  "zh-TW": "這張照片裡的是哪一個？"
+ },
+ "この写真を単語に追加しました": {
+  "en": "Photo added to this word",
+  "zh-TW": "已把這張照片加到這個字"
+ },
+ "この単語をひらく": {
+  "en": "Open this word",
+  "zh-TW": "打開這個單字"
+ },
+ "この単語を図鑑から削除しますか？": {
+  "en": "Delete this word from your collection?",
+  "zh-TW": "要從圖鑑中刪除這個單字嗎？"
+ },
+ "この単語を編集する権限がありません": {
+  "en": "You don't have permission to edit this word.",
+  "zh-TW": "你沒有編輯這個單字的權限。"
+ },
+ "この単語帳を復習する": {
+  "en": "Review this wordbook",
+  "zh-TW": "複習這本單字本"
+ },
+ "この型が使えます": {
+  "en": "Patterns you can use",
+  "zh-TW": "可以用這些句型"
+ },
+ "この場所": {
+  "en": "this place",
+  "zh-TW": "這個地方"
+ },
+ "この意味の語はどれ": {
+  "en": "Which word means this",
+  "zh-TW": "哪一個字是這個意思"
+ },
+ "この操作の権限がありません。": {
+  "en": "You don't have permission to do this.",
+  "zh-TW": "你沒有執行此操作的權限。"
+ },
+ "この日のことを、学んでいる言葉で書いてみよう": {
+  "en": "Write about this day in the language you're learning",
+  "zh-TW": "用你正在學的語言寫寫這一天吧"
+ },
+ "この日は写真がありません。": {
+  "en": "No photos on this day.",
+  "zh-TW": "這天沒有照片。"
+ },
+ "この日は場所の記録がありません": {
+  "en": "No locations were recorded on this day",
+  "zh-TW": "這天沒有地點紀錄"
+ },
+ "この時刻を消す": {
+  "en": "Remove this time",
+  "zh-TW": "刪除這個時間"
+ },
+ "この月の本はまだ白紙です。": {
+  "en": "This month's book is still blank.",
+  "zh-TW": "這個月的書還是空白的。"
+ },
+ "この本の今日ぶんは終わりです": {
+  "en": "That's today's batch",
+  "zh-TW": "這本今天的份結束了"
+ },
+ "この本の語は、次に出る日まで休みます。ほかの本を選ぶか、新しく取り込んでください。": {
+  "en": "This book rests until its words come due. Pick another book, or import a new one.",
+  "zh-TW": "這本的字要等到下次到期。可以換一本，或匯入新的。"
+ },
+ "この条件の単語はまだありません": {
+  "en": "No words match these filters yet",
+  "zh-TW": "還沒有符合這些條件的單字"
+ },
+ "この棚の名前は、あなたの図鑑だけで変わります。": {
+  "en": "This shelf name changes only in your own collection.",
+  "zh-TW": "這個書架名稱只會在你的圖鑑中變更。"
+ },
+ "この棚を消しますか？": {
+  "en": "Delete this shelf?",
+  "zh-TW": "要刪除這個書架嗎？"
+ },
+ "この棚を消す": {
+  "en": "Delete this shelf",
+  "zh-TW": "刪除這個書架"
+ },
+ "この機能は Pro 限定です。": {
+  "en": "This is a Pro feature.",
+  "zh-TW": "此功能為 Pro 專屬。"
+ },
+ "この言葉、{1}に{2}でゲットしています。": {
+  "en": "You got this word on {1} at {2}.",
+  "zh-TW": "這個單字你在{1}於{2}收集過。"
+ },
+ "この言葉、{1}にゲットしています。": {
+  "en": "You got this word on {1}.",
+  "zh-TW": "這個單字你在{1}收集過。"
+ },
+ "この言葉に出会った記録": {
+  "en": "Times you met this word",
+  "zh-TW": "遇到這個字的紀錄"
+ },
+ "この語で合っていますか": {
+  "en": "Do these look right?",
+  "zh-TW": "這些字對嗎"
+ },
+ "この語で図鑑に入れる": {
+  "en": "Add this word",
+  "zh-TW": "用這個詞加入圖鑑"
+ },
+ "この語の誤りを報告": {
+  "en": "Report an error in this entry",
+  "zh-TW": "回報這個字的錯誤"
+ },
+ "この語を編集する権限がありません": {
+  "en": "You don't have permission to edit this word.",
+  "zh-TW": "你沒有編輯這個單字的權限。"
+ },
+ "これまで": {
+  "en": "So far",
+  "zh-TW": "到目前為止"
+ },
+ "しっかり": {
+  "en": "Full",
+  "zh-TW": "完整"
+ },
+ "しばらく時間をおいてからお試しください。": {
+  "en": "Please wait a while and try again.",
+  "zh-TW": "請稍後再試。"
+ },
+ "しるし": {
+  "en": "Marks",
+  "zh-TW": "標記"
+ },
+ "すべて": {
+  "en": "All",
+  "zh-TW": "全部"
+ },
+ "すべての日": {
+  "en": "All days",
+  "zh-TW": "所有日期"
+ },
+ "その他": {
+  "en": "Something else",
+  "zh-TW": "其他"
+ },
+ "その場のメモ": {
+  "en": "A note from the moment",
+  "zh-TW": "當下的筆記"
+ },
+ "その言葉が見つかりませんでした。": {
+  "en": "That word couldn't be found.",
+  "zh-TW": "找不到這個單字。"
+ },
+ "たまに": {
+  "en": "Occasionally",
+  "zh-TW": "偶爾"
+ },
+ "ときどき": {
+  "en": "Sometimes",
+  "zh-TW": "有時"
+ },
+ "どこが違いましたか？": {
+  "en": "What was wrong?",
+  "zh-TW": "哪裡不對？"
+ },
+ "どちらでも": {
+  "en": "Either",
+  "zh-TW": "都可以"
+ },
+ "なし": {
+  "en": "none",
+  "zh-TW": "無"
+ },
+ "はがして図鑑に追加": {
+  "en": "Peel to add to your collection",
+  "zh-TW": "撕下加入圖鑑"
+ },
+ "はがして図鑑へ": {
+  "en": "Peel it into your collection",
+  "zh-TW": "掀起照片，放進圖鑑"
+ },
+ "はじめて": {
+  "en": "First",
+  "zh-TW": "第一次"
+ },
+ "はじめて撮った写真": {
+  "en": "First photo taken",
+  "zh-TW": "第一次拍的照片"
+ },
+ "はじめる": {
+  "en": "Get started",
+  "zh-TW": "開始使用"
+ },
+ "はっきり": {
+  "en": "Clear",
+  "zh-TW": "很清楚"
+ },
+ "ひと言": {
+  "en": "Note",
+  "zh-TW": "一句話"
+ },
+ "ひと言を編集": {
+  "en": "Edit note",
+  "zh-TW": "編輯一句話"
+ },
+ "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。": {
+  "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
+  "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
+ },
+ "ほかの棚": {
+  "en": "Other shelves",
+  "zh-TW": "其他書架"
+ },
+ "ほかの言い方": {
+  "en": "Other ways to say it",
+  "zh-TW": "其他說法"
+ },
+ "ほかの言い方 {1}": {
+  "en": "Other ways to say it: {1}",
+  "zh-TW": "其他說法 {1}"
+ },
+ "まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。": {
+  "en": "Take a quick look around, then photograph something you’d like to learn.",
+  "zh-TW": "先看看怎麼使用，接著拍下一樣想學的東西吧。"
+ },
+ "まだしっかり覚えています": {
+  "en": "You still remember it well",
+  "zh-TW": "還記得很清楚"
+ },
+ "まだ保存できません。サーバの更新を待ってください。": {
+  "en": "This can't be saved yet. Please wait for the server update.",
+  "zh-TW": "目前還無法儲存。請等待伺服器更新。"
+ },
+ "まだ単語帳がありません": {
+  "en": "No wordbooks yet",
+  "zh-TW": "還沒有單字本"
+ },
+ "まだ過去の日記はありません": {
+  "en": "No past diary entries yet",
+  "zh-TW": "還沒有過去的日記"
+ },
+ "まれ": {
+  "en": "Rare",
+  "zh-TW": "少見"
+ },
+ "めくる →": {
+  "en": "Turn →",
+  "zh-TW": "翻頁 →"
+ },
+ "もう一度": {
+  "en": "Try again",
+  "zh-TW": "再試一次"
+ },
+ "もう一度覚えよう": {
+  "en": "Let's learn it again",
+  "zh-TW": "再記一次吧"
+ },
+ "もう一度試す": {
+  "en": "Try again",
+  "zh-TW": "再試一次"
+ },
+ "もう一度読み込む": {
+  "en": "Reload",
+  "zh-TW": "重新載入"
+ },
+ "もう一枚撮る": {
+  "en": "Take another",
+  "zh-TW": "再拍一張"
+ },
+ "ものと一緒に、もう一枚": {
+  "en": "One more, with you",
+  "zh-TW": "和它一起，再拍一張"
+ },
+ "やめる": {
+  "en": "Cancel",
+  "zh-TW": "取消"
+ },
+ "やや書き言葉": {
+  "en": "Leans written",
+  "zh-TW": "偏書面語"
+ },
+ "やや話し言葉": {
+  "en": "Leans spoken",
+  "zh-TW": "偏口語"
+ },
+ "やり直す": {
+  "en": "Start over",
+  "zh-TW": "重來"
+ },
+ "よく使う度": {
+  "en": "How common",
+  "zh-TW": "常用度"
+ },
+ "よく使う形": {
+  "en": "Most-used pattern",
+  "zh-TW": "最常用的形式"
+ },
+ "よく出会う": {
+  "en": "Often",
+  "zh-TW": "常見"
+ },
+ "アカウントをお持ちの方はログイン": {
+  "en": "Already have an account? Sign in",
+  "zh-TW": "已有帳號？登入"
+ },
+ "アカウントを削除": {
+  "en": "Delete account",
+  "zh-TW": "刪除帳號"
+ },
+ "アクセ": {
+  "en": "Accessories",
+  "zh-TW": "配件"
+ },
+ "アニメーション": {
+  "en": "Animation",
+  "zh-TW": "動畫"
+ },
+ "アメリカ式": {
+  "en": "American",
+  "zh-TW": "美式"
+ },
+ "アルバムから外した写真 {1}": {
+  "en": "Photos removed from the album: {1}",
+  "zh-TW": "從相簿移除的照片 {1}"
+ },
+ "アルバムから外す（図鑑には残ります）": {
+  "en": "Remove from album (stays in your collection)",
+  "zh-TW": "從相簿移除（仍保留在圖鑑中）"
+ },
+ "アルバムを開く": {
+  "en": "Open the album",
+  "zh-TW": "打開相簿"
+ },
+ "アート": {
+  "en": "Art",
+  "zh-TW": "藝術"
+ },
+ "イギリス式": {
+  "en": "British",
+  "zh-TW": "英式"
+ },
+ "インターネットに接続できません。": {
+  "en": "Can't connect to the internet.",
+  "zh-TW": "無法連上網路。"
+ },
+ "エラーが発生しました。": {
+  "en": "Something went wrong.",
+  "zh-TW": "發生錯誤。"
+ },
+ "オフ": {
+  "en": "Off",
+  "zh-TW": "關閉"
+ },
+ "カテゴリー": {
+  "en": "Category",
+  "zh-TW": "分類"
+ },
+ "カメラ": {
+  "en": "Camera",
+  "zh-TW": "相機"
+ },
+ "カメラが見つかりません": {
+  "en": "No camera found",
+  "zh-TW": "找不到相機"
+ },
+ "カメラに戻る": {
+  "en": "Back to camera",
+  "zh-TW": "回到相機"
+ },
+ "カメラの使用が許可されていません": {
+  "en": "Camera access is not allowed",
+  "zh-TW": "尚未允許使用相機"
+ },
+ "カメラを起動できませんでした": {
+  "en": "Couldn't start the camera",
+  "zh-TW": "無法啟動相機"
+ },
+ "カメラロールに保存": {
+  "en": "Save to Camera Roll",
+  "zh-TW": "儲存到相機膠卷"
+ },
+ "カメラ切替": {
+  "en": "Switch camera",
+  "zh-TW": "切換相機"
+ },
+ "カレンダーで選ぶ": {
+  "en": "Pick from calendar",
+  "zh-TW": "從月曆選擇"
+ },
+ "カードが見つかりません": {
+  "en": "Card not found.",
+  "zh-TW": "找不到卡片。"
+ },
+ "カードの形が整いませんでした。もう一度お試しください。": {
+  "en": "The card came back incomplete. Please try again.",
+  "zh-TW": "卡片內容不完整，請再試一次。"
+ },
+ "カード生成に失敗しました": {
+  "en": "Couldn't build the card",
+  "zh-TW": "字卡產生失敗"
+ },
+ "ガジェット": {
+  "en": "Gadgets",
+  "zh-TW": "3C 小物"
+ },
+ "キャッチする": {
+  "en": "Catch",
+  "zh-TW": "捕捉"
+ },
+ "キャッチ連続": {
+  "en": "Catch streak",
+  "zh-TW": "連續捕捉"
+ },
+ "キャンセル": {
+  "en": "Cancel",
+  "zh-TW": "取消"
+ },
+ "ゲーム": {
+  "en": "Games",
+  "zh-TW": "遊戲"
+ },
+ "コトバンク": {
+  "en": "Kotobank",
+  "zh-TW": "Kotobank 辭典"
+ },
+ "コルクと画鋲": {
+  "en": "Corkboard",
+  "zh-TW": "軟木板與圖釘"
+ },
+ "サインアウト": {
+  "en": "Sign out",
+  "zh-TW": "登出"
+ },
+ "サインアウトしますか？": {
+  "en": "Sign out?",
+  "zh-TW": "要登出嗎？"
+ },
+ "サブスクリプションは期間終了の24時間前までに解約しない限り自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。": {
+  "en": "Subscriptions renew automatically unless canceled at least 24 hours before the end of the period. You can cancel anytime in your App Store account settings.",
+  "zh-TW": "除非在期間結束前 24 小時取消，訂閱會自動續訂。可以隨時在 App Store 帳號設定中取消。"
+ },
+ "サーバで失敗しました。": {
+  "en": "The server ran into a problem.",
+  "zh-TW": "伺服器發生錯誤。"
+ },
+ "サーバーに接続できませんでした（8秒）。電波の良い場所でもう一度お試しください。": {
+  "en": "Couldn't reach the server (8 seconds). Please try again where the signal is better.",
+  "zh-TW": "無法連上伺服器（8 秒）。請到訊號較好的地方再試一次。"
+ },
+ "サーバーの設定が見つかりません。": {
+  "en": "Server settings not found.",
+  "zh-TW": "找不到伺服器設定。"
+ },
+ "サーバーエラー（{1}）": {
+  "en": "Server error ({1})",
+  "zh-TW": "伺服器錯誤（{1}）"
+ },
+ "システム": {
+  "en": "System",
+  "zh-TW": "跟隨系統"
+ },
+ "シーンを感知しています": {
+  "en": "Sensing the scene…",
+  "zh-TW": "正在感測場景"
+ },
+ "ジュエリー": {
+  "en": "Jewelry",
+  "zh-TW": "珠寶"
+ },
+ "スイーツ": {
+  "en": "Desserts",
+  "zh-TW": "甜點"
+ },
+ "スキップ": {
+  "en": "Skip",
+  "zh-TW": "跳過"
+ },
+ "スキャン": {
+  "en": "Scan",
+  "zh-TW": "掃描"
+ },
+ "ステッカー": {
+  "en": "Sticker",
+  "zh-TW": "貼紙"
+ },
+ "ステッカーが見つかりません": {
+  "en": "Sticker not found.",
+  "zh-TW": "找不到貼紙。"
+ },
+ "スピーカーを押すと、発音を聞けます。": {
+  "en": "Tap the speaker to hear it.",
+  "zh-TW": "點喇叭就能聽發音。"
+ },
+ "スポーツ": {
+  "en": "Sports",
+  "zh-TW": "運動"
+ },
+ "スライド": {
+  "en": "Slides",
+  "zh-TW": "滑動"
+ },
+ "ズーム {1}倍": {
+  "en": "Zoom {1}×",
+  "zh-TW": "縮放 {1} 倍"
+ },
+ "タップで切り替え。並べ替えは右の取っ手を使います": {
+  "en": "Tap to toggle. Use the handle on the right to reorder",
+  "zh-TW": "點一下切換。用右側的把手調整順序"
+ },
+ "タップで単語ごとの忘却曲線と「いつ忘れるか」の予測が見られます": {
+  "en": "Tap to see each word's forgetting curve and when you're predicted to forget it",
+  "zh-TW": "點一下可以看每個字的遺忘曲線，以及「什麼時候會忘記」的預測"
+ },
+ "タップで戻る": {
+  "en": "Tap to flip back",
+  "zh-TW": "點一下翻回去"
+ },
+ "タップで自撮りへ": {
+  "en": "Tap for the selfie",
+  "zh-TW": "點一下看自拍"
+ },
+ "ダーク": {
+  "en": "Dark",
+  "zh-TW": "深色"
+ },
+ "テック": {
+  "en": "Tech",
+  "zh-TW": "科技"
+ },
+ "データの読み込みに失敗しました。": {
+  "en": "Couldn't load the data.",
+  "zh-TW": "資料載入失敗。"
+ },
+ "ドラッグで移動、2本指で大きさと傾き": {
+  "en": "Drag to move; use two fingers to resize and rotate",
+  "zh-TW": "拖曳移動，用兩指調整大小和角度"
+ },
+ "ネイティブならこう言う": {
+  "en": "A native would say",
+  "zh-TW": "母語者會這樣說"
+ },
+ "ノート": {
+  "en": "Notebook",
+  "zh-TW": "筆記本"
+ },
+ "バッグ": {
+  "en": "Bags",
+  "zh-TW": "包包"
+ },
+ "パスワード": {
+  "en": "Password",
+  "zh-TW": "密碼"
+ },
+ "パスワードは6文字以上にしてください。": {
+  "en": "Your password must be at least 6 characters.",
+  "zh-TW": "密碼請設定 6 個字元以上。"
+ },
+ "パスワードを忘れた": {
+  "en": "Forgot password",
+  "zh-TW": "忘記密碼"
+ },
+ "パスワード設定用のメールを送りました。": {
+  "en": "We sent you an email to set your password.",
+  "zh-TW": "已寄出設定密碼的電子郵件。"
+ },
+ "ビジネス": {
+  "en": "Business",
+  "zh-TW": "商業"
+ },
+ "ファッション": {
+  "en": "Fashion",
+  "zh-TW": "時尚"
+ },
+ "フレーズ": {
+  "en": "Phrase",
+  "zh-TW": "片語"
+ },
+ "フレームを取得できませんでした": {
+  "en": "Couldn't grab a frame",
+  "zh-TW": "無法取得畫面"
+ },
+ "プライバシー": {
+  "en": "Privacy",
+  "zh-TW": "隱私"
+ },
+ "プロフィール": {
+  "en": "Profile",
+  "zh-TW": "個人檔案"
+ },
+ "プロフィールが見つかりません": {
+  "en": "Profile not found.",
+  "zh-TW": "找不到個人資料。"
+ },
+ "プロフィール写真": {
+  "en": "Profile photo",
+  "zh-TW": "大頭貼"
+ },
+ "ベータ期間中は撮影回数の制限はありません": {
+  "en": "No photo limit during the beta",
+  "zh-TW": "測試期間沒有拍攝次數限制"
+ },
+ "ページ全体が枠に入るように": {
+  "en": "Fit the whole page in the frame",
+  "zh-TW": "讓整頁都進入框內"
+ },
+ "ホーム": {
+  "en": "Home",
+  "zh-TW": "首頁"
+ },
+ "ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。": {
+  "en": "The home album always uses light colors to keep its paper feel.",
+  "zh-TW": "首頁相簿為了保留紙張質感，一律以明亮色彩顯示。"
+ },
+ "ホームの壁紙": {
+  "en": "Home wallpaper",
+  "zh-TW": "首頁桌布"
+ },
+ "ホームへ": {
+  "en": "Go home",
+  "zh-TW": "回首頁"
+ },
+ "マイクと音声認識の使用を設定で許可してください": {
+  "en": "Allow the microphone and speech recognition in Settings",
+  "zh-TW": "請在設定中允許使用麥克風和語音辨識"
+ },
+ "メニューや説明に使う言語です。": {
+  "en": "The language for menus and explanations.",
+  "zh-TW": "選擇選單與說明使用的語言。"
+ },
+ "メールアドレス": {
+  "en": "Email",
+  "zh-TW": "電子郵件"
+ },
+ "メールアドレスかパスワードが違います。": {
+  "en": "Incorrect email or password.",
+  "zh-TW": "電子郵件或密碼錯誤。"
+ },
+ "メールアドレスで続ける": {
+  "en": "Continue with email",
+  "zh-TW": "使用電子郵件繼續"
+ },
+ "ライト": {
+  "en": "Light",
+  "zh-TW": "淺色"
+ },
+ "リスト": {
+  "en": "List",
+  "zh-TW": "列表"
+ },
+ "レベル": {
+  "en": "Level",
+  "zh-TW": "等級"
+ },
+ "レベル{1}、次のレベルまで{2}": {
+  "en": "Level {1}, {2} to the next level",
+  "zh-TW": "等級 {1}，距離下一級還差 {2}"
+ },
+ "ログイン": {
+  "en": "Sign in",
+  "zh-TW": "登入"
+ },
+ "ログインする": {
+  "en": "Log in",
+  "zh-TW": "登入"
+ },
+ "ログインすると日記を保存できます。書いた文章はこの端末に残っています。": {
+  "en": "Log in to save your diary. What you wrote is kept on this device.",
+  "zh-TW": "登入後即可儲存日記。你寫的內容會保留在這台裝置上。"
+ },
+ "ログインせずに入る（開発用）": {
+  "en": "Enter without logging in (development)",
+  "zh-TW": "不登入直接進入（開發用）"
+ },
+ "ログインに切り替え": {
+  "en": "Switch to log in",
+  "zh-TW": "切換為登入"
+ },
+ "ログインに失敗しました（{1}）": {
+  "en": "Login failed ({1}).",
+  "zh-TW": "登入失敗（{1}）"
+ },
+ "ログインの有効期限が切れました。もう一度ログインしてください。": {
+  "en": "Your session has expired. Please log in again.",
+  "zh-TW": "登入已過期。請重新登入。"
+ },
+ "・取得済み": {
+  "en": " · Collected",
+  "zh-TW": "，已收集"
+ },
+ "ㄅㄆㄇ 注音": {
+  "en": "ㄅㄆㄇ Zhuyin",
+  "zh-TW": "ㄅㄆㄇ 注音"
+ },
+ "一緒に覚える語": {
+  "en": "Words to learn with it",
+  "zh-TW": "一起記的字"
+ },
+ "一覧を閉じる": {
+  "en": "Close list",
+  "zh-TW": "關閉列表"
+ },
+ "一覧を開く": {
+  "en": "Open list",
+  "zh-TW": "打開列表"
+ },
+ "一言の録音を聞く": {
+  "en": "Play the voice note",
+  "zh-TW": "聽一句話錄音"
+ },
+ "一言を止める": {
+  "en": "Pause the voice note",
+  "zh-TW": "暫停一句話"
+ },
+ "一言を聞く": {
+  "en": "Play the voice note",
+  "zh-TW": "播放一句話"
+ },
+ "一言メモ（任意）": {
+  "en": "A quick note (optional)",
+  "zh-TW": "一句話筆記（選填）"
+ },
+ "丁寧さ・敬語": {
+  "en": "Politeness & keigo",
+  "zh-TW": "禮貌程度與敬語"
+ },
+ "三単現": {
+  "en": "3rd person",
+  "zh-TW": "第三人稱單數"
+ },
+ "上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。": {
+  "en": "Use the icons above to switch between photos, the map, and a list.",
+  "zh-TW": "點上方圖示，切換照片、地圖和清單，用喜歡的方式尋找。"
+ },
+ "下のカメラを押して、気になるものを撮ってみましょう。名前を知らなくても大丈夫。": {
+  "en": "Tap the camera below and photograph anything that catches your eye. You don't need its name yet.",
+  "zh-TW": "點下方的相機，拍下感興趣的東西。不知道它叫什麼也沒關係。"
+ },
+ "両方": {
+  "en": "Both",
+  "zh-TW": "兩者"
+ },
+ "並べ替え": {
+  "en": "Reorder",
+  "zh-TW": "調整順序"
+ },
+ "中立": {
+  "en": "Neutral",
+  "zh-TW": "中性"
+ },
+ "乗り物": {
+  "en": "Vehicles",
+  "zh-TW": "交通工具"
+ },
+ "交通": {
+  "en": "Transport",
+  "zh-TW": "交通"
+ },
+ "人": {
+  "en": "People",
+  "zh-TW": "人"
+ },
+ "人・体": {
+  "en": "People",
+  "zh-TW": "人、身體"
+ },
+ "今が復習どき": {
+  "en": "Now is the time to review",
+  "zh-TW": "現在就是複習時機"
+ },
+ "今のレベル": {
+  "en": "Current level",
+  "zh-TW": "目前等級"
+ },
+ "今の気持ちや場所をメモ…": {
+  "en": "Note how you feel or where you are…",
+  "zh-TW": "記下現在的心情或地點…"
+ },
+ "今日": {
+  "en": "Today",
+  "zh-TW": "今天"
+ },
+ "今日 {1}%": {
+  "en": "Today {1}%",
+  "zh-TW": "今天 {1}%"
+ },
+ "今日 {1}語": {
+  "en": "{1} words today",
+  "zh-TW": "今天 {1} 個單字"
+ },
+ "今日あと{1}回": {
+  "en": "{1} left today",
+  "zh-TW": "今天還剩 {1} 次"
+ },
+ "今日あと{1}回撮れます": {
+  "en": "{1} photos left today",
+  "zh-TW": "今天還能拍 {1} 次"
+ },
+ "今日から復習を始めましょう": {
+  "en": "Start reviewing today",
+  "zh-TW": "從今天開始複習吧"
+ },
+ "今日の1枚を撮る": {
+  "en": "Take today's photo",
+  "zh-TW": "拍下今天的一張"
+ },
+ "今日のページはまだ白紙です。": {
+  "en": "Today's page is still blank.",
+  "zh-TW": "今天的頁面還是空白的。"
+ },
+ "今日の出題を読み込めませんでした。": {
+  "en": "Couldn't load today's questions.",
+  "zh-TW": "無法載入今天的題目。"
+ },
+ "今日の復習": {
+  "en": "Today's reviews",
+  "zh-TW": "今天的複習"
+ },
+ "今日の復習が待っています。1枚だけでも思い出してみよう": {
+  "en": "Today's review is waiting. Try recalling just one card.",
+  "zh-TW": "今天的複習在等你。就算只回想一張也好。"
+ },
+ "今日の復習はおしまいです": {
+  "en": "You're done reviewing for today",
+  "zh-TW": "今天的複習結束了"
+ },
+ "今日の無料キャッチ（3回）を使い切りました。": {
+  "en": "You've used today's 3 free catches.",
+  "zh-TW": "今天的免費捕捉（3 次）已用完。"
+ },
+ "今日は{1}回復習しました。": {
+  "en": "You reviewed {1} times today.",
+  "zh-TW": "今天複習了 {1} 次。"
+ },
+ "今日はおしまい": {
+  "en": "Done for today",
+  "zh-TW": "今天到這裡"
+ },
+ "今日キャッチした語を押すと本文に入ります": {
+  "en": "Tap a word you caught today to add it to the text",
+  "zh-TW": "點今天捕捉的單字即可加入內文"
+ },
+ "今日キャッチしました": {
+  "en": "Caught today",
+  "zh-TW": "今天捕捉"
+ },
+ "今日出す語はありません": {
+  "en": "Nothing due today",
+  "zh-TW": "今天沒有要出的字"
+ },
+ "今日撮ったものから": {
+  "en": "From what you caught today",
+  "zh-TW": "從你今天拍到的東西"
+ },
+ "仕事": {
+  "en": "Work",
+  "zh-TW": "工作"
+ },
+ "仕事・キャリア": {
+  "en": "Work & career",
+  "zh-TW": "工作、職涯"
+ },
+ "代名詞": {
+  "en": "Pronoun",
+  "zh-TW": "代名詞"
+ },
+ "似": {
+  "en": "syn",
+  "zh-TW": "近"
+ },
+ "体の部位": {
+  "en": "Body parts",
+  "zh-TW": "身體部位"
+ },
+ "作り直せませんでした。少し待ってからお試しください": {
+  "en": "Couldn't regenerate. Please wait a moment and try again",
+  "zh-TW": "無法重新製作。請稍候再試"
+ },
+ "使い始めて{1}日。これまでの思い出を1冊にまとめました": {
+  "en": "{1} days since you started. Your memories so far, in one book.",
+  "zh-TW": "開始使用第 {1} 天。把至今的回憶整理成一本。"
+ },
+ "使い始めて{1}日の記念アルバム": {
+  "en": "Memorial album: {1} days",
+  "zh-TW": "使用 {1} 天的紀念相簿"
+ },
+ "使い始めて{1}日の記念アルバム。{2}語を集めました": {
+  "en": "Memorial album: {1} days. You've collected {2} words.",
+  "zh-TW": "使用 {1} 天的紀念相簿。收集了 {2} 個單字。"
+ },
+ "使い方チャンク": {
+  "en": "Usage chunks",
+  "zh-TW": "用法組塊"
+ },
+ "例: JLPT N4 第3課": {
+  "en": "e.g. JLPT N4 Lesson 3",
+  "zh-TW": "例：JLPT N4 第3課"
+ },
+ "例: TOCFL 2級 第3課": {
+  "en": "e.g. TOCFL 2, unit 3",
+  "zh-TW": "例：TOCFL 2級 第3課"
+ },
+ "例: TOEIC 頻出 Unit 3": {
+  "en": "e.g. TOEIC essentials Unit 3",
+  "zh-TW": "例：TOEIC 常考 Unit 3"
+ },
+ "例: {1}": {
+  "en": "e.g. {1}",
+  "zh-TW": "例：{1}"
+ },
+ "例: 読み方が違う（書かなくても大丈夫）": {
+  "en": "e.g. the reading is wrong (optional)",
+  "zh-TW": "例：讀音不對（不寫也可以）"
+ },
+ "例文": {
+  "en": "Example",
+  "zh-TW": "例句"
+ },
+ "保存": {
+  "en": "Save",
+  "zh-TW": "儲存"
+ },
+ "保存できませんでした。通信を確かめてください。": {
+  "en": "Couldn't save. Please check your connection.",
+  "zh-TW": "儲存失敗。請確認網路連線。"
+ },
+ "保存に失敗しました": {
+  "en": "Couldn't save",
+  "zh-TW": "儲存失敗"
+ },
+ "保存に失敗しました\n{1}": {
+  "en": "Couldn't save\n{1}",
+  "zh-TW": "儲存失敗\n{1}"
+ },
+ "保存に失敗しました。": {
+  "en": "Couldn't save.",
+  "zh-TW": "儲存失敗。"
+ },
+ "候補の形が整いませんでした。もう一度お試しください。": {
+  "en": "The suggestions came back incomplete. Please try again.",
+  "zh-TW": "候選內容不完整，請再試一次。"
+ },
+ "元の写真": {
+  "en": "Original photo",
+  "zh-TW": "原本的照片"
+ },
+ "元の写真を見る": {
+  "en": "See the original photo",
+  "zh-TW": "查看原照片"
+ },
+ "先月までの本がここに並びます": {
+  "en": "Books from past months will line up here",
+  "zh-TW": "過去月份的書會排在這裡"
+ },
+ "入れる語がありません": {
+  "en": "There are no words to add",
+  "zh-TW": "沒有可加入的單字"
+ },
+ "全体の記憶率（前後2週間）": {
+  "en": "Overall retention (±2 weeks)",
+  "zh-TW": "整體記憶率（前後兩週）"
+ },
+ "再会{1}回目": {
+  "en": "Reunion #{1}",
+  "zh-TW": "第 {1} 次重逢"
+ },
+ "再会！": {
+  "en": "Reunion!",
+  "zh-TW": "重逢！"
+ },
+ "再会！写真を追加しました": {
+  "en": "Reunion! Photo added",
+  "zh-TW": "重逢！已新增照片"
+ },
+ "写っている物": {
+  "en": "In the photo",
+  "zh-TW": "照片裡的東西"
+ },
+ "写真": {
+  "en": "Photos",
+  "zh-TW": "照片"
+ },
+ "写真から見つけた候補です。残したいことばを選んでください。": {
+  "en": "Here are words found in your photo. Pick the one you want to keep.",
+  "zh-TW": "這些是照片中找到的候選單字，選一個想留下的吧。"
+ },
+ "写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。": {
+  "en": "No words were found in this photo. Move closer to the object in good light and retake it.",
+  "zh-TW": "無法從照片中找到單字。請在明亮的地方靠近想拍的東西，再拍一次。"
+ },
+ "写真から選ぶ": {
+  "en": "Choose from photos",
+  "zh-TW": "從照片選擇"
+ },
+ "写真に合うことばを選んでください。": {
+  "en": "Choose the word that matches the photo.",
+  "zh-TW": "請選出和照片相符的單字。"
+ },
+ "写真の保存に失敗しました。": {
+  "en": "Couldn't save the photo.",
+  "zh-TW": "照片儲存失敗。"
+ },
+ "写真の追加を再試行": {
+  "en": "Retry adding photo",
+  "zh-TW": "重試新增照片"
+ },
+ "写真を保存できませんでした。": {
+  "en": "Couldn't save the photo.",
+  "zh-TW": "照片儲存失敗。"
+ },
+ "写真を指で好きな方向にめくります。": {
+  "en": "Drag the photo in any direction.",
+  "zh-TW": "用手指把照片往任一方向掀起。"
+ },
+ "写真を替えました": {
+  "en": "Photo replaced",
+  "zh-TW": "已更換照片"
+ },
+ "写真を替えられませんでした": {
+  "en": "Couldn't replace the photo",
+  "zh-TW": "無法更換照片"
+ },
+ "写真を替える": {
+  "en": "Replace photo",
+  "zh-TW": "更換照片"
+ },
+ "写真を読み込めませんでした。": {
+  "en": "Couldn't load the photo.",
+  "zh-TW": "無法讀取照片。"
+ },
+ "切り抜いています": {
+  "en": "Cutting out",
+  "zh-TW": "正在去背"
+ },
+ "切り抜き": {
+  "en": "Cut-out",
+  "zh-TW": "去背圖"
+ },
+ "切り抜きの保存に失敗しました。": {
+  "en": "Couldn't save the cut-out.",
+  "zh-TW": "去背圖儲存失敗。"
+ },
+ "切り抜きを見る": {
+  "en": "See the cut-out",
+  "zh-TW": "查看去背圖"
+ },
+ "切り抜きモード": {
+  "en": "Cut-out mode",
+  "zh-TW": "去背模式"
+ },
+ "切替": {
+  "en": "Flip",
+  "zh-TW": "切換"
+ },
+ "別のものを撮る": {
+  "en": "Shoot something else",
+  "zh-TW": "拍別的東西"
+ },
+ "利用規約": {
+  "en": "Terms of Service",
+  "zh-TW": "使用條款"
+ },
+ "削除": {
+  "en": "Delete",
+  "zh-TW": "刪除"
+ },
+ "削除しています…": {
+  "en": "Deleting…",
+  "zh-TW": "刪除中…"
+ },
+ "削除できませんでした。通信を確かめて、もう一度お試しください。": {
+  "en": "Couldn't delete. Check your connection and try again.",
+  "zh-TW": "刪除失敗。請確認網路連線後再試一次。"
+ },
+ "前のページ": {
+  "en": "Previous page",
+  "zh-TW": "上一頁"
+ },
+ "前の日": {
+  "en": "Previous day",
+  "zh-TW": "前一天"
+ },
+ "前の月": {
+  "en": "Previous month",
+  "zh-TW": "上個月"
+ },
+ "前置詞": {
+  "en": "Preposition",
+  "zh-TW": "介詞"
+ },
+ "副詞": {
+  "en": "Adverb",
+  "zh-TW": "副詞"
+ },
+ "助数詞": {
+  "en": "Counters",
+  "zh-TW": "助數詞"
+ },
+ "助詞・前置詞": {
+  "en": "Particle / preposition",
+  "zh-TW": "助詞、介詞"
+ },
+ "効果音": {
+  "en": "Sound effects",
+  "zh-TW": "音效"
+ },
+ "効果音と振動": {
+  "en": "Sounds and haptics",
+  "zh-TW": "音效與震動"
+ },
+ "動物": {
+  "en": "Animals",
+  "zh-TW": "動物"
+ },
+ "動詞": {
+  "en": "Verb",
+  "zh-TW": "動詞"
+ },
+ "単語が並んだページを、まっすぐ明るい所で撮ってください。並んでいる語をまとめて取り込みます。": {
+  "en": "Shoot a page of listed words, straight on and well lit. Every word on it comes in at once.",
+  "zh-TW": "請在光線充足的地方，正面拍下排列著單字的那一頁。上面的單字會一次全部匯入。"
+ },
+ "単語が見つかりません": {
+  "en": "Word not found.",
+  "zh-TW": "找不到單字。"
+ },
+ "単語の詳細で、この写真を表紙にします。": {
+  "en": "This photo becomes the cover on the word's page.",
+  "zh-TW": "在單字詳細頁用這張照片當封面。"
+ },
+ "単語の詳細の「棚」から、語をこの棚に移せます。": {
+  "en": "Move words to this shelf from “Shelf” on a word's page.",
+  "zh-TW": "可以從單字詳細頁的「書架」把單字移到這個書架。"
+ },
+ "単語をひらく": {
+  "en": "Open the word",
+  "zh-TW": "打開單字"
+ },
+ "単語を入れてください。": {
+  "en": "Please enter a word.",
+  "zh-TW": "請輸入單字。"
+ },
+ "単語を撮ったあと、続けてその場の自分を撮る画面に進みます": {
+  "en": "After catching a word, go straight to a selfie of the moment.",
+  "zh-TW": "拍下單字後，會接著進入自拍畫面，留下當下的自己。"
+ },
+ "単語を撮った場所の近くに来ると、その単語を通知で思い出させます": {
+  "en": "When you're back near where you caught a word, you'll get a reminder of it.",
+  "zh-TW": "回到拍下單字的地方附近時，會用通知提醒你那個單字。"
+ },
+ "単語を撮りに行く": {
+  "en": "Go catch words",
+  "zh-TW": "去拍單字"
+ },
+ "単語を直しました": {
+  "en": "Word updated",
+  "zh-TW": "已修改單字"
+ },
+ "単語を直す": {
+  "en": "Edit the word",
+  "zh-TW": "修改單字"
+ },
+ "単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます": {
+  "en": "When you choose a word, the object is cut out into a sticker before it goes into your collection. Turn off to keep the photo as is",
+  "zh-TW": "選擇單字後，會把拍到的物品去背做成貼紙再放進圖鑑。關閉則以原照片加入"
+ },
+ "単語・読み・意味で検索": {
+  "en": "Search word / reading / meaning",
+  "zh-TW": "用單字、讀音、意思搜尋"
+ },
+ "単語帳": {
+  "en": "Wordbooks",
+  "zh-TW": "單字本"
+ },
+ "単語帳で復習する": {
+  "en": "Review a wordbook",
+  "zh-TW": "用單字本複習"
+ },
+ "単語帳の一覧へ": {
+  "en": "Back to wordbooks",
+  "zh-TW": "回到單字本清單"
+ },
+ "単語帳の一覧を読み込めませんでした。": {
+  "en": "Couldn't load your word lists.",
+  "zh-TW": "無法載入單字本列表。"
+ },
+ "単語帳の名前": {
+  "en": "Wordbook name",
+  "zh-TW": "單字本名稱"
+ },
+ "単語帳の形が読み取れませんでした。もう一度撮ってみてください。": {
+  "en": "Couldn't recognize the word list layout. Please take the photo again.",
+  "zh-TW": "無法辨識單字本的格式。請再拍一次。"
+ },
+ "単語帳を作れませんでした": {
+  "en": "Couldn't create the word list",
+  "zh-TW": "無法建立單字本"
+ },
+ "単語帳を撮る": {
+  "en": "Photograph a wordbook",
+  "zh-TW": "拍單字本"
+ },
+ "反": {
+  "en": "ant",
+  "zh-TW": "反"
+ },
+ "反義語": {
+  "en": "Antonyms",
+  "zh-TW": "反義詞"
+ },
+ "取り込めませんでした": {
+  "en": "Couldn't import those",
+  "zh-TW": "匯入失敗"
+ },
+ "句動詞": {
+  "en": "Phrasal verbs",
+  "zh-TW": "片語動詞"
+ },
+ "台湾での言い方として不確か": {
+  "en": "Uncertain as Taiwan usage",
+  "zh-TW": "不確定是否為台灣說法"
+ },
+ "台湾のサイトで検索": {
+  "en": "Search Taiwanese sites",
+  "zh-TW": "在台灣的網站搜尋"
+ },
+ "台湾メモ": {
+  "en": "Taiwan note",
+  "zh-TW": "台灣筆記"
+ },
+ "台湾華語": {
+  "en": "Taiwanese Mandarin",
+  "zh-TW": "台灣華語"
+ },
+ "台湾華語で調べる": {
+  "en": "Look it up in Taiwanese Mandarin",
+  "zh-TW": "用台灣華語查"
+ },
+ "台湾華語を学習中": {
+  "en": "Learning Taiwanese Mandarin",
+  "zh-TW": "正在學台灣華語"
+ },
+ "名前": {
+  "en": "Name",
+  "zh-TW": "名稱"
+ },
+ "名前と絵文字を変える": {
+  "en": "Change name and emoji",
+  "zh-TW": "更改名稱和表情符號"
+ },
+ "名詞": {
+  "en": "Noun",
+  "zh-TW": "名詞"
+ },
+ "品詞": {
+  "en": "Part of speech",
+  "zh-TW": "詞性"
+ },
+ "回": {
+  "en": "times",
+  "zh-TW": "次"
+ },
+ "図鑑": {
+  "en": "Collection",
+  "zh-TW": "圖鑑"
+ },
+ "図鑑で見る": {
+  "en": "Open in Dex",
+  "zh-TW": "在圖鑑查看"
+ },
+ "図鑑に追加": {
+  "en": "Add to collection",
+  "zh-TW": "加入圖鑑"
+ },
+ "図鑑に追加しました！": {
+  "en": "Added to your collection!",
+  "zh-TW": "已加入圖鑑！"
+ },
+ "図鑑の本棚とアルバムを立体で見せます。「視差効果を減らす」がオンの時は出しません": {
+  "en": "Shows the collection bookshelf and album in 3D. Not shown when “Reduce Motion” is on",
+  "zh-TW": "以立體方式呈現圖鑑書架和相簿。開啟「減少動態效果」時不顯示"
+ },
+ "図鑑を読み込めませんでした。": {
+  "en": "Couldn't load your collection.",
+  "zh-TW": "無法載入圖鑑。"
+ },
+ "固有名詞": {
+  "en": "Proper noun",
+  "zh-TW": "專有名詞"
+ },
+ "土": {
+  "en": "Sat",
+  "zh-TW": "六"
+ },
+ "地図": {
+  "en": "Map",
+  "zh-TW": "地圖"
+ },
+ "型と解説": {
+  "en": "Patterns & notes",
+  "zh-TW": "句型與解說"
+ },
+ "報告": {
+  "en": "Report",
+  "zh-TW": "回報"
+ },
+ "報告に失敗しました": {
+  "en": "Could not send the report",
+  "zh-TW": "回報失敗"
+ },
+ "報告を受け付けました。確かめてから直します": {
+  "en": "Report received. We'll check it before changing anything",
+  "zh-TW": "已收到回報，確認後會修正"
+ },
+ "場所でリマインド": {
+  "en": "Location reminders",
+  "zh-TW": "地點提醒"
+ },
+ "壁": {
+  "en": "Wall",
+  "zh-TW": "牆面"
+ },
+ "声で一言を残す": {
+  "en": "Say your note out loud",
+  "zh-TW": "用聲音留一句話"
+ },
+ "声で調べる": {
+  "en": "Search by voice",
+  "zh-TW": "用語音查詢"
+ },
+ "変更": {
+  "en": "Change",
+  "zh-TW": "更換"
+ },
+ "外す": {
+  "en": "Remove",
+  "zh-TW": "移除"
+ },
+ "外観": {
+  "en": "Appearance",
+  "zh-TW": "外觀"
+ },
+ "天気": {
+  "en": "Weather",
+  "zh-TW": "天氣"
+ },
+ "好きなことから、\nことばを広げよう": {
+  "en": "Start with what\nyou love.",
+  "zh-TW": "從喜歡的事物，\n開始學單字。"
+ },
+ "好きな方向にはがしてキャッチ": {
+  "en": "Peel in any direction to catch",
+  "zh-TW": "往任何方向撕，捕捉單字"
+ },
+ "学びたい言語は？": {
+  "en": "What would you\nlike to learn?",
+  "zh-TW": "你想學哪種語言？"
+ },
+ "学び・遊び": {
+  "en": "Learn & play",
+  "zh-TW": "學習、玩樂"
+ },
+ "学ぶ目的を\n教えてください": {
+  "en": "What brings you\nhere?",
+  "zh-TW": "你學語言的目的是？"
+ },
+ "学ぶ言語": {
+  "en": "Language to learn",
+  "zh-TW": "要學的語言"
+ },
+ "学習": {
+  "en": "Learning",
+  "zh-TW": "學習"
+ },
+ "学習している言語の単語が見つかりませんでした。別の言い方で調べてみてください。": {
+  "en": "No word was found in the language you're learning. Try searching another way.",
+  "zh-TW": "找不到你正在學的語言的單字。請換個說法查查看。"
+ },
+ "学習の通知を\n設定しますか？": {
+  "en": "Would you like\nlearning reminders?",
+  "zh-TW": "要設定學習提醒嗎？"
+ },
+ "学習言語": {
+  "en": "Target language",
+  "zh-TW": "學習語言"
+ },
+ "学習設定": {
+  "en": "Study settings",
+  "zh-TW": "學習設定"
+ },
+ "完了": {
+  "en": "Done",
+  "zh-TW": "完成"
+ },
+ "完全に削除する": {
+  "en": "Delete permanently",
+  "zh-TW": "永久刪除"
+ },
+ "実際の使われ方": {
+  "en": "Seen in the wild",
+  "zh-TW": "實際上怎麼用"
+ },
+ "家": {
+  "en": "Home",
+  "zh-TW": "家"
+ },
+ "家具": {
+  "en": "Furniture",
+  "zh-TW": "家具"
+ },
+ "家族": {
+  "en": "Family",
+  "zh-TW": "家人"
+ },
+ "家電": {
+  "en": "Appliances",
+  "zh-TW": "家電"
+ },
+ "対象を解析しています": {
+  "en": "Reading the object…",
+  "zh-TW": "正在解析對象"
+ },
+ "山": {
+  "en": "Mountains",
+  "zh-TW": "山"
+ },
+ "年額 ¥7,800 / 月額 ¥980（予定）": {
+  "en": "¥7,800/year · ¥980/month (planned)",
+  "zh-TW": "年費 ¥7,800 / 月費 ¥980（預定）"
+ },
+ "年額プラン": {
+  "en": "Yearly plan",
+  "zh-TW": "年費方案"
+ },
+ "建物": {
+  "en": "Buildings",
+  "zh-TW": "建築"
+ },
+ "建物・街": {
+  "en": "City & architecture",
+  "zh-TW": "建築、街景"
+ },
+ "強く読む所": {
+  "en": "Stress",
+  "zh-TW": "重音"
+ },
+ "形": {
+  "en": "Shapes",
+  "zh-TW": "形狀"
+ },
+ "形容詞": {
+  "en": "Adjective",
+  "zh-TW": "形容詞"
+ },
+ "復元できる購入が見つかりませんでした。": {
+  "en": "No purchases to restore were found.",
+  "zh-TW": "找不到可恢復的購買紀錄。"
+ },
+ "復習": {
+  "en": "Review",
+  "zh-TW": "複習"
+ },
+ "復習 **{1}** 回": {
+  "en": "Reviewed **{1}** times",
+  "zh-TW": "複習 **{1}** 次"
+ },
+ "復習が{1}日続いています": {
+  "en": "{1}-day review streak",
+  "zh-TW": "已連續複習 {1} 天"
+ },
+ "復習した日": {
+  "en": "Reviewed",
+  "zh-TW": "複習過的日子"
+ },
+ "復習してみる": {
+  "en": "Try a review",
+  "zh-TW": "試著複習"
+ },
+ "復習しないと {1}（{2}日後）に「うろ覚え」になります": {
+  "en": "Without review it becomes “fuzzy” on {1} (in {2} days)",
+  "zh-TW": "如果不複習，{1}（{2} 天後）會變成「記不太清」"
+ },
+ "復習しなかったら": {
+  "en": "If not reviewed",
+  "zh-TW": "如果不複習"
+ },
+ "復習する": {
+  "en": "Review",
+  "zh-TW": "複習"
+ },
+ "復習の通知": {
+  "en": "Review reminders",
+  "zh-TW": "複習提醒"
+ },
+ "復習を始めると、ここに記憶率の推移が出ます": {
+  "en": "Once you start reviewing, your retention trend appears here",
+  "zh-TW": "開始複習後，這裡會顯示記憶率的變化"
+ },
+ "復習を読み込めませんでした。": {
+  "en": "Couldn't load your reviews.",
+  "zh-TW": "無法載入複習。"
+ },
+ "復習待ち": {
+  "en": "Due",
+  "zh-TW": "待複習"
+ },
+ "復習連続": {
+  "en": "Review streak",
+  "zh-TW": "連續複習"
+ },
+ "必要なものだけ選べます。あとから変更できます。": {
+  "en": "Choose what feels useful. You can change this later.",
+  "zh-TW": "只選需要的，之後隨時可以更改。"
+ },
+ "忘れかけ": {
+  "en": "Fading",
+  "zh-TW": "快忘了"
+ },
+ "忘れかける頃に1日1回お知らせ": {
+  "en": "Once a day, right before you'd forget",
+  "zh-TW": "在快要忘記時，每天提醒一次"
+ },
+ "忘却曲線を見る": {
+  "en": "See the forgetting curve",
+  "zh-TW": "查看遺忘曲線"
+ },
+ "思い出しどきの単語がたまっています。今なら記憶に残りやすい時間です": {
+  "en": "Words are ready to be recalled. Now is a good time for them to stick.",
+  "zh-TW": "有幾個單字正是該回想的時候。現在複習最容易記住。"
+ },
+ "意味": {
+  "en": "Meaning",
+  "zh-TW": "意思"
+ },
+ "意味によって両方": {
+  "en": "Both, depending on meaning",
+  "zh-TW": "依意思而定，兩種都有"
+ },
+ "意味も使い方も、この写真から。例文を確認したら、復習を試してみましょう。": {
+  "en": "Discover meanings and examples alongside your photo. Then try recalling the word in a review.",
+  "zh-TW": "從這張照片了解意思和用法。看完例句後，試著複習這個單字。"
+ },
+ "感動詞": {
+  "en": "Interjection",
+  "zh-TW": "感嘆詞"
+ },
+ "戻す": {
+  "en": "Restore",
+  "zh-TW": "還原"
+ },
+ "戻る": {
+  "en": "Back",
+  "zh-TW": "返回"
+ },
+ "手": {
+  "en": "Hands",
+  "zh-TW": "手"
+ },
+ "押すと下に入ります": {
+  "en": "Tap to drop it into your draft",
+  "zh-TW": "點一下就會加到下面"
+ },
+ "拼音": {
+  "en": "Pinyin",
+  "zh-TW": "拼音"
+ },
+ "振動": {
+  "en": "Haptics",
+  "zh-TW": "震動"
+ },
+ "接続詞": {
+  "en": "Conjunction",
+  "zh-TW": "連接詞"
+ },
+ "控えめ": {
+  "en": "Subtle",
+  "zh-TW": "輕微"
+ },
+ "撮った写真をスマホの写真アプリにも残します": {
+  "en": "Also save your photos to the Photos app",
+  "zh-TW": "拍的照片也保存到手機的照片 App"
+ },
+ "撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。": {
+  "en": "All your photos, collection and review history will be erased and can't be restored. Your web app data will be erased too.",
+  "zh-TW": "所有照片、圖鑑和複習紀錄都會刪除且無法復原。網頁版的資料也會一併刪除。"
+ },
+ "撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。": {
+  "en": "Capture it. Understand it. Recall it.\nBuild your vocabulary from everyday life.",
+  "zh-TW": "拍下來、了解意思、再想起來。\n從生活中累積你的單字。"
+ },
+ "撮影": {
+  "en": "Take photo",
+  "zh-TW": "拍照"
+ },
+ "撮影は無制限です": {
+  "en": "Unlimited photos",
+  "zh-TW": "拍攝不限次數"
+ },
+ "撮影・キャッチが無制限": {
+  "en": "Unlimited photos and catches",
+  "zh-TW": "無限拍攝與捕捉"
+ },
+ "撮影地": {
+  "en": "Where it was taken",
+  "zh-TW": "拍攝地"
+ },
+ "教科書や自作のリストを撮ると、そこに並ぶ語をまとめて取り込んで、図鑑とは別に復習できます。": {
+  "en": "Photograph a textbook page or your own list to bring every word in at once and review it apart from your dex.",
+  "zh-TW": "拍下課本的一頁或自己整理的清單，上面的字會一次全部匯入，可以跟圖鑑分開複習。"
+ },
+ "教育部國語辭典簡編本": {
+  "en": "MOE Concised Mandarin Dictionary",
+  "zh-TW": "教育部國語辭典簡編本"
+ },
+ "数えられない（不可算）": {
+  "en": "Uncountable",
+  "zh-TW": "不可數"
+ },
+ "数えられる（可算）": {
+  "en": "Countable",
+  "zh-TW": "可數"
+ },
+ "数え方と冠詞": {
+  "en": "Countability",
+  "zh-TW": "可數與冠詞"
+ },
+ "数字を読み込めませんでした。通信を確かめてください。": {
+  "en": "Couldn't load your numbers. Please check your connection.",
+  "zh-TW": "無法載入數據。請確認網路連線。"
+ },
+ "文化の一言": {
+  "en": "Culture note",
+  "zh-TW": "文化筆記"
+ },
+ "文字": {
+  "en": "Characters",
+  "zh-TW": "文字"
+ },
+ "文字で調べる": {
+  "en": "Search by text",
+  "zh-TW": "用文字查詢"
+ },
+ "文房具": {
+  "en": "Stationery",
+  "zh-TW": "文具"
+ },
+ "新しい単語を撮ると、ここに出てきます。": {
+  "en": "When you photograph new words, they show up here.",
+  "zh-TW": "拍下新單字後，會出現在這裡。"
+ },
+ "新しい機能が毎月届きます": {
+  "en": "New features every month",
+  "zh-TW": "每月推出新功能"
+ },
+ "新規登録": {
+  "en": "Sign up",
+  "zh-TW": "註冊"
+ },
+ "新規登録はこちら": {
+  "en": "New here? Sign up",
+  "zh-TW": "新用戶請由此註冊"
+ },
+ "旅行": {
+  "en": "Travel",
+  "zh-TW": "旅行"
+ },
+ "旅行・留学": {
+  "en": "Travel & study abroad",
+  "zh-TW": "旅行、留學"
+ },
+ "既定に戻す": {
+  "en": "Use the default",
+  "zh-TW": "改回預設"
+ },
+ "日": {
+  "en": "days",
+  "zh-TW": "天"
+ },
+ "日ごと": {
+  "en": "By day",
+  "zh-TW": "按日"
+ },
+ "日付": {
+  "en": "Date",
+  "zh-TW": "日期"
+ },
+ "日付を選ぶ": {
+  "en": "Pick a date",
+  "zh-TW": "選擇日期"
+ },
+ "日常会話": {
+  "en": "Everyday conversation",
+  "zh-TW": "日常會話"
+ },
+ "日本のサイトで検索": {
+  "en": "Search Japanese sites",
+  "zh-TW": "在日本網站搜尋"
+ },
+ "日本メモ": {
+  "en": "Japan note",
+  "zh-TW": "日本筆記"
+ },
+ "日本語": {
+  "en": "Japanese",
+  "zh-TW": "日文"
+ },
+ "日本語で入力": {
+  "en": "Type in Japanese",
+  "zh-TW": "用日文輸入"
+ },
+ "日本語の単語を入れてください。": {
+  "en": "Please enter a Japanese word.",
+  "zh-TW": "請輸入日文單字。"
+ },
+ "日本語を学習中": {
+  "en": "Learning Japanese",
+  "zh-TW": "正在學日文"
+ },
+ "日記": {
+  "en": "Diary",
+  "zh-TW": "日記"
+ },
+ "日記を保存できませんでした。書いた文章はこの端末に残っています。": {
+  "en": "Couldn't save your diary. What you wrote is kept on this device.",
+  "zh-TW": "日記儲存失敗。你寫的內容會保留在這台裝置上。"
+ },
+ "日記を書き直す": {
+  "en": "Edit the diary",
+  "zh-TW": "修改日記"
+ },
+ "日記を書く": {
+  "en": "Write a diary",
+  "zh-TW": "寫日記"
+ },
+ "日記を読み込めませんでした。": {
+  "en": "Couldn't load your diary.",
+  "zh-TW": "無法載入日記。"
+ },
+ "時刻を指定": {
+  "en": "Set times",
+  "zh-TW": "自訂時間"
+ },
+ "時刻を追加": {
+  "en": "Add a time",
+  "zh-TW": "新增時間"
+ },
+ "書いたものはこの端末に控えてあります。添削が通らなくても消えません。": {
+  "en": "Your writing is kept on this device — it won't be lost if the check fails.",
+  "zh-TW": "你寫的內容有留在這台裝置上，就算修改沒成功也不會不見。"
+ },
+ "書いた日記と添削はここに並びます。": {
+  "en": "Your diary entries and corrections will appear here.",
+  "zh-TW": "你寫的日記和批改會排列在這裡。"
+ },
+ "書き直す": {
+  "en": "Edit what I typed",
+  "zh-TW": "重寫"
+ },
+ "書き言葉": {
+  "en": "Written",
+  "zh-TW": "書面語"
+ },
+ "書き言葉 ⇄ 話し言葉": {
+  "en": "Written ⇄ Spoken",
+  "zh-TW": "書面語 ⇄ 口語"
+ },
+ "書く": {
+  "en": "Write",
+  "zh-TW": "寫"
+ },
+ "書類": {
+  "en": "Documents",
+  "zh-TW": "文件"
+ },
+ "替えています…": {
+  "en": "Replacing…",
+  "zh-TW": "更換中…"
+ },
+ "最上級": {
+  "en": "Superlative",
+  "zh-TW": "最高級"
+ },
+ "最初の1枚を撮る": {
+  "en": "Take your first photo",
+  "zh-TW": "拍下第一張"
+ },
+ "最初のキャッチ、完了！": {
+  "en": "Your first Catch is complete!",
+  "zh-TW": "完成第一次捕捉！"
+ },
+ "最初の画面に戻る": {
+  "en": "Back to the welcome screen",
+  "zh-TW": "回到最初的畫面"
+ },
+ "最初の発見は、もうすぐ。": {
+  "en": "Your first discovery is close.",
+  "zh-TW": "你的第一個發現，就快到了。"
+ },
+ "最初の質問に答え直す": {
+  "en": "Answer the first questions again",
+  "zh-TW": "重新回答一開始的問題"
+ },
+ "月": {
+  "en": "Month",
+  "zh-TW": "月"
+ },
+ "月あたり {1}": {
+  "en": "{1} per month",
+  "zh-TW": "每月 {1}"
+ },
+ "月ごと": {
+  "en": "By month",
+  "zh-TW": "按月"
+ },
+ "月に戻る": {
+  "en": "Back to month",
+  "zh-TW": "回到月份"
+ },
+ "月額プラン": {
+  "en": "Monthly plan",
+  "zh-TW": "月費方案"
+ },
+ "服": {
+  "en": "Clothes",
+  "zh-TW": "衣服"
+ },
+ "服の部分": {
+  "en": "Clothing parts",
+  "zh-TW": "衣服的部分"
+ },
+ "朝と夜": {
+  "en": "Morning and evening",
+  "zh-TW": "早上和晚上"
+ },
+ "木": {
+  "en": "Thu",
+  "zh-TW": "四"
+ },
+ "未来の日の日記は書けません": {
+  "en": "You can't write a diary for a future date",
+  "zh-TW": "無法寫未來日期的日記"
+ },
+ "未送信の下書き": {
+  "en": "Unsent draft",
+  "zh-TW": "尚未送出的草稿"
+ },
+ "本": {
+  "en": "Books",
+  "zh-TW": "書"
+ },
+ "本文に入れる": {
+  "en": "Add to the text",
+  "zh-TW": "加入內文"
+ },
+ "札を押すと意味と発音が出ます": {
+  "en": "Tap a tag to see its meaning and pronunciation",
+  "zh-TW": "點標籤即可看到意思和發音"
+ },
+ "果物": {
+  "en": "Fruit",
+  "zh-TW": "水果"
+ },
+ "案内に戻る": {
+  "en": "Back to the guide",
+  "zh-TW": "回到導覽"
+ },
+ "案内を終える": {
+  "en": "End the guide",
+  "zh-TW": "結束導覽"
+ },
+ "案内中の設定です。案内を終えると、そのままあなたのアカウントに引き継がれます。": {
+  "en": "These are guide settings. When you finish the guide, they carry over to your account.",
+  "zh-TW": "這是導覽中的設定。完成導覽後會直接套用到你的帳號。"
+ },
+ "棚": {
+  "en": "Shelf",
+  "zh-TW": "書架"
+ },
+ "棚の名前と絵文字": {
+  "en": "Shelf name and emoji",
+  "zh-TW": "書架名稱和表情符號"
+ },
+ "棚の名前（24文字まで）": {
+  "en": "Shelf name (up to 24 characters)",
+  "zh-TW": "書架名稱（最多 24 個字）"
+ },
+ "棚を変える。いまは{1}": {
+  "en": "Change shelf. Currently {1}",
+  "zh-TW": "更換書架。目前是{1}"
+ },
+ "植物": {
+  "en": "Plants",
+  "zh-TW": "植物"
+ },
+ "検出に失敗しました": {
+  "en": "Detection failed",
+  "zh-TW": "偵測失敗"
+ },
+ "検索": {
+  "en": "Search",
+  "zh-TW": "搜尋"
+ },
+ "検証済み": {
+  "en": "Verified",
+  "zh-TW": "已驗證"
+ },
+ "楽器": {
+  "en": "Instruments",
+  "zh-TW": "樂器"
+ },
+ "横にスワイプでページをめくる": {
+  "en": "Swipe sideways to turn pages",
+  "zh-TW": "左右滑動翻頁"
+ },
+ "次のページ": {
+  "en": "Next page",
+  "zh-TW": "下一頁"
+ },
+ "次の日": {
+  "en": "Next day",
+  "zh-TW": "下一天"
+ },
+ "次の月": {
+  "en": "Next month",
+  "zh-TW": "下個月"
+ },
+ "次へ": {
+  "en": "Next",
+  "zh-TW": "下一步"
+ },
+ "止める（あと{1}秒）": {
+  "en": "Stop ({1}s left)",
+  "zh-TW": "停止（剩 {1} 秒）"
+ },
+ "正解！": {
+  "en": "Correct!",
+  "zh-TW": "答對了！"
+ },
+ "母語": {
+  "en": "Your language",
+  "zh-TW": "母語"
+ },
+ "毎日のように": {
+  "en": "Almost daily",
+  "zh-TW": "幾乎每天"
+ },
+ "比較級": {
+  "en": "Comparative",
+  "zh-TW": "比較級"
+ },
+ "気になるカードをいつでも作り直せます": {
+  "en": "Regenerate any card whenever you like",
+  "zh-TW": "隨時重新製作想改的卡片"
+ },
+ "水": {
+  "en": "Water",
+  "zh-TW": "水"
+ },
+ "注音": {
+  "en": "Zhuyin",
+  "zh-TW": "注音"
+ },
+ "活用": {
+  "en": "Word forms",
+  "zh-TW": "詞形變化"
+ },
+ "活用（動詞・形容詞）": {
+  "en": "Conjugation",
+  "zh-TW": "動詞與形容詞變化"
+ },
+ "海": {
+  "en": "sea",
+  "zh-TW": "海"
+ },
+ "消す": {
+  "en": "Delete",
+  "zh-TW": "刪除"
+ },
+ "消す（語は元の棚に戻ります）": {
+  "en": "Delete (words go back to their original shelf)",
+  "zh-TW": "刪除（單字會回到原本的書架）"
+ },
+ "消せませんでした": {
+  "en": "Couldn't delete it",
+  "zh-TW": "刪除失敗"
+ },
+ "添削中…": {
+  "en": "Reviewing…",
+  "zh-TW": "修改中…"
+ },
+ "添削失敗": {
+  "en": "Review failed",
+  "zh-TW": "修改失敗"
+ },
+ "添削失敗: {1}": {
+  "en": "Correction failed: {1}",
+  "zh-TW": "批改失敗：{1}"
+ },
+ "減らす": {
+  "en": "Reduce",
+  "zh-TW": "減少"
+ },
+ "準備ができました！": {
+  "en": "You’re all set!",
+  "zh-TW": "準備好了！"
+ },
+ "漢字の内訳": {
+  "en": "Kanji breakdown",
+  "zh-TW": "漢字拆解"
+ },
+ "火": {
+  "en": "Tue",
+  "zh-TW": "二"
+ },
+ "無制限": {
+  "en": "Unlimited",
+  "zh-TW": "無限制"
+ },
+ "状態動詞": {
+  "en": "Stative verb",
+  "zh-TW": "狀態動詞"
+ },
+ "状態動詞(形容詞)": {
+  "en": "Stative verb (adjective)",
+  "zh-TW": "狀態動詞（形容詞）"
+ },
+ "理由: {1}": {
+  "en": "Reason: {1}",
+  "zh-TW": "原因：{1}"
+ },
+ "画像のAI読み込みに失敗しました": {
+  "en": "The AI couldn't read the image.",
+  "zh-TW": "AI 讀取圖片失敗。"
+ },
+ "画像をタップで自撮りにフリップ": {
+  "en": "Tap the photo to flip to your selfie",
+  "zh-TW": "點圖片翻到自拍"
+ },
+ "画像を読み取れませんでした": {
+  "en": "Couldn't read the image.",
+  "zh-TW": "無法讀取圖片。"
+ },
+ "画面の明るさ": {
+  "en": "Light / dark",
+  "zh-TW": "畫面明暗"
+ },
+ "発音と意味": {
+  "en": "Sound and meaning",
+  "zh-TW": "發音與意思"
+ },
+ "発音のコツ": {
+  "en": "Pronunciation tips",
+  "zh-TW": "發音訣竅"
+ },
+ "発音を聞く": {
+  "en": "Listen",
+  "zh-TW": "聽發音"
+ },
+ "発音・読み": {
+  "en": "Pronunciation",
+  "zh-TW": "發音、讀音"
+ },
+ "発音表記": {
+  "en": "Phonetic notation",
+  "zh-TW": "發音標記"
+ },
+ "発音記号": {
+  "en": "Phonetic symbols",
+  "zh-TW": "音標"
+ },
+ "目標レベル": {
+  "en": "Target level",
+  "zh-TW": "目標等級"
+ },
+ "直しています…": {
+  "en": "Fixing…",
+  "zh-TW": "修正中…"
+ },
+ "直してもらう": {
+  "en": "Fix it",
+  "zh-TW": "請 AI 修正"
+ },
+ "直す": {
+  "en": "Save",
+  "zh-TW": "修改"
+ },
+ "直せませんでした": {
+  "en": "Couldn't fix it",
+  "zh-TW": "無法修正"
+ },
+ "看板": {
+  "en": "Signs",
+  "zh-TW": "招牌"
+ },
+ "看板や物にかざして、ボタンを押してください": {
+  "en": "Point at a sign or object and press the button",
+  "zh-TW": "對準招牌或物品，然後按下按鈕"
+ },
+ "知っておくと得": {
+  "en": "Good to know",
+  "zh-TW": "知道了會加分"
+ },
+ "知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。": {
+  "en": "Just take a photo, even when you don't know its name. AI suggests words from what it sees.",
+  "zh-TW": "不知道名稱也能先拍下來，AI 會從照片裡找出值得學的單字。"
+ },
+ "短い時間でも大丈夫。あなたのペースで続けましょう。": {
+  "en": "A few minutes is a great start. Make it your own pace.",
+  "zh-TW": "幾分鐘也很好，照著自己的步調來。"
+ },
+ "砕けた言い方": {
+  "en": "Casual",
+  "zh-TW": "口語說法"
+ },
+ "確かめました。間違いは見つかりませんでした": {
+  "en": "Checked. No mistakes found",
+  "zh-TW": "已確認。沒有發現錯誤"
+ },
+ "確認が終わったので、ログインする": {
+  "en": "I've confirmed — sign in",
+  "zh-TW": "已完成確認，登入"
+ },
+ "確認のため「削除」と入力してください": {
+  "en": "Type DELETE to confirm",
+  "zh-TW": "請輸入「刪除」以確認"
+ },
+ "確認メールのリンクを開いてからログインしてください。": {
+  "en": "Open the link in the confirmation email, then log in.",
+  "zh-TW": "請先打開確認信中的連結再登入。"
+ },
+ "確認メールを送りました。メールのリンクを開いて登録を完了したら、このアプリに戻って「ログイン」してください。": {
+  "en": "We sent a confirmation email. Open the link to finish signing up, then come back to this app and tap “Log in”.",
+  "zh-TW": "已寄出確認信。打開信中的連結完成註冊後，請回到這個 App 點「登入」。"
+ },
+ "空": {
+  "en": "Sky",
+  "zh-TW": "天空"
+ },
+ "答えを確かめたら「次へ」。": {
+  "en": "Check the answer, then tap “Next”.",
+  "zh-TW": "確認答案後，按「下一步」。"
+ },
+ "紙": {
+  "en": "Paper",
+  "zh-TW": "紙"
+ },
+ "結果を見る": {
+  "en": "See results",
+  "zh-TW": "查看結果"
+ },
+ "絵文字": {
+  "en": "Emoji",
+  "zh-TW": "表情符號"
+ },
+ "縦軸＝いま思い出せる確率（写真の右上の%と同じ）": {
+  "en": "Vertical axis = chance you can recall it now (same as the % on the photo)",
+  "zh-TW": "縱軸＝現在能想起來的機率（與照片右上的 % 相同）"
+ },
+ "繁体字で入力": {
+  "en": "Type in Traditional Chinese",
+  "zh-TW": "用繁體字輸入"
+ },
+ "繁体字中国語": {
+  "en": "Traditional Chinese",
+  "zh-TW": "繁體中文"
+ },
+ "繁体字（台湾華語）の単語を入れてください。": {
+  "en": "Please enter a word in Traditional Chinese (Taiwanese Mandarin).",
+  "zh-TW": "請輸入繁體字（台灣華語）的單字。"
+ },
+ "繁體字（台灣）": {
+  "en": "Mandarin (Taiwan)",
+  "zh-TW": "繁體字（台灣）"
+ },
+ "自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。": {
+  "en": "Use your photo as a clue in a four-choice review. Recall the moment behind the word.",
+  "zh-TW": "看自己的照片做四選一，從相遇的場景想起單字，不用死背字表。"
+ },
+ "自分の棚を作る": {
+  "en": "Create your own shelf",
+  "zh-TW": "建立自己的書架"
+ },
+ "自動": {
+  "en": "Auto",
+  "zh-TW": "自動"
+ },
+ "自撮り": {
+  "en": "Selfie",
+  "zh-TW": "自拍"
+ },
+ "自撮りモード": {
+  "en": "Selfie mode",
+  "zh-TW": "自拍模式"
+ },
+ "自撮り写真": {
+  "en": "Selfie",
+  "zh-TW": "自拍照"
+ },
+ "自然": {
+  "en": "Nature",
+  "zh-TW": "自然"
+ },
+ "興味のあるテーマを選んでください（複数選択可）。": {
+  "en": "Choose the topics you enjoy. Select as many as you like.",
+  "zh-TW": "選擇感興趣的主題，可以複選。"
+ },
+ "色": {
+  "en": "Colors",
+  "zh-TW": "顏色"
+ },
+ "花": {
+  "en": "flower",
+  "zh-TW": "花"
+ },
+ "英語": {
+  "en": "English",
+  "zh-TW": "英文"
+ },
+ "英語で入力": {
+  "en": "Type in English",
+  "zh-TW": "用英文輸入"
+ },
+ "英語のサイトで検索": {
+  "en": "Search English-language sites",
+  "zh-TW": "在英語網站搜尋"
+ },
+ "英語の単語を入れてください。": {
+  "en": "Please enter an English word.",
+  "zh-TW": "請輸入英文單字。"
+ },
+ "英語を学習中": {
+  "en": "Learning English",
+  "zh-TW": "正在學英文"
+ },
+ "薄れぎみ": {
+  "en": "Slipping",
+  "zh-TW": "開始變淡"
+ },
+ "薬": {
+  "en": "Medicine",
+  "zh-TW": "藥"
+ },
+ "街": {
+  "en": "Town",
+  "zh-TW": "街"
+ },
+ "街じゅうを、図鑑にしよう。": {
+  "en": "Turn your whole town into your collection.",
+  "zh-TW": "把整條街變成你的圖鑑。"
+ },
+ "街で出会ったことばを、この言語で学びます。": {
+  "en": "Learn how to say the things you encounter.",
+  "zh-TW": "學會用這個語言說出生活中的事物。"
+ },
+ "街で見つけた物が、台湾華語になる。": {
+  "en": "What you find around town becomes words you learn.",
+  "zh-TW": "在街上發現的東西，變成你學會的單字。"
+ },
+ "街で見つけた物が、学びたい言葉になる。": {
+  "en": "What you find on the street becomes the language you're learning.",
+  "zh-TW": "街上看到的東西，變成你想學的語言。"
+ },
+ "街並み": {
+  "en": "Streets",
+  "zh-TW": "街景"
+ },
+ "表示するタイプ": {
+  "en": "Photo type",
+  "zh-TW": "顯示的類型"
+ },
+ "表示する写真": {
+  "en": "Photo to show",
+  "zh-TW": "要顯示的照片"
+ },
+ "表示する写真を選ぶ": {
+  "en": "Choose the photo to show",
+  "zh-TW": "選擇要顯示的照片"
+ },
+ "表示する項目と順番": {
+  "en": "Sections & order",
+  "zh-TW": "要顯示的項目與順序"
+ },
+ "表示中": {
+  "en": "shown",
+  "zh-TW": "顯示中"
+ },
+ "表示名": {
+  "en": "Display name",
+  "zh-TW": "顯示名稱"
+ },
+ "表示言語": {
+  "en": "App language",
+  "zh-TW": "顯示語言"
+ },
+ "表示言語を\n選んでください": {
+  "en": "Choose your\ndisplay language",
+  "zh-TW": "選擇介面語言"
+ },
+ "被写体の切り抜きも無制限": {
+  "en": "Unlimited subject cut-outs",
+  "zh-TW": "主體去背也無限"
+ },
+ "被写体を切り抜く": {
+  "en": "Cut out the subject",
+  "zh-TW": "主體去背"
+ },
+ "装飾": {
+  "en": "Decoration",
+  "zh-TW": "裝飾"
+ },
+ "複数形": {
+  "en": "Plural",
+  "zh-TW": "複數"
+ },
+ "見せる": {
+  "en": "Show",
+  "zh-TW": "顯示"
+ },
+ "見つかりませんでした。": {
+  "en": "It couldn't be found.",
+  "zh-TW": "找不到。"
+ },
+ "見つけたものが、\nあなたのことばになる。": {
+  "en": "See it. Catch it.\nMake it yours.",
+  "zh-TW": "發現生活裡的事物，\n學會用自己的話說出來。"
+ },
+ "見つけた場面ごと、今日のアルバムに。単語帳へ書き写す手間がなくなります。": {
+  "en": "Keep the moment with the word in today's album. No copying it into a notebook.",
+  "zh-TW": "單字和發現它的時刻，一起留在今天的相簿。不用再抄進筆記本。"
+ },
+ "覚えた {1}／{2}": {
+  "en": "Learned {1}/{2}",
+  "zh-TW": "已記住 {1}／{2}"
+ },
+ "覚えたいことばを選ぶ": {
+  "en": "Pick a word to learn",
+  "zh-TW": "選一個想學的單字"
+ },
+ "覚えている": {
+  "en": "Remembered",
+  "zh-TW": "記得"
+ },
+ "覚え方": {
+  "en": "Memory hook",
+  "zh-TW": "記憶方法"
+ },
+ "解析できなかったので写真を預かりました": {
+  "en": "Couldn't analyze it — we kept your photo",
+  "zh-TW": "沒能分析，先幫你把照片收著了"
+ },
+ "解析に失敗しました。": {
+  "en": "Analysis failed.",
+  "zh-TW": "分析失敗。"
+ },
+ "解析中": {
+  "en": "Analyzing",
+  "zh-TW": "分析中"
+ },
+ "解析待ち {1}件": {
+  "en": "{1} waiting to be analyzed",
+  "zh-TW": "等待分析 {1} 件"
+ },
+ "解析待ちの写真": {
+  "en": "Photo waiting to be analyzed",
+  "zh-TW": "等待分析的照片"
+ },
+ "解説の作り直し": {
+  "en": "Regenerate explanations",
+  "zh-TW": "重新製作解說"
+ },
+ "言語": {
+  "en": "Language",
+  "zh-TW": "語言"
+ },
+ "訓読み": {
+  "en": "kun reading",
+  "zh-TW": "訓讀"
+ },
+ "記号": {
+  "en": "Symbols",
+  "zh-TW": "符號"
+ },
+ "記憶の内訳": {
+  "en": "Memory breakdown",
+  "zh-TW": "記憶分布"
+ },
+ "記憶の曲線": {
+  "en": "Memory curve",
+  "zh-TW": "記憶曲線"
+ },
+ "記録に失敗しました": {
+  "en": "Couldn't record that",
+  "zh-TW": "紀錄失敗"
+ },
+ "設定": {
+  "en": "Settings",
+  "zh-TW": "設定"
+ },
+ "設定を保存できませんでした": {
+  "en": "Couldn't save your settings.",
+  "zh-TW": "無法儲存設定。"
+ },
+ "設定を開く": {
+  "en": "Open Settings",
+  "zh-TW": "打開設定"
+ },
+ "設定アプリでマイクを許可すると録音できます。": {
+  "en": "Allow the microphone in the Settings app to record.",
+  "zh-TW": "在「設定」App 允許使用麥克風即可錄音。"
+ },
+ "試験対策": {
+  "en": "Exam preparation",
+  "zh-TW": "考試準備"
+ },
+ "話しかけてください": {
+  "en": "Speak now",
+  "zh-TW": "請開始說話"
+ },
+ "話し言葉": {
+  "en": "Spoken",
+  "zh-TW": "口語"
+ },
+ "語": {
+  "en": "words",
+  "zh-TW": "個"
+ },
+ "語源": {
+  "en": "Word origin",
+  "zh-TW": "字源"
+ },
+ "語源・部首": {
+  "en": "Origin & radicals",
+  "zh-TW": "字源、部首"
+ },
+ "語種": {
+  "en": "Word origin type",
+  "zh-TW": "詞的來源類型"
+ },
+ "読みの表記": {
+  "en": "Reading notation",
+  "zh-TW": "讀音標示"
+ },
+ "読み取っています…": {
+  "en": "Reading the page…",
+  "zh-TW": "正在讀取這一頁…"
+ },
+ "読み取れませんでした": {
+  "en": "Couldn't read that page",
+  "zh-TW": "讀不出這一頁"
+ },
+ "読み込み中…": {
+  "en": "Loading…",
+  "zh-TW": "載入中…"
+ },
+ "調理器具": {
+  "en": "Kitchenware",
+  "zh-TW": "廚具"
+ },
+ "購入の承認待ちです。": {
+  "en": "Your purchase is awaiting approval.",
+  "zh-TW": "購買正在等待核准。"
+ },
+ "購入を完了できませんでした。": {
+  "en": "Couldn't complete the purchase.",
+  "zh-TW": "無法完成購買。"
+ },
+ "購入を復元": {
+  "en": "Restore purchases",
+  "zh-TW": "恢復購買"
+ },
+ "趣味・教養": {
+  "en": "Hobbies & culture",
+  "zh-TW": "興趣、文化"
+ },
+ "身につける": {
+  "en": "Wear",
+  "zh-TW": "穿戴"
+ },
+ "辞書と照合しています": {
+  "en": "Matching the dictionary…",
+  "zh-TW": "正在跟辭典比對"
+ },
+ "追加した単語を見てみる": {
+  "en": "Explore your new word",
+  "zh-TW": "看看剛加入的單字"
+ },
+ "追加した単語を開いて、意味や使い方を見てみましょう。": {
+  "en": "Open your new word to explore its meanings and uses.",
+  "zh-TW": "打開剛加入的單字，看看意思和用法。"
+ },
+ "追加の例文": {
+  "en": "More examples",
+  "zh-TW": "更多例句"
+ },
+ "送った内容の形が違います。アプリを最新にしてください。": {
+  "en": "The request was in an unexpected format. Please update the app.",
+  "zh-TW": "送出的資料格式不符，請將 App 更新到最新版本。"
+ },
+ "通信が時間切れになりました。電波の良い場所でもう一度お試しください。": {
+  "en": "The connection timed out. Please try again where the signal is better.",
+  "zh-TW": "連線逾時。請到訊號較好的地方再試一次。"
+ },
+ "通信に時間がかかっています。写真は端末に保存しました。": {
+  "en": "The connection is taking too long. Your photo is saved on this device.",
+  "zh-TW": "連線時間過長，照片已儲存在此裝置。"
+ },
+ "通知": {
+  "en": "Notifications",
+  "zh-TW": "通知"
+ },
+ "通知が許可されていません。iPhoneの「設定」→「CatchWords」→「通知」から許可してください。": {
+  "en": "Notifications are off. Allow them in iPhone Settings → CatchWords → Notifications.",
+  "zh-TW": "尚未允許通知。請從 iPhone 的「設定」→「CatchWords」→「通知」開啟。"
+ },
+ "通知しない": {
+  "en": "No notifications",
+  "zh-TW": "不通知"
+ },
+ "通知の時刻": {
+  "en": "Notification time",
+  "zh-TW": "通知時間"
+ },
+ "週": {
+  "en": "Week",
+  "zh-TW": "週"
+ },
+ "週ごと": {
+  "en": "By week",
+  "zh-TW": "按週"
+ },
+ "過去の日記": {
+  "en": "Past entries",
+  "zh-TW": "以前的日記"
+ },
+ "過去の日記と添削": {
+  "en": "Past diary entries and corrections",
+  "zh-TW": "過去的日記與批改"
+ },
+ "過去分詞": {
+  "en": "Past participle",
+  "zh-TW": "過去分詞"
+ },
+ "過去形": {
+  "en": "Past",
+  "zh-TW": "過去式"
+ },
+ "道具": {
+  "en": "Tools",
+  "zh-TW": "工具"
+ },
+ "違う単語を入力": {
+  "en": "Type a different word",
+  "zh-TW": "輸入別的單字"
+ },
+ "違う語が混ざっていたら、右の×で外してください。外した語は入りません。": {
+  "en": "Drop anything that came out wrong with the × — dropped words are not saved.",
+  "zh-TW": "有認錯的字，就用右邊的 × 移除。移除的字不會存進來。"
+ },
+ "選ぶ": {
+  "en": "Pick",
+  "zh-TW": "選"
+ },
+ "部首: {1}": {
+  "en": "Radical: {1}",
+  "zh-TW": "部首：{1}"
+ },
+ "野菜": {
+  "en": "Vegetables",
+  "zh-TW": "蔬菜"
+ },
+ "量詞": {
+  "en": "Measure words",
+  "zh-TW": "量詞"
+ },
+ "金": {
+  "en": "Fri",
+  "zh-TW": "五"
+ },
+ "録った一言を捨てる": {
+  "en": "Discard the recording",
+  "zh-TW": "捨棄錄音"
+ },
+ "録り直す": {
+  "en": "Record again",
+  "zh-TW": "重錄"
+ },
+ "録れました": {
+  "en": "Recorded",
+  "zh-TW": "已錄好"
+ },
+ "録音中。タップで止める": {
+  "en": "Recording. Tap to stop",
+  "zh-TW": "錄音中。點一下停止"
+ },
+ "閉じる": {
+  "en": "Close",
+  "zh-TW": "關閉"
+ },
+ "開発を応援": {
+  "en": "Support development",
+  "zh-TW": "支持開發"
+ },
+ "関": {
+  "en": "rel",
+  "zh-TW": "關"
+ },
+ "関連語": {
+  "en": "Related words",
+  "zh-TW": "相關詞"
+ },
+ "集めたことばが、撮った写真と一緒に並びます。": {
+  "en": "Every word you catch is kept with its photo.",
+  "zh-TW": "收集的單字會和照片一起保存。"
+ },
+ "集めた単語": {
+  "en": "Words collected",
+  "zh-TW": "收集的單字"
+ },
+ "集める": {
+  "en": "Catch",
+  "zh-TW": "收集"
+ },
+ "非表示": {
+  "en": "hidden",
+  "zh-TW": "已隱藏"
+ },
+ "靴": {
+  "en": "Shoes",
+  "zh-TW": "鞋子"
+ },
+ "音と手ざわり": {
+  "en": "Sound & haptics",
+  "zh-TW": "聲音與觸感"
+ },
+ "音楽・映画": {
+  "en": "Music & film",
+  "zh-TW": "音樂、電影"
+ },
+ "音読み": {
+  "en": "on reading",
+  "zh-TW": "音讀"
+ },
+ "項目": {
+  "en": "Sections",
+  "zh-TW": "項目"
+ },
+ "項目の再生成は Pro 限定です": {
+  "en": "Regenerating sections is a Pro feature.",
+  "zh-TW": "重新產生項目為 Pro 專屬功能。"
+ },
+ "額縁": {
+  "en": "Picture frame",
+  "zh-TW": "畫框"
+ },
+ "顔": {
+  "en": "Face",
+  "zh-TW": "臉"
+ },
+ "類義語": {
+  "en": "Synonyms",
+  "zh-TW": "近義詞"
+ },
+ "類義語・反義語・関連語": {
+  "en": "Synonyms, antonyms & related",
+  "zh-TW": "近義詞、反義詞、相關詞"
+ },
+ "食べる": {
+  "en": "Eat",
+  "zh-TW": "吃"
+ },
+ "食べ物": {
+  "en": "Food & drink",
+  "zh-TW": "美食"
+ },
+ "飲み物": {
+  "en": "Drinks",
+  "zh-TW": "飲料"
+ },
+ "高低アクセント": {
+  "en": "Pitch accent",
+  "zh-TW": "高低重音"
+ },
+ "（意味が読み取れていません）": {
+  "en": "(no meaning was read)",
+  "zh-TW": "（沒有讀到意思）"
+ }
+}

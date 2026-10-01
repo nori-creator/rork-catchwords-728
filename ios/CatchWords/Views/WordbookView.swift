@@ -28,11 +28,11 @@ struct WordbookView: View {
                 }
                 .refreshable { await store.load() }
             }
-            .navigationTitle("単語帳")
+            .navigationTitle(L("単語帳"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("閉じる") { dismiss() }
+                    Button(L("閉じる")) { dismiss() }
                 }
             }
             .navigationDestination(item: $reviewing) { book in
@@ -58,19 +58,19 @@ struct WordbookView: View {
         .sheet(item: Binding(get: { draft.map { DraftBox(draft: $0) } }, set: { if $0 == nil { draft = nil } })) { box in
             WordbookConfirmView(draft: box.draft, store: store) { added in
                 draft = nil
-                showToast("\(added)語を取り込みました")
+                showToast(L("\(added)語を取り込みました"))
             }
             .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
-            "「\(pendingDelete?.title ?? "")」を語ごと消します。戻せません。",
+            L("「\(pendingDelete?.title ?? "")」を語ごと消します。戻せません。"),
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
             titleVisibility: .visible
         ) {
-            Button("消す", role: .destructive) {
+            Button(L("消す"), role: .destructive) {
                 guard let b = pendingDelete else { return }
                 Task {
-                    do { try await store.delete(b); Haptics.success() } catch { showToast("消せませんでした") }
+                    do { try await store.delete(b); Haptics.success() } catch { showToast(L("消せませんでした")) }
                 }
             }
         }
@@ -98,7 +98,7 @@ struct WordbookView: View {
                 Button { showCamera = true } label: {
                     HStack(spacing: 8) {
                         if isReading { ProgressView().tint(.white) } else { Image(systemName: "camera.fill") }
-                        Text(isReading ? "読み取っています…" : "単語帳を撮る")
+                        Text(isReading ? L("読み取っています…") : L("単語帳を撮る"))
                     }
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
@@ -118,9 +118,9 @@ struct WordbookView: View {
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border))
                 }
                 .disabled(isReading)
-                .accessibilityLabel("写真から選ぶ")
+                .accessibilityLabel(L("写真から選ぶ"))
             }
-            Text("単語が並んだページを、まっすぐ明るい所で撮ってください。並んでいる語をまとめて取り込みます。")
+            Text(L("単語が並んだページを、まっすぐ明るい所で撮ってください。並んでいる語をまとめて取り込みます。"))
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -132,7 +132,7 @@ struct WordbookView: View {
         if let err = store.loadError, store.books.isEmpty {
             VStack(spacing: 10) {
                 Label(err, systemImage: "wifi.exclamationmark")
-                Button("もう一度読み込む") { Task { await store.load() } }.foregroundStyle(Theme.primary)
+                Button(L("もう一度読み込む")) { Task { await store.load() } }.foregroundStyle(Theme.primary)
             }
             .frame(maxWidth: .infinity).padding(.top, 40)
         } else if !store.hasLoaded {
@@ -149,8 +149,8 @@ struct WordbookView: View {
                     .foregroundStyle(Theme.primary)
                     .frame(width: 72, height: 72)
                     .background(Theme.accent, in: Circle())
-                Text("まだ単語帳がありません").font(.system(size: 17, weight: .semibold))
-                Text("教科書や自作のリストを撮ると、そこに並ぶ語をまとめて取り込んで、図鑑とは別に復習できます。")
+                Text(L("まだ単語帳がありません")).font(.system(size: 17, weight: .semibold))
+                Text(L("教科書や自作のリストを撮ると、そこに並ぶ語をまとめて取り込んで、図鑑とは別に復習できます。"))
                     .font(.system(size: 14)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity).padding(.top, 40).padding(.horizontal, 20)
@@ -176,10 +176,10 @@ struct WordbookView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(book.title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground).lineLimit(1)
                     HStack(spacing: 8) {
-                        Text(book.due > 0 ? "今日 \(book.due)語" : "今日はおしまい")
+                        Text(book.due > 0 ? L("今日 \(book.due)語") : L("今日はおしまい"))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(book.due > 0 ? Theme.primaryInk : Theme.muted)
-                        Text("覚えた \(book.learned)／\(book.total)").font(.system(size: 12)).foregroundStyle(Theme.muted).monospacedDigit()
+                        Text(L("覚えた \(book.learned)／\(book.total)")).font(.system(size: 12)).foregroundStyle(Theme.muted).monospacedDigit()
                     }
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
@@ -197,9 +197,9 @@ struct WordbookView: View {
         }
         .buttonStyle(PressableStyle(scale: 0.98))
         .contextMenu {
-            Button(role: .destructive) { pendingDelete = book } label: { Label("「\(book.title)」を消す", systemImage: "trash") }
+            Button(role: .destructive) { pendingDelete = book } label: { Label(L("「\(book.title)」を消す"), systemImage: "trash") }
         }
-        .accessibilityHint("この単語帳を復習する")
+        .accessibilityHint(L("この単語帳を復習する"))
     }
 
     private func read(_ image: UIImage) async {
@@ -210,7 +210,7 @@ struct WordbookView: View {
             Haptics.success()
         } catch {
             Haptics.warning()
-            showToast((error as? LocalizedError)?.errorDescription ?? "読み取れませんでした")
+            showToast((error as? LocalizedError)?.errorDescription ?? L("読み取れませんでした"))
         }
     }
 
@@ -244,12 +244,12 @@ struct WordbookConfirmView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("この語で合っていますか").font(.system(size: 22, weight: .bold))
-                    Text("違う語が混ざっていたら、右の×で外してください。外した語は入りません。")
+                    Text(L("この語で合っていますか")).font(.system(size: 22, weight: .bold))
+                    Text(L("違う語が混ざっていたら、右の×で外してください。外した語は入りません。"))
                         .font(.system(size: 13)).foregroundStyle(Theme.muted)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("単語帳の名前").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
-                        TextField("例: TOCFL 2級 第3課", text: $title)
+                        Text(L("単語帳の名前")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                        TextField(NativeAPI.targetLanguage == "en" ? L("例: TOEIC 頻出 Unit 3") : NativeAPI.targetLanguage == "ja" ? L("例: JLPT N4 第3課") : L("例: TOCFL 2級 第3課"), text: $title)
                             .padding(.horizontal, 14).frame(minHeight: 48)
                             .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     }
@@ -261,7 +261,7 @@ struct WordbookConfirmView: View {
                                         Text(e.headword).font(.system(size: 20, weight: .bold))
                                         if let z = e.readingZhuyin { Text(z).font(.system(size: 12)).foregroundStyle(Theme.muted) }
                                     }
-                                    Text(e.meaningJa ?? "（意味が読み取れていません）")
+                                    Text(ReaderLanguage.shown(e.meaningJa).isEmpty ? L("（意味が読み取れていません）") : ReaderLanguage.shown(e.meaningJa))
                                         .font(.system(size: 13)).foregroundStyle(Theme.muted).lineLimit(2)
                                 }
                                 Spacer()
@@ -272,7 +272,7 @@ struct WordbookConfirmView: View {
                                     Image(systemName: "xmark").font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(Theme.muted).frame(width: 44, height: 44)
                                 }
-                                .accessibilityLabel("「\(e.headword)」を外す")
+                                .accessibilityLabel(L("「\(e.headword)」を外す"))
                             }
                             .padding(.leading, 14)
                             .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
@@ -285,9 +285,9 @@ struct WordbookConfirmView: View {
                 .padding(20)
             }
             VStack(spacing: 8) {
-                PrimaryButton(title: "\(entries.count)語を取り込む", icon: "tray.and.arrow.down", isLoading: isSaving) { save() }
+                PrimaryButton(title: L("\(entries.count)語を取り込む"), icon: "tray.and.arrow.down", isLoading: isSaving) { save() }
                     .disabled(entries.isEmpty)
-                Button("キャンセル") { dismiss() }.foregroundStyle(Theme.muted).frame(minHeight: 44)
+                Button(L("キャンセル")) { dismiss() }.foregroundStyle(Theme.muted).frame(minHeight: 44)
             }
             .padding(.horizontal, 20).padding(.bottom, 8)
         }
@@ -304,7 +304,7 @@ struct WordbookConfirmView: View {
                 onSaved(n)
             } catch {
                 Haptics.warning()
-                self.error = (error as? LocalizedError)?.errorDescription ?? "取り込めませんでした"
+                self.error = (error as? LocalizedError)?.errorDescription ?? L("取り込めませんでした")
             }
         }
     }
@@ -335,10 +335,10 @@ struct WordbookReviewView: View {
                 } else if let error {
                     VStack(spacing: 10) {
                         Text(error)
-                        Button("もう一度読み込む") { Task { await load() } }.foregroundStyle(Theme.primary)
+                        Button(L("もう一度読み込む")) { Task { await load() } }.foregroundStyle(Theme.primary)
                     }.frame(maxHeight: .infinity)
                 } else if cards.isEmpty {
-                    empty("checkmark.circle", "今日出す語はありません", "この本の語は、次に出る日まで休みます。ほかの本を選ぶか、新しく取り込んでください。")
+                    empty("checkmark.circle", L("今日出す語はありません"), L("この本の語は、次に出る日まで休みます。ほかの本を選ぶか、新しく取り込んでください。"))
                 } else if let card = current {
                     quiz(card)
                 } else {
@@ -364,7 +364,7 @@ struct WordbookReviewView: View {
             error = nil
             makeChoices()
         } catch {
-            self.error = "今日の出題を読み込めませんでした。"
+            self.error = L("今日の出題を読み込めませんでした。")
         }
     }
 
@@ -378,7 +378,7 @@ struct WordbookReviewView: View {
     private func quiz(_ card: WordbookEntry) -> some View {
         VStack(spacing: 18) {
             HStack {
-                Text("この意味の語はどれ").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text(L("この意味の語はどれ")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
                 Spacer()
                 Text("\(index + 1)／\(cards.count)").font(.system(size: 14)).monospacedDigit().foregroundStyle(Theme.muted)
             }
@@ -391,7 +391,7 @@ struct WordbookReviewView: View {
             .frame(height: 6)
             .animation(.spring(response: 0.5, dampingFraction: 0.85), value: index)
 
-            Text(card.meaningJa ?? "（意味が読み取れていません）")
+            Text(ReaderLanguage.shown(card.meaningJa).isEmpty ? L("（意味が読み取れていません）") : ReaderLanguage.shown(card.meaningJa))
                 .font(.system(size: 26, weight: .bold))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, minHeight: 160)
@@ -404,7 +404,7 @@ struct WordbookReviewView: View {
             }
             Spacer(minLength: 0)
             if picked != nil {
-                PrimaryButton(title: index + 1 < cards.count ? "次へ" : "結果を見る", icon: "arrow.right") {
+                PrimaryButton(title: index + 1 < cards.count ? L("次へ") : L("結果を見る"), icon: "arrow.right") {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { index += 1 }
                     makeChoices()
                 }
@@ -452,9 +452,9 @@ struct WordbookReviewView: View {
     private var finished: some View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(Theme.gold)
-            Text("この本の今日ぶんは終わりです").font(.system(size: 20, weight: .bold))
-            Text("\(correct)／\(cards.count) 正解").font(.system(size: 16)).monospacedDigit().foregroundStyle(Theme.muted)
-            PrimaryButton(title: "単語帳の一覧へ", icon: "books.vertical") {
+            Text(L("この本の今日ぶんは終わりです")).font(.system(size: 20, weight: .bold))
+            Text(L("\(correct)／\(cards.count) 正解")).font(.system(size: 16)).monospacedDigit().foregroundStyle(Theme.muted)
+            PrimaryButton(title: L("単語帳の一覧へ"), icon: "books.vertical") {
                 Task { await store.load() }
                 dismiss()
             }
@@ -492,13 +492,13 @@ struct PageCameraView: View {
                     .allowsHitTesting(false)
             } else if camera.state == .denied {
                 VStack(spacing: 12) {
-                    Text("カメラの使用が許可されていません").foregroundStyle(.white)
-                    Button("設定を開く") {
+                    Text(L("カメラの使用が許可されていません")).foregroundStyle(.white)
+                    Button(L("設定を開く")) {
                         if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
                     }.foregroundStyle(Theme.cyan)
                 }
             } else if camera.state == .unavailable {
-                Text("カメラが見つかりません").foregroundStyle(.white.opacity(0.8))
+                Text(L("カメラが見つかりません")).foregroundStyle(.white.opacity(0.8))
             }
             VStack {
                 HStack {
@@ -510,7 +510,7 @@ struct PageCameraView: View {
                 }
                 .padding(.horizontal, 16)
                 Spacer()
-                Text("ページ全体が枠に入るように").font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                Text(L("ページ全体が枠に入るように")).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                 Button {
                     isShooting = true
                     Haptics.impact(.medium)
@@ -527,7 +527,7 @@ struct PageCameraView: View {
                 .buttonStyle(PressableStyle(scale: 0.9))
                 .disabled(isShooting || camera.state != .running)
                 .padding(.bottom, 30)
-                .accessibilityLabel("撮影")
+                .accessibilityLabel(L("撮影"))
             }
         }
         .task { await camera.start() }

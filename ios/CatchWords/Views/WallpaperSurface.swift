@@ -8,11 +8,11 @@ enum Wallpaper: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .paper: "紙"
-        case .notebook: "ノート"
-        case .wall: "壁"
-        case .frame: "額縁"
-        case .cork: "コルクと画鋲"
+        case .paper: L("紙")
+        case .notebook: L("ノート")
+        case .wall: L("壁")
+        case .frame: L("額縁")
+        case .cork: L("コルクと画鋲")
         }
     }
 

@@ -12,18 +12,18 @@ nonisolated enum APIError: LocalizedError {
     case limit(String)
 
     /// err.dailyCap (web i18n).
-    static let dailyCapMessage = "1日の利用上限に達しました。24時間以内に自動で回復します。"
+    static var dailyCapMessage: String { L("1日の利用上限に達しました。24時間以内に自動で回復します。") }
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: "サーバーの設定が見つかりません。"
-        case .unauthorized: "ログインの有効期限が切れました。もう一度ログインしてください。"
-        case .timeout: "通信が時間切れになりました。電波の良い場所でもう一度お試しください。"
-        case .offline: "インターネットに接続できません。"
-        case .server(let code, let msg): msg.isEmpty ? "サーバーエラー（\(code)）" : msg
-        case .decoding: "データの読み込みに失敗しました。"
-        case .message(let m): m
-        case .limit(let m): m
+        case .notConfigured: L("サーバーの設定が見つかりません。")
+        case .unauthorized: L("ログインの有効期限が切れました。もう一度ログインしてください。")
+        case .timeout: L("通信が時間切れになりました。電波の良い場所でもう一度お試しください。")
+        case .offline: L("インターネットに接続できません。")
+        case .server(let code, let msg): L10n.readerSafe(msg, fallback: L("サーバーエラー（\(code)）"))
+        case .decoding: L("データの読み込みに失敗しました。")
+        case .message(let m): L10n.readerSafe(m, fallback: L("うまくいきませんでした。もう一度お試しください。"))
+        case .limit(let m): L10n.readerSafe(m, fallback: Self.dailyCapMessage)
         }
     }
 
@@ -117,6 +117,20 @@ final class SupabaseClient {
         guard (200..<300).contains(response.statusCode) else { throw APIError.server(response.statusCode, "") }
     }
 
+    /// The signed-in user's `user_metadata` (notification_preferences, learning_preferences…).
+    func userMetadata() async throws -> [String: Any] {
+        try await refreshIfNeeded()
+        guard let baseURL, let token = session?.accessToken,
+              let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await perform(req)
+        guard (200..<300).contains(response.statusCode),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { throw APIError.server(response.statusCode, "") }
+        return json["user_metadata"] as? [String: Any] ?? [:]
+    }
+
     func refreshIfNeeded() async throws {
         guard let current = session else { throw APIError.unauthorized }
         guard current.expiresAt.timeIntervalSinceNow < 120 else { return }
@@ -164,12 +178,12 @@ final class SupabaseClient {
 
     private static func localizeAuthError(_ msg: String, code: Int) -> String {
         let m = msg.lowercased()
-        if m.contains("invalid login") { return "メールアドレスかパスワードが違います。" }
-        if m.contains("already registered") { return "このメールアドレスは登録済みです。ログインしてください。" }
-        if m.contains("password should be") { return "パスワードは6文字以上にしてください。" }
-        if m.contains("email not confirmed") { return "確認メールのリンクを開いてからログインしてください。" }
-        if m.contains("rate limit") { return "しばらく時間をおいてからお試しください。" }
-        return msg.isEmpty ? "ログインに失敗しました（\(code)）" : msg
+        if m.contains("invalid login") { return L("メールアドレスかパスワードが違います。") }
+        if m.contains("already registered") { return L("このメールアドレスは登録済みです。ログインしてください。") }
+        if m.contains("password should be") { return L("パスワードは6文字以上にしてください。") }
+        if m.contains("email not confirmed") { return L("確認メールのリンクを開いてからログインしてください。") }
+        if m.contains("rate limit") { return L("しばらく時間をおいてからお試しください。") }
+        return L("ログインに失敗しました（\(code)）")  // never the raw English message (G2)
     }
 
     // MARK: - REST
@@ -202,7 +216,7 @@ final class SupabaseClient {
 
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)
 
-    func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers") async throws {
+    func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers", upsert: Bool = false) async throws {
         try await refreshIfNeeded()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
@@ -211,12 +225,12 @@ final class SupabaseClient {
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        req.setValue("false", forHTTPHeaderField: "x-upsert")
+        req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
         req.httpBody = data
         let (body, response) = try await perform(req)
         guard (200..<300).contains(response.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
-            throw APIError.server(response.statusCode, (json?["message"] as? String) ?? "写真の保存に失敗しました。")
+            throw APIError.server(response.statusCode, (json?["message"] as? String) ?? L("写真の保存に失敗しました。"))
         }
     }
 

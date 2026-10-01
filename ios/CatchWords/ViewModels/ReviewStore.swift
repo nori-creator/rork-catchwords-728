@@ -30,48 +30,82 @@ final class ReviewStore {
 
     private let client = SupabaseClient.shared
 
-    /// quiz-choices.ts fallback pool (4 so one collision still leaves 3).
-    static let fallback: [QuizChoice] = [
-        QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),
-        QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),
-        QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),
-        QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ"),
-    ]
+    /// quiz-choices.ts quizFallbackHeadwords, per learning language (4 so one collision still leaves 3).
+    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」).
+    static func fallback(for target: String) -> [QuizChoice] {
+        switch target {
+        case "en":
+            return ["apple", "bus", "umbrella", "lunch box"].map { QuizChoice(headword: $0, zhuyin: nil) }  // l10n-ignore (target words)
+        case "ja":
+            return [("りんご", ""), ("バス", ""), ("傘", "かさ"), ("お弁当", "おべんとう")]  // l10n-ignore (target words)
+                .map { QuizChoice(headword: $0.0, zhuyin: $0.1.isEmpty ? nil : $0.1) }
+        default:
+            return [QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ")]  // l10n-ignore (target word)
+        }
+    }
+
+    /// The learning language the queue was built for (R5: a switched language must not keep the old cards).
+    private(set) var loadedTarget: String = ""
+
+    /// Forget the queue (the learning language changed).
+    func reset() {
+        queue = []
+        index = 0
+        hasLoaded = false
+        choiceCache = [:]
+        loadedTarget = ""
+        doneToday = 0
+        streak = 0
+        allHistory = []
+    }
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
     var isFinished: Bool { hasLoaded && index >= queue.count }
 
     func load(dex: DexStore, limit: Int) async {
         guard client.session != nil else { return }
+        choiceCache = [:]
         isLoading = true
         defer { isLoading = false }
-        async let historyTask = loadHistory()
+        async let historyTask = loadHistory(dex: dex)
         do {
             let now = SupabaseDate.string(Date())
             let enc = DexStore.enc(now)
             let data = try await client.rest(
                 "GET",
-                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=\(max(1, limit - doneToday))"
+                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=5000"
             )
             let rows = try SupabaseDate.decoder.decode([ReviewState].self, from: data)
             if dex.stickers.isEmpty { await dex.load() }
-            queue = rows.compactMap { r in
+            // Only this learning language's cards (the dex is already filtered), and the daily limit is
+            // counted after that filter — not before (R1 「復習の記憶の状態が他の学習言語と混ざってる」).
+            let cards = rows.compactMap { r -> ReviewCard? in
                 guard let s = dex.sticker(id: r.stickerId), s.word != nil else { return nil }
                 return ReviewCard(review: r, sticker: s)
             }
+            await historyTask  // doneToday is now this language's count
+            queue = Array(cards.prefix(max(1, limit - doneToday)))
+            loadedTarget = NativeAPI.targetLanguage
             index = 0
             correctCount = 0
             loadError = nil
             hasLoaded = true
         } catch {
-            loadError = (error as? LocalizedError)?.errorDescription ?? "復習を読み込めませんでした。"
+            loadError = (error as? LocalizedError)?.errorDescription ?? L("復習を読み込めませんでした。")
+            await historyTask
         }
-        await historyTask
     }
 
-    private func loadHistory() async {
+    private func loadHistory(dex: DexStore) async {
         guard let data = try? await client.rest("GET", "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc&limit=5000"),
-              let rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+              var rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+        // Streak, today's count and the retention line: this learning language's words only.
+        if dex.stickers.isEmpty { await dex.load() }
+        let mine = Set(dex.stickers.map(\.id))
+        if dex.hasLoaded { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)
@@ -80,7 +114,18 @@ final class ReviewStore {
     }
 
     /// Distractors from the learner's own dex first (same category preferred), then the fallback pool.
+    /// Choices are drawn once per card. Without this the four buttons reshuffled every time the
+    /// screen redrew — including right after a tap, so the answer you pressed jumped to another slot.
+    @ObservationIgnored private var choiceCache: [String: [QuizChoice]] = [:]
+
     func choices(for card: ReviewCard, dex: DexStore) -> [QuizChoice] {
+        if let cached = choiceCache[card.sticker.id] { return cached }
+        let made = makeChoices(for: card, dex: dex)
+        choiceCache[card.sticker.id] = made
+        return made
+    }
+
+    private func makeChoices(for card: ReviewCard, dex: DexStore) -> [QuizChoice] {
         let correct = QuizChoice(headword: card.sticker.word?.headword ?? "", zhuyin: card.sticker.word?.readingZhuyin)
         let others = dex.stickers.compactMap { s -> (QuizChoice, Bool)? in
             guard let w = s.word, w.headword != correct.headword else { return nil }
@@ -89,48 +134,37 @@ final class ReviewStore {
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
         var out: [QuizChoice] = []
-        for c in same + rest + Self.fallback where c.headword != correct.headword && !out.contains(c) {
+        for c in same + rest + Self.fallback(for: NativeAPI.targetLanguage) where c.headword != correct.headword && !out.contains(c) {
             out.append(c)
             if out.count == 3 { break }
         }
         return ([correct] + out).shuffled()
     }
 
-    /// gradeReview: correct=5 (−1 if slow >8s), wrong=1.
+    /// Graded by the web's own `gradeReview` (reviews.functions.ts): the same scoring (correct=5,
+    /// −1 when slow, wrong=1), the same interval engine (SM-2 with the Jev guardrails) and the same
+    /// history rows as the web — so a word comes due on the same day on the iPhone and on the web.
+    /// If the server cannot be reached, nothing is written locally (a half-graded card would drift).
     func grade(_ card: ReviewCard, correct: Bool, responseMs: Int, dex: DexStore) async {
-        var score = correct ? 5 : 1
-        if correct && responseMs > 8000 { score -= 1 }
         if correct { correctCount += 1 }
         let r = card.review
-        let elapsed = r.lastReviewedAt.map { Date().timeIntervalSince($0) / 86_400 }
-        let next = SRS.next(.init(ease: r.ease, intervalDays: r.intervalDays, repetitions: r.repetitions ?? 0), score: score, elapsedDays: elapsed)
         let now = Date()
-        let due = now.addingTimeInterval(Double(next.intervalDays) * 86_400)
         guard let rid = r.id else { return }
-        _ = try? await client.rest("PATCH", "reviews?id=eq.\(rid)", body: [
-            "ease": next.ease,
-            "interval_days": next.intervalDays,
-            "repetitions": next.repetitions,
-            "last_score": score,
-            "last_reviewed_at": SupabaseDate.string(now),
-            "due_at": SupabaseDate.string(due),
-        ])
-        if let uid = client.userId {
-            _ = try? await client.rest("POST", "review_history", body: [
-                "user_id": uid,
-                "review_id": rid,
-                "sticker_id": r.stickerId,
-                "score": score,
-                "correct": correct,
-                "blur_seen": false,
-                "response_ms": responseMs,
-                "interval_days_after": next.intervalDays,
-                "ease_after": next.ease,
-                "repetitions_after": next.repetitions,
-            ])
+        struct Graded: Decodable {
+            let score: Int?
+            let intervalDays: Double?
+            enum CodingKeys: String, CodingKey { case score, intervalDays = "interval_days" }
         }
+        let graded = try? await NativeAPI.call("gradeReview", [
+            "review_id": rid,
+            "correct": correct,
+            "blur_seen": false,
+            "response_ms": max(0, responseMs),
+        ], as: Graded.self, timeout: 20)
+        let intervalAfter = graded?.intervalDays.map { Int($0.rounded()) } ?? r.intervalDays
         doneToday += 1
-        if let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: next.intervalDays, easeAfter: next.ease) {
+        if graded != nil,
+           let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: intervalAfter, easeAfter: r.ease) {
             allHistory.insert(row, at: 0)
         }
         if streak == 0 || !Calendar.current.isDateInToday(now) { streak = max(streak, 1) }

@@ -15,8 +15,9 @@ struct OnboardingView: View {
     @State private var stage: Stage = .intro
     @State private var step: Int = 0
     @State private var forward: Bool = true
-    @State private var uiLanguage: String = "ja"
-    @State private var targetLanguage: String = "zh-TW"
+    @State private var uiLanguage: String = L10n.lang
+    /// Never the display language itself (a zh-TW device starts on English).
+    @State private var targetLanguage: String = L10n.lang == "zh-TW" ? "en" : "zh-TW"
     @State private var minutes: Int = 10
     @State private var goals: Set<String> = []
     @State private var interests: Set<String> = []
@@ -25,28 +26,29 @@ struct OnboardingView: View {
     @State private var showMenu: Bool = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
-    @AppStorage("sound.level") private var soundLevel: String = "soft"
+    @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("haptics.enabled") private var hapticsOn: Bool = true
 
-    static let goalList: [(id: String, label: String, icon: String)] = [
-        ("conversation", "日常会話", "bubble.left.and.bubble.right"),
-        ("travel", "旅行・留学", "airplane"),
-        ("work", "仕事・キャリア", "briefcase"),
-        ("exams", "試験対策", "graduationcap"),
-        ("culture", "趣味・教養", "book"),
-        ("other", "その他", "ellipsis"),
-    ]
-    static let interestList: [(id: String, label: String)] = [
-        ("food", "食べ物"), ("travel", "旅行"), ("animals", "動物"),
-        ("nature", "自然"), ("city", "建物・街"), ("fashion", "ファッション"),
-        ("business", "ビジネス"), ("music", "音楽・映画"), ("sports", "スポーツ"),
-    ]
-    static let uiLanguages: [(id: String, label: String, native: String, flag: String)] = [
-        ("ja", "日本語", "日本語", "🇯🇵"), ("en", "英語", "English", "🇺🇸"), ("zh-TW", "繁体字中国語", "繁體中文", "🇹🇼"),
-    ]
-    static let targets: [(id: String, label: String, native: String, flag: String)] = [
-        ("zh-TW", "台湾華語", "臺灣華語", "🇹🇼"), ("en", "英語", "English", "🇺🇸"),
-    ]
+    static var goalList: [(id: String, label: String, icon: String)] { [
+        ("conversation", L("日常会話"), "bubble.left.and.bubble.right"),
+        ("travel", L("旅行・留学"), "airplane"),
+        ("work", L("仕事・キャリア"), "briefcase"),
+        ("exams", L("試験対策"), "graduationcap"),
+        ("culture", L("趣味・教養"), "book"),
+        ("other", L("その他"), "ellipsis"),
+    ] }
+    static var interestList: [(id: String, label: String)] { [
+        ("food", L("食べ物")), ("travel", L("旅行")), ("animals", L("動物")),
+        ("nature", L("自然")), ("city", L("建物・街")), ("fashion", L("ファッション")),
+        ("business", L("ビジネス")), ("music", L("音楽・映画")), ("sports", L("スポーツ")),
+    ] }
+    // label = in the display language, native = the language's own name (never translated).
+    static var uiLanguages: [(id: String, label: String, native: String, flag: String)] { [
+        ("ja", L("日本語"), "日本語", "🇯🇵"), ("en", L("英語"), "English", "🇺🇸"), ("zh-TW", L("繁体字中国語"), "繁體中文", "🇹🇼"),  // l10n-ignore (autonyms)
+    ] }
+    static var targets: [(id: String, label: String, native: String, flag: String)] { [
+        ("zh-TW", L("台湾華語"), "臺灣華語", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸"), ("ja", L("日本語"), "日本語", "🇯🇵")  // l10n-ignore (autonyms)
+    ] }
 
     var body: some View {
         ZStack {
@@ -79,18 +81,18 @@ struct OnboardingView: View {
             }
             .padding(.top, 24)
             Spacer(minLength: 12)
-            IntroBouquet(labels: targetLanguage == "en" ? ["coffee", "flower", "cat", "sea"] : ["咖啡", "花", "貓", "海"])
+            IntroBouquet(labels: targetLanguage == "en" ? ["coffee", "flower", "cat", "sea"] : targetLanguage == "ja" ? ["コーヒー", "花", "猫", "海"] : ["咖啡", "花", "貓", "海"])  // l10n-ignore (target words)
                 .frame(maxHeight: 420)
                 .padding(.horizontal, 24)
             Spacer(minLength: 12)
-            Text("見つけたものが、\nあなたのことばになる。")
+            Text(L("見つけたものが、\nあなたのことばになる。"))
                 .font(AppFont.hand(24))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Color(hex: 0x33291F))
                 .padding(.bottom, 24)
             VStack(spacing: 10) {
-                PrimaryButton(title: "はじめる", icon: "arrow.right", sheen: true) { go(.questions, step: 0) }
-                Button("アカウントをお持ちの方はログイン") { finishToLogin() }
+                PrimaryButton(title: L("はじめる"), icon: "arrow.right", sheen: true) { go(.questions, step: 0) }
+                Button(L("アカウントをお持ちの方はログイン")) { finishToLogin() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Theme.primaryInk)
                     .frame(minHeight: 44)
@@ -123,7 +125,7 @@ struct OnboardingView: View {
                     .padding(.vertical, 20)
             }
             .scrollBounceBehavior(.basedOnSize)
-            PrimaryButton(title: "次へ", icon: "arrow.right") {
+            PrimaryButton(title: L("次へ"), icon: "arrow.right") {
                 if step < 4 { go(.questions, step: step + 1) } else { go(.notifications, step: 0) }
             }
             .padding(.horizontal, 24)
@@ -132,12 +134,12 @@ struct OnboardingView: View {
     }
 
     private var questionTitle: String {
-        ["表示言語を\n選んでください", "学びたい言語は？", "1日、どれくらい\n学びたい？", "学ぶ目的を\n教えてください", "好きなことから、\nことばを広げよう"][step]
+        [L("表示言語を\n選んでください"), L("学びたい言語は？"), L("1日、どれくらい\n学びたい？"), L("学ぶ目的を\n教えてください"), L("好きなことから、\nことばを広げよう")][step]
     }
 
     private var questionHint: String {
-        ["メニューや説明に使う言語です。", "街で出会ったことばを、この言語で学びます。", "あなたのペースで。あとから変更できます。",
-         "いくつでも選べます。例文の場面をあなたに合わせます。", "興味のあるテーマを選んでください（複数選択可）。"][step]
+        [L("メニューや説明に使う言語です。"), L("街で出会ったことばを、この言語で学びます。"), L("あなたのペースで。あとから変更できます。"),
+         L("いくつでも選べます。例文の場面をあなたに合わせます。"), L("興味のあるテーマを選んでください（複数選択可）。")][step]
     }
 
     @ViewBuilder
@@ -148,12 +150,15 @@ struct OnboardingView: View {
                 ForEach(Self.uiLanguages, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native == l.label ? nil : l.native, isOn: uiLanguage == l.id) {
                         uiLanguage = l.id
+                        if targetLanguage == l.id { targetLanguage = Self.targets.first { $0.id != l.id }?.id ?? "zh-TW" }
+                        withAnimation(.easeInOut(duration: 0.25)) { L10n.set(l.id) }
                     }
                 }
             }
         case 1:
             VStack(spacing: 10) {
-                ForEach(Self.targets, id: \.id) { l in
+                // Your own language is not offered as the one to learn (web l1ChoicesFor).
+                ForEach(Self.targets.filter { $0.id != uiLanguage }, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native, isOn: targetLanguage == l.id) {
                         targetLanguage = l.id
                     }
@@ -171,7 +176,7 @@ struct OnboardingView: View {
                             Haptics.selection()
                             minutes = m
                         } label: {
-                            Text("\(m)分")
+                            Text(L("\(m)分"))
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(minutes == m ? .white : Theme.foreground)
                                 .frame(maxWidth: .infinity, minHeight: 58)
@@ -182,7 +187,7 @@ struct OnboardingView: View {
                         .accessibilityAddTraits(minutes == m ? .isSelected : [])
                     }
                 }
-                Text("短い時間でも大丈夫。あなたのペースで続けましょう。")
+                Text(L("短い時間でも大丈夫。あなたのペースで続けましょう。"))
                     .font(.system(size: 13)).foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity)
@@ -190,7 +195,7 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 ForEach(Self.goalList, id: \.id) { g in
                     ChoiceRow(leading: .icon(g.icon), title: g.label,
-                              sub: g.id == "exams" ? (targetLanguage == "en" ? "TOEFL · IELTS" : "TOCFL") : nil,
+                              sub: g.id == "exams" ? (targetLanguage == "en" ? "TOEFL · IELTS" : targetLanguage == "ja" ? "JLPT" : "TOCFL") : nil,
                               isOn: goals.contains(g.id)) { toggle(&goals, g.id) }
                 }
             }
@@ -213,20 +218,20 @@ struct OnboardingView: View {
     private var notifications: some View {
         VStack(alignment: .leading, spacing: 0) {
             progressHeader(index: 6) { go(.questions, step: 4, back: true) }
-            Text("学習の通知を\n設定しますか？")
+            Text(L("学習の通知を\n設定しますか？"))
                 .font(.system(size: 28, weight: .heavy))
                 .padding(.horizontal, 24).padding(.top, 20)
-            Text("必要なものだけ選べます。あとから変更できます。")
+            Text(L("必要なものだけ選べます。あとから変更できます。"))
                 .font(.system(size: 14)).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 24).padding(.top, 8)
             VStack(spacing: 10) {
-                ChoiceRow(leading: .icon("sparkles"), title: "おまかせ", sub: "忘れかける頃に1日1回お知らせ", isOn: reminderMode == "ai") { reminderMode = "ai" }
-                ChoiceRow(leading: .icon("clock"), title: "朝と夜", sub: "8:00 と 20:00", isOn: reminderMode == "custom") { reminderMode = "custom" }
-                ChoiceRow(leading: .icon("bell.slash"), title: "通知しない", sub: nil, isOn: reminderMode == "off") { reminderMode = "off" }
+                ChoiceRow(leading: .icon("sparkles"), title: L("おまかせ"), sub: L("忘れかける頃に1日1回お知らせ"), isOn: reminderMode == "ai") { reminderMode = "ai" }
+                ChoiceRow(leading: .icon("clock"), title: L("朝と夜"), sub: L("8:00 と 20:00"), isOn: reminderMode == "custom") { reminderMode = "custom" }
+                ChoiceRow(leading: .icon("bell.slash"), title: L("通知しない"), sub: nil, isOn: reminderMode == "off") { reminderMode = "off" }
             }
             .padding(20)
             Spacer()
-            PrimaryButton(title: "次へ", icon: "arrow.right") {
+            PrimaryButton(title: L("次へ"), icon: "arrow.right") {
                 Task {
                     if reminderMode != "off" { _ = await ReminderService.requestPermission() }
                     go(.ready, step: 0)
@@ -242,19 +247,19 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             progressHeader(index: 7) { go(.notifications, step: 0, back: true) }
             Spacer()
-            OnboardingPrint(name: "first_catch_ready", label: targetLanguage == "en" ? "sea" : "海", ratio: 1)
+            OnboardingPrint(name: "first_catch_ready", label: targetLanguage == "en" ? "sea" : "海", ratio: 1)  // l10n-ignore (target word)
                 .frame(width: 230)
                 .rotationEffect(.degrees(-3))
                 .shadow(color: .black.opacity(0.15), radius: 18, y: 10)
-            Text("最初の発見は、もうすぐ。")
+            Text(L("最初の発見は、もうすぐ。"))
                 .font(AppFont.hand(18)).foregroundStyle(Theme.muted).padding(.top, 18)
-            Text("準備ができました！")
+            Text(L("準備ができました！"))
                 .font(.system(size: 30, weight: .heavy)).padding(.top, 26)
-            Text("まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。")
+            Text(L("まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。"))
                 .font(.system(size: 15)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center).padding(.top, 10)
             Spacer()
-            PrimaryButton(title: "はじめる", icon: "arrow.right", isLoading: isSaving, sheen: true) {
+            PrimaryButton(title: L("はじめる"), icon: "arrow.right", isLoading: isSaving, sheen: true) {
                 Task { await finish() }
             }
             .padding(.horizontal, 24).padding(.bottom, 20)
@@ -270,7 +275,7 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.foreground)
                     .frame(width: 44, height: 44)
             }
-            .accessibilityLabel("戻る")
+            .accessibilityLabel(L("戻る"))
             GeometryReader { geo in
                 Capsule().fill(Theme.secondary)
                     .overlay(alignment: .leading) {
@@ -284,7 +289,7 @@ struct OnboardingView: View {
                 Image(systemName: "gearshape").font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.muted).frame(width: 44, height: 44)
             }
-            .accessibilityLabel("設定")
+            .accessibilityLabel(L("設定"))
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
@@ -296,65 +301,69 @@ struct OnboardingView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("案内中の設定です。案内を終えると、そのままあなたのアカウントに引き継がれます。")
+                    Text(L("案内中の設定です。案内を終えると、そのままあなたのアカウントに引き継がれます。"))
                         .font(.footnote).foregroundStyle(Theme.muted)
                 }
-                Section("言語") {
-                    Picker("表示言語", selection: $uiLanguage) {
+                Section(L("言語")) {
+                    Picker(L("表示言語"), selection: Binding(get: { uiLanguage }, set: { picked in
+                        uiLanguage = picked
+                        if targetLanguage == picked { targetLanguage = Self.targets.first { $0.id != picked }?.id ?? "zh-TW" }
+                        L10n.set(picked)
+                    })) {
                         ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
                     }
-                    Picker("学ぶ言語", selection: $targetLanguage) {
+                    Picker(L("学ぶ言語"), selection: $targetLanguage) {
                         ForEach(Self.targets, id: \.id) { Text($0.label).tag($0.id) }
                     }
                     if targetLanguage == "en" {
-                        Picker("発音記号", selection: $ipaPref) {
-                            Text("アメリカ式").tag("us")
-                            Text("イギリス式").tag("uk")
+                        Picker(L("発音記号"), selection: $ipaPref) {
+                            Text(L("アメリカ式")).tag("us")
+                            Text(L("イギリス式")).tag("uk")
                         }
                     } else {
-                        Picker("読みの表記", selection: $readingPref) {
-                            Text("注音").tag("zhuyin")
-                            Text("拼音").tag("pinyin")
-                            Text("両方").tag("both")
+                        Picker(L("読みの表記"), selection: $readingPref) {
+                            Text(L("注音")).tag("zhuyin")
+                            Text(L("拼音")).tag("pinyin")
+                            Text(L("両方")).tag("both")
                         }
                     }
                 }
-                Section("学習") {
-                    Picker("1日の学習時間", selection: $minutes) {
-                        ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0)分").tag($0) }
+                Section(L("学習")) {
+                    Picker(L("1日の学習時間"), selection: $minutes) {
+                        ForEach([5, 10, 15, 30, 60], id: \.self) { Text(L("\($0)分")).tag($0) }
                     }
-                    Picker("通知", selection: $reminderMode) {
-                        Text("おまかせ").tag("ai")
-                        Text("朝と夜").tag("custom")
-                        Text("通知しない").tag("off")
+                    Picker(L("通知"), selection: $reminderMode) {
+                        Text(L("おまかせ")).tag("ai")
+                        Text(L("朝と夜")).tag("custom")
+                        Text(L("通知しない")).tag("off")
                     }
                 }
-                Section("効果音と振動") {
-                    Picker("効果音", selection: $soundLevel) {
-                        Text("なし").tag("off")
-                        Text("控えめ").tag("soft")
-                        Text("しっかり").tag("full")
+                Section(L("効果音と振動")) {
+                    Picker(L("効果音"), selection: $soundLevel) {
+                        Text(L("なし")).tag("off")
+                        Text(L("控えめ")).tag("subtle")
+                        Text(L("しっかり")).tag("full")
                     }
-                    Toggle("振動", isOn: $hapticsOn)
+                    Toggle(L("振動"), isOn: $hapticsOn)
                 }
                 Section {
-                    Button("最初の質問に答え直す", systemImage: "list.bullet.clipboard") {
+                    Button(L("最初の質問に答え直す"), systemImage: "list.bullet.clipboard") {
                         showMenu = false
                         go(.questions, step: 0, back: true)
                     }
-                    Button("最初の画面に戻る", systemImage: "arrow.counterclockwise") {
+                    Button(L("最初の画面に戻る"), systemImage: "arrow.counterclockwise") {
                         showMenu = false
                         go(.intro, step: 0, back: true)
                     }
-                    Button("ログインする", systemImage: "person.crop.circle") {
+                    Button(L("ログインする"), systemImage: "person.crop.circle") {
                         showMenu = false
                         finishToLogin()
                     }
                 }
             }
-            .navigationTitle("設定")
+            .navigationTitle(L("設定"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("案内に戻る") { showMenu = false } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L("案内に戻る")) { showMenu = false } } }
         }
     }
 

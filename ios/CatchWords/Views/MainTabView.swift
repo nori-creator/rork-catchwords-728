@@ -7,11 +7,11 @@ enum AppTab: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .home: "ホーム"
-        case .dex: "図鑑"
-        case .camera: "カメラ"
-        case .review: "復習"
-        case .settings: "設定"
+        case .home: L("ホーム")
+        case .dex: L("図鑑")
+        case .camera: L("カメラ")
+        case .review: L("復習")
+        case .settings: L("設定")
         }
     }
 
@@ -57,7 +57,7 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch router.tab {
-                case .home: HomeView()
+                case .home: HomeView().environment(\.colorScheme, .light)  // the paper album stays paper
                 case .dex: DexView()
                 case .camera: CaptureView()
                 case .review: ReviewView()
@@ -92,6 +92,7 @@ struct MainTabView: View {
             if router.tour == .word { startTourReview() }
         }) { sticker in
             WordDetailView(sticker: sticker)
+                .environment(router)
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.background)
                 .overlay(alignment: .bottom) {
@@ -176,7 +177,7 @@ struct CapsuleTabBar: View {
                 if onCamera {
                     Capsule().fill(Theme.navyDeep.opacity(0.55)).background(.ultraThinMaterial, in: Capsule())
                 } else {
-                    Capsule().fill(.white.opacity(0.9)).background(.regularMaterial, in: Capsule())
+                    Capsule().fill(Theme.card.opacity(0.9)).background(.regularMaterial, in: Capsule())
                 }
             }
             .overlay(Capsule().stroke(onCamera ? .white.opacity(0.12) : Theme.border, lineWidth: 1))

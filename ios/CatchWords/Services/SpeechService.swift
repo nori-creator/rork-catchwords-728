@@ -18,8 +18,8 @@ final class SpeechService {
     private var silenceTask: Task<Void, Never>?
     private var onFinal: ((String) -> Void)?
 
-    /// Learning language → recognizer locale (zh-TW for Taiwan Mandarin).
-    var localeIdentifier: String = "zh-TW"
+    /// Learning language → recognizer locale (zh-TW for Taiwan Mandarin, en-US for English).
+    var localeIdentifier: String { NativeAPI.speechLanguage }
 
     var isListening: Bool { state == .listening }
 
