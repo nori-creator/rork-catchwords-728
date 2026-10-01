@@ -54,6 +54,10 @@ struct UIPreviewRoot: View {
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
             case "jadetail": LanguageCardPreview(kind: .ja)
+            case "quiz": ReviewPreview(learning: "zh-TW", answered: false)
+            case "answer": ReviewPreview(learning: "zh-TW", answered: true)
+            case "jaquiz": ReviewPreview(learning: "ja", answered: false)
+            case "enanswer": ReviewPreview(learning: "en", answered: true)
             case "endetail": LanguageCardPreview(kind: .en)
             case "settings": SettingsView()
             case "auth": AuthView()
@@ -457,6 +461,57 @@ private struct LanguageCardPreview: View {
 
     var body: some View {
         WordDetailView(sticker: sticker, previewFocus: .usageChunks)
+    }
+}
+/// The review 4-choice card and its answer panel, for a Mandarin, Japanese or English word — to check
+/// the quiz prompt, the choices (learning language only) and the notes (display language only).
+private struct ReviewPreview: View {
+    let learning: String
+    let answered: Bool
+
+    private var card: ReviewCard {
+        ImageCache.shared.set(PreviewFixtures.photo, for: "preview/review.jpg")
+        let zh = L10n.lang == "zh-TW", en = L10n.lang == "en"
+        let w: [String: Any]
+        switch learning {
+        case "ja":
+            w = ["id": "rq", "headword": "傘", "reading_zhuyin": "かさ", "language": "ja",
+                 "meaning_ja": zh ? "雨傘" : "umbrella", "example_sentence": "傘をさしました。",
+                 "example_translation": zh ? "撐了傘。" : "I put up my umbrella."]
+        case "en":
+            w = ["id": "rq", "headword": "mango", "language": "en", "meaning_ja": zh ? "芒果" : "マンゴー",
+                 "example_sentence": "This mango is really sweet.", "example_translation": zh ? "這顆芒果很甜。" : "このマンゴーはとても甘い。",
+                 "extras": ["explain_lang": L10n.lang,
+                            "usage_chunks": [["parts": [["text": "a ripe", "pos": "A"], ["text": "mango", "pos": "N"]], "ja": zh ? "熟透的芒果" : "熟したマンゴー"]]] as [String: Any]]
+        default:
+            w = ["id": "rq", "headword": "芒果", "reading_zhuyin": "ㄇㄤˊ ㄍㄨㄛˇ", "language": "zh-TW",
+                 "meaning_ja": en ? "mango" : "マンゴー", "example_sentence": "這顆芒果很甜。",
+                 "example_translation": en ? "This mango is very sweet." : "このマンゴーはとても甘い。",
+                 "extras": ["explain_lang": L10n.lang,
+                            "usage_chunks": [["parts": [["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "very sweet" : "とても甘い"]],
+                            "measure_words": [["word": "顆", "zhuyin": "ㄎㄜ", "note": en ? "for round fruit" : "丸い果物に"]]] as [String: Any]]
+        }
+        let data = (try? JSONSerialization.data(withJSONObject: w)) ?? Data()
+        let word = (try? JSONDecoder().decode(Word.self, from: data))
+            .map { ReaderLanguage.resolve($0, explanation: nil, readerMeaning: nil, reader: L10n.lang) }
+        let s = Sticker(id: "review", wordId: "rq", objectImageUrl: "preview/review.jpg", cutoutImageUrl: nil, selfieImageUrl: nil,
+                        caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
+        return ReviewCard(review: ReviewState(id: "r1", stickerId: "review", ease: 2.5, intervalDays: 1), sticker: s)
+    }
+
+    var body: some View {
+        // The learning language first, so the choices and readings are drawn for it (DEBUG preview only).
+        let _ = { NativeAPI.targetLanguage = learning }()
+        let c = card
+        let choices = [QuizChoice(headword: c.sticker.word?.headword ?? "", zhuyin: c.sticker.word?.readingZhuyin)]
+            + ReviewStore.fallback(for: learning).prefix(3)
+        ZStack(alignment: .bottom) {
+            AppBackground()
+            ScrollView { QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {}).padding(.top, 40) }
+            if answered {
+                AnswerPanel(sticker: c.sticker, correct: true, onDex: {}, onNext: {})
+            }
+        }
     }
 }
 #endif
