@@ -15,6 +15,8 @@
 #
 # 署名（証明書・プロファイル）は Apple のクラウド署名に任せる
 # （-allowProvisioningUpdates + API キー）。手元に証明書を持たなくてよい。
+# アーカイブは最初から配布用（Apple Distribution）で署名する。開発用で署名しようとすると
+# 「Your team has no devices」で止まる（開発用のプロファイルには登録済みの端末が要る）。
 name: iOS release（App Store Connect へ送る）
 
 on:
@@ -93,6 +95,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)|Signing Identity|Provisioning Profile" || true
           test -d "$RUNNER_TEMP/CatchWords.xcarchive" || { echo "::error::アーカイブに失敗しました（archive.log を見てください）"; exit 1; }
