@@ -144,6 +144,9 @@ nonisolated enum L10n {
         return out
     }()
 
+    /// Whether `text` reads as the given display language (LanguageRules R7).
+    static func looksLike(_ text: String, _ code: String) -> Bool { LanguageRules.readsAs(text, code) }
+
     static func text(_ key: String, in code: String? = nil) -> String {
         let c = code ?? lang
         if c == "ja" { return key }
