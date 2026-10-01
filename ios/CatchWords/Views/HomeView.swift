@@ -688,10 +688,10 @@ struct AlbumSkeleton: View {
             .overlay {
                 // A soft band of light that sweeps across while waiting.
                 GeometryReader { geo in
-                    LinearGradient(colors: [.clear, .white.opacity(0.55), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: geo.size.width * 0.5)
+                    // Soft and narrow, so the frames underneath stay visible while it passes.
+                    LinearGradient(colors: [.clear, .white.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.3)
                         .offset(x: geo.size.width * phase)
-                        .blendMode(.plusLighter)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .allowsHitTesting(false)
