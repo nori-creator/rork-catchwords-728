@@ -14,6 +14,7 @@ final class AIService {
         case scan, card, wordbook, text
     }
 
+    // l10n-ignore (prompt) — the next line opens an AI prompt (always Japanese; the server reads it)
     private static let detectPrompt = """
     あなたは台湾華語(zh-TW / 繁体字 / 注音)の学習アプリの検出エンジンです。
     入力画像から、学習価値のある「モノ (kind=object)」と「写っている文字 (kind=text)」を検出してください。
@@ -35,13 +36,13 @@ final class AIService {
     """
 
     func detect(image: UIImage, textOnly: Bool = false) async throws -> [Candidate] {
-        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
+        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
         let prompt = textOnly
-            ? Self.detectPrompt + "\n今回はスキャンです。kind=text(写っている文字そのもの)だけを返し、名詞以外の語も写っていれば返してよい。"
+            ? Self.detectPrompt + "\n今回はスキャンです。kind=text(写っている文字そのもの)だけを返し、名詞以外の語も写っていれば返してよい。"  // l10n-ignore (prompt)
             : Self.detectPrompt
         let text = try await complete(.scan, prompt: prompt, jpeg: jpeg, timeout: 40)
         let items = try Self.parseItems(text)
-        guard !items.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
+        guard !items.isEmpty else { throw APIError.message(L("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。")) }
         return items
     }
 
@@ -55,7 +56,7 @@ final class AIService {
     /// in the server's order (most likely first, everyday name first). Never re-sorted here.
     func suggest(image: UIImage) async throws -> [Candidate] {
         guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 768, quality: 0.8) else {
-            throw APIError.message("写真を読み込めませんでした。")
+            throw APIError.message(L("写真を読み込めませんでした。"))
         }
         let res = try await NativeAPI.call("suggestWords", [
             "imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())",
@@ -63,7 +64,7 @@ final class AIService {
         ], as: Suggestions.self, timeout: 25)
         var out: [Candidate] = []
         for c in res.suggestions where !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
-        guard !out.isEmpty else { throw APIError.message("AIから候補が返りませんでした。もう一度お試しください。") }
+        guard !out.isEmpty else { throw APIError.message(L("AIから候補が返りませんでした。もう一度お試しください。")) }
         return out
     }
 
@@ -71,13 +72,13 @@ final class AIService {
     /// the scan_events funnel log — all on the server, same as the web.
     func detectScan(image: UIImage, lat: Double? = nil, lng: Double? = nil) async throws -> [Candidate] {
         struct Res: Decodable { let items: [Candidate] }
-        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message("写真を読み込めませんでした。") }
+        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
         var data: [String: Any] = ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]
         if let lat, let lng { data["lat"] = lat; data["lng"] = lng }
         let res = try await NativeAPI.call("detectScan", data, as: Res.self, timeout: 40)
         var out: [Candidate] = []
         for c in res.items where !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
-        guard !out.isEmpty else { throw APIError.message("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。") }
+        guard !out.isEmpty else { throw APIError.message(L("写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。")) }
         return out
     }
 
@@ -92,12 +93,13 @@ final class AIService {
 
     /// Text search ("文字で調べる"): turn a typed word (Japanese or Chinese) into a candidate.
     func lookup(text query: String) async throws -> Candidate {
+        // l10n-ignore (prompt) — the next line opens an AI prompt (always Japanese; the server reads it)
         let prompt = """
         学習者が「\(query)」を台湾華語で知りたがっています。日本語なら台湾華語に訳し、中国語ならそのまま使ってください。
         出力はJSONのみ: {"items":[{"kind":"text","headword":"繁体字","zhuyin":"注音","pinyin":"拼音","meaning_ja":"日本語訳","pos":"名詞など","point":[500,500],"confidence":0.9,"alternatives":[]}]}
         """
         let text = try await complete(.scan, prompt: prompt, timeout: 30)
-        guard let first = try Self.parseItems(text).first else { throw APIError.message("その言葉が見つかりませんでした。") }
+        guard let first = try Self.parseItems(text).first else { throw APIError.message(L("その言葉が見つかりませんでした。")) }
         return first
     }
 
@@ -111,7 +113,8 @@ final class AIService {
 
     /// wordbook.functions.ts EXTRACT_PROMPT: read the words printed on a vocabulary page (not saved yet).
     func extractWordbook(image: UIImage) async throws -> WordbookDraft {
-        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 2000, quality: 0.85) else { throw APIError.message("写真を読み込めませんでした。") }
+        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 2000, quality: 0.85) else { throw APIError.message(L("写真を読み込めませんでした。")) }
+        // l10n-ignore (prompt) — the next line opens an AI prompt (always Japanese; the server reads it)
         let prompt = """
         あなたは台湾華語(zh-TW / 繁体字 / 注音)の学習アプリの、単語帳読み取りエンジンです。
         入力画像は単語帳・教科書の語彙ページ・自作の単語リストです。そこに並んでいる語を読み取ってください。
@@ -129,10 +132,10 @@ final class AIService {
         """
         let text = try await complete(.wordbook, prompt: prompt, jpeg: jpeg, timeout: 60)
         guard let draft = try? JSONDecoder().decode(WordbookDraft.self, from: Self.jsonData(from: text)) else {
-            throw APIError.message("単語帳の形が読み取れませんでした。もう一度撮ってみてください。")
+            throw APIError.message(L("単語帳の形が読み取れませんでした。もう一度撮ってみてください。"))
         }
         let cleaned = Wordbook.clean(draft.entries)
-        guard !cleaned.isEmpty else { throw APIError.message("このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。") }
+        guard !cleaned.isEmpty else { throw APIError.message(L("このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。")) }
         return WordbookDraft(title: draft.title, entries: cleaned)
     }
 
@@ -177,7 +180,7 @@ final class AIService {
         case 200: break
         case 401: throw APIError.unauthorized
         case 429: throw APIError.limit(serverMessage.isEmpty ? APIError.dailyCapMessage : serverMessage)
-        default: throw APIError.server(status, serverMessage.isEmpty ? "AIの解析に失敗しました（\(status)）" : serverMessage)
+        default: throw APIError.server(status, serverMessage.isEmpty ? L("AIの解析に失敗しました（\(status)）") : serverMessage)
         }
         guard let text = json?["text"] as? String else { throw APIError.decoding }
         return text
@@ -200,7 +203,7 @@ final class AIService {
     nonisolated private static func parseItems(_ text: String) throws -> [Candidate] {
         let data = try jsonData(from: text)
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let raw = obj["items"] as? [Any] else { throw APIError.message("AIの返事を読み取れませんでした。もう一度試してください。写真は残っています。") }
+              let raw = obj["items"] as? [Any] else { throw APIError.message(L("AIの返事を読み取れませんでした。もう一度試してください。写真は残っています。")) }
         var out: [Candidate] = []
         for item in raw.prefix(6) {
             guard let d = try? JSONSerialization.data(withJSONObject: item),

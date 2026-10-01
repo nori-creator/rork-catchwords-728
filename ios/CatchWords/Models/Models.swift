@@ -149,9 +149,9 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var resolvedRegister: Int? {
         if let registerScale { return max(-2, min(2, registerScale)) }
         guard let tag = registerTag, !tag.isEmpty else { return nil }
-        if tag.contains("口語") && tag.contains("書面") { return 0 }
-        if tag.contains("口語") { return -1 }
-        if tag.contains("書面") { return 1 }
+        if tag.contains("口語") && tag.contains("書面") { return 0 }  // l10n-ignore (matching data)
+        if tag.contains("口語") { return -1 }  // l10n-ignore (matching data)
+        if tag.contains("書面") { return 1 }  // l10n-ignore (matching data)
         return nil
     }
 }
@@ -433,7 +433,7 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
             ?? (try? c.decode(String.self, forKey: .readingZhuyin)) ?? ""
         pinyin = (try? c.decode(String.self, forKey: .pinyin)) ?? ""
         meaningJa = (try? c.decode(String.self, forKey: .meaningJa)) ?? ""
-        pos = (try? c.decode(String.self, forKey: .pos)) ?? "名詞"
+        pos = (try? c.decode(String.self, forKey: .pos)) ?? "名詞"  // l10n-ignore (data)
         var p = (try? c.decode([Double].self, forKey: .point)) ?? [500, 500]
         if p.count < 2 { p = [500, 500] }
         if p[0] <= 1 && p[1] <= 1 { p = [p[0] * 1000, p[1] * 1000] }

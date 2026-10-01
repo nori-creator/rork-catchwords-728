@@ -25,11 +25,11 @@ struct HeroPhotoPickerSheet: View {
 
     private var options: [Option] {
         var out: [Option] = []
-        if let p = sticker.objectImageUrl { out.append(Option(id: "object", label: "元の写真", path: p, isCutout: false)) }
+        if let p = sticker.objectImageUrl { out.append(Option(id: "object", label: L("元の写真"), path: p, isCutout: false)) }
         if let p = sticker.cutoutImageUrl, p != sticker.objectImageUrl {
-            out.append(Option(id: "cutout", label: "切り抜き", path: p, isCutout: true))
+            out.append(Option(id: "cutout", label: L("切り抜き"), path: p, isCutout: true))
         }
-        if let p = sticker.selfieImageUrl { out.append(Option(id: "selfie", label: "自撮り", path: p, isCutout: false)) }
+        if let p = sticker.selfieImageUrl { out.append(Option(id: "selfie", label: L("自撮り"), path: p, isCutout: false)) }
         return out
     }
 
@@ -43,10 +43,10 @@ struct HeroPhotoPickerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("表示する写真")
+                Text(L("表示する写真"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Theme.foreground)
-                Text("単語の詳細で、この写真を表紙にします。")
+                Text(L("単語の詳細で、この写真を表紙にします。"))
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.muted)
             }
@@ -139,7 +139,7 @@ struct HeroPhotoPickerSheet: View {
                 Haptics.warning()
                 withAnimation(.snappy) {
                     chosen = before
-                    failure = (error as? LocalizedError)?.errorDescription ?? "保存できませんでした。通信を確かめてください。"
+                    failure = (error as? LocalizedError)?.errorDescription ?? L("保存できませんでした。通信を確かめてください。")
                 }
             }
         }

@@ -12,16 +12,16 @@ nonisolated enum APIError: LocalizedError {
     case limit(String)
 
     /// err.dailyCap (web i18n).
-    static let dailyCapMessage = "1日の利用上限に達しました。24時間以内に自動で回復します。"
+    static var dailyCapMessage: String { L("1日の利用上限に達しました。24時間以内に自動で回復します。") }
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: "サーバーの設定が見つかりません。"
-        case .unauthorized: "ログインの有効期限が切れました。もう一度ログインしてください。"
-        case .timeout: "通信が時間切れになりました。電波の良い場所でもう一度お試しください。"
-        case .offline: "インターネットに接続できません。"
-        case .server(let code, let msg): msg.isEmpty ? "サーバーエラー（\(code)）" : msg
-        case .decoding: "データの読み込みに失敗しました。"
+        case .notConfigured: L("サーバーの設定が見つかりません。")
+        case .unauthorized: L("ログインの有効期限が切れました。もう一度ログインしてください。")
+        case .timeout: L("通信が時間切れになりました。電波の良い場所でもう一度お試しください。")
+        case .offline: L("インターネットに接続できません。")
+        case .server(let code, let msg): msg.isEmpty ? L("サーバーエラー（\(code)）") : msg
+        case .decoding: L("データの読み込みに失敗しました。")
         case .message(let m): m
         case .limit(let m): m
         }
@@ -178,12 +178,12 @@ final class SupabaseClient {
 
     private static func localizeAuthError(_ msg: String, code: Int) -> String {
         let m = msg.lowercased()
-        if m.contains("invalid login") { return "メールアドレスかパスワードが違います。" }
-        if m.contains("already registered") { return "このメールアドレスは登録済みです。ログインしてください。" }
-        if m.contains("password should be") { return "パスワードは6文字以上にしてください。" }
-        if m.contains("email not confirmed") { return "確認メールのリンクを開いてからログインしてください。" }
-        if m.contains("rate limit") { return "しばらく時間をおいてからお試しください。" }
-        return msg.isEmpty ? "ログインに失敗しました（\(code)）" : msg
+        if m.contains("invalid login") { return L("メールアドレスかパスワードが違います。") }
+        if m.contains("already registered") { return L("このメールアドレスは登録済みです。ログインしてください。") }
+        if m.contains("password should be") { return L("パスワードは6文字以上にしてください。") }
+        if m.contains("email not confirmed") { return L("確認メールのリンクを開いてからログインしてください。") }
+        if m.contains("rate limit") { return L("しばらく時間をおいてからお試しください。") }
+        return msg.isEmpty ? L("ログインに失敗しました（\(code)）") : msg
     }
 
     // MARK: - REST
@@ -230,7 +230,7 @@ final class SupabaseClient {
         let (body, response) = try await perform(req)
         guard (200..<300).contains(response.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
-            throw APIError.server(response.statusCode, (json?["message"] as? String) ?? "写真の保存に失敗しました。")
+            throw APIError.server(response.statusCode, (json?["message"] as? String) ?? L("写真の保存に失敗しました。"))
         }
     }
 

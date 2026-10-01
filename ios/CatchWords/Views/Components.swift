@@ -91,7 +91,7 @@ struct MemoryBadge: View {
         return 5
     }
 
-    static let labels = ["忘れかけ", "あやうい", "うろ覚え", "薄れぎみ", "覚えている", "はっきり"]
+    static var labels: [String] { [L("忘れかけ"), L("あやうい"), L("うろ覚え"), L("薄れぎみ"), L("覚えている"), L("はっきり")] }
 
     var body: some View {
         let lv = Self.level(percent)

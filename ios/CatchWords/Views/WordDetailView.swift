@@ -89,10 +89,10 @@ struct WordDetailView: View {
             }
             }
         }
-        .alert("ひと言", isPresented: $editingCaption) {
-            TextField("その場のメモ", text: $captionDraft)
-            Button("キャンセル", role: .cancel) {}
-            Button("保存") {
+        .alert(L("ひと言"), isPresented: $editingCaption) {
+            TextField(L("その場のメモ"), text: $captionDraft)
+            Button(L("キャンセル"), role: .cancel) {}
+            Button(L("保存")) {
                 let text = captionDraft
                 Task {
                     do { try await dex.updateCaption(current, caption: text); Haptics.success() }
@@ -111,19 +111,19 @@ struct WordDetailView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
         }
-        .alert("どこが違いましたか？", isPresented: $reporting) {
-            TextField("例: 読み方が違う（書かなくても大丈夫）", text: $reportNote)
-            Button("キャンセル", role: .cancel) {}
-            Button("直してもらう") { reportAndFix() }
+        .alert(L("どこが違いましたか？"), isPresented: $reporting) {
+            TextField(L("例: 読み方が違う（書かなくても大丈夫）"), text: $reportNote)
+            Button(L("キャンセル"), role: .cancel) {}
+            Button(L("直してもらう")) { reportAndFix() }
         } message: {
-            Text("AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。")
+            Text(L("AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。"))
         }
-        .alert("単語を直す", isPresented: $editingHead) {
-            TextField(NativeAPI.targetLanguage == "en" ? "英語で入力" : "繁体字で入力", text: $headDraft)
-            Button("キャンセル", role: .cancel) {}
-            Button("直す") { saveHeadword() }
+        .alert(L("単語を直す"), isPresented: $editingHead) {
+            TextField(NativeAPI.targetLanguage == "en" ? L("英語で入力") : L("繁体字で入力"), text: $headDraft)
+            Button(L("キャンセル"), role: .cancel) {}
+            Button(L("直す")) { saveHeadword() }
         } message: {
-            Text("この写真が指す単語だけを変えます。中身は新しく作ります。")
+            Text(L("この写真が指す単語だけを変えます。中身は新しく作ります。"))
         }
         .overlay(alignment: .bottom) {
             if let toast {
@@ -137,8 +137,8 @@ struct WordDetailView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .confirmationDialog("この単語を図鑑から削除しますか？", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("削除", role: .destructive) {
+        .confirmationDialog(L("この単語を図鑑から削除しますか？"), isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(L("削除"), role: .destructive) {
                 Task {
                     try? await dex.delete(current)
                     dismiss()
@@ -167,7 +167,7 @@ struct WordDetailView: View {
                     .overlay(Circle().stroke(Theme.border, lineWidth: 1))
             }
             .buttonStyle(PressableStyle(scale: 0.9))
-            .accessibilityLabel("表示する項目と順番")
+            .accessibilityLabel(L("表示する項目と順番"))
             .popover(isPresented: $showSections, arrowEdge: .top) {
                 SectionsPanel(prefs: prefs)
                     .presentationCompactAdaptation(.popover)
@@ -181,7 +181,7 @@ struct WordDetailView: View {
                     .overlay(Circle().stroke(Theme.border, lineWidth: 1))
             }
             .buttonStyle(PressableStyle(scale: 0.9))
-            .accessibilityLabel("閉じる")
+            .accessibilityLabel(L("閉じる"))
         }
         .padding(.horizontal, 16)
         .padding(.top, 22)
@@ -207,7 +207,7 @@ struct WordDetailView: View {
                     .frame(width: 44, height: 44)
                 }
                 .disabled(isSavingHead)
-                .accessibilityLabel("単語を直す")
+                .accessibilityLabel(L("単語を直す"))
                 Spacer(minLength: 8)
                 PronounceCircle(text: headword, size: 50)
             }
@@ -227,14 +227,14 @@ struct WordDetailView: View {
                 } label: {
                     HStack(spacing: 5) {
                         if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
-                        Text(isFixing ? "直しています…" : "報告")
+                        Text(isFixing ? L("直しています…") : L("報告"))
                     }
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.muted)
                     .frame(minWidth: 44, minHeight: 44)
                 }
                 .disabled(isFixing)
-                .accessibilityLabel("この語の誤りを報告")
+                .accessibilityLabel(L("この語の誤りを報告"))
             }
         }
         .padding(.horizontal, 20)
@@ -250,7 +250,7 @@ struct WordDetailView: View {
     }
 
     private func posLabel(_ pos: String) -> String {
-        let map: [String: String] = ["N": "名詞", "V": "動詞", "VS": "状態動詞", "ADV": "副詞", "M": "量詞", "PREP": "前置詞"]
+        let map: [String: String] = ["N": L("名詞"), "V": L("動詞"), "VS": L("状態動詞"), "ADV": L("副詞"), "M": L("量詞"), "PREP": L("前置詞")]
         if let ja = map[pos.uppercased()] { return "\(pos) · \(ja)" }
         return pos
     }
@@ -277,7 +277,7 @@ struct WordDetailView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if hasSelfie {
-                    Text(back ? "タップで戻る" : "タップで自撮りへ")
+                    Text(back ? L("タップで戻る") : L("タップで自撮りへ"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
@@ -298,7 +298,7 @@ struct WordDetailView: View {
                 Haptics.impact(.medium)
                 pickingHero = true
             }
-            .accessibilityAction(named: "表示する写真を選ぶ") { pickingHero = true }
+            .accessibilityAction(named: L("表示する写真を選ぶ")) { pickingHero = true }
             .overlay(alignment: .bottomLeading) {
                 if !back, current.cutoutImageUrl != nil {
                     Button {
@@ -312,13 +312,13 @@ struct WordDetailView: View {
                             .background(.black.opacity(0.55), in: Circle())
                     }
                     .buttonStyle(PressableStyle(scale: 0.9))
-                    .accessibilityLabel(showCutout ? "元の写真を見る" : "切り抜きを見る")
+                    .accessibilityLabel(showCutout ? L("元の写真を見る") : L("切り抜きを見る"))
                     .padding(10)
                     .opacity(abs(flipAngle.truncatingRemainder(dividingBy: 180)) < 1 ? 1 : 0)
                 }
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(back ? "自撮り写真" : "写真")
+            .accessibilityLabel(back ? L("自撮り写真") : L("写真"))
     }
 
     /// Shows the side the learner chose (`hero_role`): the selfie is the card's back, the cut-out a toggle.
@@ -366,10 +366,10 @@ struct WordDetailView: View {
             Button {
                 Task { try? await dex.move(current, to: nil); Haptics.selection() }
             } label: {
-                Label("\(Category.emoji(for: aiKey)) \(Category.label(for: aiKey))（AIのおすすめ）",
+                Label(L("\(Category.emoji(for: aiKey)) \(Category.label(for: aiKey))（AIのおすすめ）"),
                       systemImage: current.shelfKey == nil ? "checkmark" : "sparkles")
             }
-            Section("ほかの棚") {
+            Section(L("ほかの棚")) {
                 ForEach(keys.filter { $0 != aiKey }, id: \.self) { key in
                     Button {
                         Task { try? await dex.move(current, to: key); Haptics.selection() }
@@ -385,7 +385,7 @@ struct WordDetailView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "books.vertical").font(.system(size: 14))
-                Text("棚").font(.system(size: 14)).foregroundStyle(Theme.muted)
+                Text(L("棚")).font(.system(size: 14)).foregroundStyle(Theme.muted)
                 Spacer()
                 Text("\(Category.emoji(for: current.categoryKey)) \(Category.label(for: current.categoryKey))")
                     .font(.system(size: 15, weight: .semibold))
@@ -396,7 +396,7 @@ struct WordDetailView: View {
             .frame(minHeight: 40)
             .contentShape(.rect)
         }
-        .accessibilityLabel("棚を変える。いまは\(Category.label(for: current.categoryKey))")
+        .accessibilityLabel(L("棚を変える。いまは\(Category.label(for: current.categoryKey))"))
     }
 
     private var metaCard: some View {
@@ -417,7 +417,7 @@ struct WordDetailView: View {
                         Text(cap).font(AppFont.hand(18)).foregroundStyle(Theme.foreground.opacity(0.9))
                             .multilineTextAlignment(.leading)
                     } else {
-                        Text("ひと言").font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        Text(L("ひと言")).font(.system(size: 14)).foregroundStyle(Theme.muted)
                     }
                     Spacer()
                     Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.muted)
@@ -426,7 +426,7 @@ struct WordDetailView: View {
                 .contentShape(.rect)
             }
             .buttonStyle(PressableStyle(scale: 0.98))
-            .accessibilityLabel("ひと言を編集")
+            .accessibilityLabel(L("ひと言を編集"))
             Divider().overlay(Theme.border)
             shelfPicker
             if let pct = dex.memoryPercent(for: current) {
@@ -452,7 +452,7 @@ struct WordDetailView: View {
                 Image(systemName: "chart.line.downtrend.xyaxis")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Theme.memoryLevels[lv])
-                Text("記憶の曲線")
+                Text(L("記憶の曲線"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Theme.foreground.opacity(0.85))
                 Spacer()
@@ -479,7 +479,7 @@ struct WordDetailView: View {
     }
 
     private var placeChip: some View {
-        let name = current.locationName.flatMap { $0.isEmpty ? nil : $0 } ?? "撮影地"
+        let name = current.locationName.flatMap { $0.isEmpty ? nil : $0 } ?? L("撮影地")
         return Button {
             if let url = mapsURL { openURL(url) }
         } label: {
@@ -507,7 +507,7 @@ struct WordDetailView: View {
             Button { Task { await cutOut() } } label: {
                 HStack(spacing: 8) {
                     if isCutting { ProgressView().tint(Theme.primaryInk) } else { Image(systemName: "scissors") }
-                    Text(isCutting ? "切り抜いています" : "被写体を切り抜く")
+                    Text(isCutting ? L("切り抜いています") : L("被写体を切り抜く"))
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.primaryInk)
@@ -536,11 +536,11 @@ struct WordDetailView: View {
 
     private func registerLabel(_ r: Int) -> String {
         switch r {
-        case ...(-2): "話し言葉"
-        case -1: "やや話し言葉"
-        case 0: "中立"
-        case 1: "やや書き言葉"
-        default: "書き言葉"
+        case ...(-2): L("話し言葉")
+        case -1: L("やや話し言葉")
+        case 0: L("中立")
+        case 1: L("やや書き言葉")
+        default: L("書き言葉")
         }
     }
 
@@ -562,7 +562,7 @@ struct WordDetailView: View {
     private var chunks: [UsageChunk] { refinedChunks(extras?.usageChunks ?? []) }
     private var measures: [MeasureWord] { (extras?.measureWords ?? []).filter { !$0.word.isEmpty } }
     private var pronunciationText: String { nonEmpty([extras?.pronunciationTips, extras?.studyTips]) }
-    private var etymologyText: String { nonEmpty([extras?.etymology, extras?.radicals.map { $0.isEmpty ? "" : "部首: \($0)" }]) }
+    private var etymologyText: String { nonEmpty([extras?.etymology, extras?.radicals.map { $0.isEmpty ? "" : L("部首: \($0)") }]) }
     private var taiwanText: String { nonEmpty([extras?.taiwanNote, extras?.trivia, extras?.usageNote]) }
 
     private func nonEmpty(_ parts: [String?]) -> String {
@@ -603,7 +603,7 @@ struct WordDetailView: View {
             let ok = await dex.fillSection(wordId: wordId, section: s.rawValue, onlyIfEmpty: false)
             await dex.reload(stickerId: current.id)
             withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { _ = refreshing.remove(s) }
-            if ok { Haptics.success() } else { Haptics.warning(); showToast("作り直せませんでした。少し待ってからお試しください") }
+            if ok { Haptics.success() } else { Haptics.warning(); showToast(L("作り直せませんでした。少し待ってからお試しください")) }
         }
     }
 
@@ -682,10 +682,10 @@ struct WordDetailView: View {
             do {
                 try await dex.setHeadword(current, to: next)
                 Haptics.success()
-                showToast("単語を直しました")
+                showToast(L("単語を直しました"))
             } catch {
                 Haptics.warning()
-                showToast((error as? LocalizedError)?.errorDescription ?? "直せませんでした")
+                showToast((error as? LocalizedError)?.errorDescription ?? L("直せませんでした"))
             }
         }
     }
@@ -721,23 +721,23 @@ struct WordDetailView: View {
                 await dex.reload(stickerId: current.id)
                 Haptics.success()
                 if r.fixed {
-                    showToast("「\(Self.itemTitle(r.item))」を直しました")
+                    showToast(L("「\(Self.itemTitle(r.item))」を直しました"))
                 } else {
-                    showToast("確かめました。間違いは見つかりませんでした")
+                    showToast(L("確かめました。間違いは見つかりませんでした"))
                 }
             } catch {
                 Haptics.warning()
-                showToast((error as? LocalizedError)?.errorDescription ?? "直せませんでした")
+                showToast((error as? LocalizedError)?.errorDescription ?? L("直せませんでした"))
             }
         }
     }
 
     private static func itemTitle(_ item: String?) -> String {
         switch item {
-        case "pronunciation": "発音・読み"
-        case "pos": "品詞"
+        case "pronunciation": L("発音・読み")
+        case "pos": L("品詞")
         case let key?: CardSection(rawValue: key)?.title ?? key
-        default: "項目"
+        default: L("項目")
         }
     }
 
@@ -747,10 +747,10 @@ struct WordDetailView: View {
             do {
                 try await dex.report(headword: head, kind: kind, note: "")
                 Haptics.success()
-                showToast("報告を受け付けました。確かめてから直します")
+                showToast(L("報告を受け付けました。確かめてから直します"))
             } catch {
                 Haptics.warning()
-                showToast("報告に失敗しました")
+                showToast(L("報告に失敗しました"))
             }
         }
     }
@@ -764,7 +764,7 @@ struct WordDetailView: View {
     }
 
     private func exampleCard(_ sentence: String, _ translation: String?) -> some View {
-        SectionCard(title: "例文", icon: "text.quote") {
+        SectionCard(title: L("例文"), icon: "text.quote") {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(highlighted(sentence))
@@ -799,7 +799,7 @@ struct WordDetailView: View {
     private func chunkCard(_ chunks: [UsageChunk]) -> some View {
         let shown = Array(chunks.prefix(5))
         let kinds = Set(shown.flatMap { $0.parts.map { ChunkKind(pos: $0.pos) } })
-        return SectionCard(title: "使い方チャンク", icon: "square.grid.2x2") {
+        return SectionCard(title: L("使い方チャンク"), icon: "square.grid.2x2") {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.offset) { _, chunk in
                     HStack(alignment: .center, spacing: 10) {
@@ -850,21 +850,21 @@ struct WordDetailView: View {
     }
 
     private func measureCard(_ items: [MeasureWord]) -> some View {
-        SectionCard(title: "量詞", icon: "number") {
+        SectionCard(title: L("量詞"), icon: "number") {
             VStack(spacing: 10) {
                 ForEach(items, id: \.word) { m in
                     HStack(alignment: .center, spacing: 12) {
                         VStack(alignment: .leading, spacing: 8) {
                             // Shown as it is said: 一 + the measure word (web: 「一份」).
-                            let said = m.word.hasPrefix("一") ? m.word : "一" + m.word
-                            let reading = m.word.hasPrefix("一") ? m.zhuyin : m.zhuyin.map { "ㄧ " + $0 }
+                            let said = m.word.hasPrefix("一") ? m.word : "一" + m.word  // l10n-ignore (target word)
+                            let reading = m.word.hasPrefix("一") ? m.zhuyin : m.zhuyin.map { "ㄧ " + $0 }  // l10n-ignore (target word)
                             ZhuyinWordView(headword: said, zhuyin: reading, size: 32, weight: .heavy)
                             if let n = m.note, !n.isEmpty {
                                 Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
                             }
                         }
                         Spacer(minLength: 0)
-                        PronounceCircle(text: m.word.hasPrefix("一") ? m.word : "一" + m.word, size: 50)
+                        PronounceCircle(text: m.word.hasPrefix("一") ? m.word : "一" + m.word, size: 50)  // l10n-ignore (target word)
                     }
                     .padding(.horizontal, 18)
                     .padding(.vertical, 16)
@@ -875,8 +875,8 @@ struct WordDetailView: View {
     }
 
     private func relatedCard(_ items: [RelatedWord]) -> some View {
-        let groups: [(String, String)] = [("syn", "類義語"), ("ant", "反義語"), ("rel", "関連語")]
-        return SectionCard(title: "類義語・反義語・関連語", icon: "point.3.connected.trianglepath.dotted") {
+        let groups: [(String, String)] = [("syn", L("類義語")), ("ant", L("反義語")), ("rel", L("関連語"))]
+        return SectionCard(title: L("類義語・反義語・関連語"), icon: "point.3.connected.trianglepath.dotted") {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(groups, id: \.0) { kind, label in
                     let rows = items.filter { $0.kind == kind }
@@ -938,17 +938,17 @@ struct WordDetailView: View {
         let q = headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? headword
         let path = headword.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? headword
         return [
-            ("🎬", "YouTubeで聞く", "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=TW&hl=zh-TW"),
-            ("🗣️", "YouGlishで発音例", "https://youglish.com/pronounce/\(path)/chinese/tw"),
-            ("💬", "Dcardで見る", "https://www.dcard.tw/search?query=\(q)"),
-            ("🧵", "Threads で見る", "https://www.threads.com/search?q=\(q)"),
-            ("📰", "台湾のサイトで検索", "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
-            ("📖", "教育部國語辭典簡編本", "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
+            ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=TW&hl=zh-TW"),
+            ("🗣️", L("YouGlishで発音例"), "https://youglish.com/pronounce/\(path)/chinese/tw"),
+            ("💬", L("Dcardで見る"), "https://www.dcard.tw/search?query=\(q)"),
+            ("🧵", L("Threads で見る"), "https://www.threads.com/search?q=\(q)"),
+            ("📰", L("台湾のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
+            ("📖", L("教育部國語辭典簡編本"), "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
         ]
     }
 
     private var realUsageCard: some View {
-        SectionCard(title: "実際の使われ方", icon: "film") {
+        SectionCard(title: L("実際の使われ方"), icon: "film") {
             VStack(spacing: 10) {
                 ForEach(realUsageLinks, id: \.label) { link in
                     Button {
@@ -974,12 +974,12 @@ struct WordDetailView: View {
     private var footer: some View {
         let days = Calendar.current.dateComponents([.day], from: current.takenAt, to: Date()).day ?? 0
         return VStack(alignment: .leading, spacing: 12) {
-            Label(days == 0 ? "今日キャッチしました" : "\(days)日前にキャッチしました", systemImage: "clock.arrow.circlepath")
+            Label(days == 0 ? L("今日キャッチしました") : L("\(days)日前にキャッチしました"), systemImage: "clock.arrow.circlepath")
                 .font(AppFont.hand(16))
                 .foregroundStyle(Theme.muted)
             HStack {
             PhotosPicker(selection: $newPhoto, matching: .images) {
-                Label(isReplacing ? "替えています…" : "写真を替える", systemImage: "photo.badge.arrow.down")
+                Label(isReplacing ? L("替えています…") : L("写真を替える"), systemImage: "photo.badge.arrow.down")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.primaryInk)
                     .padding(.horizontal, 16)
@@ -994,7 +994,7 @@ struct WordDetailView: View {
             }
             Spacer()
             Button { confirmDelete = true } label: {
-                Label("削除", systemImage: "trash")
+                Label(L("削除"), systemImage: "trash")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.destructive)
                     .padding(.horizontal, 20)
@@ -1016,13 +1016,13 @@ struct WordDetailView: View {
         do {
             try await dex.replacePhoto(current, with: img)
             Haptics.success()
-            showToast("写真を替えました")
+            showToast(L("写真を替えました"))
             if CaptureViewModel.cutoutMode, let lifted = await CutoutService.liftSubject(from: img) {
                 try? await dex.addCutout(to: current, image: lifted)
             }
         } catch {
             Haptics.warning()
-            showToast((error as? LocalizedError)?.errorDescription ?? "写真を替えられませんでした")
+            showToast((error as? LocalizedError)?.errorDescription ?? L("写真を替えられませんでした"))
         }
     }
 
@@ -1036,7 +1036,7 @@ struct WordDetailView: View {
             image = await ImageCache.shared.load(url: url, key: path)
         }
         guard let image, let lifted = await CutoutService.liftSubject(from: image) else {
-            cutoutMessage = "この写真では切り抜けませんでした。"
+            cutoutMessage = L("この写真では切り抜けませんでした。")
             Haptics.warning()
             return
         }
@@ -1087,7 +1087,7 @@ struct SectionCard<Content: View>: View {
                             .frame(width: 44, height: 44)
                     }
                     .disabled(refresh.running)
-                    .accessibilityLabel("\(title)を作り直す")
+                    .accessibilityLabel(L("\(title)を作り直す"))
                 }
             }
             content
@@ -1108,8 +1108,8 @@ enum ChunkKind: CaseIterable, Hashable {
     init(pos: String) {
         let p = pos.uppercased()
         if p.hasPrefix("ADV") || p == "D" { self = .adverb }
-        else if p.hasPrefix("VS") || p == "A" || p == "C" || p.contains("形容") || p.contains("状態") { self = .stative }
-        else if p.hasPrefix("V") || p.contains("動") { self = .verb }
+        else if p.hasPrefix("VS") || p == "A" || p == "C" || p.contains("形容") || p.contains("状態") { self = .stative }  // l10n-ignore (matching server POS)
+        else if p.hasPrefix("V") || p.contains("動") { self = .verb }  // l10n-ignore (matching server POS)
         else { self = .noun }
     }
 
@@ -1124,10 +1124,10 @@ enum ChunkKind: CaseIterable, Hashable {
 
     var label: String {
         switch self {
-        case .noun: "名詞"
-        case .verb: "動詞"
-        case .stative: "状態動詞(形容詞)"
-        case .adverb: "副詞"
+        case .noun: L("名詞")
+        case .verb: L("動詞")
+        case .stative: L("状態動詞(形容詞)")
+        case .adverb: L("副詞")
         }
     }
 }
@@ -1161,7 +1161,7 @@ struct SectionSkeleton: View {
                 .allowsHitTesting(false)
             }
         }
-        .accessibilityLabel("\(title)を作っています")
+        .accessibilityLabel(L("\(title)を作っています"))
         .task {
             guard !reduceMotion else { return }
             while !Task.isCancelled {

@@ -90,8 +90,8 @@ enum Milestone {
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
         center.removePendingNotificationRequests(withIdentifiers: [notificationId])
         let content = UNMutableNotificationContent()
-        content.title = "\(target.n)日目の記念アルバムができました"
-        content.body = "使い始めて\(target.n)日。これまでの思い出を1冊にまとめました"
+        content.title = L("\(target.n)日目の記念アルバムができました")
+        content.body = L("使い始めて\(target.n)日。これまでの思い出を1冊にまとめました")
         content.sound = .default
         let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: target.at)
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
@@ -123,10 +123,10 @@ struct MemorialBanner: View {
                     .frame(width: 46, height: 46)
                     .shadow(color: Theme.gold.opacity(0.45), radius: 8, y: 3)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("使い始めて\(n)日の記念アルバム")
+                        Text(L("使い始めて\(n)日の記念アルバム"))
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(Color(hex: 0x33291F))
-                        Text("\(n)日間で\(words)語。思い出の\(photos)枚をまとめました")
+                        Text(L("\(n)日間で\(words)語。思い出の\(photos)枚をまとめました"))
                             .font(.system(size: 12))
                             .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     }
@@ -139,7 +139,7 @@ struct MemorialBanner: View {
                 Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
                     .frame(width: 44, height: 44)
             }
-            .accessibilityLabel("閉じる")
+            .accessibilityLabel(L("閉じる"))
         }
         .padding(.leading, 12)
         .padding(.vertical, 8)
@@ -170,11 +170,11 @@ struct MemorialAlbumView: View {
             HomeBackground().ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 6) {
-                    Text("使い始めて\(n)日の記念アルバム")
+                    Text(L("使い始めて\(n)日の記念アルバム"))
                         .font(.system(size: 24, weight: .heavy))
                         .foregroundStyle(Color(hex: 0x33291F))
                         .multilineTextAlignment(.center)
-                    Text("\(n)日間で\(words)語。思い出の\(picks.count)枚をまとめました")
+                    Text(L("\(n)日間で\(words)語。思い出の\(picks.count)枚をまとめました"))
                         .font(.system(size: 13))
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     CollageBoard(items: picks, editable: false, onOpen: onOpen, autoOnly: true)
@@ -193,7 +193,7 @@ struct MemorialAlbumView: View {
                         .background(.ultraThinMaterial, in: Circle())
                 }
                 .padding(.trailing, 16).padding(.top, 8)
-                .accessibilityLabel("閉じる")
+                .accessibilityLabel(L("閉じる"))
             }
             if !revealed {
                 MemorialReveal(n: n, words: words, photos: picks.compactMap(\.heroPath)) {
@@ -237,7 +237,7 @@ struct MemorialReveal: View {
             Confetti(active: phase != .count)
                 .ignoresSafeArea()
             VStack(spacing: 10) {
-                Text("おめでとう")
+                Text(L("おめでとう"))
                     .font(.system(size: 15, weight: .bold))
                     .tracking(4)
                     .foregroundStyle(Theme.gold)
@@ -247,9 +247,9 @@ struct MemorialReveal: View {
                         .foregroundStyle(LinearGradient(colors: [.white, Color(hex: 0xFFE7A8)], startPoint: .top, endPoint: .bottom))
                         .contentTransition(.numericText(value: Double(day)))
                         .shadow(color: Theme.gold.opacity(0.5), radius: phase == .count ? 0 : 24)
-                    Text("日").font(.system(size: 30, weight: .heavy)).foregroundStyle(.white.opacity(0.9))
+                    Text(L("日")).font(.system(size: 30, weight: .heavy)).foregroundStyle(.white.opacity(0.9))
                 }
-                Text("\(count)語を集めました")
+                Text(L("\(count)語を集めました"))
                     .font(.system(size: 17, weight: .semibold).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.85))
                     .contentTransition(.numericText(value: Double(count)))
@@ -278,7 +278,7 @@ struct MemorialReveal: View {
                 }
                 .frame(height: 170)
                 .padding(.top, 22)
-                Text("アルバムを開く")
+                Text(L("アルバムを開く"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Color(hex: 0x33291F))
                     .padding(.horizontal, 28)
@@ -295,7 +295,7 @@ struct MemorialReveal: View {
         .contentShape(.rect)
         .onTapGesture { finish() }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("使い始めて\(n)日の記念アルバム。\(words)語を集めました")
+        .accessibilityLabel(L("使い始めて\(n)日の記念アルバム。\(words)語を集めました"))
         .accessibilityAddTraits(.isButton)
         .onAppear(perform: run)
         .onDisappear { task?.cancel() }

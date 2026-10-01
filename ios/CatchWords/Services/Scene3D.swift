@@ -144,7 +144,7 @@ enum Scene3D {
                                                       .foregroundColor: UIColor(red: 0.07, green: 0.13, blue: 0.24, alpha: 1),
                                                       .paragraphStyle: center])
             if let count {
-                ("\(count)語" as NSString).draw(in: CGRect(x: 20, y: 290, width: size.width - 40, height: 60),
+                (L("\(count)語") as NSString).draw(in: CGRect(x: 20, y: 290, width: size.width - 40, height: 60),
                                                withAttributes: [.font: UIFont.systemFont(ofSize: 42, weight: .semibold),
                                                                 .foregroundColor: tint,
                                                                 .paragraphStyle: center])

@@ -37,7 +37,7 @@ struct CollageBoard: View {
                     HStack(spacing: 6) {
                         if saving { ProgressView().controlSize(.mini) }
                         Image(systemName: editing ? "checkmark" : "hand.draw")
-                        Text(editing ? "完了" : "並べ替え")
+                        Text(editing ? L("完了") : L("並べ替え"))
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(editing ? .white : Color(hex: 0x33291F).opacity(0.75))
@@ -146,7 +146,7 @@ struct CollageBoard: View {
         .gesture(manipulate(s.id, current: p), including: editing ? .all : .subviews)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(s.word?.headword ?? "")
-        .accessibilityHint(editing ? "ドラッグで移動、2本指で大きさと傾き" : "単語をひらく")
+        .accessibilityHint(editing ? L("ドラッグで移動、2本指で大きさと傾き") : L("単語をひらく"))
     }
 
     // MARK: Editing

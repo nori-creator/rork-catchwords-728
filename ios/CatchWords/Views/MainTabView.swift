@@ -7,11 +7,11 @@ enum AppTab: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .home: "ホーム"
-        case .dex: "図鑑"
-        case .camera: "カメラ"
-        case .review: "復習"
-        case .settings: "設定"
+        case .home: L("ホーム")
+        case .dex: L("図鑑")
+        case .camera: L("カメラ")
+        case .review: L("復習")
+        case .settings: L("設定")
         }
     }
 

@@ -133,8 +133,8 @@ struct MonthBookView: View {
         .contentShape(.rect)
         .simultaneousGesture(pageDrag(w: w), including: editingPhotos ? .subviews : .all)
         .accessibilityElement(children: .contain)
-        .accessibilityAction(named: "次のページ") { step(forward: true, w: w) }
-        .accessibilityAction(named: "前のページ") { step(forward: false, w: w) }
+        .accessibilityAction(named: L("次のページ")) { step(forward: true, w: w) }
+        .accessibilityAction(named: L("前のページ")) { step(forward: false, w: w) }
     }
 
     private func spineShadow(strength: CGFloat) -> some View {
@@ -160,19 +160,19 @@ struct MonthBookView: View {
                     }
                     Spacer()
                     if !d.items.isEmpty {
-                        Text("\(d.items.count)語")
+                        Text(L("\(d.items.count)語"))
                             .font(AppFont.mono(12, weight: .semibold))
                             .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
                     }
                 }
                 if d.items.isEmpty {
                     VStack(spacing: 14) {
-                        Text(isToday ? "今日のページはまだ白紙です。" : "この日は写真がありません。")
+                        Text(isToday ? L("今日のページはまだ白紙です。") : L("この日は写真がありません。"))
                             .font(AppFont.hand(19))
                             .foregroundStyle(Color(hex: 0x33291F).opacity(0.65))
                         if isToday, let onCamera {
                             Button(action: onCamera) {
-                                Label("今日の1枚を撮る", systemImage: "camera.fill")
+                                Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 20)
@@ -192,14 +192,14 @@ struct MonthBookView: View {
                         .padding(.bottom, 12)
                     }
                 }
-                pageFoot(text: "→ 日記", trailing: true)
+                pageFoot(text: L("→ 日記"), trailing: true)
             }
         }
         .frame(width: w, height: h)
     }
 
     private func rightPage(_ d: BookDay, w: CGFloat, h: CGFloat) -> some View {
-        RightDiaryPage(day: d, onWrite: onWrite, onOpen: onOpen, foot: pageFoot(text: index < days.count - 1 ? "めくる →" : "", trailing: true))
+        RightDiaryPage(day: d, onWrite: onWrite, onOpen: onOpen, foot: pageFoot(text: index < days.count - 1 ? L("めくる →") : "", trailing: true))
             .frame(width: w, height: h)
     }
 
@@ -382,12 +382,12 @@ private struct RightDiaryPage<Foot: View>: View {
         PaperPage(side: .right) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("日記")
+                    Text(L("日記"))
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     Spacer()
                     Button { onWrite(day.day) } label: {
-                        Label(text.isEmpty ? "書く" : "書き直す", systemImage: "pencil.line")
+                        Label(text.isEmpty ? L("書く") : L("書き直す"), systemImage: "pencil.line")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Theme.primaryInk)
                             .padding(.horizontal, 12)
@@ -401,7 +401,7 @@ private struct RightDiaryPage<Foot: View>: View {
                     Group {
                         if text.isEmpty {
                             Button { onWrite(day.day) } label: {
-                                Text(pending ?? "この日のことを、学んでいる言葉で書いてみよう")
+                                Text(pending ?? L("この日のことを、学んでいる言葉で書いてみよう"))
                                     .font(AppFont.hand(19))
                                     .foregroundStyle(Color(hex: 0x33291F, opacity: pending == nil ? 0.4 : 0.8))
                                     .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
@@ -481,7 +481,7 @@ struct MonthBookSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(String(Calendar.current.component(.year, from: month)))
                         .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
-                    Text("\(Calendar.current.component(.month, from: month))月のアルバム")
+                    Text(L("\(Calendar.current.component(.month, from: month))月のアルバム"))
                         .font(.system(size: 24, weight: .heavy)).foregroundStyle(Color(hex: 0x33291F))
                 }
                 Spacer()
@@ -490,11 +490,11 @@ struct MonthBookSheet: View {
                         .frame(width: 44, height: 44)
                         .background(.white.opacity(0.7), in: Circle())
                 }
-                .accessibilityLabel("閉じる")
+                .accessibilityLabel(L("閉じる"))
             }
             .padding(.horizontal, 20)
             if days.isEmpty {
-                Text("この月の本はまだ白紙です。")
+                Text(L("この月の本はまだ白紙です。"))
                     .font(AppFont.hand(20)).foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     .frame(maxHeight: .infinity)
             } else {

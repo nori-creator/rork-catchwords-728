@@ -27,33 +27,33 @@ enum TourStep: String, Equatable {
 
     var title: String? {
         switch self {
-        case .home: "ホーム"
-        case .tapCamera, .shoot: "1枚撮ってみましょう"
-        case .pick: "覚えたいことばを選ぶ"
-        case .detail, .word: "発音と意味"
-        case .peel: "はがして図鑑へ"
-        case .added: "図鑑に追加しました！"
-        case .dexTypes, .dexOpen: "図鑑"
-        case .review: "復習"
+        case .home: L("ホーム")
+        case .tapCamera, .shoot: L("1枚撮ってみましょう")
+        case .pick: L("覚えたいことばを選ぶ")
+        case .detail, .word: L("発音と意味")
+        case .peel: L("はがして図鑑へ")
+        case .added: L("図鑑に追加しました！")
+        case .dexTypes, .dexOpen: L("図鑑")
+        case .review: L("復習")
         default: nil
         }
     }
 
     var text: String {
         switch self {
-        case .home: "見つけた場面ごと、今日のアルバムに。単語帳へ書き写す手間がなくなります。"
-        case .tapCamera: "下のカメラを押して、気になるものを撮ってみましょう。名前を知らなくても大丈夫。"
-        case .shoot: "知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。"
-        case .pick: "写真から見つけた候補です。残したいことばを選んでください。"
-        case .detail: "スピーカーを押すと、発音を聞けます。"
-        case .peel: "写真を指で好きな方向にめくります。"
-        case .added: "集めたことばが、撮った写真と一緒に並びます。"
-        case .dexTypes: "上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。"
-        case .dexOpen: "追加した単語を開いて、意味や使い方を見てみましょう。"
-        case .word: "意味も使い方も、この写真から。例文を確認したら、復習を試してみましょう。"
-        case .review: "自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。"
-        case .reviewPick: "写真に合うことばを選んでください。"
-        case .reviewNext: "答えを確かめたら「次へ」。"
+        case .home: L("見つけた場面ごと、今日のアルバムに。単語帳へ書き写す手間がなくなります。")
+        case .tapCamera: L("下のカメラを押して、気になるものを撮ってみましょう。名前を知らなくても大丈夫。")
+        case .shoot: L("知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。")
+        case .pick: L("写真から見つけた候補です。残したいことばを選んでください。")
+        case .detail: L("スピーカーを押すと、発音を聞けます。")
+        case .peel: L("写真を指で好きな方向にめくります。")
+        case .added: L("集めたことばが、撮った写真と一緒に並びます。")
+        case .dexTypes: L("上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。")
+        case .dexOpen: L("追加した単語を開いて、意味や使い方を見てみましょう。")
+        case .word: L("意味も使い方も、この写真から。例文を確認したら、復習を試してみましょう。")
+        case .review: L("自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。")
+        case .reviewPick: L("写真に合うことばを選んでください。")
+        case .reviewNext: L("答えを確かめたら「次へ」。")
         default: ""
         }
     }
@@ -79,9 +79,9 @@ enum TourStep: String, Equatable {
 
     var nextLabel: String? {
         switch self {
-        case .home, .detail, .added, .review: "次へ"
-        case .dexOpen: "追加した単語を見てみる"
-        case .word: "復習してみる"
+        case .home, .detail, .added, .review: L("次へ")
+        case .dexOpen: L("追加した単語を見てみる")
+        case .word: L("復習してみる")
         default: nil
         }
     }
@@ -195,7 +195,7 @@ struct TourCoachCard: View {
                 .foregroundStyle(Theme.foreground.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
-                Button("案内を終える", action: onSkip)
+                Button(L("案内を終える"), action: onSkip)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Theme.muted)
                     .frame(minHeight: 44)
@@ -246,10 +246,10 @@ struct TourCompleteView: View {
             AppBackground()
             VStack(spacing: 18) {
                 Spacer(minLength: 20)
-                Text("最初のキャッチ、完了！")
+                Text(L("最初のキャッチ、完了！"))
                     .font(.system(size: 28, weight: .heavy))
                     .foregroundStyle(Theme.foreground)
-                Text("撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。")
+                Text(L("撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。"))
                     .font(.system(size: 15))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.muted)
@@ -281,7 +281,7 @@ struct TourCompleteView: View {
                     Text(head).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.foreground)
                 }
                 Spacer()
-                PrimaryButton(title: "はじめる", icon: "arrow.right", sheen: true, action: onDone)
+                PrimaryButton(title: L("はじめる"), icon: "arrow.right", sheen: true, action: onDone)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
             }

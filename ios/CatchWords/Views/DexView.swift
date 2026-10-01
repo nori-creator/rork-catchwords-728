@@ -6,10 +6,10 @@ enum DexMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .cover: "スライド"
-        case .map: "地図"
-        case .grid: "棚"
-        case .list: "リスト"
+        case .cover: L("スライド")
+        case .map: L("地図")
+        case .grid: L("棚")
+        case .list: L("リスト")
         }
     }
     var icon: String {
@@ -179,15 +179,15 @@ struct DexView: View {
                         }
                         .padding(16)
                     }
-                    .navigationTitle("日付")
+                    .navigationTitle(L("日付"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         if dayFilter != nil {
                             ToolbarItem(placement: .topBarLeading) {
-                                Button("すべて") { dayFilter = nil; showCalendar = false }
+                                Button(L("すべて")) { dayFilter = nil; showCalendar = false }
                             }
                         }
-                        ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { showCalendar = false } }
+                        ToolbarItem(placement: .topBarTrailing) { Button(L("閉じる")) { showCalendar = false } }
                     }
                 }
                 .presentationDetents([.medium, .large])
@@ -231,7 +231,7 @@ struct DexView: View {
                 Spacer(minLength: 0)
 
                 Button { toggleMenu(.category) } label: {
-                    pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? "カテゴリー",
+                    pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? L("カテゴリー"),
                          active: categoryFilter != nil, open: openMenu == .category)
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
@@ -240,7 +240,7 @@ struct DexView: View {
                 }
                 .zIndex(openMenu == .category ? 2 : 0)
                 Button { toggleMenu(.day) } label: {
-                    pill(dayFilter.map { JPDate.mmdd($0) } ?? "日付", active: dayFilter != nil, open: openMenu == .day)
+                    pill(dayFilter.map { JPDate.mmdd($0) } ?? L("日付"), active: dayFilter != nil, open: openMenu == .day)
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
                 .overlay(alignment: .topTrailing) {
@@ -251,7 +251,7 @@ struct DexView: View {
             .zIndex(1)
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
-                TextField("", text: $query, prompt: Text("単語・読み・意味で検索").foregroundStyle(Theme.muted))
+                TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
                     .font(.system(size: 16))
                     .foregroundStyle(Theme.foreground)
                     .submitLabel(.search)
@@ -290,7 +290,7 @@ struct DexView: View {
 
     private var categoryMenu: some View {
         DexDropdown {
-            DexDropdownRow(title: "すべて", count: nil, isSelected: categoryFilter == nil) {
+            DexDropdownRow(title: L("すべて"), count: nil, isSelected: categoryFilter == nil) {
                 pick { categoryFilter = nil }
             }
             ForEach(categoryCounts, id: \.key) { item in
@@ -304,7 +304,7 @@ struct DexView: View {
 
     private var dayMenu: some View {
         DexDropdown(width: 200) {
-            DexDropdownRow(title: "すべての日", count: nil, isSelected: dayFilter == nil) {
+            DexDropdownRow(title: L("すべての日"), count: nil, isSelected: dayFilter == nil) {
                 pick { dayFilter = nil }
             }
             ForEach(dayCounts, id: \.day) { item in
@@ -314,7 +314,7 @@ struct DexView: View {
                 }
             }
             Divider().padding(.vertical, 4)
-            DexDropdownRow(title: "カレンダーで選ぶ", count: nil, isSelected: false, icon: "calendar") {
+            DexDropdownRow(title: L("カレンダーで選ぶ"), count: nil, isSelected: false, icon: "calendar") {
                 closeMenu()
                 showCalendar = true
             }
@@ -349,7 +349,7 @@ struct DexView: View {
         if let err = dex.loadError, dex.stickers.isEmpty {
             VStack(spacing: 12) {
                 Label(err, systemImage: "wifi.exclamationmark").foregroundStyle(Theme.foreground)
-                Button("もう一度読み込む") { Task { await dex.load() } }.foregroundStyle(Theme.primary)
+                Button(L("もう一度読み込む")) { Task { await dex.load() } }.foregroundStyle(Theme.primary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dex.isLoading && !dex.hasLoaded {
@@ -398,7 +398,7 @@ struct DexView: View {
                     Button {
                         shelfEdit = ShelfEdit(key: nil, label: "", emoji: "📦")
                     } label: {
-                        Label("自分の棚を作る", systemImage: "plus")
+                        Label(L("自分の棚を作る"), systemImage: "plus")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -420,18 +420,18 @@ struct DexView: View {
                 if let id = router.landingStickerId { land(id, proxy: proxy) }
             }
         }
-        .alert(shelfEdit?.key == nil ? "自分の棚を作る" : "棚の名前と絵文字",
+        .alert(shelfEdit?.key == nil ? L("自分の棚を作る") : L("棚の名前と絵文字"),
                isPresented: Binding(get: { shelfEdit != nil }, set: { if !$0 { shelfEdit = nil } })) {
-            TextField("棚の名前（24文字まで）", text: Binding(get: { shelfEdit?.label ?? "" }, set: { shelfEdit?.label = $0 }))
-            TextField("絵文字", text: Binding(get: { shelfEdit?.emoji ?? "" }, set: { shelfEdit?.emoji = $0 }))
-            Button("キャンセル", role: .cancel) { shelfEdit = nil }
-            Button("保存") { saveShelfEdit(); shelfEdit = nil }
+            TextField(L("棚の名前（24文字まで）"), text: Binding(get: { shelfEdit?.label ?? "" }, set: { shelfEdit?.label = $0 }))
+            TextField(L("絵文字"), text: Binding(get: { shelfEdit?.emoji ?? "" }, set: { shelfEdit?.emoji = $0 }))
+            Button(L("キャンセル"), role: .cancel) { shelfEdit = nil }
+            Button(L("保存")) { saveShelfEdit(); shelfEdit = nil }
         } message: {
-            Text(shelfEdit?.key == nil ? "単語の詳細の「棚」から、語をこの棚に移せます。" : "この棚の名前は、あなたの図鑑だけで変わります。")
+            Text(shelfEdit?.key == nil ? L("単語の詳細の「棚」から、語をこの棚に移せます。") : L("この棚の名前は、あなたの図鑑だけで変わります。"))
         }
-        .confirmationDialog("この棚を消しますか？", isPresented: Binding(get: { deleteShelfKey != nil }, set: { if !$0 { deleteShelfKey = nil } }),
+        .confirmationDialog(L("この棚を消しますか？"), isPresented: Binding(get: { deleteShelfKey != nil }, set: { if !$0 { deleteShelfKey = nil } }),
                             titleVisibility: .visible) {
-            Button("消す（語は元の棚に戻ります）", role: .destructive) {
+            Button(L("消す（語は元の棚に戻ります）"), role: .destructive) {
                 guard let key = deleteShelfKey else { return }
                 deleteShelfKey = nil
                 Task { try? await dex.deleteShelf(key: key) }
@@ -512,8 +512,8 @@ struct CategoryShelf: View {
                 Text("\(stickers.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
                 if onEdit != nil || onDelete != nil {
                     Menu {
-                        if let onEdit { Button("名前と絵文字を変える", systemImage: "pencil", action: onEdit) }
-                        if let onDelete { Button("この棚を消す", systemImage: "trash", role: .destructive, action: onDelete) }
+                        if let onEdit { Button(L("名前と絵文字を変える"), systemImage: "pencil", action: onEdit) }
+                        if let onDelete { Button(L("この棚を消す"), systemImage: "trash", role: .destructive, action: onDelete) }
                     } label: {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 14, weight: .semibold))
@@ -521,7 +521,7 @@ struct CategoryShelf: View {
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
-                    .accessibilityLabel("\(Category.label(for: key))の棚を編集")
+                    .accessibilityLabel(L("\(Category.label(for: key))の棚を編集"))
                 }
             }
             LazyVGrid(columns: columns, spacing: 10) {
@@ -841,7 +841,7 @@ struct DexMapView: View {
 
             VStack(spacing: 10) {
                 if located.isEmpty && !dayItems.isEmpty {
-                    Text("この日は場所の記録がありません")
+                    Text(L("この日は場所の記録がありません"))
                         .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.foreground)
                         .padding(.horizontal, 16).frame(minHeight: 40)
                         .background(.regularMaterial, in: Capsule())
@@ -873,7 +873,7 @@ struct DexMapView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showDatePicker = false } label: { Image(systemName: "xmark") }
-                            .accessibilityLabel("閉じる")
+                            .accessibilityLabel(L("閉じる"))
                     }
                 }
             }
@@ -1048,21 +1048,21 @@ struct DexMapView: View {
                     .background(Theme.foreground, in: Circle())
             }
             .buttonStyle(PressableStyle(scale: 0.9))
-            .accessibilityLabel(panelOpen ? "一覧を閉じる" : "一覧を開く")
+            .accessibilityLabel(panelOpen ? L("一覧を閉じる") : L("一覧を開く"))
             Text(day.map { JPDate.monthDayWeek($0) } ?? "—")
                 .font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
             Spacer()
-            circleButton("calendar") { showDatePicker = true }.accessibilityLabel("日付を選ぶ")
+            circleButton("calendar") { showDatePicker = true }.accessibilityLabel(L("日付を選ぶ"))
             circleButton("chevron.left") {
                 if let idx, idx + 1 < days.count { day = days[idx + 1] }
             }
             .disabled(idx == nil || (idx ?? 0) + 1 >= days.count)
-            .accessibilityLabel("前の日")
+            .accessibilityLabel(L("前の日"))
             circleButton("chevron.right") {
                 if let idx, idx > 0 { day = days[idx - 1] }
             }
             .disabled(idx == nil || idx == 0)
-            .accessibilityLabel("次の日")
+            .accessibilityLabel(L("次の日"))
         }
         .padding(6)
         .background(Theme.card.opacity(0.95), in: Capsule())
@@ -1124,11 +1124,11 @@ struct EmptyDexView: View {
             Image(systemName: isFiltered ? "line.3.horizontal.decrease.circle" : "camera.viewfinder")
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(Theme.primary)
-            Text(isFiltered ? "この条件の単語はまだありません" : "今日のページはまだ白紙です。")
+            Text(isFiltered ? L("この条件の単語はまだありません") : L("今日のページはまだ白紙です。"))
                 .font(AppFont.hand(20))
                 .foregroundStyle(Theme.foreground)
             if !isFiltered {
-                PrimaryButton(title: "最初の1枚を撮る", icon: "camera.fill", sheen: true, action: onCamera)
+                PrimaryButton(title: L("最初の1枚を撮る"), icon: "camera.fill", sheen: true, action: onCamera)
                     .frame(maxWidth: 260)
             }
         }

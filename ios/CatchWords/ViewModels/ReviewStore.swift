@@ -32,10 +32,14 @@ final class ReviewStore {
 
     /// quiz-choices.ts fallback pool (4 so one collision still leaves 3).
     static let fallback: [QuizChoice] = [
-        QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),
-        QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),
-        QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),
-        QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ"),
+        QuizChoice(headword: "蘋果",  // l10n-ignore (target word)
+                   zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),
+        QuizChoice(headword: "公車",  // l10n-ignore (target word)
+                   zhuyin: "ㄍㄨㄥ ㄔㄜ"),
+        QuizChoice(headword: "雨傘",  // l10n-ignore (target word)
+                   zhuyin: "ㄩˇ ㄙㄢˇ"),
+        QuizChoice(headword: "便當",  // l10n-ignore (target word)
+                   zhuyin: "ㄅㄧㄢˋ ㄉㄤ"),
     ]
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
@@ -65,7 +69,7 @@ final class ReviewStore {
             loadError = nil
             hasLoaded = true
         } catch {
-            loadError = (error as? LocalizedError)?.errorDescription ?? "復習を読み込めませんでした。"
+            loadError = (error as? LocalizedError)?.errorDescription ?? L("復習を読み込めませんでした。")
         }
         await historyTask
     }

@@ -27,8 +27,9 @@ final class ProfileStore {
 
     static let levelOptions: [(value: String, label: String)] = (1...6).map { ("TOCFL-\($0)", "TOCFL Level \($0)") }
     static let cefrOptions: [(value: String, label: String)] = ["A1", "A2", "B1", "B2", "C1", "C2"].map { ($0, "CEFR \($0)") }
-    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體字（台灣）")]
-    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "繁體字（台灣）"), ("en", "English")]
+    // Language names in their own language (an autonym never changes with the display language).
+    static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體中文")]  // l10n-ignore (autonyms)
+    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "台灣華語"), ("en", "English")]  // l10n-ignore (autonyms)
 
     /// TOCFL for 台湾華語, CEFR for English (level-scale.ts).
     static func levels(for target: String) -> [(value: String, label: String)] {
@@ -46,7 +47,7 @@ final class ProfileStore {
     func load() async {
         guard let uid = client.userId else { isLoaded = true; return }
         defer { isLoaded = true }
-        let full = "display_name,avatar_url,native_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
+        let full = "display_name,avatar_url,native_language,ui_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
         var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
         if data == nil {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
@@ -55,6 +56,11 @@ final class ProfileStore {
         displayName = row["display_name"] as? String ?? ""
         avatarURL = row["avatar_url"] as? String
         nativeLanguage = row["native_language"] as? String ?? "ja"
+        // The display language follows the account (set on the web or another device too).
+        if let ui = row["ui_language"] as? String, !ui.isEmpty {
+            L10n.set(ui)
+            nativeLanguage = L10n.lang
+        }
         targetLanguage = row["target_language"] as? String ?? "zh-TW"
         if let v = row["current_level"] as? String, !v.isEmpty { currentLevel = v }
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
@@ -71,7 +77,7 @@ final class ProfileStore {
             _ = try await client.rest("PATCH", "profiles?id=eq.\(uid)", body: body)
             message = nil
         } catch {
-            message = "保存できませんでした。通信を確かめてください。"
+            message = L("保存できませんでした。通信を確かめてください。")
         }
     }
 
@@ -87,7 +93,7 @@ final class ProfileStore {
             await update(["avatar_url": url])
             avatarURL = url
         } catch {
-            message = "写真を保存できませんでした。"
+            message = L("写真を保存できませんでした。")
         }
     }
 
@@ -98,7 +104,7 @@ final class ProfileStore {
     /// Deleting only the rows left a live login behind (App Store Review Guideline 5.1.1(v)).
     /// The user has typed 「削除」 on the settings screen; that is the confirmation the server requires.
     func deleteAccount() async throws {
-        _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)
+        _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)  // l10n-ignore (server keyword)
     }
 
     func clearAvatar() async {

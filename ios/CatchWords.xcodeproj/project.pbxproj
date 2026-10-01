@@ -192,6 +192,8 @@
 			knownRegions = (
 				en,
 				Base,
+				ja,
+				"zh-Hant",
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
@@ -403,9 +405,9 @@
 				CODE_SIGN_ENTITLEMENTS = CatchWords/CatchWords.entitlements;
 				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、台湾華語の単語として図鑑に集めるためにカメラを使います。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、学んでいる言語の単語として図鑑に集めるためにカメラを使います。";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "声で単語を調べたり、キャッチしたときの一言を録音したりするためにマイクを使います。";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した台湾華語を文字にして、単語を調べたり発音を確かめたりするために音声認識を使います。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した言葉を文字にして、単語を調べるために音声認識を使います。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "撮った場所の地名を記録して、思い出と一緒に単語を覚えられるようにします。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮った写真をスマホの写真アプリにも保存します。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "写真アプリの画像から単語を探すために使います。";
@@ -445,9 +447,9 @@
 				CODE_SIGN_ENTITLEMENTS = CatchWords/CatchWords.entitlements;
 				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、台湾華語の単語として図鑑に集めるためにカメラを使います。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、学んでいる言語の単語として図鑑に集めるためにカメラを使います。";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "声で単語を調べたり、キャッチしたときの一言を録音したりするためにマイクを使います。";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した台湾華語を文字にして、単語を調べたり発音を確かめたりするために音声認識を使います。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した言葉を文字にして、単語を調べるために音声認識を使います。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "撮った場所の地名を記録して、思い出と一緒に単語を覚えられるようにします。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮った写真をスマホの写真アプリにも保存します。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "写真アプリの画像から単語を探すために使います。";

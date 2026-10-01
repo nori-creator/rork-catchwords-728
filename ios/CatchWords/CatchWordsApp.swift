@@ -32,14 +32,17 @@ struct CatchWordsApp: App {
         WindowGroup {
             #if DEBUG
             if let preview = UIPreview.requested {
-                // "<scene>-dark" photographs the same scene in the dark appearance.
-                UIPreviewRoot(name: preview.hasSuffix("-dark") ? String(preview.dropLast(5)) : preview)
+                // "<scene>-dark" photographs the same scene in the dark appearance;
+                // "-en" / "-zh" in another display language.
+                let p = UIPreview.parse(preview)
+                UIPreviewRoot(name: p.scene)
+                    .environment(\.locale, L10n.locale)
                     .environment(dex)
                     .environment(diary)
                     .environment(auth)
                     .environment(plan)
                     .environment(profile)
-                    .preferredColorScheme(preview.hasSuffix("-dark") ? .dark : .light)
+                    .preferredColorScheme(p.dark ? .dark : .light)
             } else {
                 app
             }
@@ -51,6 +54,7 @@ struct CatchWordsApp: App {
 
     private var app: some View {
             RootView()
+                .environment(\.locale, L10n.locale)
                 .environment(auth)
                 .environment(dex)
                 .environment(plan)

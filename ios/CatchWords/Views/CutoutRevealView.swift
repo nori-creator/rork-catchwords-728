@@ -66,7 +66,7 @@ struct CutoutRevealView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .aspectRatio(1, contentMode: .fit)
-        .accessibilityLabel("切り抜いています")
+        .accessibilityLabel(L("切り抜いています"))
         .task { await run() }
     }
 

@@ -189,7 +189,7 @@ struct VoiceNoteButton: View {
             switch recorder.state {
             case .idle:
                 Button { recorder.toggle() } label: {
-                    Label("声で一言を残す", systemImage: "mic.fill")
+                    Label(L("声で一言を残す"), systemImage: "mic.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.primary)
                         .padding(.horizontal, 14)
@@ -205,7 +205,7 @@ struct VoiceNoteButton: View {
                             .opacity(reduceMotion ? 1 : (Int(recorder.elapsed * 2) % 2 == 0 ? 1 : 0.35))
                         Waveform(levels: recorder.levels, color: .white)
                             .frame(width: 96, height: 22)
-                        Text("止める（あと\(recorder.remaining)秒）")
+                        Text(L("止める（あと\(recorder.remaining)秒）"))
                             .font(.system(size: 13, weight: .semibold).monospacedDigit())
                             .foregroundStyle(.white)
                     }
@@ -215,14 +215,14 @@ struct VoiceNoteButton: View {
                     .shadow(color: Color(hex: 0xE5484D).opacity(0.35), radius: 10, y: 4)
                 }
                 .buttonStyle(PressableStyle())
-                .accessibilityLabel("録音中。タップで止める")
+                .accessibilityLabel(L("録音中。タップで止める"))
                 .transition(.scale(scale: 0.9).combined(with: .opacity))
             case .recorded:
                 Button { player.toggle(local: recorder.fileURL) } label: {
                     HStack(spacing: 8) {
                         Image(systemName: player.isPlaying ? "stop.fill" : "play.fill")
                             .contentTransition(.symbolEffect(.replace))
-                        Text(player.isPlaying ? "一言を止める" : "録れました")
+                        Text(player.isPlaying ? L("一言を止める") : L("録れました"))
                     }
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Theme.foreground)
@@ -246,7 +246,7 @@ struct VoiceNoteButton: View {
                         .overlay(Circle().stroke(Theme.border, lineWidth: 1))
                 }
                 .buttonStyle(PressableStyle(scale: 0.9))
-                .accessibilityLabel("録り直す")
+                .accessibilityLabel(L("録り直す"))
                 Button { player.stop(); recorder.discard() } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .semibold))
@@ -254,7 +254,7 @@ struct VoiceNoteButton: View {
                         .frame(width: 40, height: 40)
                 }
                 .buttonStyle(PressableStyle(scale: 0.9))
-                .accessibilityLabel("録った一言を捨てる")
+                .accessibilityLabel(L("録った一言を捨てる"))
             }
             Spacer(minLength: 0)
         }
@@ -262,7 +262,7 @@ struct VoiceNoteButton: View {
         .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: recorder.state)
         .overlay(alignment: .bottomLeading) {
             if recorder.denied {
-                Text("設定アプリでマイクを許可すると録音できます。")
+                Text(L("設定アプリでマイクを許可すると録音できます。"))
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.muted)
                     .offset(y: 18)
@@ -291,7 +291,7 @@ struct VoiceNoteRow: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(player.isPlaying ? "一言を止める" : "一言を聞く")
+                    Text(player.isPlaying ? L("一言を止める") : L("一言を聞く"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.foreground)
                     GeometryReader { g in
@@ -313,7 +313,7 @@ struct VoiceNoteRow: View {
         }
         .buttonStyle(PressableStyle())
         .disabled(url == nil)
-        .accessibilityLabel("一言の録音を聞く")
+        .accessibilityLabel(L("一言の録音を聞く"))
     }
 }
 

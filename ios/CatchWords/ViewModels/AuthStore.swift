@@ -66,7 +66,7 @@ final class AuthStore {
             client.signOut()
             phase = .signedOut
         case .none:
-            phase = .failed("サーバーに接続できませんでした（8秒）。電波の良い場所でもう一度お試しください。")
+            phase = .failed(L("サーバーに接続できませんでした（8秒）。電波の良い場所でもう一度お試しください。"))
         }
     }
 
@@ -83,7 +83,7 @@ final class AuthStore {
             if signedIn {
                 self.phase = .signedIn
             } else {
-                self.infoMessage = "確認メールを送りました。メールのリンクを開いて登録を完了したら、このアプリに戻って「ログイン」してください。"
+                self.infoMessage = L("確認メールを送りました。メールのリンクを開いて登録を完了したら、このアプリに戻って「ログイン」してください。")
                 self.awaitingConfirmation = true
             }
         }
@@ -92,7 +92,7 @@ final class AuthStore {
     func resetPassword(email: String) async {
         await run {
             try await self.client.sendPasswordReset(email: email)
-            self.infoMessage = "パスワード設定用のメールを送りました。"
+            self.infoMessage = L("パスワード設定用のメールを送りました。")
         }
     }
 
@@ -107,14 +107,14 @@ final class AuthStore {
         switch result {
         case .failure(let error):
             if (error as? ASAuthorizationError)?.code != .canceled {
-                errorMessage = "Appleでのログインに失敗しました。"
+                errorMessage = L("Appleでのログインに失敗しました。")
             }
         case .success(let auth):
             guard let cred = auth.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = cred.identityToken,
                   let token = String(data: tokenData, encoding: .utf8),
                   let nonce = currentNonce else {
-                errorMessage = "Appleでのログインに失敗しました。"
+                errorMessage = L("Appleでのログインに失敗しました。")
                 return
             }
             await run {
@@ -153,7 +153,7 @@ final class AuthStore {
             try await work()
             Haptics.success()
         } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? "エラーが発生しました。"
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? L("エラーが発生しました。")
             Haptics.warning()
         }
     }

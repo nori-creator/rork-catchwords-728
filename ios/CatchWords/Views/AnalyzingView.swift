@@ -53,7 +53,7 @@ struct AnalyzingView: View {
                 HStack {
                     Spacer()
                     Button(action: onCancel) {
-                        Text("やめる")
+                        Text(L("やめる"))
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
@@ -68,7 +68,7 @@ struct AnalyzingView: View {
                 Spacer()
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles").symbolEffect(.pulse, isActive: !reduceMotion)
-                    Text("AIが分析中…")
+                    Text(L("AIが分析中…"))
                 }
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)

@@ -184,7 +184,7 @@ struct RewardOverlay: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(readingGlow ? Color(hex: 0xBFEFFF) : .white.opacity(0.85))
                 .shadow(color: Theme.cyan.opacity(readingGlow ? 0.7 : 0), radius: 8)
-            Label(payload.gate.isReencounter ? "再会！写真を追加しました" : "図鑑に追加",
+            Label(payload.gate.isReencounter ? L("再会！写真を追加しました") : L("図鑑に追加"),
                   systemImage: payload.gate.isReencounter ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(payload.gate.isReencounter ? Theme.gold : Theme.ok)

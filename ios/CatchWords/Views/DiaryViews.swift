@@ -25,7 +25,7 @@ struct DiaryLine: View {
             }
             HStack(spacing: 8) {
                 Button { onWrite(day) } label: {
-                    Label(text.isEmpty ? "日記を書く" : "日記を書き直す", systemImage: "pencil.line")
+                    Label(text.isEmpty ? L("日記を書く") : L("日記を書き直す"), systemImage: "pencil.line")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 16)
@@ -35,7 +35,7 @@ struct DiaryLine: View {
                 }
                 .buttonStyle(PressableStyle())
                 if pending != nil {
-                    Label("未送信の下書き", systemImage: "icloud.slash")
+                    Label(L("未送信の下書き"), systemImage: "icloud.slash")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Theme.muted)
                 }
@@ -117,11 +117,11 @@ struct DiaryComposer: View {
                 }
             }
             .background(Theme.background)
-            .navigationTitle("\(JPDate.monthDay(day))の日記")
+            .navigationTitle(L("\(JPDate.monthDay(day))の日記"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") { dismiss() }
+                    Button(L("閉じる")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -135,7 +135,7 @@ struct DiaryComposer: View {
                             }
                         }
                     } label: {
-                        if diary.isSaving { ProgressView() } else { Text("保存").bold() }
+                        if diary.isSaving { ProgressView() } else { Text(L("保存")).bold() }
                     }
                     .disabled(diary.isSaving || diary.isCorrecting)
                 }
@@ -169,12 +169,12 @@ struct DiaryComposer: View {
                                 .background(Theme.accent, in: Capsule())
                         }
                         .buttonStyle(PressableStyle())
-                        .accessibilityHint("本文に入れる")
+                        .accessibilityHint(L("本文に入れる"))
                     }
                 }
             }
             .contentMargins(.horizontal, 16)
-            Text("今日キャッチした語を押すと本文に入ります")
+            Text(L("今日キャッチした語を押すと本文に入ります"))
                 .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 16)
         }
@@ -190,7 +190,7 @@ struct DiaryComposer: View {
             .background(RuledPaper().clipShape(.rect(cornerRadius: 14)))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text(isToday ? "例: 今天早上我去咖啡店…" : "この日のことを、学んでいる言葉で書いてみよう")
+                    Text(isToday ? L("例: 今天早上我去咖啡店…") : L("この日のことを、学んでいる言葉で書いてみよう"))
                         .font(AppFont.hand(19))
                         .foregroundStyle(Theme.muted.opacity(0.7))
                         .padding(.horizontal, 18).padding(.vertical, 20)
@@ -224,7 +224,7 @@ struct DiaryComposer: View {
                         Image(systemName: "wand.and.stars")
                             .symbolEffect(.bounce, value: justCorrected)
                     }
-                    Text(diary.isCorrecting ? "添削中…" : "AIに添削してもらう")
+                    Text(diary.isCorrecting ? L("添削中…") : L("AIに添削してもらう"))
                 }
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(ready ? .white : Theme.muted)
@@ -240,7 +240,7 @@ struct DiaryComposer: View {
             }
             .buttonStyle(PressableStyle())
             .disabled(!ready || diary.isCorrecting)
-            Text("書いたものはこの端末に控えてあります。添削が通らなくても消えません。")
+            Text(L("書いたものはこの端末に控えてあります。添削が通らなくても消えません。"))
                 .font(.system(size: 11)).foregroundStyle(Theme.muted)
         }
         .padding(.horizontal, 16)
@@ -261,7 +261,7 @@ private struct ScaffoldCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("今日撮ったものから", systemImage: "sparkles")
+            Label(L("今日撮ったものから"), systemImage: "sparkles")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Theme.primaryInk)
             ForEach(Array(scaffold.prompts.enumerated()), id: \.offset) { _, p in
@@ -274,7 +274,7 @@ private struct ScaffoldCard: View {
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                         if let id = p.stickerId, let head = scaffold.captures.first(where: { $0.id == id })?.headword {
-                            Text("「\(head)」のこと")
+                            Text(L("「\(head)」のこと"))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Theme.primaryInk.opacity(0.8))
                         }
@@ -287,7 +287,7 @@ private struct ScaffoldCard: View {
             }
             if !scaffold.patterns.isEmpty {
                 Divider().padding(.vertical, 2)
-                Text("この型が使えます")
+                Text(L("この型が使えます"))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.muted)
                 FlowRow(spacing: 6) {
@@ -304,7 +304,7 @@ private struct ScaffoldCard: View {
                         .accessibilityHint(pt.ja)
                     }
                 }
-                Text("押すと下に入ります").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                Text(L("押すと下に入ります")).font(.system(size: 11)).foregroundStyle(Theme.muted)
             }
         }
         .padding(14)
@@ -325,7 +325,7 @@ struct CorrectionBlock: View {
             if let c = entry.correction ?? entry.bodyZh, !c.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     if !compact {
-                        Text("✦ 添削後").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.primaryInk)
+                        Text(L("✦ 添削後")).font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.primaryInk)
                     }
                     HStack(alignment: .top) {
                         Text(c)
@@ -337,7 +337,7 @@ struct CorrectionBlock: View {
                         if !compact { PronounceCircle(text: c, size: 36) }
                     }
                     if let f = entry.feedbackJa, !f.isEmpty {
-                        Text("型と解説").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.muted).padding(.top, 4)
+                        Text(L("型と解説")).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.muted).padding(.top, 4)
                         Text(f).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(3)
                     }
                     if entry.correction == nil, let ja = entry.bodyJa, !ja.isEmpty {
@@ -356,7 +356,7 @@ struct CorrectionBlock: View {
             }
             if let phrases = entry.nativePhrases, !phrases.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("ネイティブならこう言う", systemImage: "quote.opening")
+                    Label(L("ネイティブならこう言う"), systemImage: "quote.opening")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Theme.primaryInk)
                     ForEach(Array(phrases.enumerated()), id: \.offset) { _, p in
@@ -404,13 +404,13 @@ struct JournalHistoryView: View {
                         .redacted(reason: .placeholder)
                     } else if diary.journalFailed {
                         VStack(spacing: 10) {
-                            Text("日記を読み込めませんでした。").foregroundStyle(Theme.muted)
-                            Button("もう一度") { Task { await diary.loadJournal() } }
+                            Text(L("日記を読み込めませんでした。")).foregroundStyle(Theme.muted)
+                            Button(L("もう一度")) { Task { await diary.loadJournal() } }
                         }
                         .frame(maxWidth: .infinity).padding(.top, 60)
                     } else if past.isEmpty {
-                        ContentUnavailableView("まだ過去の日記はありません", systemImage: "book.closed",
-                                               description: Text("書いた日記と添削はここに並びます。"))
+                        ContentUnavailableView(L("まだ過去の日記はありません"), systemImage: "book.closed",
+                                               description: Text(L("書いた日記と添削はここに並びます。")))
                             .padding(.top, 40)
                     } else {
                         ForEach(past) { e in
@@ -440,10 +440,10 @@ struct JournalHistoryView: View {
                 .padding(16)
             }
             .background(Theme.background)
-            .navigationTitle("過去の日記")
+            .navigationTitle(L("過去の日記"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("閉じる") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(L("閉じる")) { dismiss() } }
             }
             .refreshable { await diary.loadJournal() }
             .task { await diary.loadJournal() }
@@ -462,7 +462,7 @@ struct StrandedDiaryBanner: View {
                 HStack(spacing: 10) {
                     Image(systemName: "doc.text").foregroundStyle(Theme.primaryInk)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(JPDate.monthDay(first.date))の日記が保存されていません")
+                        Text(L("\(JPDate.monthDay(first.date))の日記が保存されていません"))
                             .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
                         Text(first.text).lineLimit(1).font(.system(size: 12)).foregroundStyle(Theme.muted)
                     }

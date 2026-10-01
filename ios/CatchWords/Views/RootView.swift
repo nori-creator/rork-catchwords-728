@@ -89,7 +89,7 @@ struct ConnectionFailedView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
-            PrimaryButton(title: "もう一度試す", icon: "arrow.clockwise", action: retry)
+            PrimaryButton(title: L("もう一度試す"), icon: "arrow.clockwise", action: retry)
                 .frame(maxWidth: 260)
         }
         .padding(32)

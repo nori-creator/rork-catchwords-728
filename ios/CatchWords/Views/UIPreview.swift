@@ -11,6 +11,19 @@ enum UIPreview {
         return nil
         #endif
     }
+
+    /// "settings-en-dark" → scene "settings", English, dark. Sets the display language as a side effect.
+    static func parse(_ raw: String) -> (scene: String, dark: Bool) {
+        var parts = raw.split(separator: "-").map(String.init)
+        var dark = false
+        var lang = "ja"
+        while let last = parts.last, parts.count > 1, ["dark", "en", "zh", "ja"].contains(last) {
+            if last == "dark" { dark = true } else { lang = last == "zh" ? "zh-TW" : last }
+            parts.removeLast()
+        }
+        L10n.lang = lang
+        return (parts.joined(separator: "-"), dark)
+    }
 }
 
 #if DEBUG

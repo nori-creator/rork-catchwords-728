@@ -146,7 +146,7 @@ final class DiaryStore {
             message = m
             return false
         } catch {
-            message = (error as? LocalizedError)?.errorDescription.map { "添削失敗: \($0)" } ?? "添削失敗"
+            message = (error as? LocalizedError)?.errorDescription.map { L("添削失敗: \($0)") } ?? L("添削失敗")
             return false
         }
     }
@@ -187,11 +187,11 @@ final class DiaryStore {
     @discardableResult
     func save(_ text: String, for day: Date) async -> Bool {
         guard let uid = client.userId else {
-            message = "ログインすると日記を保存できます。書いた文章はこの端末に残っています。"
+            message = L("ログインすると日記を保存できます。書いた文章はこの端末に残っています。")
             return false
         }
         let dayKey = Self.key(day)
-        guard dayKey <= Self.key(Date()) else { message = "未来の日の日記は書けません"; return false }
+        guard dayKey <= Self.key(Date()) else { message = L("未来の日の日記は書けません"); return false }
         isSaving = true
         defer { isSaving = false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -205,7 +205,7 @@ final class DiaryStore {
             return true
         } catch {
             keepDraft(text, for: day)
-            message = "日記を保存できませんでした。書いた文章はこの端末に残っています。"
+            message = L("日記を保存できませんでした。書いた文章はこの端末に残っています。")
             return false
         }
     }

@@ -22,9 +22,9 @@ struct EncounterHistoryView: View {
     var body: some View {
         Group {
             if photos.count > 1 {
-                SectionCard(title: "この言葉に出会った記録", icon: "photo.stack") {
+                SectionCard(title: L("この言葉に出会った記録"), icon: "photo.stack") {
                     HStack {
-                        Text("\(photos.count)枚").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        Text(L("\(photos.count)枚")).font(.system(size: 13)).foregroundStyle(Theme.muted)
                         Spacer()
                     }
                     ScrollView(.horizontal) {
@@ -63,7 +63,7 @@ struct EncounterHistoryView: View {
             .frame(width: 118, height: 118)
             .clipShape(.rect(cornerRadius: 18, style: .continuous))
             .overlay(alignment: .topLeading) {
-                Text(p.first ? "はじめて" : "\(index + 1)回目")
+                Text(p.first ? L("はじめて") : L("\(index + 1)回目"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(p.first ? .white : Theme.primaryInk)
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -80,6 +80,6 @@ struct EncounterHistoryView: View {
         }
         .frame(width: 118, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(p.first ? "はじめて撮った写真" : "\(index + 1)回目に撮った写真")
+        .accessibilityLabel(p.first ? L("はじめて撮った写真") : L("\(index + 1)回目に撮った写真"))
     }
 }

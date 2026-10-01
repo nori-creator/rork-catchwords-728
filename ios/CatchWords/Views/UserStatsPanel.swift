@@ -45,10 +45,10 @@ struct UserStatsPanel: View {
             HStack(spacing: 14) {
                 AvatarView(url: profile.avatarURL, size: 52)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(profile.displayName.isEmpty ? "あなた" : profile.displayName)
+                    Text(profile.displayName.isEmpty ? L("あなた") : profile.displayName)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(Theme.foreground)
-                    Text(profile.targetLanguage == "en" ? "英語を学習中" : "台湾華語を学習中")
+                    Text(profile.targetLanguage == "en" ? L("英語を学習中") : L("台湾華語を学習中"))
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.muted)
                 }
@@ -57,30 +57,30 @@ struct UserStatsPanel: View {
             }
 
             HStack(spacing: 10) {
-                streakTile(value: stats?.captureStreak, label: "キャッチ連続", icon: "camera.fill", tint: Theme.primary)
-                streakTile(value: stats?.reviewStreak, label: "復習連続", icon: "flame.fill", tint: Color(hex: 0xFF7A1A))
+                streakTile(value: stats?.captureStreak, label: L("キャッチ連続"), icon: "camera.fill", tint: Theme.primary)
+                streakTile(value: stats?.reviewStreak, label: L("復習連続"), icon: "flame.fill", tint: Color(hex: 0xFF7A1A))
             }
 
             HStack(spacing: 0) {
-                figure(stats?.capturedTotal, "集めた単語", unit: "語")
+                figure(stats?.capturedTotal, L("集めた単語"), unit: L("語"))
                 Divider().frame(height: 34)
-                figure(stats?.reviewsDoneToday, "今日の復習", unit: "回")
+                figure(stats?.reviewsDoneToday, L("今日の復習"), unit: L("回"))
                 Divider().frame(height: 34)
-                figure(stats?.reviewsDue, "復習待ち", unit: "語")
+                figure(stats?.reviewsDue, L("復習待ち"), unit: L("語"))
             }
             .padding(.vertical, 12)
             .background(Theme.card, in: .rect(cornerRadius: 18, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border))
 
             if failed {
-                Text("数字を読み込めませんでした。通信を確かめてください。")
+                Text(L("数字を読み込めませんでした。通信を確かめてください。"))
                     .font(.system(size: 12)).foregroundStyle(Theme.muted)
             }
 
             HStack(spacing: 10) {
                 if let due = stats?.reviewsDue, due > 0 {
                     Button(action: onReview) {
-                        Label("復習する", systemImage: "arrow.triangle.2.circlepath")
+                        Label(L("復習する"), systemImage: "arrow.triangle.2.circlepath")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 48)
@@ -89,7 +89,7 @@ struct UserStatsPanel: View {
                     .buttonStyle(PressableStyle())
                 }
                 Button(action: onSettings) {
-                    Label("設定", systemImage: "gearshape")
+                    Label(L("設定"), systemImage: "gearshape")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.foreground)
                         .frame(maxWidth: .infinity, minHeight: 48)
@@ -134,7 +134,7 @@ struct UserStatsPanel: View {
         }
         .frame(width: 60, height: 60)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(stats.map { "レベル\($0.level)、次のレベルまで\($0.xpToNext)" } ?? "レベル")
+        .accessibilityLabel(stats.map { L("レベル\($0.level)、次のレベルまで\($0.xpToNext)") } ?? L("レベル"))
     }
 
     private func streakTile(value: Int?, label: String, icon: String, tint: Color) -> some View {
@@ -152,7 +152,7 @@ struct UserStatsPanel: View {
                     .font(.system(size: 34, weight: .heavy).monospacedDigit())
                     .foregroundStyle(Theme.foreground)
                     .contentTransition(.numericText())
-                Text("日").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text(L("日")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

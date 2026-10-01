@@ -94,7 +94,7 @@ struct CandidatePickerView: View {
 
     private var stageOne: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("写っている物")
+            Text(L("写っている物"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 6)
@@ -129,7 +129,7 @@ struct CandidatePickerView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if !g.others.isEmpty {
                         HStack(spacing: 2) {
-                            Text("ほかの言い方 \(g.others.count)")
+                            Text(L("ほかの言い方 \(g.others.count)"))
                             Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
                         }
                         .font(.system(size: 12))
@@ -156,7 +156,7 @@ struct CandidatePickerView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold))
-                    Text("戻る")
+                    Text(L("戻る"))
                 }
                 .font(.system(size: 16))
                 .foregroundStyle(Theme.muted)
@@ -170,7 +170,7 @@ struct CandidatePickerView: View {
                     PronounceCircle(text: g.main.headword, size: 48)
                 }
                 Button { vm.pick(g.main) } label: {
-                    Text("この語で図鑑に入れる")
+                    Text(L("この語で図鑑に入れる"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 46)
@@ -183,7 +183,7 @@ struct CandidatePickerView: View {
             .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
             .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
 
-            Text("ほかの言い方")
+            Text(L("ほかの言い方"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.muted)
                 .padding(.horizontal, 4)
@@ -221,9 +221,9 @@ struct CandidatePickerView: View {
 
     static func registerLabel(_ register: String?) -> String? {
         switch register {
-        case "casual": "砕けた言い方"
-        case "specific": "くわしい名前"
-        case "proper": "固有名詞"
+        case "casual": L("砕けた言い方")
+        case "specific": L("くわしい名前")
+        case "proper": L("固有名詞")
         default: nil
         }
     }
@@ -252,11 +252,11 @@ struct CandidatePickerView: View {
 
     private var manualInput: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            Text("違う単語を入力")
+            Text(L("違う単語を入力"))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.muted)
             HStack(spacing: 8) {
-                TextField("", text: $typed, prompt: Text("例: 椅子").foregroundStyle(Theme.muted.opacity(0.7)))
+                TextField("", text: $typed, prompt: Text(L("例: 椅子")).foregroundStyle(Theme.muted.opacity(0.7)))
                     .font(.system(size: 16))
                     .foregroundStyle(Theme.foreground)
                     .focused($inputFocused)
@@ -269,7 +269,7 @@ struct CandidatePickerView: View {
                 Button(action: submit) {
                     HStack(spacing: 6) {
                         if vm.isLookingUp { ProgressView().controlSize(.small) } else { Image(systemName: "magnifyingglass") }
-                        Text("検索")
+                        Text(L("検索"))
                     }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Theme.foreground)
@@ -311,7 +311,7 @@ struct CollectHeader: View {
     var body: some View {
         HStack(spacing: 10) {
             LogoMark(size: 30)
-            Text("集める")
+            Text(L("集める"))
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Theme.muted)
             Spacer()
@@ -322,7 +322,7 @@ struct CollectHeader: View {
                         .foregroundStyle(Theme.muted)
                         .frame(width: 44, height: 44)
                 }
-                .accessibilityLabel("カメラに戻る")
+                .accessibilityLabel(L("カメラに戻る"))
             }
         }
         .padding(.top, 4)
@@ -347,7 +347,7 @@ struct PronounceCircle: View {
                 .frame(minWidth: 44, minHeight: 44)
         }
         .buttonStyle(PressableStyle(scale: 0.9))
-        .accessibilityLabel("発音を聞く")
+        .accessibilityLabel(L("発音を聞く"))
         // Web `pronounce.prefetch`: fetch the server voice when the button appears, so the tap is instant.
         .task(id: text) { if prefetch { SoundService.shared.prefetch(text) } }
     }

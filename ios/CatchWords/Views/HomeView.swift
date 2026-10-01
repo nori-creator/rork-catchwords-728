@@ -50,11 +50,11 @@ struct HomeView: View {
                 }
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text("\(cal.component(.month, from: today))月のアルバム")
+                    Text(L("\(cal.component(.month, from: today))月のアルバム"))
                         .font(.system(size: 20, weight: .heavy))
                         .foregroundStyle(Color(hex: 0x33291F))
                     Spacer()
-                    Text("横にスワイプでページをめくる")
+                    Text(L("横にスワイプでページをめくる"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
                 }
@@ -73,7 +73,7 @@ struct HomeView: View {
                 .tourAnchor(.album)
 
                 Button { showJournal = true } label: {
-                    Label("過去の日記と添削", systemImage: "books.vertical")
+                    Label(L("過去の日記と添削"), systemImage: "books.vertical")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.7))
                         .frame(minHeight: 44)
@@ -136,7 +136,7 @@ struct HomeView: View {
         HStack(spacing: 12) {
             Button { Haptics.selection(); showStats = true } label: { AvatarView(url: profile.avatarURL, size: 38) }
                 .buttonStyle(PressableStyle(scale: 0.92))
-                .accessibilityLabel("あなたの記録")
+                .accessibilityLabel(L("あなたの記録"))
             Text("CatchWords")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(Theme.muted)
@@ -158,9 +158,9 @@ enum AlbumSpan: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .day: "日"
-        case .week: "週"
-        case .month: "月"
+        case .day: L("日ごと")
+        case .week: L("週ごと")
+        case .month: L("月ごと")
         }
     }
 
@@ -185,7 +185,7 @@ enum AlbumSpan: String, CaseIterable, Identifiable {
             return "\(JPDate.monthDay(key)) – \(JPDate.monthDay(end))"
         case .month:
             let c = Calendar.current.dateComponents([.year, .month], from: key)
-            return "\(c.year ?? 0)年\(c.month ?? 0)月"
+            return L("\(c.year ?? 0)年\(c.month ?? 0)月")
         }
     }
 }
@@ -244,7 +244,7 @@ struct Bookshelf: View {
 
             HStack(alignment: .bottom, spacing: 2) {
                 if months.isEmpty {
-                    Text("先月までの本がここに並びます")
+                    Text(L("先月までの本がここに並びます"))
                         .font(AppFont.hand(15))
                         .foregroundStyle(.white.opacity(0.75))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -330,7 +330,7 @@ struct BookSpine: View {
             in: .rect(cornerRadius: 3)
         )
         .shadow(color: .black.opacity(0.35), radius: 2, x: 2)
-        .accessibilityLabel("\(JPDate.monthName(month)) \(count)語")
+        .accessibilityLabel(L("\(JPDate.monthName(month)) \(count)語"))
     }
 }
 
@@ -376,12 +376,12 @@ struct AlbumPage: View {
         VStack(spacing: 0) {
             if items.isEmpty {
                 VStack(spacing: 16) {
-                    Text("今日のページはまだ白紙です。")
+                    Text(L("今日のページはまだ白紙です。"))
                         .font(AppFont.hand(20))
                         .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
                     if isToday {
                         Button(action: onCamera) {
-                            Label("今日の1枚を撮る", systemImage: "camera.fill")
+                            Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 22)
@@ -466,8 +466,8 @@ struct AlbumPrint: View {
         printView
             // Web: 「ホームアルバムだけから消す。図鑑からは消さない。あとから戻せる」.
             .contextMenu {
-                Button("この単語をひらく", systemImage: "book") { onOpen(sticker) }
-                Button("アルバムから外す（図鑑には残ります）", systemImage: "eye.slash", role: .destructive) {
+                Button(L("この単語をひらく"), systemImage: "book") { onOpen(sticker) }
+                Button(L("アルバムから外す（図鑑には残ります）"), systemImage: "eye.slash", role: .destructive) {
                     Haptics.impact(.light)
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                         Task { await dex.setAlbumHidden(sticker.id, hidden: true) }
@@ -530,7 +530,7 @@ struct AlbumPrint: View {
             }
         }
         .buttonStyle(PressableStyle(scale: 0.97))
-        .accessibilityLabel(sticker.word?.headword ?? "写真")
+        .accessibilityLabel(sticker.word?.headword ?? L("写真"))
     }
 }
 
@@ -603,7 +603,7 @@ struct AlbumHiddenTray: View {
                 } label: {
                     HStack {
                         Image(systemName: "eye.slash")
-                        Text("アルバムから外した写真 \(hidden.count)")
+                        Text(L("アルバムから外した写真 \(hidden.count)"))
                         Spacer()
                         Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0))
                     }
@@ -623,7 +623,7 @@ struct AlbumHiddenTray: View {
                                         .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                                         .clipShape(.rect(cornerRadius: 12))
                                     Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                                    Button("戻す") {
+                                    Button(L("戻す")) {
                                         Haptics.selection()
                                         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                                             Task { await dex.setAlbumHidden(s.id, hidden: false) }

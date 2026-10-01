@@ -36,7 +36,7 @@ struct AuthView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
-                            Text("メールアドレスで続ける").font(.system(size: 17, weight: .semibold))
+                            Text(L("メールアドレスで続ける")).font(.system(size: 17, weight: .semibold))
                         }
                         .foregroundStyle(Theme.foreground)
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -58,7 +58,7 @@ struct AuthView: View {
                             .foregroundStyle(Theme.ok)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if auth.awaitingConfirmation {
-                            PrimaryButton(title: "確認が終わったので、ログインする", icon: "arrow.right") {
+                            PrimaryButton(title: L("確認が終わったので、ログインする"), icon: "arrow.right") {
                                 withAnimation(.snappy) {
                                     isSignUp = false
                                     showMail = true
@@ -73,14 +73,14 @@ struct AuthView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 24)
 
-                Text("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。")
+                Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。"))
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
 
                 HStack(spacing: 16) {
-                    Link("利用規約", destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                    Link("プライバシー", destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                    Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                    Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
                 }
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.muted)
@@ -101,7 +101,7 @@ struct AuthView: View {
                 Text("CatchWords")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.foreground)
-                Text("街で見つけた物が、台湾華語になる。")
+                Text(L("街で見つけた物が、台湾華語になる。"))
                     .font(AppFont.hand(18))
                     .foregroundStyle(Theme.muted)
             }
@@ -110,7 +110,7 @@ struct AuthView: View {
 
     private var mailForm: some View {
         VStack(spacing: 10) {
-            TextField("", text: $email, prompt: Text("メールアドレス").foregroundStyle(Theme.muted))
+            TextField("", text: $email, prompt: Text(L("メールアドレス")).foregroundStyle(Theme.muted))
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
@@ -119,20 +119,20 @@ struct AuthView: View {
                 .submitLabel(.next)
                 .onSubmit { focused = .password }
                 .fieldStyle()
-            SecureField("", text: $password, prompt: Text("パスワード").foregroundStyle(Theme.muted))
+            SecureField("", text: $password, prompt: Text(L("パスワード")).foregroundStyle(Theme.muted))
                 .textContentType(isSignUp ? .newPassword : .password)
                 .focused($focused, equals: .password)
                 .submitLabel(.go)
                 .onSubmit(submit)
                 .fieldStyle()
-            PrimaryButton(title: isSignUp ? "新規登録" : "ログイン", isLoading: auth.isBusy, action: submit)
+            PrimaryButton(title: isSignUp ? L("新規登録") : L("ログイン"), isLoading: auth.isBusy, action: submit)
             HStack {
-                Button(isSignUp ? "ログインに切り替え" : "新規登録はこちら") {
+                Button(isSignUp ? L("ログインに切り替え") : L("新規登録はこちら")) {
                     withAnimation(.snappy) { isSignUp.toggle() }
                 }
                 Spacer()
                 if !isSignUp {
-                    Button("パスワードを忘れた") {
+                    Button(L("パスワードを忘れた")) {
                         Task { await auth.resetPassword(email: email) }
                     }
                     .disabled(email.isEmpty)
@@ -145,7 +145,7 @@ struct AuthView: View {
                 Button {
                     Task { await auth.enterAsGuest() }
                 } label: {
-                    Label("ログインせずに入る（開発用）", systemImage: "arrow.right.circle")
+                    Label(L("ログインせずに入る（開発用）"), systemImage: "arrow.right.circle")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.muted)
                         .frame(maxWidth: .infinity, minHeight: 44)

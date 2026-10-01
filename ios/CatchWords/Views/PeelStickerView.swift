@@ -103,8 +103,8 @@ struct PeelStickerView: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityElement()
-        .accessibilityLabel("ステッカー")
-        .accessibilityHint("はがして図鑑に追加")
+        .accessibilityLabel(L("ステッカー"))
+        .accessibilityHint(L("はがして図鑑に追加"))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { commit() }
         .task {

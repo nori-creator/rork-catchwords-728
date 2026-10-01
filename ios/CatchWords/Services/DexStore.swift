@@ -82,7 +82,7 @@ final class DexStore {
             await loadReviews()
             await signPaths(for: rows)
         } catch {
-            loadError = (error as? LocalizedError)?.errorDescription ?? "図鑑を読み込めませんでした。"
+            loadError = (error as? LocalizedError)?.errorDescription ?? L("図鑑を読み込めませんでした。")
         }
     }
 
@@ -151,7 +151,7 @@ final class DexStore {
     /// selfie never blocks the catch.
     func save(_ draft: CatchDraft) async throws -> SaveOutcome {
         guard let uid = client.userId else { throw APIError.unauthorized }
-        guard let card = draft.details else { throw APIError.message("カード生成に失敗しました") }
+        guard let card = draft.details else { throw APIError.message(L("カード生成に失敗しました")) }
         let ts = Int(Date().timeIntervalSince1970 * 1000)
 
         async let objectPath: String? = uploadJPEG(draft.photo, uid: uid, ts: ts, kind: "object")
@@ -173,7 +173,7 @@ final class DexStore {
             "reading_zhuyin": text("reading_zhuyin", c.zhuyin),
             "pinyin": text("pinyin", c.pinyin),
             "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
-            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? "名詞" : c.pos),
+            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? "名詞" : c.pos),  // l10n-ignore (data)
             "level": text("level", card.level),
             "category_key": text("category_key", card.categoryKey),
             "example_sentence": text("example_sentence", card.exampleSentence),
@@ -228,7 +228,7 @@ final class DexStore {
         async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "encounter-cutout")
         let image = try await imagePath
         let cut = await cutoutPath
-        if photo != nil && image == nil { throw APIError.message("記録に失敗しました") }
+        if photo != nil && image == nil { throw APIError.message(L("記録に失敗しました")) }
         struct Recorded: Decodable {
             let encounterCount: Int?
             enum CodingKeys: String, CodingKey { case encounterCount = "encounter_count" }
@@ -264,7 +264,7 @@ final class DexStore {
             "language": language,
             "headword": c.headword,
             "meaning_ja": c.meaningJa.isEmpty ? c.headword : c.meaningJa,
-            "part_of_speech": c.pos.isEmpty ? "名詞" : c.pos,
+            "part_of_speech": c.pos.isEmpty ? "名詞" : c.pos,  // l10n-ignore (data)
             "level": d?.level ?? "TOCFL-2",
             "category_key": d?.categoryKey ?? "other",
             "extras": extras,
@@ -358,7 +358,7 @@ final class DexStore {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         guard let path = try await uploadJPEG(image, uid: uid, ts: ts, kind: "object") else {
-            throw APIError.message("写真を読み込めませんでした。")
+            throw APIError.message(L("写真を読み込めませんでした。"))
         }
         _ = try await NativeAPI.call("replaceStickerPhoto", ["sticker_id": sticker.id, "object_path": path])
         ImageCache.shared.set(image, for: path)
@@ -370,7 +370,7 @@ final class DexStore {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         guard let path = await uploadPNG(image, uid: uid, ts: ts, kind: "cutout") else {
-            throw APIError.message("切り抜きの保存に失敗しました。")
+            throw APIError.message(L("切り抜きの保存に失敗しました。"))
         }
         _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["cutout_image_url": path])
         ImageCache.shared.set(image, for: path)
@@ -400,7 +400,7 @@ final class DexStore {
     /// Points this sticker at another headword (setStickerHeadword). The shared `words` row is never rewritten.
     func setHeadword(_ sticker: Sticker, to raw: String) async throws {
         let head = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !head.isEmpty, head.count <= 60 else { throw APIError.message("単語を入れてください。") }
+        guard !head.isEmpty, head.count <= 60 else { throw APIError.message(L("単語を入れてください。")) }
         if sticker.word?.headword == head { return }
         do {
             // The server checks the language, reuses or creates the word row (its contents are
@@ -408,7 +408,7 @@ final class DexStore {
             _ = try await NativeAPI.call("setStickerHeadword", ["sticker_id": sticker.id, "headword": head])
         } catch let APIError.server(_, message) where message.contains("NOT_TARGET_LANGUAGE") {
             throw APIError.message(NativeAPI.targetLanguage == "en"
-                ? "英語の単語を入れてください。" : "繁体字（台湾華語）の単語を入れてください。")
+                ? L("英語の単語を入れてください。") : L("繁体字（台湾華語）の単語を入れてください。"))
         }
         await reload(stickerId: sticker.id)
     }
@@ -500,7 +500,7 @@ final class DexStore {
         let res: Saved = try await NativeAPI.call("setStickerHeroRole", [
             "sticker_id": sticker.id, "hero_role": role.map { $0 as Any } ?? NSNull(),
         ], as: Saved.self)
-        guard res.saved else { throw APIError.message("まだ保存できません。サーバの更新を待ってください。") }
+        guard res.saved else { throw APIError.message(L("まだ保存できません。サーバの更新を待ってください。")) }
         replace(sticker.id) { old in
             var s = old
             s.heroRole = role

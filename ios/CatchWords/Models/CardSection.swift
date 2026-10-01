@@ -20,17 +20,17 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
 
     var title: String {
         switch self {
-        case .meaning: "意味"
-        case .example: "例文"
-        case .examplesExtra: "追加の例文"
-        case .usageChunks: "使い方チャンク"
-        case .measureWords: "量詞"
-        case .relatedWords: "類義語・反義語・関連語"
-        case .pronunciationTips: "発音のコツ"
-        case .etymology: "語源・部首"
-        case .mnemonic: "覚え方"
-        case .taiwanNote: "台湾メモ"
-        case .realUsage: "実際の使われ方"
+        case .meaning: L("意味")
+        case .example: L("例文")
+        case .examplesExtra: L("追加の例文")
+        case .usageChunks: L("使い方チャンク")
+        case .measureWords: L("量詞")
+        case .relatedWords: L("類義語・反義語・関連語")
+        case .pronunciationTips: L("発音のコツ")
+        case .etymology: L("語源・部首")
+        case .mnemonic: L("覚え方")
+        case .taiwanNote: L("台湾メモ")
+        case .realUsage: L("実際の使われ方")
         }
     }
 

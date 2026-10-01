@@ -184,7 +184,7 @@ struct CaptureView: View {
                     camera.stop()
                     showScan = true
                 } label: {
-                    Label("かざす", systemImage: "dot.viewfinder")
+                    Label(L("かざす"), systemImage: "dot.viewfinder")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.cyan)
                         .padding(.horizontal, 10)
@@ -194,7 +194,7 @@ struct CaptureView: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(PressableStyle())
-                .accessibilityLabel("かざして調べる")
+                .accessibilityLabel(L("かざして調べる"))
                 if !dex.pending.isEmpty {
                     Button { showPending = true } label: {
                         Label("\(dex.pending.count)", systemImage: "tray.and.arrow.up.fill")
@@ -205,7 +205,7 @@ struct CaptureView: View {
                             .background(.white.opacity(0.1), in: Capsule())
                     }
                     .buttonStyle(PressableStyle())
-                    .accessibilityLabel("解析待ち \(dex.pending.count)件")
+                    .accessibilityLabel(L("解析待ち \(dex.pending.count)件"))
                 }
             }
             .padding(.horizontal, 16)
@@ -249,15 +249,15 @@ struct CaptureView: View {
             }
             .background(Color.black)
         case .denied:
-            CameraMessageView(icon: "camera.fill", title: "カメラの使用が許可されていません",
-                              message: "1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る",
-                              buttonTitle: "設定を開く") {
+            CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
+                              message: L("1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る"),
+                              buttonTitle: L("設定を開く")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
             }
         case .unavailable:
-            CameraMessageView(icon: "camera.metering.unknown", title: "カメラを起動できませんでした",
-                              message: "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。",
-                              buttonTitle: "もう一度試す") {
+            CameraMessageView(icon: "camera.metering.unknown", title: L("カメラを起動できませんでした"),
+                              message: L("ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。"),
+                              buttonTitle: L("もう一度試す")) {
                 Task { await camera.start() }
             }
         }
@@ -265,12 +265,12 @@ struct CaptureView: View {
 
     private var selfiePrompt: some View {
         VStack(spacing: 18) {
-            Text("ものと一緒に、もう一枚")
+            Text(L("ものと一緒に、もう一枚"))
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
             Button { vm.finishSelfie(nil) } label: {
-                Text("スキップ")
+                Text(L("スキップ"))
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 26)
@@ -351,7 +351,7 @@ struct CaptureView: View {
     private var controls: some View {
         HStack(alignment: .top) {
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                sideButton(icon: "photo.badge.plus", label: "写真")
+                sideButton(icon: "photo.badge.plus", label: L("写真"))
             }
             .buttonStyle(PressableStyle(scale: 0.9))
             .opacity(vm.step == .selfie ? 0 : 1)
@@ -362,7 +362,7 @@ struct CaptureView: View {
                 .tourAnchor(.shutter)
             Spacer()
             Button { camera.toggle() } label: {
-                sideButton(icon: "arrow.triangle.2.circlepath.camera", label: "切替")
+                sideButton(icon: "arrow.triangle.2.circlepath.camera", label: L("切替"))
             }
             .buttonStyle(PressableStyle(scale: 0.9))
         }
@@ -389,7 +389,7 @@ struct CaptureView: View {
         .background(.white.opacity(0.1), in: Capsule())
         .contentShape(Capsule())
         .onTapGesture { if !plan.isPro { router.showPaywall = true } }
-        .accessibilityLabel(plan.isPro ? "Pro" : "今日あと\(plan.remainingToday)回")
+        .accessibilityLabel(plan.isPro ? "Pro" : L("今日あと\(plan.remainingToday)回"))
     }
 
     private func sideButton(icon: String, label: String) -> some View {
@@ -408,19 +408,19 @@ struct CaptureView: View {
     private var textSearchSheet: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                TextField("", text: $searchText, prompt: Text("例: マンゴー / 芒果").foregroundStyle(Theme.muted))
+                TextField("", text: $searchText, prompt: Text(L("例: マンゴー / 芒果")).foregroundStyle(Theme.muted))
                     .font(.system(size: 18))
                     .padding(.horizontal, 16)
                     .frame(minHeight: 54)
                     .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     .submitLabel(.search)
                     .onSubmit(runSearch)
-                PrimaryButton(title: "台湾華語で調べる", icon: "magnifyingglass", action: runSearch)
+                PrimaryButton(title: L("台湾華語で調べる"), icon: "magnifyingglass", action: runSearch)
                     .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
                 Spacer()
             }
             .padding(20)
-            .navigationTitle("文字で調べる")
+            .navigationTitle(L("文字で調べる"))
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.height(260)])
@@ -477,7 +477,7 @@ struct CaptureView: View {
             // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
             await vm.awaitCutout()
             guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
-                vm.showToast("カード生成に失敗しました")
+                vm.showToast(L("カード生成に失敗しました"))
                 return
             }
             runCatch(draft)
@@ -530,7 +530,7 @@ struct CaptureView: View {
             // Web: toast 「保存に失敗しました」 and stay on the card (capture.tsx reportSaveFailure).
             reward = nil
             let reason = (error as? LocalizedError)?.errorDescription ?? ""
-            vm.showToast(reason.isEmpty ? "保存に失敗しました" : "保存に失敗しました\n\(reason)")
+            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
         case .none:
             reward = nil
             vm.reset()
@@ -605,7 +605,7 @@ struct ShutterButton: View {
         .buttonStyle(ShutterStyle(pressed: $pressed))
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.45)
-        .accessibilityLabel("撮影")
+        .accessibilityLabel(L("撮影"))
     }
 }
 
@@ -658,22 +658,22 @@ struct FailedView: View {
             Image(systemName: offline ? "wifi.slash" : "sparkles")
                 .font(.system(size: 40, weight: .semibold))
                 .foregroundStyle(Theme.gold)
-            Text("解析できなかったので写真を預かりました")
+            Text(L("解析できなかったので写真を預かりました"))
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。")
+            Text(L("あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。"))
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
-            Text("理由: \(reason)")
+            Text(L("理由: \(reason)"))
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
             VStack(spacing: 10) {
-                if retryable { PrimaryButton(title: "いますぐもう一度試す", icon: "arrow.clockwise", action: onRetry) }
-                secondary("ホームへ", action: onHome)
-                secondary("もう一枚撮る", action: onAgain)
+                if retryable { PrimaryButton(title: L("いますぐもう一度試す"), icon: "arrow.clockwise", action: onRetry) }
+                secondary(L("ホームへ"), action: onHome)
+                secondary(L("もう一枚撮る"), action: onAgain)
             }
             .padding(.top, 8)
             Spacer()
@@ -718,14 +718,14 @@ struct PendingListView: View {
                         }
                     }
                     .swipeActions {
-                        Button("削除", role: .destructive) {
+                        Button(L("削除"), role: .destructive) {
                             PendingQueue.shared.remove(id: item.id)
                             dex.refreshPending()
                         }
                     }
                 }
             }
-            .navigationTitle("解析待ちの写真")
+            .navigationTitle(L("解析待ちの写真"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }

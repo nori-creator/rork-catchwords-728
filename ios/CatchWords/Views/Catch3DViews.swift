@@ -41,7 +41,7 @@ struct Bookshelf3DView: View {
                     } label: {
                         Color.clear.contentShape(Rectangle())
                     }
-                    .accessibilityLabel("\(Category.label(for: b.key))、\(b.count)語")
+                    .accessibilityLabel(L("\(Category.label(for: b.key))、\(b.count)語"))
                     .accessibilityAddTraits(selected == b.key ? .isSelected : [])
                 }
             }
@@ -143,12 +143,12 @@ struct Preview3DView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                Text("3D プレビュー").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                Text(L("3D プレビュー")).font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
                 Bookshelf3DView(books: [ShelfBook(key: "fruit", count: 12), ShelfBook(key: "drink", count: 7),
                                         ShelfBook(key: "animal", count: 4), ShelfBook(key: "tech", count: 9)],
                                 selected: selected) { selected = $0 }
                     .background(Theme.card, in: .rect(cornerRadius: 24))
-                Album3DView(cover: CaptureViewModel.textCard(for: "旅行"))
+                Album3DView(cover: CaptureViewModel.textCard(for: L("旅行")))
                     .frame(height: 220)
                     .background(Theme.card, in: .rect(cornerRadius: 24))
             }

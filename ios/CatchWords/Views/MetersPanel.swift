@@ -11,7 +11,7 @@ struct MetersPanel: View {
         HStack(alignment: .top, spacing: 12) {
             if let f = extras.frequencyLevel {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("よく使う度").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
+                    Text(L("よく使う度")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
                     HStack(alignment: .bottom, spacing: 4) {
                         ForEach(1...5, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 3)
@@ -29,7 +29,7 @@ struct MetersPanel: View {
             }
             if let r = extras.resolvedRegister {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("書き言葉 ⇄ 話し言葉").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
+                    Text(L("書き言葉 ⇄ 話し言葉")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
                     GeometryReader { geo in
                         let pos = animate ? CGFloat(2 - r) / 4 : 0.5
                         ZStack(alignment: .leading) {
@@ -63,21 +63,21 @@ struct MetersPanel: View {
 
     private func frequencyLabel(_ f: Int) -> String {
         switch f {
-        case 5: "毎日のように"
-        case 4: "よく出会う"
-        case 3: "ときどき"
-        case 2: "たまに"
-        default: "まれ"
+        case 5: L("毎日のように")
+        case 4: L("よく出会う")
+        case 3: L("ときどき")
+        case 2: L("たまに")
+        default: L("まれ")
         }
     }
 
     private func registerLabel(_ r: Int) -> String {
         switch r {
-        case -2: "話し言葉"
-        case -1: "やや話し言葉"
-        case 0: "どちらでも"
-        case 1: "やや書き言葉"
-        default: "書き言葉"
+        case -2: L("話し言葉")
+        case -1: L("やや話し言葉")
+        case 0: L("どちらでも")
+        case 1: L("やや書き言葉")
+        default: L("書き言葉")
         }
     }
 }

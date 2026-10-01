@@ -13,7 +13,7 @@ struct DexCalendarView: View {
     @State private var timelineDay: Date?
 
     private let cal = Calendar.current
-    private let weekdays = ["日", "月", "火", "水", "木", "金", "土"]
+    private var weekdays: [String] { JPDate.veryShortWeekdays }
 
     var body: some View {
         Group {
@@ -34,11 +34,11 @@ struct DexCalendarView: View {
         return VStack(spacing: 12) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(String(cal.component(.year, from: month)))年")
+                    Text(L("\(String(cal.component(.year, from: month)))年"))
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
-                    Text("\(cal.component(.month, from: month))月")
+                    Text(L("\(cal.component(.month, from: month))月"))
                         .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.primaryInk)
-                    Text("\(monthItems.count)枚・\(dayCount)日")
+                    Text(L("\(monthItems.count)枚・\(dayCount)日"))
                         .font(.system(size: 12, weight: .semibold)).monospacedDigit()
                         .foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 10).padding(.vertical, 4)
@@ -46,8 +46,8 @@ struct DexCalendarView: View {
                         .padding(.top, 4)
                 }
                 Spacer()
-                navCircle("chevron.left") { shift(-1) }.accessibilityLabel("前の月")
-                navCircle("chevron.right") { shift(1) }.accessibilityLabel("次の月")
+                navCircle("chevron.left") { shift(-1) }.accessibilityLabel(L("前の月"))
+                navCircle("chevron.right") { shift(1) }.accessibilityLabel(L("次の月"))
             }
 
             let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
@@ -128,7 +128,7 @@ struct DexCalendarView: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Button { timelineDay = nil } label: {
-                    Label("月に戻る", systemImage: "chevron.left").font(.system(size: 14, weight: .semibold))
+                    Label(L("月に戻る"), systemImage: "chevron.left").font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(Theme.primary)
                 .frame(minHeight: 44)

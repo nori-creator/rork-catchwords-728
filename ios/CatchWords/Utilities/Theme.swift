@@ -67,50 +67,46 @@ extension Color {
     }
 }
 
+/// Dates in the display language (L10n): 9月28日 / Sep 28 / 9月28日.
 enum JPDate {
-    private static let md: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = "M月d日"
-        return f
-    }()
+    nonisolated(unsafe) private static var cache: [String: DateFormatter] = [:]
 
-    static func monthDay(_ date: Date) -> String { md.string(from: date) }
-
-    private static func make(_ format: String) -> DateFormatter {
+    /// A formatter from a template (CLDR picks the right order and words for each language).
+    private static func fmt(_ template: String, fixed: Bool = false) -> DateFormatter {
+        let key = L10n.lang + "|" + template
+        if let f = cache[key] { return f }
         let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = format
+        f.locale = L10n.locale
+        if fixed { f.dateFormat = template } else { f.setLocalizedDateFormatFromTemplate(template) }
+        cache[key] = f
         return f
     }
 
-    private static let weekdayF = make("EEEE")
-    private static let mdwF = make("M月d日(E)")
-    private static let slashF = make("M/d")
-    private static let timeF = make("HH:mm")
-    private static let fullF = make("yyyy年M月d日 HH:mm")
-    private static let mmddF = make("MM/dd")
-    /// 2026年9月28日 18:17
-    static func full(_ d: Date) -> String { fullF.string(from: d) }
+    /// 9月28日 · Sep 28
+    static func monthDay(_ date: Date) -> String { fmt("MMMd").string(from: date) }
+    /// 2026年9月28日 18:17 · Sep 28, 2026, 18:17
+    static func full(_ d: Date) -> String { fmt("yMMMdHHmm").string(from: d) }
     /// 09/28
-    static func mmdd(_ d: Date) -> String { mmddF.string(from: d) }
-    private static let monthEN: DateFormatter = {
+    static func mmdd(_ d: Date) -> String { fmt("MM/dd", fixed: true).string(from: d) }
+    /// 水曜日 · Wednesday
+    static func weekday(_ d: Date) -> String { fmt("EEEE").string(from: d) }
+    /// 9月28日(月) · Mon, Sep 28
+    static func monthDayWeek(_ d: Date) -> String { fmt("MMMdE").string(from: d) }
+    /// 9/28
+    static func slash(_ d: Date) -> String { fmt("M/d", fixed: true).string(from: d) }
+    /// 15:36
+    static func time(_ d: Date) -> String { fmt("HH:mm", fixed: true).string(from: d) }
+    /// 2026年9月 · September 2026
+    static func yearMonth(_ d: Date) -> String { fmt("yMMMM").string(from: d) }
+    /// SEPTEMBER (the book spine's decorative month name, always English)
+    static func monthName(_ d: Date) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "MMMM"
-        return f
-    }()
-
-    /// 水曜日
-    static func weekday(_ d: Date) -> String { weekdayF.string(from: d) }
-    /// 9月28日(月)
-    static func monthDayWeek(_ d: Date) -> String { mdwF.string(from: d) }
-    /// 9/28
-    static func slash(_ d: Date) -> String { slashF.string(from: d) }
-    /// 15:36
-    static func time(_ d: Date) -> String { timeF.string(from: d) }
-    /// SEPTEMBER
-    static func monthName(_ d: Date) -> String { monthEN.string(from: d).uppercased() }
+        return f.string(from: d).uppercased()
+    }
+    /// 日 月 火 … · S M T … in the display language, Sunday first.
+    static var veryShortWeekdays: [String] { fmt("EEEEE").veryShortWeekdaySymbols ?? [] }
 }
 
 /// Bundled fonts: Zen Kurenaido (handwritten Japanese captions) and Caveat (handwritten Latin).

@@ -26,7 +26,7 @@ final class WordbookStore {
                 let list = byBook[id] ?? []
                 return WordbookSummary(
                     id: id,
-                    title: (d["title"] as? String) ?? "単語帳",
+                    title: (d["title"] as? String) ?? L("単語帳"),
                     createdAt: (d["created_at"] as? String).flatMap(SupabaseDate.parse) ?? Date(),
                     total: list.count,
                     due: list.filter(\.isDue).count,
@@ -35,7 +35,7 @@ final class WordbookStore {
             }
             loadError = nil
         } catch {
-            loadError = (error as? LocalizedError)?.errorDescription ?? "単語帳の一覧を読み込めませんでした。"
+            loadError = (error as? LocalizedError)?.errorDescription ?? L("単語帳の一覧を読み込めませんでした。")
         }
         hasLoaded = true
     }
@@ -45,7 +45,7 @@ final class WordbookStore {
     func create(title: String, entries: [WordbookEntryDraft]) async throws -> Int {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let cleaned = Wordbook.clean(entries)
-        guard !cleaned.isEmpty else { throw APIError.message("入れる語がありません") }
+        guard !cleaned.isEmpty else { throw APIError.message(L("入れる語がありません")) }
         let today = SRS.taipeiDay(Date())
         let data = try await client.rest(
             "POST", "wordbooks?select=id",
@@ -53,7 +53,7 @@ final class WordbookStore {
             prefer: "return=representation"
         )
         guard let id = ((try JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first?["id"]) as? String else {
-            throw APIError.message("単語帳を作れませんでした")
+            throw APIError.message(L("単語帳を作れませんでした"))
         }
         let rows: [[String: Any]] = cleaned.map { e in
             [

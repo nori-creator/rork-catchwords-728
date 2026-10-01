@@ -31,9 +31,9 @@ struct ScanView: View {
         var label: String {
             switch self {
             case .idle: ""
-            case .sensing: "シーンを感知しています"
-            case .reading: "対象を解析しています"
-            case .matching: "辞書と照合しています"
+            case .sensing: L("シーンを感知しています")
+            case .reading: L("対象を解析しています")
+            case .matching: L("辞書と照合しています")
             }
         }
     }
@@ -100,15 +100,15 @@ struct ScanView: View {
         case .denied:
             VStack(spacing: 12) {
                 Image(systemName: "camera.fill").font(.system(size: 30)).foregroundStyle(.white.opacity(0.6))
-                Text("カメラの使用が許可されていません").foregroundStyle(.white)
-                Button("設定を開く") {
+                Text(L("カメラの使用が許可されていません")).foregroundStyle(.white)
+                Button(L("設定を開く")) {
                     if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
                 }
                 .foregroundStyle(Theme.cyan).frame(minHeight: 44)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.navyCard)
         case .unavailable:
-            Text("カメラが見つかりません").foregroundStyle(.white.opacity(0.8))
+            Text(L("カメラが見つかりません")).foregroundStyle(.white.opacity(0.8))
                 .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.navyCard)
         default:
             if let frame, !items.isEmpty {
@@ -141,14 +141,14 @@ struct ScanView: View {
                     Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
                 }
-                .accessibilityLabel("閉じる")
+                .accessibilityLabel(L("閉じる"))
                 Spacer()
-                Text("かざす").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                Text(L("かざす")).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
                 Spacer()
                 Text(String(format: "%.1f×", camera.zoom))
                     .font(AppFont.mono(13, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
-                    .accessibilityLabel("ズーム \(String(format: "%.1f", camera.zoom))倍")
+                    .accessibilityLabel(L("ズーム \(String(format: "%.1f", camera.zoom))倍"))
             }
             .padding(.horizontal, 16)
             Spacer()
@@ -156,15 +156,15 @@ struct ScanView: View {
             VStack(spacing: 14) {
                 Group {
                     if speech.isListening {
-                        Text(speech.transcript.isEmpty ? "話しかけてください" : speech.transcript)
+                        Text(speech.transcript.isEmpty ? L("話しかけてください") : speech.transcript)
                     } else if stage != .idle {
                         Text(stage.label)
                     } else if let message {
                         Text(message)
                     } else if !items.isEmpty {
-                        Text("札を押すと意味と発音が出ます")
+                        Text(L("札を押すと意味と発音が出ます"))
                     } else {
-                        Text("看板や物にかざして、ボタンを押してください")
+                        Text(L("看板や物にかざして、ボタンを押してください"))
                     }
                 }
                 .font(.system(size: 14, weight: .medium))
@@ -175,7 +175,7 @@ struct ScanView: View {
                 .animation(.easeInOut(duration: 0.2), value: stage)
 
                 HStack(alignment: .center) {
-                    roundButton(icon: speech.isListening ? "waveform" : "mic.fill", label: "声で調べる", active: speech.isListening) { voice() }
+                    roundButton(icon: speech.isListening ? "waveform" : "mic.fill", label: L("声で調べる"), active: speech.isListening) { voice() }
                     Spacer()
                     Button { scanOrReset() } label: {
                         ZStack {
@@ -192,9 +192,9 @@ struct ScanView: View {
                     }
                     .buttonStyle(PressableStyle(scale: 0.9))
                     .disabled(stage != .idle || camera.state != .running)
-                    .accessibilityLabel(items.isEmpty ? "スキャン" : "もう一度")
+                    .accessibilityLabel(items.isEmpty ? L("スキャン") : L("もう一度"))
                     Spacer()
-                    roundButton(icon: "arrow.triangle.2.circlepath.camera", label: "カメラ切替", active: false) {
+                    roundButton(icon: "arrow.triangle.2.circlepath.camera", label: L("カメラ切替"), active: false) {
                         camera.toggle()
                         baseZoom = 1
                     }
@@ -251,7 +251,7 @@ struct ScanView: View {
     }
 
     private func scan() async {
-        guard let shot = await camera.capture() else { message = "フレームを取得できませんでした"; return }
+        guard let shot = await camera.capture() else { message = L("フレームを取得できませんでした"); return }
         Haptics.impact(.medium)
         message = nil
         stage = .sensing
@@ -275,7 +275,7 @@ struct ScanView: View {
             stageTimer.cancel()
             stage = .idle
             Haptics.warning()
-            message = (error as? LocalizedError)?.errorDescription ?? "検出に失敗しました"
+            message = (error as? LocalizedError)?.errorDescription ?? L("検出に失敗しました")
         }
     }
 
@@ -283,7 +283,7 @@ struct ScanView: View {
         speech.toggle { text in
             Task { await lookupVoice(text) }
         }
-        if speech.state == .denied { message = "マイクと音声認識の使用を設定で許可してください" }
+        if speech.state == .denied { message = L("マイクと音声認識の使用を設定で許可してください") }
     }
 
     private func lookupVoice(_ text: String) async {
@@ -297,7 +297,7 @@ struct ScanView: View {
             selected = item
             SoundService.shared.speak(item.headword)
         } catch {
-            message = (error as? LocalizedError)?.errorDescription ?? "その言葉が見つかりませんでした。"
+            message = (error as? LocalizedError)?.errorDescription ?? L("その言葉が見つかりませんでした。")
         }
     }
 
@@ -388,7 +388,7 @@ struct ScanTag: View {
                     Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Color(hex: 0x0B121A))
                     if isDoubtful {
                         Text("?").font(.system(size: 13, weight: .heavy)).foregroundStyle(Color(hex: 0xB45309))
-                            .accessibilityLabel("台湾での言い方として不確か")
+                            .accessibilityLabel(L("台湾での言い方として不確か"))
                     }
                     if owned {
                         Image(systemName: "checkmark.seal.fill").font(.system(size: 12)).foregroundStyle(Theme.ok)
@@ -407,7 +407,7 @@ struct ScanTag: View {
             .offset(y: bob ? -3 : 3)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel("\(item.headword)、\(item.meaning)\(owned ? "、取得済み" : "")")
+        .accessibilityLabel(L("\(item.headword)、\(item.meaning)\(owned ? "、取得済み" : "")"))
         .scaleEffect(isTop ? 1.08 : 1)
         .zIndex(isTop ? 1 : 0)
         .onAppear {
@@ -464,18 +464,18 @@ struct ScanCatchSheet: View {
             Text(item.meaning).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
             HStack(spacing: 6) {
                 if item.isVerified {
-                    Label("検証済み", systemImage: "checkmark.seal").foregroundStyle(Theme.ok)
+                    Label(L("検証済み"), systemImage: "checkmark.seal").foregroundStyle(Theme.ok)
                 } else {
-                    Label("AIによる推定", systemImage: "sparkles").foregroundStyle(Theme.muted)
+                    Label(L("AIによる推定"), systemImage: "sparkles").foregroundStyle(Theme.muted)
                 }
                 if dex.owns(headword: item.headword) {
-                    Text("・取得済み").foregroundStyle(Theme.primaryInk)
+                    Text(L("・取得済み")).foregroundStyle(Theme.primaryInk)
                 }
             }
             .font(.system(size: 12, weight: .medium))
             if let error { Text(error).font(.system(size: 13)).foregroundStyle(Theme.destructive) }
             Spacer(minLength: 0)
-            PrimaryButton(title: "キャッチする", icon: "sparkles", isLoading: isSaving, sheen: true) { caught() }
+            PrimaryButton(title: L("キャッチする"), icon: "sparkles", isLoading: isSaving, sheen: true) { caught() }
         }
         .padding(20)
         .background(Theme.background)
@@ -483,7 +483,7 @@ struct ScanCatchSheet: View {
 
     private func caught() {
         guard plan.canCatch else { router.showPaywall = true; return }
-        guard let frame else { error = "フレームを取得できませんでした"; return }
+        guard let frame else { error = L("フレームを取得できませんでした"); return }
         isSaving = true
         Task {
             defer { isSaving = false }
@@ -505,7 +505,7 @@ struct ScanCatchSheet: View {
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
             } catch {
                 Haptics.warning()
-                self.error = (error as? LocalizedError)?.errorDescription ?? "保存に失敗しました。"
+                self.error = (error as? LocalizedError)?.errorDescription ?? L("保存に失敗しました。")
             }
         }
     }

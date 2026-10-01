@@ -29,7 +29,7 @@ struct CatchCardView: View {
                     stickerStage.tourAnchor(.peel)
                     actions
                     if vm.selfie != nil {
-                        Text("画像をタップで自撮りにフリップ")
+                        Text(L("画像をタップで自撮りにフリップ"))
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                     }
@@ -72,7 +72,7 @@ struct CatchCardView: View {
             }
             HStack(spacing: 6) {
                 if vm.isCutting { ProgressView().controlSize(.mini).tint(.white) }
-                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? "切り抜いています" : "好きな方向にはがしてキャッチ")
+                Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? L("切り抜いています") : L("好きな方向にはがしてキャッチ"))
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)
@@ -91,7 +91,7 @@ struct CatchCardView: View {
             Button {
                 vm.reset()
             } label: {
-                Text("やり直す")
+                Text(L("やり直す"))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 50)
@@ -106,7 +106,7 @@ struct CatchCardView: View {
                     } else {
                         Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold))
                     }
-                    Text("図鑑に追加").font(.system(size: 16, weight: .semibold))
+                    Text(L("図鑑に追加")).font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -138,7 +138,7 @@ struct CatchCardView: View {
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
                     .background(Theme.primary, in: Circle())
-                Text("意味").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                Text(L("意味")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
             }
             Text(meaning(c)).font(.system(size: 22, weight: .medium)).foregroundStyle(Theme.foreground)
         }
@@ -156,8 +156,8 @@ struct CatchCardView: View {
 
     private var captionField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("一言メモ（任意）").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.muted)
-            TextField("", text: $vm.caption, prompt: Text("今の気持ちや場所をメモ…").foregroundStyle(Theme.muted.opacity(0.7)), axis: .vertical)
+            Text(L("一言メモ（任意）")).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.muted)
+            TextField("", text: $vm.caption, prompt: Text(L("今の気持ちや場所をメモ…")).foregroundStyle(Theme.muted.opacity(0.7)), axis: .vertical)
                 .font(AppFont.hand(18))
                 .foregroundStyle(Theme.foreground)
                 .focused($captionFocused)
