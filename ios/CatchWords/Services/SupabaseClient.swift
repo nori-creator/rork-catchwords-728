@@ -180,6 +180,7 @@ final class SupabaseClient {
         let m = msg.lowercased()
         if m.contains("invalid login") { return L("メールアドレスかパスワードが違います。") }
         if m.contains("already registered") { return L("このメールアドレスは登録済みです。ログインしてください。") }
+        if m.contains("known to be weak") || m.contains("weak_password") { return L("このパスワードは推測されやすいため使えません。英字と数字を混ぜた、ほかのパスワードにしてください。") }
         if m.contains("password should be") { return L("パスワードは6文字以上にしてください。") }
         if m.contains("email not confirmed") { return L("確認メールのリンクを開いてからログインしてください。") }
         if m.contains("rate limit") { return L("しばらく時間をおいてからお試しください。") }
