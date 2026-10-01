@@ -208,7 +208,7 @@ final class SoundService {
     }
 
     private static func pickVoice() -> AVSpeechSynthesisVoice? {
-        let lang = NativeAPI.targetLanguage == "en" ? "en-US" : "zh-TW"
+        let lang = NativeAPI.speechLanguage
         let voices = AVSpeechSynthesisVoice.speechVoices()
             .filter { $0.language == lang }
             .sorted { lhs, rhs in

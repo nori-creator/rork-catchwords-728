@@ -48,7 +48,7 @@ struct UserStatsPanel: View {
                     Text(profile.displayName.isEmpty ? L("あなた") : profile.displayName)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(Theme.foreground)
-                    Text(profile.targetLanguage == "en" ? L("英語を学習中") : L("台湾華語を学習中"))
+                    Text(profile.targetLanguage == "en" ? L("英語を学習中") : profile.targetLanguage == "ja" ? L("日本語を学習中") : L("台湾華語を学習中"))
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.muted)
                 }

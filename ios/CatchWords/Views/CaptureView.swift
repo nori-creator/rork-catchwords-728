@@ -415,7 +415,7 @@ struct CaptureView: View {
                     .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     .submitLabel(.search)
                     .onSubmit(runSearch)
-                PrimaryButton(title: L("台湾華語で調べる"), icon: "magnifyingglass", action: runSearch)
+                PrimaryButton(title: L("\(NativeAPI.targetName)で調べる"), icon: "magnifyingglass", action: runSearch)
                     .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
                 Spacer()
             }

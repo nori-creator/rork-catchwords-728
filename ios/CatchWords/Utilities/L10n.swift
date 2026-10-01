@@ -152,19 +152,29 @@ nonisolated struct LKey: ExpressibleByStringInterpolation, Sendable {
 }
 
 /// Text in the display language (see `L10n`).
-nonisolated func L(_ k: LKey) -> String {
-    var out = L10n.text(k.key)
-    for (i, a) in k.args.enumerated() {
-        out = out.replacingOccurrences(of: "{\(i + 1)}", with: a)
-    }
-    return out
-}
+nonisolated func L(_ k: LKey) -> String { L10n.fill(L10n.text(k.key), k.args, lang: L10n.lang) }
 
 /// The same, in a given language (e.g. a notification written before the app opens).
-nonisolated func L(_ k: LKey, in code: String) -> String {
-    var out = L10n.text(k.key, in: code)
-    for (i, a) in k.args.enumerated() {
-        out = out.replacingOccurrences(of: "{\(i + 1)}", with: a)
+nonisolated func L(_ k: LKey, in code: String) -> String { L10n.fill(L10n.text(k.key, in: code), k.args, lang: code) }
+
+extension L10n {
+    /// English counted nouns that follow a number ("{1} words"); "1 words" becomes "1 word".
+    private static let plurals = ["words": "word", "days": "day", "photos": "photo", "times": "time", "cards": "card",
+                                  "stickers": "sticker", "items": "item", "reviews": "review", "books": "book",
+                                  "minutes": "minute", "hours": "hour", "pages": "page", "entries": "entry"]
+
+    /// Puts the values into `{1}`, `{2}` … (and, in English, makes "1 words" singular).
+    nonisolated static func fill(_ template: String, _ args: [String], lang: String) -> String {
+        var out = template
+        for (i, a) in args.enumerated() {
+            let slot = "{\(i + 1)}"
+            if lang == "en", a == "1" {
+                for (many, one) in plurals {
+                    out = out.replacingOccurrences(of: slot + " " + many, with: slot + " " + one)
+                }
+            }
+            out = out.replacingOccurrences(of: slot, with: a)
+        }
+        return out
     }
-    return out
 }

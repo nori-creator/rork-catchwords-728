@@ -249,7 +249,7 @@ struct WordbookConfirmView: View {
                         .font(.system(size: 13)).foregroundStyle(Theme.muted)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L("単語帳の名前")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
-                        TextField(L("例: TOCFL 2級 第3課"), text: $title)
+                        TextField(NativeAPI.targetLanguage == "en" ? L("例: TOEIC 頻出 Unit 3") : NativeAPI.targetLanguage == "ja" ? L("例: JLPT N4 第3課") : L("例: TOCFL 2級 第3課"), text: $title)
                             .padding(.horizontal, 14).frame(minHeight: 48)
                             .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     }
@@ -261,7 +261,7 @@ struct WordbookConfirmView: View {
                                         Text(e.headword).font(.system(size: 20, weight: .bold))
                                         if let z = e.readingZhuyin { Text(z).font(.system(size: 12)).foregroundStyle(Theme.muted) }
                                     }
-                                    Text(e.meaningJa ?? L("（意味が読み取れていません）"))
+                                    Text(ReaderLanguage.shown(e.meaningJa).isEmpty ? L("（意味が読み取れていません）") : ReaderLanguage.shown(e.meaningJa))
                                         .font(.system(size: 13)).foregroundStyle(Theme.muted).lineLimit(2)
                                 }
                                 Spacer()
@@ -391,7 +391,7 @@ struct WordbookReviewView: View {
             .frame(height: 6)
             .animation(.spring(response: 0.5, dampingFraction: 0.85), value: index)
 
-            Text(card.meaningJa ?? L("（意味が読み取れていません）"))
+            Text(ReaderLanguage.shown(card.meaningJa).isEmpty ? L("（意味が読み取れていません）") : ReaderLanguage.shown(card.meaningJa))
                 .font(.system(size: 26, weight: .bold))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, minHeight: 160)

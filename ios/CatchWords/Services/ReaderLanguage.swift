@@ -62,6 +62,15 @@ nonisolated enum ReaderLanguage {
         }
     }
 
+    /// The first of `texts` written in the display language, or "" (never another language).
+    static func shown(_ texts: String?..., source: String? = nil, hanOnlyOk: Bool = true) -> String {
+        for t in texts {
+            let v = (t ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !v.isEmpty, !looksWrong(v, reader: L10n.lang, source: source, hanOnlyOk: hanOnlyOk) { return v }
+        }
+        return ""
+    }
+
     // MARK: - Explanation rows (word_explanations)
 
     struct Explanation: Decodable, Sendable, Hashable {

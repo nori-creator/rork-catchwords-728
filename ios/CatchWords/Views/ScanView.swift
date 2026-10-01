@@ -344,7 +344,7 @@ struct ScanItem: Identifiable, Hashable {
     var point: [Double] { candidate.point }
     var zhuyin: String { entry?.zhuyin ?? candidate.zhuyin }
     var pinyin: String { entry?.pinyin ?? candidate.pinyin }
-    var meaning: String { entry?.meaningJa ?? candidate.meaningJa }
+    var meaning: String { ReaderLanguage.shown(entry?.meaningJa, candidate.meaningJa) }
     var isVerified: Bool { entry?.source == "verified" }
 
     /// Candidate with dictionary values so the saved card reads the same as the tag.

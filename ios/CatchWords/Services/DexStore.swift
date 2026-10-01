@@ -534,8 +534,8 @@ final class DexStore {
             // filled in afterwards by the detail page's auto-fill, as on the web).
             _ = try await NativeAPI.call("setStickerHeadword", ["sticker_id": sticker.id, "headword": head])
         } catch let APIError.server(_, message) where message.contains("NOT_TARGET_LANGUAGE") {
-            throw APIError.message(NativeAPI.targetLanguage == "en"
-                ? L("英語の単語を入れてください。") : L("繁体字（台湾華語）の単語を入れてください。"))
+            throw APIError.message(NativeAPI.targetLanguage == "en" ? L("英語の単語を入れてください。")
+                : NativeAPI.targetLanguage == "ja" ? L("日本語の単語を入れてください。") : L("繁体字（台湾華語）の単語を入れてください。"))
         }
         await reload(stickerId: sticker.id)
     }

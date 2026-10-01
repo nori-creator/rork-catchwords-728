@@ -320,6 +320,14 @@ struct CorrectionBlock: View {
     var highlight: Bool = false
     var compact: Bool = false
 
+    /// Notes from the server, only when written in the display language (an entry corrected while
+    /// the app was in another language keeps its sentences but hides the old-language notes).
+    private func readable(_ text: String?, source: String? = nil) -> String? {
+        guard let t = text?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty,
+              !ReaderLanguage.looksWrong(t, reader: L10n.lang, source: source) else { return nil }
+        return t
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let c = entry.correction ?? entry.bodyZh, !c.isEmpty {
@@ -336,11 +344,11 @@ struct CorrectionBlock: View {
                         Spacer(minLength: 0)
                         if !compact { PronounceCircle(text: c, size: 36) }
                     }
-                    if let f = entry.feedbackJa, !f.isEmpty {
+                    if let f = readable(entry.feedbackJa) {
                         Text(L("型と解説")).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.muted).padding(.top, 4)
                         Text(f).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(3)
                     }
-                    if entry.correction == nil, let ja = entry.bodyJa, !ja.isEmpty {
+                    if entry.correction == nil, let ja = readable(entry.bodyJa, source: c) {
                         Text(ja).font(.system(size: 14)).foregroundStyle(Theme.muted)
                     }
                 }
@@ -363,8 +371,10 @@ struct CorrectionBlock: View {
                         HStack(alignment: .top, spacing: 8) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(p.zh).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
-                                Text(p.ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                                if let n = p.note, !n.isEmpty {
+                                if let ja = readable(p.ja, source: p.zh) {
+                                    Text(ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                                }
+                                if let n = readable(p.note) {
                                     Text(n).font(.system(size: 12)).foregroundStyle(Theme.muted.opacity(0.9))
                                 }
                             }

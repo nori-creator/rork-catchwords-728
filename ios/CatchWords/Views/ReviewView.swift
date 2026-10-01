@@ -322,7 +322,7 @@ struct QuizCard: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }
 
-            Text(L("「\(card.sticker.word?.meaningJa ?? "")」はどれ？"))
+            Text((card.sticker.word?.meaningJa ?? "").isEmpty ? L("この写真の物はどれ？") : L("「\(card.sticker.word?.meaningJa ?? "")」はどれ？"))
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)

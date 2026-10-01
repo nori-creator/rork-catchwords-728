@@ -80,7 +80,7 @@ struct OnboardingView: View {
             }
             .padding(.top, 24)
             Spacer(minLength: 12)
-            IntroBouquet(labels: targetLanguage == "en" ? ["coffee", "flower", "cat", "sea"] : ["咖啡", "花", "貓", "海"])  // l10n-ignore (target words)
+            IntroBouquet(labels: targetLanguage == "en" ? ["coffee", "flower", "cat", "sea"] : targetLanguage == "ja" ? ["コーヒー", "花", "猫", "海"] : ["咖啡", "花", "貓", "海"])  // l10n-ignore (target words)
                 .frame(maxHeight: 420)
                 .padding(.horizontal, 24)
             Spacer(minLength: 12)
@@ -192,7 +192,7 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 ForEach(Self.goalList, id: \.id) { g in
                     ChoiceRow(leading: .icon(g.icon), title: g.label,
-                              sub: g.id == "exams" ? (targetLanguage == "en" ? "TOEFL · IELTS" : "TOCFL") : nil,
+                              sub: g.id == "exams" ? (targetLanguage == "en" ? "TOEFL · IELTS" : targetLanguage == "ja" ? "JLPT" : "TOCFL") : nil,
                               isOn: goals.contains(g.id)) { toggle(&goals, g.id) }
                 }
             }

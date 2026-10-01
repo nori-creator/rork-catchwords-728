@@ -119,7 +119,7 @@ struct WordDetailView: View {
             Text(L("AIが間違っている項目を見つけ、辞書と照らして、その項目だけを直します。"))
         }
         .alert(L("単語を直す"), isPresented: $editingHead) {
-            TextField(NativeAPI.targetLanguage == "en" ? L("英語で入力") : L("繁体字で入力"), text: $headDraft)
+            TextField(learningLang == "en" ? L("英語で入力") : learningLang == "ja" ? L("日本語で入力") : L("繁体字で入力"), text: $headDraft)
             Button(L("キャンセル"), role: .cancel) {}
             Button(L("直す")) { saveHeadword() }
         } message: {
@@ -557,8 +557,9 @@ struct WordDetailView: View {
 
     // MARK: - Section routing (card-sections.ts: draw only what has content)
 
-    private var exampleOK: Bool { (word?.exampleSentence ?? "").hasHan }
-    private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { $0.zh.hasHan } }
+    private var learningLang: String { word?.language ?? NativeAPI.targetLanguage }
+    private var exampleOK: Bool { (word?.exampleSentence ?? "").isIn(target: learningLang) }
+    private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { $0.zh.isIn(target: learningLang) } }
     private var chunks: [UsageChunk] { refinedChunks(extras?.usageChunks ?? []) }
     private var measures: [MeasureWord] { (extras?.measureWords ?? []).filter { !$0.word.isEmpty } }
     private var pronunciationText: String { nonEmpty([extras?.pronunciationTips, extras?.studyTips]) }
@@ -941,18 +942,41 @@ struct WordDetailView: View {
         }
     }
 
-    /// real-usage-links.ts (Taiwan Mandarin set).
+    /// real-usage-links.ts: where native speakers of the learning language actually use the word.
     private var realUsageLinks: [(emoji: String, label: String, url: String)] {
         let q = headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? headword
         let path = headword.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? headword
-        return [
-            ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=TW&hl=zh-TW"),
-            ("🗣️", L("YouGlishで発音例"), "https://youglish.com/pronounce/\(path)/chinese/tw"),
-            ("💬", L("Dcardで見る"), "https://www.dcard.tw/search?query=\(q)"),
-            ("🧵", L("Threads で見る"), "https://www.threads.com/search?q=\(q)"),
-            ("📰", L("台湾のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
-            ("📖", L("教育部國語辭典簡編本"), "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
-        ]
+        switch word?.language ?? NativeAPI.targetLanguage {
+        case "en":
+            return [
+                ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=US&hl=en"),
+                ("🗣️", L("YouGlishで発音例"), "https://youglish.com/pronounce/\(path)/english/us"),
+                ("💬", L("Redditで見る"), "https://www.reddit.com/search/?q=\(q)"),
+                ("📷", L("Instagram で見る"), "https://www.instagram.com/explore/tags/\(path)/"),
+                ("📰", L("英語のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=en&gl=US&cr=countryUS&lr=lang_en"),
+                ("📖", "Merriam-Webster", "https://www.merriam-webster.com/dictionary/\(path)"),  // l10n-ignore (name)
+            ]
+        case "ja":
+            return [
+                ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=JP&hl=ja"),
+                ("🗣️", L("YouGlishで発音例"), "https://youglish.com/pronounce/\(path)/japanese"),
+                ("💬", L("Xで見る"), "https://x.com/search?q=\(q)&lang=ja"),
+                ("🙋", L("Yahoo!知恵袋で見る"), "https://chiebukuro.yahoo.co.jp/search?p=\(q)"),
+                ("📰", L("日本のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=ja&gl=JP&cr=countryJP&lr=lang_ja"),
+                ("📖", L("Weblio辞書"), "https://www.weblio.jp/content/\(path)"),
+                ("📚", L("コトバンク"), "https://kotobank.jp/search?q=\(q)"),
+                ("🔎", "Jisho.org", "https://jisho.org/search/\(path)"),
+            ]
+        default:
+            return [
+                ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=TW&hl=zh-TW"),
+                ("🗣️", L("YouGlishで発音例"), "https://youglish.com/pronounce/\(path)/chinese/tw"),
+                ("💬", L("Dcardで見る"), "https://www.dcard.tw/search?query=\(q)"),
+                ("🧵", L("Threads で見る"), "https://www.threads.com/search?q=\(q)"),
+                ("📰", L("台湾のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
+                ("📖", L("教育部國語辭典簡編本"), "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
+            ]
+        }
     }
 
     private var realUsageCard: some View {

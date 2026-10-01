@@ -7,7 +7,7 @@ final class ProfileStore {
     var avatarURL: String?
     var nativeLanguage: String = "ja"
     var targetLanguage: String = "zh-TW" {
-        didSet { NativeAPI.targetLanguage = targetLanguage == "en" ? "en" : "zh-TW" }
+        didSet { NativeAPI.targetLanguage = ["en", "ja"].contains(targetLanguage) ? targetLanguage : "zh-TW" }
     }
     var currentLevel: String = "TOCFL-1"
     var levelGoal: String = "TOCFL-2"

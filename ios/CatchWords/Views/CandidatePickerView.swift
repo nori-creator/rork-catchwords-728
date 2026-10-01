@@ -233,7 +233,7 @@ struct CandidatePickerView: View {
     private func wordLine(_ c: Candidate, size: CGFloat, note: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: size, pinyin: c.pinyin)
-            Text(c.meaningJa)
+            Text(ReaderLanguage.shown(c.meaningJa))
                 .font(.system(size: size >= 34 ? 16 : 13))
                 .foregroundStyle(Theme.muted)
                 .lineLimit(2)

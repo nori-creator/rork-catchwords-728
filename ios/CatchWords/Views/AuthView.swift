@@ -101,7 +101,7 @@ struct AuthView: View {
                 Text("CatchWords")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.foreground)
-                Text(L("街で見つけた物が、台湾華語になる。"))
+                Text(L("街で見つけた物が、学びたい言葉になる。"))
                     .font(AppFont.hand(18))
                     .foregroundStyle(Theme.muted)
             }

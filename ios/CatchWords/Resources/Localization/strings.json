@@ -91,6 +91,10 @@
   "en": "IPA (UK)",
   "zh-TW": "IPA 英式"
  },
+ "Instagram で見る": {
+  "en": "See it on Instagram",
+  "zh-TW": "在 Instagram 上看"
+ },
  "Pro をご利用中です": {
   "en": "You're on Pro",
   "zh-TW": "你正在使用 Pro"
@@ -111,13 +115,29 @@
   "en": "Pro has been restored.",
   "zh-TW": "已恢復 Pro。"
  },
+ "Redditで見る": {
+  "en": "See it on Reddit",
+  "zh-TW": "在 Reddit 上看"
+ },
  "Threads で見る": {
   "en": "See it on Threads",
   "zh-TW": "在 Threads 上看"
  },
+ "Weblio辞書": {
+  "en": "Weblio Dictionary",
+  "zh-TW": "Weblio 辭典"
+ },
  "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
   "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
   "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字和照片都能直接使用。\n用 Google 註冊的人，可以在登入畫面的「忘記密碼」為同一個帳號設定密碼。"
+ },
+ "Xで見る": {
+  "en": "See it on X",
+  "zh-TW": "在 X 上看"
+ },
+ "Yahoo!知恵袋で見る": {
+  "en": "See it on Yahoo! Chiebukuro",
+  "zh-TW": "在 Yahoo!知恵袋 上看"
  },
  "YouGlishで発音例": {
   "en": "Pronunciation samples on YouGlish",
@@ -158,6 +178,10 @@
  "{1}で「{2}」をキャッチしました。覚えていますか？": {
   "en": "You caught “{2}” at {1}. Do you remember it?",
   "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
+ },
+ "{1}で調べる": {
+  "en": "Look it up in {1}",
+  "zh-TW": "用{1}查"
  },
  "{1}のアルバム": {
   "en": "{1} album",
@@ -394,6 +418,10 @@
  "この写真では切り抜けませんでした。": {
   "en": "Couldn't cut out from this photo.",
   "zh-TW": "這張照片無法去背。"
+ },
+ "この写真の物はどれ？": {
+  "en": "Which one is in this photo?",
+  "zh-TW": "這張照片裡的是哪一個？"
  },
  "この写真を単語に追加しました": {
   "en": "Photo added to this word",
@@ -798,6 +826,10 @@
  "ゲーム": {
   "en": "Games",
   "zh-TW": "遊戲"
+ },
+ "コトバンク": {
+  "en": "Kotobank",
+  "zh-TW": "Kotobank 辭典"
  },
  "コルクと画鋲": {
   "en": "Corkboard",
@@ -1251,9 +1283,17 @@
   "en": "Usage chunks",
   "zh-TW": "用法組塊"
  },
+ "例: JLPT N4 第3課": {
+  "en": "e.g. JLPT N4 Lesson 3",
+  "zh-TW": "例：JLPT N4 第3課"
+ },
  "例: TOCFL 2級 第3課": {
   "en": "e.g. TOCFL 2, unit 3",
   "zh-TW": "例：TOCFL 2級 第3課"
+ },
+ "例: TOEIC 頻出 Unit 3": {
+  "en": "e.g. TOEIC essentials Unit 3",
+  "zh-TW": "例：TOEIC 常考 Unit 3"
  },
  "例: マンゴー / 芒果": {
   "en": "e.g. mango / 芒果",
@@ -2003,9 +2043,25 @@
   "en": "Everyday conversation",
   "zh-TW": "日常會話"
  },
+ "日本のサイトで検索": {
+  "en": "Search Japanese sites",
+  "zh-TW": "在日本網站搜尋"
+ },
  "日本語": {
   "en": "英語",
   "zh-TW": "繁體中文(台湾)"
+ },
+ "日本語で入力": {
+  "en": "Type in Japanese",
+  "zh-TW": "用日文輸入"
+ },
+ "日本語の単語を入れてください。": {
+  "en": "Please enter a Japanese word.",
+  "zh-TW": "請輸入日文單字。"
+ },
+ "日本語を学習中": {
+  "en": "Learning Japanese",
+  "zh-TW": "正在學日文"
  },
  "日記": {
   "en": "your journal",
@@ -2491,6 +2547,10 @@
   "en": "Type in English",
   "zh-TW": "用英文輸入"
  },
+ "英語のサイトで検索": {
+  "en": "Search English-language sites",
+  "zh-TW": "在英語網站搜尋"
+ },
  "英語の単語を入れてください。": {
   "en": "Please enter an English word.",
   "zh-TW": "請輸入英文單字。"
@@ -2522,6 +2582,10 @@
  "街で見つけた物が、台湾華語になる。": {
   "en": "What you find around town becomes words you learn.",
   "zh-TW": "在街上發現的東西，變成你學會的單字。"
+ },
+ "街で見つけた物が、学びたい言葉になる。": {
+  "en": "What you find on the street becomes the language you're learning.",
+  "zh-TW": "街上看到的東西，變成你想學的語言。"
  },
  "街並み": {
   "en": "Streets",

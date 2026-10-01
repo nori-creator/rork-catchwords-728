@@ -10,6 +10,22 @@ enum NativeAPI {
     /// The learning language (`profiles.target_language`: "zh-TW" or "en"). `ProfileStore` keeps it
     /// in step; the web profile decides the rest (level, explanation language).
     nonisolated(unsafe) static var targetLanguage = "zh-TW"
+    /// The learning language's name in the display language (台湾華語 / English / 日本語 …).
+    static var targetName: String {
+        switch targetLanguage {
+        case "en": L("英語")
+        case "ja": L("日本語")
+        default: L("台湾華語")
+        }
+    }
+    /// BCP-47 for speaking and listening in the learning language (web `speechLangOf` / `sttLangOf`).
+    static var speechLanguage: String {
+        switch targetLanguage {
+        case "en": "en-US"
+        case "ja": "ja-JP"
+        default: "zh-TW"
+        }
+    }
 
     /// Returns the function's `result` as raw JSON bytes.
     static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40) async throws -> Data {

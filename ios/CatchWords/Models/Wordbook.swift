@@ -127,7 +127,7 @@ nonisolated enum Wordbook {
         var byHead: [String: WordbookEntryDraft] = [:]
         for r in raw {
             let head = squash(r.headword)
-            guard !head.isEmpty, head.hasHan else { continue }
+            guard !head.isEmpty, head.isIn(target: NativeAPI.targetLanguage) else { continue }
             if var existing = byHead[head] {
                 existing.readingZhuyin = existing.readingZhuyin ?? clean(r.readingZhuyin)
                 existing.pinyin = existing.pinyin ?? clean(r.pinyin)

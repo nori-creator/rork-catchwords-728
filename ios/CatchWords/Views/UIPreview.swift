@@ -337,25 +337,55 @@ private struct BookPreview: View {
 }
 /// The word page's chunk / measure-word / related-word cards (web WordCard look), scrolled to the chunks.
 private struct DetailPreview: View {
-    private static let sticker: Sticker = {
-        let json = #"""
-        {"id":"w-teppan","headword":"鐵板麵","reading_zhuyin":"ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ","meaning_ja":"鉄板焼きそば","part_of_speech":"名詞",
-         "example_sentence":"早餐我想吃鐵板麵。","example_translation":"朝ごはんに鉄板焼きそばが食べたい。",
-         "extras":{
-          "usage_chunks":[
-            {"parts":[{"text":"蘑菇","pos":"N"},{"text":"鐵板麵","pos":"N"}],"ja":"マッシュルームソースの鉄板焼きそば"},
-            {"parts":[{"text":"黑胡椒","pos":"N"},{"text":"鐵板麵","pos":"N"}],"ja":"黒胡椒ソースの鉄板焼きそば"},
-            {"parts":[{"text":"點","pos":"V"},{"text":"鐵板麵","pos":"N"}],"ja":"鉄板焼きそばを注文する"}],
-          "measure_words":[{"word":"份","zhuyin":"ㄈㄣˋ","note":"一皿分（料理を数える際の最も一般的な量詞）"}],
-          "related_words":[
-            {"word":"炒麵","kind":"syn","reading":"ㄔㄠˇ ㄇㄧㄢˋ","note":"一般的な炒め麺。鐵板麵は鉄板の上でソースをかけて調理する点が異なる。"},
-            {"word":"義大利麵","kind":"rel","reading":"ㄧˋ ㄉㄚˋ ㄌㄧˋ ㄇㄧㄢˋ","note":"パスタ。鐵板麵はパスタより安価で、朝食店で提供される軽食という位置づけ。"}]
-         }}
-        """#
-        let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8))
+    /// The same word as each display language's reader would get it (notes written in their language).
+    private static var notes: (meaning: String, translation: String, chunks: [String], measure: String, related: [String]) {
+        switch L10n.lang {
+        case "en":
+            return ("teppan noodles", "I want teppan noodles for breakfast.",
+                    ["teppan noodles with mushroom sauce", "teppan noodles with black pepper sauce", "order teppan noodles"],
+                    "one serving (the most common measure word for dishes)",
+                    ["Ordinary stir-fried noodles. 鐵板麵 is served sizzling on an iron plate with sauce poured over.",
+                     "Pasta. 鐵板麵 is cheaper — a light meal sold at breakfast shops."])
+        case "zh-TW":
+            return ("鐵板上淋醬的麵", "",
+                    ["蘑菇醬的鐵板麵", "黑胡椒醬的鐵板麵", "點一份鐵板麵"],
+                    "一盤的量（數餐點最常用的量詞）",
+                    ["一般的炒麵。鐵板麵是放在熱鐵板上再淋醬。", "比義大利麵便宜，是早餐店的輕食。"])
+        default:
+            return ("鉄板焼きそば", "朝ごはんに鉄板焼きそばが食べたい。",
+                    ["マッシュルームソースの鉄板焼きそば", "黒胡椒ソースの鉄板焼きそば", "鉄板焼きそばを注文する"],
+                    "一皿分（料理を数える際の最も一般的な量詞）",
+                    ["一般的な炒め麺。鐵板麵は鉄板の上でソースをかけて調理する点が異なる。",
+                     "パスタ。鐵板麵はパスタより安価で、朝食店で提供される軽食という位置づけ。"])
+        }
+    }
+
+    private static var sticker: Sticker {
+        let n = notes
+        let obj: [String: Any] = [
+            "id": "w-teppan", "headword": "鐵板麵", "reading_zhuyin": "ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ", "meaning_ja": n.meaning,
+            "part_of_speech": "名詞", "example_sentence": "早餐我想吃鐵板麵。", "example_translation": n.translation,
+            "extras": [
+                "explain_lang": L10n.lang,
+                "usage_chunks": [
+                    ["parts": [["text": "蘑菇", "pos": "N"], ["text": "鐵板麵", "pos": "N"]], "ja": n.chunks[0]],
+                    ["parts": [["text": "黑胡椒", "pos": "N"], ["text": "鐵板麵", "pos": "N"]], "ja": n.chunks[1]],
+                    ["parts": [["text": "點", "pos": "V"], ["text": "鐵板麵", "pos": "N"]], "ja": n.chunks[2]],
+                ],
+                "measure_words": [["word": "份", "zhuyin": "ㄈㄣˋ", "note": n.measure]],
+                "related_words": [
+                    ["word": "炒麵", "kind": "syn", "reading": "ㄔㄠˇ ㄇㄧㄢˋ", "note": n.related[0]],
+                    ["word": "義大利麵", "kind": "rel", "reading": "ㄧˋ ㄉㄚˋ ㄌㄧˋ ㄇㄧㄢˋ", "note": n.related[1]],
+                ],
+            ] as [String: Any],
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data()
+        // Through the same reader-language filter as real cards.
+        let word = (try? JSONDecoder().decode(Word.self, from: data))
+            .map { ReaderLanguage.resolve($0, explanation: nil, readerMeaning: nil, reader: L10n.lang) }
         return Sticker(id: "detail", wordId: "w-teppan", objectImageUrl: nil, cutoutImageUrl: nil, selfieImageUrl: nil,
                        caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
-    }()
+    }
 
     var body: some View {
         WordDetailView(sticker: Self.sticker, previewFocus: .usageChunks)

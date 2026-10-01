@@ -19,7 +19,7 @@ final class SpeechService {
     private var onFinal: ((String) -> Void)?
 
     /// Learning language → recognizer locale (zh-TW for Taiwan Mandarin, en-US for English).
-    var localeIdentifier: String { NativeAPI.targetLanguage == "en" ? "en-US" : "zh-TW" }
+    var localeIdentifier: String { NativeAPI.speechLanguage }
 
     var isListening: Bool { state == .listening }
 
