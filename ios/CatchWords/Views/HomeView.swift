@@ -61,15 +61,26 @@ struct HomeView: View {
                 .padding(.horizontal, 22)
                 .padding(.bottom, 8)
 
-                MonthBookView(
-                    days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
-                    startAtEnd: true,
-                    onOpen: { router.detailSticker = $0 },
-                    onWrite: { writingDay = WritingDay(date: $0) },
-                    onCamera: { router.tab = .camera }
-                )
+                Group {
+                    if let err = dex.loadError, dex.stickers.isEmpty {
+                        // Nothing to show yet and the dex could not be read: say so, offer a retry.
+                        AlbumLoadFailed(message: err) { Task { await dex.load() } }
+                    } else if !dex.hasLoaded, dex.stickers.isEmpty {
+                        AlbumSkeleton()
+                    } else {
+                        MonthBookView(
+                            days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
+                            startAtEnd: true,
+                            onOpen: { router.detailSticker = $0 },
+                            onWrite: { writingDay = WritingDay(date: $0) },
+                            onCamera: { router.tab = .camera }
+                        )
+                        .transition(.opacity)
+                    }
+                }
                 .frame(height: max(520, UIScreen.main.bounds.height * 0.66))
                 .padding(.horizontal, 12)
+                .animation(.easeOut(duration: 0.3), value: dex.hasLoaded)
                 .tourAnchor(.album)
 
                 Button { showJournal = true } label: {
@@ -643,5 +654,87 @@ struct AlbumHiddenTray: View {
             .padding(.vertical, 6)
             .background(Color(hex: 0xFFFBF2).opacity(0.8), in: .rect(cornerRadius: 16, style: .continuous))
         }
+    }
+}
+
+/// The album's shape while the dex is still loading: a blank page with soft photo frames that shimmer,
+/// so the home screen is never an empty white sheet.
+struct AlbumSkeleton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var phase: CGFloat = -1
+
+    var body: some View {
+        let paper = Color(hex: 0xFFFDF8)
+        let frame = Color(hex: 0x33291F, opacity: 0.07)
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(paper)
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 18) {
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 120, height: 16)
+                    HStack(spacing: 16) {
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 130, height: 130).rotationEffect(.degrees(-4))
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 118, height: 118).rotationEffect(.degrees(3))
+                    }
+                    HStack(spacing: 16) {
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 112, height: 112).rotationEffect(.degrees(2))
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 126, height: 126).rotationEffect(.degrees(-3))
+                    }
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 200, height: 12)
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 150, height: 12)
+                }
+                .padding(24)
+            }
+            .overlay {
+                // A soft band of light that sweeps across while waiting.
+                GeometryReader { geo in
+                    LinearGradient(colors: [.clear, .white.opacity(0.55), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.5)
+                        .offset(x: geo.size.width * phase)
+                        .blendMode(.plusLighter)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .allowsHitTesting(false)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L("読み込み中"))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) { phase = 1.5 }
+            }
+    }
+}
+
+/// The album could not be loaded (offline, server down): a calm message and a retry button.
+struct AlbumLoadFailed: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(Color(hex: 0xFFFDF8))
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+            .overlay {
+                VStack(spacing: 14) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.45))
+                    Text(L("アルバムを読み込めませんでした"))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x33291F))
+                    Text(message)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
+                        .multilineTextAlignment(.center)
+                    Button(action: onRetry) {
+                        Label(L("もう一度読み込む"), systemImage: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                            .padding(.horizontal, 22).frame(minHeight: 48)
+                            .background(Theme.primary, in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                .padding(28)
+            }
     }
 }

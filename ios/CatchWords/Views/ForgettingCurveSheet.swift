@@ -13,6 +13,12 @@ struct ForgettingCurveSheet: View {
 
     @State private var history: [ReviewHistoryRow] = []
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The day under the finger while tracing the curve (nil when not touching).
+    @State private var scrubDate: Date?
+    @State private var lastScrubDay: Int?
+    /// 0→1 as the curve draws itself from left to right when the sheet opens.
+    @State private var reveal: CGFloat = 0
 
     private struct Pt: Identifiable {
         let id = UUID()
@@ -70,6 +76,11 @@ struct ForgettingCurveSheet: View {
                 .font(.system(size: 13)).foregroundStyle(Theme.muted)
 
                 chart.frame(height: 260)
+                    .onAppear {
+                        if reduceMotion { reveal = 1 } else { withAnimation(.easeOut(duration: 0.9).delay(0.1)) { reveal = 1 } }
+                    }
+                Text(L("グラフを指でなぞると、その日の記憶率が見られます"))
+                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
 
                 callout(pct: pct)
             }
@@ -122,8 +133,15 @@ struct ForgettingCurveSheet: View {
         return (past, future, marks, Pt(date: now, value: todayVal, series: "today"))
     }
 
+    /// The curve's value on a day: the nearest sampled point of the past or "if not reviewed" line.
+    private func value(at date: Date, in d: (past: [Pt], future: [Pt], reviews: [Pt], today: Pt)) -> Pt? {
+        let pts = date <= d.today.date ? d.past : d.future
+        return pts.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
+    }
+
     private var chart: some View {
         let d = curveData
+        let picked = scrubDate.flatMap { value(at: $0, in: d) }
         return Chart {
             ForEach(d.past) { p in
                 AreaMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", p.series))
@@ -141,11 +159,41 @@ struct ForgettingCurveSheet: View {
                 PointMark(x: .value("date", p.date), y: .value("%", p.value))
                     .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(Theme.card)).frame(width: 13, height: 13) }
             }
+            if let picked {
+                RuleMark(x: .value("date", picked.date))
+                    .foregroundStyle(Theme.muted.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                PointMark(x: .value("date", picked.date), y: .value("%", picked.value))
+                    .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(picked.value))]).overlay(Circle().stroke(.white, lineWidth: 2)).frame(width: 14, height: 14) }
+                    .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                        VStack(spacing: 1) {
+                            Text(Calendar.current.isDateInToday(picked.date) ? L("今日") : JPDate.monthDay(picked.date))
+                                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                            Text("\(Int(picked.value))%").font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                                .foregroundStyle(Theme.memoryLevels[MemoryBadge.level(Int(picked.value))].mix(with: Theme.foreground, by: 0.3))
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Theme.card, in: .rect(cornerRadius: 10, style: .continuous))
+                        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                    }
+            }
             PointMark(x: .value("date", d.today.date), y: .value("%", d.today.value))
                 .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(d.today.value))]).overlay(Circle().stroke(.white, lineWidth: 2.5)).frame(width: 18, height: 18) }
                 .annotation(position: .topTrailing, spacing: 2) {
                     Text(L("今日 \(Int(d.today.value))%")).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.foreground)
                 }
+        }
+        .chartXSelection(value: $scrubDate)
+        .onChange(of: scrubDate) { _, new in
+            // A light tick each time the finger crosses into another day.
+            guard let new else { lastScrubDay = nil; return }
+            let day = Calendar.current.ordinality(of: .day, in: .era, for: new)
+            if day != lastScrubDay { Haptics.selection(); lastScrubDay = day }
+        }
+        .mask(alignment: .leading) {
+            GeometryReader { geo in
+                Rectangle().frame(width: geo.size.width * reveal)
+            }
         }
         .chartYScale(domain: 0...100)
         .chartYAxis {

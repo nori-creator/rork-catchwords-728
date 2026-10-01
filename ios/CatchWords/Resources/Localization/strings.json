@@ -779,6 +779,10 @@
   "en": "Remove from album (stays in your collection)",
   "zh-TW": "從相簿移除（仍保留在圖鑑中）"
  },
+ "アルバムを読み込めませんでした": {
+  "en": "Couldn't load your album",
+  "zh-TW": "無法載入相簿"
+ },
  "アルバムを開く": {
   "en": "Open the album",
   "zh-TW": "打開相簿"
@@ -866,6 +870,10 @@
  "キャンセル": {
   "en": "Cancel",
   "zh-TW": "取消"
+ },
+ "グラフを指でなぞると、その日の記憶率が見られます": {
+  "en": "Trace the graph with your finger to see your memory on that day",
+  "zh-TW": "用手指劃過圖表，就能看到那天的記憶率"
  },
  "ゲーム": {
   "en": "Games",
@@ -2902,6 +2910,10 @@
  "読み取れませんでした": {
   "en": "Couldn't read that page",
   "zh-TW": "讀不出這一頁"
+ },
+ "読み込み中": {
+  "en": "Loading",
+  "zh-TW": "載入中"
  },
  "読み込み中…": {
   "en": "Loading…",

@@ -68,6 +68,10 @@ struct UIPreviewRoot: View {
             case "dex": DexView()
             case "wordbook": WordbookView()
             case "done": DonePreview()
+            case "homeload": VStack(spacing: 20) {
+                AlbumSkeleton().frame(height: 380)
+                AlbumLoadFailed(message: L("通信できませんでした。電波のよい場所でもう一度お試しください。")) {}.frame(height: 300)
+            }.padding(16).background(HomeBackground())
             default: Text("unknown preview: \(name)")
             }
         }
