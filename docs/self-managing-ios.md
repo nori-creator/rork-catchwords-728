@@ -27,14 +27,13 @@
 
 ### 1-1. バンドル ID を決める（最初の提出の前に1回だけ）
 
-- 今のバンドル ID は `app.rork.v075or6kicdigi0jhlze3`（Rork が自動で付けたもの）です。
-- 一度提出すると変えられません（Apple の決まり）。
-- **おすすめ:** 最初の提出の前に、Rork の Project Settings で自分用の ID に変える（例: `com.自分の名前.catchwords`）。利用者には見えませんが、Rork の名前が永久に残らなくなります。
-- すでに提出済みなら、今の ID のまま使い続けます（それでも問題なく動きます）。
+- バンドル ID は **`com.nori.catchwords`**（2026-10-01 に Rork の自動の名前 `app.rork.v075or6kicdigi0jhlze3` から変更。まだ一度も提出していなかったため変えられた）。
+- 一度 App Store Connect に提出すると変えられません（Apple の決まり）。
+- **Apple でサインインのために、Supabase にも同じ ID を登録する**: Supabase の管理画面 → Authentication → Sign In / Providers → Apple → **Client IDs** に `com.nori.catchwords` を足す（カンマ区切り。Web 用の Services ID がある場合はそれを先頭のままにする）。足さないと、iPhone・iPad の「Appleでサインイン」が失敗します。
 
 ### 1-2. Web 版を先に公開する
 
-iOS 版の AI・保存は、Web 版のサーバ（`/api/native-ai`、`/api/native-fn`）を通ります。
+iOS 版の AI・保存は、Web 版のサーバ（`/api/native-fn`）を通ります。iOS 版が呼ぶ関数が Web 版に全部あるかは、ワークフロー「iOS ↔ Web contract（約束の確認）」が毎日確かめます。
 
 1. Web 版の PR（`nori-creator/Lovable-catch-words-app`）を main に取り込む。
 2. Lovable の編集画面で右上の **Publish → Update** を押す。
