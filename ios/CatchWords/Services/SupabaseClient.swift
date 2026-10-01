@@ -183,7 +183,7 @@ final class SupabaseClient {
         if m.contains("password should be") { return L("パスワードは6文字以上にしてください。") }
         if m.contains("email not confirmed") { return L("確認メールのリンクを開いてからログインしてください。") }
         if m.contains("rate limit") { return L("しばらく時間をおいてからお試しください。") }
-        return msg.isEmpty ? L("ログインに失敗しました（\(code)）") : msg
+        return L("ログインに失敗しました（\(code)）")  // never the raw English message (G2)
     }
 
     // MARK: - REST

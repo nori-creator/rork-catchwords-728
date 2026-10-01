@@ -563,8 +563,8 @@ struct WordDetailView: View {
     // MARK: - Section routing (card-sections.ts: draw only what has content)
 
     private var learningLang: String { word?.language ?? NativeAPI.targetLanguage }
-    private var exampleOK: Bool { (word?.exampleSentence ?? "").isIn(target: learningLang) }
-    private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { $0.zh.isIn(target: learningLang) } }
+    private var exampleOK: Bool { let e = word?.exampleSentence ?? ""; return !e.isEmpty && e.isIn(target: learningLang) }
+    private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { !$0.zh.isEmpty && $0.zh.isIn(target: learningLang) } }
     private var chunks: [UsageChunk] { refinedChunks(extras?.usageChunks ?? []) }
     private var measures: [MeasureWord] { (extras?.measureWords ?? []).filter { !$0.word.isEmpty } }
     private var pronunciationText: String { nonEmpty([extras?.pronunciationTips, extras?.studyTips]) }

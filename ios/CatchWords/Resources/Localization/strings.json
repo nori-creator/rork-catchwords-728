@@ -241,7 +241,7 @@
  },
  "{1}枚・{2}日": {
   "en": "{1} photos · {2} days",
-  "zh-TW": "{1} 張・{2} 天"
+  "zh-TW": "{1} 張、{2} 天"
  },
  "{1}語": {
   "en": "{1} words",
@@ -459,6 +459,10 @@
   "en": "Which word means this",
   "zh-TW": "哪一個字是這個意思"
  },
+ "この操作の権限がありません。": {
+  "en": "You don't have permission to do this.",
+  "zh-TW": "你沒有執行此操作的權限。"
+ },
  "この日のことを、学んでいる言葉で書いてみよう": {
   "en": "Write about this day in the language you're learning",
   "zh-TW": "用你正在學的語言寫寫這一天吧"
@@ -502,6 +506,10 @@
  "この棚を消す": {
   "en": "Delete this shelf",
   "zh-TW": "刪除這個書架"
+ },
+ "この機能は Pro 限定です。": {
+  "en": "This is a Pro feature.",
+  "zh-TW": "此功能為 Pro 專屬。"
  },
  "この言葉、{1}に{2}でゲットしています。": {
   "en": "You got this word on {1} at {2}.",
@@ -1097,7 +1105,7 @@
  },
  "・取得済み": {
   "en": " · Collected",
-  "zh-TW": "・已收集"
+  "zh-TW": "，已收集"
  },
  "ㄅㄆㄇ 注音": {
   "en": "ㄅㄆㄇ Zhuyin",
@@ -2385,7 +2393,7 @@
  },
  "発音・読み": {
   "en": "Pronunciation",
-  "zh-TW": "發音・讀音"
+  "zh-TW": "發音、讀音"
  },
  "発音表記": {
   "en": "Phonetic notation",
@@ -2638,6 +2646,10 @@
  "見せる": {
   "en": "Show",
   "zh-TW": "顯示"
+ },
+ "見つかりませんでした。": {
+  "en": "It couldn't be found.",
+  "zh-TW": "找不到。"
  },
  "見つけたものが、\nあなたのことばになる。": {
   "en": "See it. Catch it.\nMake it yours.",

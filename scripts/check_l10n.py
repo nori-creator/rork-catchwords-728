@@ -47,8 +47,8 @@ def main():
                     # R1 (docs/language-rules.md): English never carries kana or Han. A learning-language
                     # sample goes in as a {n} value from NativeAPI.sample, never into the translation.
                     problems.append(f"{rel}:{line_of(src, start)}: R1 en contains Japanese/Chinese: \"{t}\"")
-                elif lang == "zh-TW" and KANA.search(t):
-                    # R2: Traditional Chinese never carries kana.
+                elif lang == "zh-TW" and (KANA.search(t) or "・" in t):
+                    # R2: Traditional Chinese never carries kana, nor the Japanese middle dot (web G3).
                     problems.append(f"{rel}:{line_of(src, start)}: R2 zh-TW contains kana: \"{t}\"")
                 # placeholders must survive translation
                 for i in range(1, 10):

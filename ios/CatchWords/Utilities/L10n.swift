@@ -85,8 +85,56 @@ nonisolated enum L10n {
     static func readerSafe(_ text: String, fallback: String) -> String {
         let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.isEmpty { return fallback }
+        if isOwnText(s) { return s }  // the app's own sentence, already in this language
         if let t = translation(s), lang != "ja" { return t }
+        if lang != "ja", let t = knownServerSentence(s) { return t }
         return looksLike(s, lang) ? s : fallback
+    }
+
+    /// The server's Japanese sentences that vary in detail (counts, names) — by what they say (web errors.ts).
+    private static func knownServerSentence(_ s: String) -> String? {
+        if s.contains("利用上限") { return L("1日の利用上限に達しました。24時間以内に自動で回復します。") }  // l10n-ignore (matching the server text)
+        if s.contains("Pro 限定") || s.contains("Pro限定") { return L("この機能は Pro 限定です。") }  // l10n-ignore (matching the server text)
+        if s.contains("権限がありません") { return L("この操作の権限がありません。") }  // l10n-ignore (matching the server text)
+        if s.contains("見つかりません") { return L("見つかりませんでした。") }  // l10n-ignore (matching the server text)
+        if s.contains("もう一度") { return L("うまくいきませんでした。もう一度お試しください。") }  // l10n-ignore (matching the server text)
+        return nil
+    }
+
+    /// Whether `s` is one of the app's own sentences in the display language (a table value, with any
+    /// `{n}` filled in) — e.g. an error the app wrote with `L(...)` and passed through `APIError`.
+    static func isOwnText(_ s: String) -> Bool {
+        let c = lang
+        if c == "ja" { return table[s] != nil || ownPatterns(c).contains { $0.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil } }
+        if ownValues(c).contains(s) { return true }
+        return ownPatterns(c).contains { $0.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil }
+    }
+
+    nonisolated(unsafe) private static var valueCache: [String: Set<String>] = [:]
+    nonisolated(unsafe) private static var patternCache: [String: [NSRegularExpression]] = [:]
+
+    private static func ownValues(_ c: String) -> Set<String> {
+        if let v = valueCache[c] { return v }
+        let v = Set(table.values.compactMap { $0[c] })
+        valueCache[c] = v
+        return v
+    }
+
+    /// Templates with `{n}` as anchored patterns (`{1}` matches anything).
+    private static func ownPatterns(_ c: String) -> [NSRegularExpression] {
+        if let p = patternCache[c] { return p }
+        let templates = c == "ja" ? Array(table.keys) : table.values.compactMap { $0[c] }
+        let p: [NSRegularExpression] = templates.filter {
+            // Only templates with enough fixed text to identify them ("{1}、{2}" would match anything).
+            $0.contains("{1}") && $0.replacingOccurrences(of: "\\{[0-9]\\}", with: "", options: .regularExpression).count >= 4
+        }.compactMap { t in
+            // Placeholders become a marker first, so escaping can't touch them.
+            let marked = t.replacingOccurrences(of: "\\{[0-9]\\}", with: "\u{1}", options: .regularExpression)
+            let pattern = NSRegularExpression.escapedPattern(for: marked).replacingOccurrences(of: "\u{1}", with: ".+")
+            return try? NSRegularExpression(pattern: "^" + pattern + "$", options: [.dotMatchesLineSeparators])
+        }
+        patternCache[c] = p
+        return p
     }
 
     /// Whether `text` reads as the given display language (LanguageRules R7).

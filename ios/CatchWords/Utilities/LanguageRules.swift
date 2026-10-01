@@ -84,14 +84,16 @@ nonisolated enum LanguageRules {
 
     // MARK: R7 — outside text (server errors, database messages)
 
-    /// Whether outside text reads as the display language: ja has kana (or no letters at all);
-    /// zh-TW has Han and no kana; en has no CJK, or is overwhelmingly Latin.
+    /// Whether outside text may be shown as it is on a screen in `code`. Only human-written text in
+    /// that language passes: Japanese with kana on a ja screen; Chinese (Han, no kana, not mostly Latin)
+    /// on a zh-TW screen. Raw English, codes (PGRST116) and anything else never show on any screen —
+    /// they are translated from a known sentence or replaced by the screen's own message (G2).
     static func readsAs(_ text: String, _ code: String) -> Bool {
         let c = counts(text)
         switch code {
-        case "ja": return c.kana > 0 || (c.han == 0 && c.latin == 0)
-        case "zh-TW": return c.kana == 0 && (c.han > 0 || c.latin == 0)
-        default: return c.cjk == 0 || c.latin > c.cjk * 3
+        case "ja": return c.kana > 0 && c.latin <= (c.kana + c.han) * 3
+        case "zh-TW": return c.han > 0 && c.kana == 0 && c.latin * 3 < c.han
+        default: return false
         }
     }
 
@@ -102,9 +104,19 @@ nonisolated enum LanguageRules {
     static func isIn(_ text: String, target: String) -> Bool {
         let c = counts(text)
         switch target {
-        case "en": return c.latin > 0 && c.latin >= c.cjk
-        case "ja": return c.kana + c.han > 0
-        default: return c.han > 0 && c.kana * 3 < c.han
+        case "en":
+            // Any Han, kana or Hangul: not an English sentence (I3「這間咖啡廳的 ceiling 很高」).
+            return c.cjk == 0
+        case "ja":
+            if c.hangul > 0 { return false }
+            if c.kana > 0 { return true }
+            // Han only: a short word (天井) is Japanese; a whole Han sentence is a Chinese copy.
+            if c.han > 0 { return c.han < 5 }
+            return c.latin == 0
+        default:
+            if c.kana > 0 || c.hangul > 0 { return false }
+            if c.han > 0 { return true }
+            return c.latin == 0
         }
     }
 }
