@@ -124,8 +124,38 @@ nonisolated enum ReaderLanguage {
             if looksWrong(r.note, reader: reader, hanOnlyOk: true) { r.note = "" }
             return r
         }
+        // English and Japanese sections: the explanatory parts are in the reader's language; the
+        // learning-language parts (forms, phrases, kanji, conjugated forms, counters) are left alone.
+        if var c = e.countability { if looksWrong(c.note, reader: reader) { c.note = "" }; e.countability = c }
+        if var st = e.stress { if looksWrong(st.note, reader: reader) { st.note = "" }; e.stress = st }
+        e.phrasalVerbs = e.phrasalVerbs?.map { p in
+            var p = p
+            if looksWrong(p.meaning, reader: reader, hanOnlyOk: true) { p.meaning = "" }
+            return p
+        }
+        e.etymologyRelatives = e.etymologyRelatives?.map { w in
+            var w = w
+            if looksWrong(w.note, reader: reader, hanOnlyOk: true) { w.note = "" }
+            return w
+        }
+        e.kanjiBreakdown = e.kanjiBreakdown?.map { k in
+            var k = k
+            if looksWrong(k.meaning, reader: reader, hanOnlyOk: true) { k.meaning = "" }
+            return k
+        }
+        e.conjugation = e.conjugation?.map { r in
+            var r = r
+            if looksWrong(r.form, reader: reader, hanOnlyOk: true) { r.form = "" }
+            return r
+        }
+        e.counters = e.counters?.map { c in
+            var c = c
+            if looksWrong(c.note, reader: reader, hanOnlyOk: true) { c.note = "" }
+            return c
+        }
         let notes: [WritableKeyPath<WordExtras, String?>] = [\.mnemonic, \.taiwanNote, \.pronunciationTips, \.studyTips,
-                                                              \.etymology, \.trivia, \.usageNote, \.synonymDiff, \.usageContext, \.radicals]
+                                                              \.etymology, \.trivia, \.usageNote, \.synonymDiff, \.usageContext, \.radicals,
+                                                              \.cultureNote, \.politeness, \.pitchAccent, \.wordOrigin, \.japanNote]
         for kp in notes where looksWrong(e[keyPath: kp], reader: reader) {
             e[keyPath: kp] = nil
         }

@@ -30,17 +30,34 @@ final class ReviewStore {
 
     private let client = SupabaseClient.shared
 
-    /// quiz-choices.ts fallback pool (4 so one collision still leaves 3).
-    static let fallback: [QuizChoice] = [
-        QuizChoice(headword: "蘋果",  // l10n-ignore (target word)
-                   zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),
-        QuizChoice(headword: "公車",  // l10n-ignore (target word)
-                   zhuyin: "ㄍㄨㄥ ㄔㄜ"),
-        QuizChoice(headword: "雨傘",  // l10n-ignore (target word)
-                   zhuyin: "ㄩˇ ㄙㄢˇ"),
-        QuizChoice(headword: "便當",  // l10n-ignore (target word)
-                   zhuyin: "ㄅㄧㄢˋ ㄉㄤ"),
-    ]
+    /// quiz-choices.ts quizFallbackHeadwords, per learning language (4 so one collision still leaves 3).
+    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」).
+    static func fallback(for target: String) -> [QuizChoice] {
+        switch target {
+        case "en":
+            return ["apple", "bus", "umbrella", "lunch box"].map { QuizChoice(headword: $0, zhuyin: nil) }  // l10n-ignore (target words)
+        case "ja":
+            return [("りんご", ""), ("バス", ""), ("傘", "かさ"), ("お弁当", "おべんとう")]  // l10n-ignore (target words)
+                .map { QuizChoice(headword: $0.0, zhuyin: $0.1.isEmpty ? nil : $0.1) }
+        default:
+            return [QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),  // l10n-ignore (target word)
+                    QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ")]  // l10n-ignore (target word)
+        }
+    }
+
+    /// The learning language the queue was built for (R5: a switched language must not keep the old cards).
+    private(set) var loadedTarget: String = ""
+
+    /// Forget the queue (the learning language changed).
+    func reset() {
+        queue = []
+        index = 0
+        hasLoaded = false
+        choiceCache = [:]
+        loadedTarget = ""
+    }
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
     var isFinished: Bool { hasLoaded && index >= queue.count }
@@ -50,20 +67,24 @@ final class ReviewStore {
         choiceCache = [:]
         isLoading = true
         defer { isLoading = false }
-        async let historyTask = loadHistory()
+        async let historyTask = loadHistory(dex: dex)
         do {
             let now = SupabaseDate.string(Date())
             let enc = DexStore.enc(now)
             let data = try await client.rest(
                 "GET",
-                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=\(max(1, limit - doneToday))"
+                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=1000"
             )
             let rows = try SupabaseDate.decoder.decode([ReviewState].self, from: data)
             if dex.stickers.isEmpty { await dex.load() }
-            queue = rows.compactMap { r in
+            // Only this learning language's cards (the dex is already filtered), and the daily limit is
+            // counted after that filter — not before (R1 「復習の記憶の状態が他の学習言語と混ざってる」).
+            let cards = rows.compactMap { r -> ReviewCard? in
                 guard let s = dex.sticker(id: r.stickerId), s.word != nil else { return nil }
                 return ReviewCard(review: r, sticker: s)
             }
+            queue = Array(cards.prefix(max(1, limit - doneToday)))
+            loadedTarget = NativeAPI.targetLanguage
             index = 0
             correctCount = 0
             loadError = nil
@@ -74,9 +95,13 @@ final class ReviewStore {
         await historyTask
     }
 
-    private func loadHistory() async {
+    private func loadHistory(dex: DexStore) async {
         guard let data = try? await client.rest("GET", "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc&limit=5000"),
-              let rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+              var rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+        // Streak, today's count and the retention line: this learning language's words only.
+        if dex.stickers.isEmpty { await dex.load() }
+        let mine = Set(dex.stickers.map(\.id))
+        if !mine.isEmpty { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)
@@ -105,7 +130,7 @@ final class ReviewStore {
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
         var out: [QuizChoice] = []
-        for c in same + rest + Self.fallback where c.headword != correct.headword && !out.contains(c) {
+        for c in same + rest + Self.fallback(for: NativeAPI.targetLanguage) where c.headword != correct.headword && !out.contains(c) {
             out.append(c)
             if out.count == 3 { break }
         }

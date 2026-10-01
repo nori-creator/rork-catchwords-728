@@ -63,7 +63,7 @@ struct WordDetailView: View {
                     EncounterHistoryView(stickerId: current.id)
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
-                    ForEach(prefs.visible.filter { hasContent($0) || isFilling($0) }) { section in
+                    ForEach(visibleSections.filter { hasContent($0) || isFilling($0) }) { section in
                         if hasContent(section) {
                             sectionView(section)
                                 .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
@@ -101,6 +101,8 @@ struct WordDetailView: View {
             }
         }
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
+        .onAppear { prefs.use(learningLang) }
+        .onChange(of: learningLang) { _, l in prefs.use(l) }
         .onAppear { applyHeroRole(animated: false) }
         .sheet(isPresented: $pickingHero) {
             HeroPhotoPickerSheet(sticker: current) { role in
@@ -193,7 +195,7 @@ struct WordDetailView: View {
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
-                ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy, pinyin: word?.pinyin)
+                ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy, pinyin: word?.pinyin, language: learningLang)
                     .opacity(isSavingHead ? 0.4 : 1)
                 Button {
                     headDraft = headword
@@ -249,6 +251,12 @@ struct WordDetailView: View {
         .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
 
+    /// The learner's visible sections that exist for this word's language.
+    private var visibleSections: [CardSection] {
+        let all = CardSection.sections(for: learningLang)
+        return prefs.visible.filter { all.contains($0) }
+    }
+
     /// Being written right now: one section (auto-fill) or the reader's whole explanation.
     private func isFilling(_ s: CardSection) -> Bool {
         filling.contains(s) || (s != .realUsage && dex.generatingWords.contains(current.wordId))
@@ -257,7 +265,14 @@ struct WordDetailView: View {
     private func posLabel(_ pos: String) -> String {
         let map: [String: String] = ["N": L("名詞"), "V": L("動詞"), "VS": L("状態動詞"), "ADV": L("副詞"), "M": L("量詞"), "PREP": L("前置詞")]
         if let ja = map[pos.uppercased()] { return "\(pos) · \(ja)" }
-        return L10n.translation(pos) ?? (ReaderLanguage.looksWrong(pos, reader: L10n.lang) ? "" : pos)
+        // English and Japanese part-of-speech words are shown in the display language, never as stored.
+        let en: [String: String] = ["noun": L("名詞"), "verb": L("動詞"), "adjective": L("形容詞"), "adverb": L("副詞"),
+                                    "preposition": L("前置詞"), "phrase": L("フレーズ"), "pronoun": L("代名詞"),
+                                    "conjunction": L("接続詞"), "interjection": L("感動詞")]
+        if let t = en[pos.lowercased()] { return t }
+        if let t = L10n.translation(pos) { return t }
+        let japaneseOnOtherScreen = L10n.lang != "ja" && !pos.isIn(target: "en")
+        return ReaderLanguage.looksWrong(pos, reader: L10n.lang) || japaneseOnOtherScreen ? "" : pos
     }
 
     // MARK: - Photo hero (flips to the selfie like a card)
@@ -562,14 +577,35 @@ struct WordDetailView: View {
 
     // MARK: - Section routing (card-sections.ts: draw only what has content)
 
-    private var learningLang: String { word?.language ?? NativeAPI.targetLanguage }
+    /// The word's language, corrected from its headword when the stored one is wrong (I4: "lamp" saved
+    /// as a Mandarin word showed measure words and a Taiwan note).
+    private var learningLang: String { LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword) }
     private var exampleOK: Bool { let e = word?.exampleSentence ?? ""; return !e.isEmpty && e.isIn(target: learningLang) }
     private var extraExamples: [ExampleExtra] { (extras?.examplesExtra ?? []).filter { !$0.zh.isEmpty && $0.zh.isIn(target: learningLang) } }
     private var chunks: [UsageChunk] { refinedChunks(extras?.usageChunks ?? []) }
     private var measures: [MeasureWord] { (extras?.measureWords ?? []).filter { !$0.word.isEmpty } }
     private var pronunciationText: String { nonEmpty([extras?.pronunciationTips, extras?.studyTips]) }
-    private var etymologyText: String { nonEmpty([extras?.etymology, extras?.radicals.map { $0.isEmpty ? "" : L("部首: \($0)") }]) }
+    /// Radicals only for Mandarin; English adds the words built from the same parts.
+    private var etymologyText: String {
+        switch learningLang {
+        case "zh-TW": return nonEmpty([extras?.etymology, extras?.radicals.map { $0.isEmpty ? "" : L("部首: \($0)") }])
+        case "en":
+            let rel = (extras?.etymologyRelatives ?? []).filter { !$0.word.isEmpty }
+                .map { $0.note.isEmpty ? $0.word : "\($0.word) — \($0.note)" }.joined(separator: "\n")
+            return nonEmpty([extras?.etymology, rel])
+        default: return nonEmpty([extras?.etymology])
+        }
+    }
     private var taiwanText: String { nonEmpty([extras?.taiwanNote, extras?.trivia, extras?.usageNote]) }
+    private var forms: [(String, String)] {
+        guard let f = extras?.forms else { return [] }
+        return [(L("複数形"), f.plural), (L("過去形"), f.past), (L("過去分詞"), f.pastParticiple), (L("-ing 形"), f.ing),
+                (L("三単現"), f.third), (L("比較級"), f.comparative), (L("最上級"), f.superlative)].filter { !$1.isEmpty }
+    }
+    private var kanjiParts: [KanjiPart] { (extras?.kanjiBreakdown ?? []).filter { !$0.kanji.trimmingCharacters(in: .whitespaces).isEmpty } }
+    private var conjugations: [ConjugationRow] { (extras?.conjugation ?? []).filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty } }
+    private var counterWords: [CounterWord] { (extras?.counters ?? []).filter { !$0.word.isEmpty } }
+    private var phrasals: [PhrasalVerb] { (extras?.phrasalVerbs ?? []).filter { !$0.phrase.isEmpty } }
 
     private func nonEmpty(_ parts: [String?]) -> String {
         parts.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: "\n\n")
@@ -586,8 +622,20 @@ struct WordDetailView: View {
         case .pronunciationTips: !pronunciationText.isEmpty
         case .etymology: !etymologyText.isEmpty
         case .mnemonic: !(extras?.mnemonic ?? "").isEmpty
-        case .taiwanNote: !taiwanText.isEmpty
+        case .taiwanNote: learningLang == "zh-TW" && !taiwanText.isEmpty
         case .realUsage: !headword.isEmpty
+        case .forms: !forms.isEmpty
+        case .countability: extras?.countability != nil
+        case .phrasalVerbs: !phrasals.isEmpty
+        case .stress: !(extras?.stress?.syllables.isEmpty ?? true)
+        case .cultureNote: !(extras?.cultureNote ?? "").isEmpty
+        case .kanjiBreakdown: !kanjiParts.isEmpty
+        case .conjugation: !conjugations.isEmpty
+        case .politeness: !(extras?.politeness ?? "").isEmpty
+        case .counters: !counterWords.isEmpty
+        case .pitchAccent: !(extras?.pitchAccent ?? "").isEmpty
+        case .wordOrigin: !(extras?.wordOrigin ?? "").isEmpty
+        case .japanNote: !(extras?.japanNote ?? "").isEmpty
         }
     }
 
@@ -623,21 +671,44 @@ struct WordDetailView: View {
         case .measureWords: measureCard(measures)
         case .relatedWords: relatedCard(extras?.allRelated ?? [])
         case .pronunciationTips: textCard(s.title, icon: s.icon, pronunciationText)
-        case .etymology: textCard(s.title, icon: s.icon, etymologyText)
+        case .etymology: textCard(s.title(for: learningLang), icon: s.icon, etymologyText)
         case .mnemonic: textCard(s.title, icon: s.icon, extras?.mnemonic ?? "")
         case .taiwanNote: textCard(s.title, icon: s.icon, taiwanText)
         case .realUsage: realUsageCard
+        case .forms: formsCard
+        case .countability: countabilityCard
+        case .phrasalVerbs: phrasalCard
+        case .stress: stressCard
+        case .cultureNote: textCard(s.title, icon: s.icon, extras?.cultureNote ?? "")
+        case .kanjiBreakdown: kanjiCard
+        case .conjugation: conjugationCard
+        case .politeness: textCard(s.title, icon: s.icon, extras?.politeness ?? "")
+        case .counters: countersCard
+        case .pitchAccent: textCard(s.title, icon: s.icon, extras?.pitchAccent ?? "")
+        case .wordOrigin: textCard(s.title, icon: s.icon, extras?.wordOrigin ?? "")
+        case .japanNote: textCard(s.title, icon: s.icon, extras?.japanNote ?? "")
         }
     }
 
-    /// refineUsageChunks (extras.ts): drop measure-word patterns, sentences, >8 chars, headword-only, duplicates; keep 5.
+    /// extras.ts MAX_CHUNK_CHARS (8) / MAX_CHUNK_WORDS_EN (4 words, 28 chars) / MAX_CHUNK_CHARS_JA (12).
+    private func tooLong(_ c: UsageChunk) -> Bool {
+        switch learningLang {
+        case "en":
+            let words = c.parts.map(\.text).joined(separator: " ").split(separator: " ")
+            return words.count > 4 || words.joined(separator: " ").count > 28
+        case "ja": return c.text.count > 12
+        default: return c.text.count > 8
+        }
+    }
+
+    /// refineUsageChunks (extras.ts): drop measure-word patterns, sentences, too-long chunks, headword-only, duplicates; keep 5.
     private func refinedChunks(_ raw: [UsageChunk]) -> [UsageChunk] {
         let mwords = Set(measures.map(\.word))
         var seen = Set<String>()
         var out: [UsageChunk] = []
         for c in raw where !c.parts.isEmpty {
             let text = c.text
-            if text.count > 8 || text == headword { continue }
+            if tooLong(c) || text == headword { continue }
             if text.contains(where: { "。！？!?".contains($0) }) { continue }
             if c.parts.contains(where: { $0.pos.uppercased() == "M" || mwords.contains($0.text) }) { continue }
             if mwords.contains(where: { !$0.isEmpty && text.contains($0) }) { continue }
@@ -705,7 +776,7 @@ struct WordDetailView: View {
         await dex.loadExplanation(wordId: current.wordId, target: target)
         // A whole explanation is being written for this reader: its sections arrive together.
         guard !Task.isCancelled, !dex.generatingWords.contains(current.wordId) else { return }
-        let missing = prefs.visible.filter { $0 != .realUsage && !hasContent($0) }
+        let missing = visibleSections.filter { $0 != .realUsage && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId
         guard !Task.isCancelled else { return }
@@ -726,7 +797,7 @@ struct WordDetailView: View {
     private func reportAndFix() {
         let note = reportNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let wordId = current.wordId
-        let candidates = ["pronunciation", "pos"] + prefs.visible.filter { $0 != .realUsage && hasContent($0) }.map(\.rawValue)
+        let candidates = ["pronunciation", "pos"] + visibleSections.filter { $0 != .realUsage && hasContent($0) }.map(\.rawValue)
         isFixing = true
         Task {
             defer { isFixing = false }
@@ -872,7 +943,7 @@ struct WordDetailView: View {
                             // Shown as it is said: 一 + the measure word (web: 「一份」).
                             let said = m.word.hasPrefix("一") ? m.word : "一" + m.word  // l10n-ignore (target word)
                             let reading = m.word.hasPrefix("一") ? m.zhuyin : m.zhuyin.map { "ㄧ " + $0 }  // l10n-ignore (target word)
-                            ZhuyinWordView(headword: said, zhuyin: reading, size: 32, weight: .heavy)
+                            ZhuyinWordView(headword: said, zhuyin: reading, size: 32, weight: .heavy, language: "zh-TW")
                             if let n = m.note, !n.isEmpty {
                                 Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
                             }
@@ -930,11 +1001,184 @@ struct WordDetailView: View {
         default: Theme.card
         }
         return ZhuyinWordView(headword: r.word, zhuyin: r.reading.isEmpty ? nil : r.reading, size: 30, weight: .bold,
-                              color: tint, readingColor: tint.opacity(0.6))
+                              color: tint, readingColor: tint.opacity(0.6), language: learningLang)
             .padding(.horizontal, 18)
             .padding(.vertical, 8)
             .background(fill, in: Capsule())
             .overlay(Capsule().stroke(kind == "syn" ? Theme.border : .clear, lineWidth: 1.2))
+    }
+
+    // MARK: - English sections
+
+    private var formsCard: some View {
+        SectionCard(title: CardSection.forms.title, icon: CardSection.forms.icon) {
+            VStack(spacing: 0) {
+                ForEach(Array(forms.enumerated()), id: \.offset) { i, row in
+                    HStack(spacing: 12) {
+                        Text(row.0).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                            .frame(width: 118, alignment: .leading)
+                        Text(row.1).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Spacer(minLength: 0)
+                        PronounceCircle(text: row.1, size: 36)
+                    }
+                    .padding(.vertical, 10)
+                    if i < forms.count - 1 { Divider().overlay(Theme.border) }
+                }
+            }
+        }
+    }
+
+    private var countabilityCard: some View {
+        let c = extras?.countability
+        let kind: String = switch c?.kind {
+        case "uncountable": L("数えられない（不可算）")
+        case "both": L("意味によって両方")
+        default: L("数えられる（可算）")
+        }
+        return SectionCard(title: CardSection.countability.title, icon: CardSection.countability.icon) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(kind)
+                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Theme.primary.opacity(0.1), in: Capsule())
+                    if let a = c?.article, !a.isEmpty {
+                        Text("\(a) \(headword)").font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    }
+                }
+                if let n = c?.note, !n.isEmpty {
+                    Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var phrasalCard: some View {
+        SectionCard(title: CardSection.phrasalVerbs.title, icon: CardSection.phrasalVerbs.icon) {
+            VStack(spacing: 10) {
+                ForEach(phrasals, id: \.phrase) { p in
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(p.phrase).font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
+                            if !p.meaning.isEmpty { Text(p.meaning).font(.system(size: 15)).foregroundStyle(Theme.muted) }
+                            if !p.example.isEmpty, p.example.isIn(target: "en") {
+                                Text(p.example).font(.system(size: 15)).italic().foregroundStyle(Theme.foreground.opacity(0.85))
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        PronounceCircle(text: p.example.isEmpty ? p.phrase : p.example, size: 40)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 22, style: .continuous))
+                }
+            }
+        }
+    }
+
+    /// The syllables with the stressed one large and in colour (PREsent / preSENT).
+    private var stressCard: some View {
+        let st = extras?.stress
+        let sy = st?.syllables ?? []
+        return SectionCard(title: CardSection.stress.title, icon: CardSection.stress.icon) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    ForEach(Array(sy.enumerated()), id: \.offset) { i, part in
+                        let primary = i == st?.primary
+                        let secondary = i == st?.secondary
+                        Text(primary ? part.uppercased() : part)
+                            .font(.system(size: primary ? 30 : 22, weight: primary ? .heavy : (secondary ? .semibold : .regular)))
+                            .foregroundStyle(primary ? Theme.primaryInk : Theme.foreground.opacity(secondary ? 0.85 : 0.6))
+                        if i < sy.count - 1 { Text("·").font(.system(size: 20)).foregroundStyle(Theme.muted) }
+                    }
+                    Spacer(minLength: 0)
+                    PronounceCircle(text: headword, size: 40)
+                }
+                if let n = st?.note, !n.isEmpty {
+                    Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                }
+            }
+        }
+    }
+
+    // MARK: - Japanese sections
+
+    /// Each kanji large, with its meaning and on / kun readings (生活 = せい / 生まれる = う / 生ビール = なま).
+    private var kanjiCard: some View {
+        SectionCard(title: CardSection.kanjiBreakdown.title, icon: CardSection.kanjiBreakdown.icon) {
+            VStack(spacing: 10) {
+                ForEach(Array(kanjiParts.enumerated()), id: \.offset) { _, k in
+                    HStack(alignment: .center, spacing: 16) {
+                        Text(k.kanji)
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundStyle(Theme.foreground)
+                            .frame(width: 64, height: 64)
+                            .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border))
+                        VStack(alignment: .leading, spacing: 5) {
+                            if !k.meaning.isEmpty {
+                                Text(k.meaning).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            }
+                            if !k.on.isEmpty { readingRow(L("音読み"), k.on) }
+                            if !k.kun.isEmpty { readingRow(L("訓読み"), k.kun) }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(14)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 22, style: .continuous))
+                }
+            }
+        }
+    }
+
+    private func readingRow(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 8) {
+            Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                .padding(.horizontal, 7).padding(.vertical, 2)
+                .background(Theme.card, in: Capsule())
+            Text(value).font(.system(size: 15)).foregroundStyle(Theme.foreground.opacity(0.85))
+        }
+    }
+
+    private var conjugationCard: some View {
+        SectionCard(title: CardSection.conjugation.title, icon: CardSection.conjugation.icon) {
+            VStack(spacing: 0) {
+                ForEach(Array(conjugations.enumerated()), id: \.offset) { i, row in
+                    HStack(spacing: 12) {
+                        Text(row.form).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                            .frame(width: 118, alignment: .leading)
+                        Text(row.text).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Spacer(minLength: 0)
+                        PronounceCircle(text: row.text, size: 36)
+                    }
+                    .padding(.vertical, 10)
+                    if i < conjugations.count - 1 { Divider().overlay(Theme.border) }
+                }
+            }
+        }
+    }
+
+    private var countersCard: some View {
+        SectionCard(title: CardSection.counters.title, icon: CardSection.counters.icon) {
+            VStack(spacing: 10) {
+                ForEach(counterWords, id: \.word) { c in
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ZhuyinWordView(headword: c.word, zhuyin: c.reading, size: 32, weight: .heavy, language: "ja")
+                            if !c.note.isEmpty {
+                                Text(c.note).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        PronounceCircle(text: c.word, size: 50)
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+                    .background(Theme.secondary, in: .rect(cornerRadius: 26, style: .continuous))
+                }
+            }
+        }
     }
 
     private func textCard(_ title: String, icon: String, _ body: String) -> some View {

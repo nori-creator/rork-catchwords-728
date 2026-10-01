@@ -31,6 +31,11 @@ CatchWords の画面には、3種類の言葉が同時に出る。
 | R12 | 入力欄の例・見本は**学習言語の語**を `NativeAPI.sample` から入れる。翻訳表に学習言語の語を書かない | `NativeAPI.sample` | `check_l10n.py`（R1 と同じ検査） |
 | R13 | AI への指示文を端末に置かない。サーバの関数（`/api/native-fn`）が、表示言語と学習言語を自分で読んで書く | `Services/AIService.swift` | レビューで確認 |
 | R14 | 英語の数：`{1} words` の 1 は単数（1 word） | `L10n.fill` | レビューで確認 |
+| R15 | 見出し語は学習言語の文字だけ。保存された言語に合わない語は、合う言語へ1つに決まるときだけ付け替える（日本語へは付け替えない） | `LanguageRules.headwordOk` / `resolveWordLanguage` | `cases.json`（`headwordOk` / `resolveLanguage`） |
+| R16 | 単語の詳細の項目は**学習言語ごと**（量詞・台湾メモは台湾華語だけ、活用形・冠詞・強勢・句動詞・文化の一言は英語だけ、漢字の内訳・活用・敬語・助数詞・アクセント・語種・日本メモは日本語だけ）。「語源・部首」は部首のある言語だけ。並びと表示の好みも言語ごとに覚える | `CardSection.sections(for:)` / `CardPrefsStore.use` | レビューで確認 |
+| R17 | 読みは学習言語の物だけ：台湾華語＝注音/ピンイン、日本語＝ふりがな/ローマ字、英語＝読みを出さない。読みの設定も言語ごと | `ZhuyinWordView` | レビューで確認 |
+| R18 | 復習は学習言語の語だけ：問題・件数・連続日数・保持率・通知の時刻・4択の受け皿。学習言語を変えたら作り直す | `ReviewStore` / `DexStore.upcomingDueTimes` | レビューで確認 |
+| R19 | 読み上げは**その文の言語**の声で（かな→日本語、欧文→英語、漢字→学習言語） | `SoundService.language(of:)` | レビューで確認 |
 
 判定の中身は `ios/CatchWords/Utilities/LanguageRules.swift` に1つだけ置く（Web版 `note-language.ts` の
 `looksWrongForReader` と同じ考え方）。**画面ごとに判定を書かない。**

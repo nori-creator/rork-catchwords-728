@@ -73,6 +73,15 @@ struct ReviewView: View {
         .task {
             if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
+        // R5 「学習言語台湾華語なのに英語の4択が表示されてる」: a switched learning language starts a fresh queue.
+        .onChange(of: profile.targetLanguage) { _, _ in
+            store.reset()
+            // The dex is re-read for the new language first, so no old-language card slips in.
+            Task {
+                await dex.load()
+                await store.load(dex: dex, limit: profile.effectiveReviewLimit)
+            }
+        }
         .fullScreenCover(isPresented: $showWordbooks) {
             WordbookView()
         }

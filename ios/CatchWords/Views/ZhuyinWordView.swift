@@ -53,8 +53,10 @@ nonisolated enum ZhuyinLayout {
     }
 }
 
-/// ZhuyinWord.tsx: zhuyin stacked vertically to the RIGHT of each character (Taiwan textbook style),
-/// tone marks in their own column at the last symbol's height, the neutral dot on top.
+/// A headword with its reading, drawn the way the learning language is read (web phonetic.tsx ReadingOf):
+/// - Taiwan Mandarin: zhuyin stacked to the RIGHT of each character (or pinyin above, 設定 › 発音表記)
+/// - Japanese: furigana in hiragana above the word (or Hepburn romaji); none for a kana-only word
+/// - English: the word alone — never zhuyin, pinyin or kana (2026-08-26「注音やピンインを決して表示しないで」)
 struct ZhuyinWordView: View {
     let headword: String
     let zhuyin: String?
@@ -64,9 +66,64 @@ struct ZhuyinWordView: View {
     var readingColor: Color = Theme.muted
     /// Shown instead of the zhuyin when the learner chose ピンイン (設定 › 発音表記, web reading-pref).
     var pinyin: String? = nil
+    /// The word's learning language (nil = the learner's current one).
+    var language: String? = nil
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
+    /// Japanese reading: "kana" (furigana, default) or "romaji". Kept apart from the Mandarin choice.
+    @AppStorage("reading.ja") private var readingJa: String = "kana"
+
+    private var lang: String { language ?? NativeAPI.targetLanguage }
 
     var body: some View {
+        switch lang {
+        case "en": plainWord
+        case "ja": japaneseWord
+        default: mandarinWord
+        }
+    }
+
+    private var plainWord: some View {
+        Text(headword)
+            .font(.system(size: size, weight: weight))
+            .foregroundStyle(color)
+            .fixedSize()
+    }
+
+    /// Furigana (or romaji) centred above the word, the way Japanese readers expect it.
+    @ViewBuilder private var japaneseWord: some View {
+        let kana = (zhuyin ?? "").trimmingCharacters(in: .whitespaces)
+        let romaji = (pinyin ?? "").trimmingCharacters(in: .whitespaces)
+        let reading = readingJa == "romaji" && !romaji.isEmpty ? romaji
+            : (kana.isEmpty || kana == headword ? "" : kana)
+        // Only kana or romaji may sit above a Japanese word (never zhuyin from an old row).
+        if reading.isEmpty || !Self.isJapaneseReading(reading) {
+            plainWord
+        } else {
+            VStack(spacing: max(0, size * 0.04)) {
+                Text(reading)
+                    .font(.system(size: max(9, size * 0.36), weight: .medium))
+                    .foregroundStyle(readingColor)
+                    .lineLimit(1)
+                Text(headword)
+                    .font(.system(size: size, weight: weight))
+                    .foregroundStyle(color)
+            }
+            .fixedSize()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(headword)
+        }
+    }
+
+    /// Kana, or Latin letters with macrons (tōkyō) and spaces — nothing else may be a Japanese reading.
+    private static func isJapaneseReading(_ s: String) -> Bool {
+        s.unicodeScalars.allSatisfy { u in
+            let v = u.value
+            if LanguageRules.isKana(v) || v == 0x20 { return true }
+            return v < 0x250 && u.properties.isAlphabetic
+        }
+    }
+
+    @ViewBuilder private var mandarinWord: some View {
         if readingPref == "pinyin", let p = pinyin?.trimmingCharacters(in: .whitespaces), !p.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(p)

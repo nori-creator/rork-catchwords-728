@@ -31,6 +31,8 @@ for c in cases {
     case "looksWrong": got = LanguageRules.looksWrong(c.text, reader: c.reader ?? "", source: c.source, hanOnlyOk: c.hanOnlyOk ?? false)
     case "readsAs": got = LanguageRules.readsAs(c.text, c.reader ?? "")
     case "isIn": got = LanguageRules.isIn(c.text, target: c.target ?? "")
+    case "headwordOk": got = LanguageRules.headwordOk(c.text, target: c.target ?? "")
+    case "resolveLanguage": got = LanguageRules.resolveWordLanguage(stored: c.reader, headword: c.text) == c.target
     default:
         print("::error::\(c.id): unknown fn \(c.fn)"); failed += 1; continue
     }

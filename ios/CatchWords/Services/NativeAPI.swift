@@ -34,6 +34,16 @@ enum NativeAPI {
     }
     enum SampleKind { case word, search, diary }
 
+    /// target-profile.ts defaultPos: the placeholder part of speech saved before the card arrives, in the
+    /// same system the card uses (I9: 「名詞」 was saved on English cards).
+    static var defaultPos: String {
+        switch targetLanguage {
+        case "en": "noun"  // l10n-ignore (data)
+        case "ja": "名詞"  // l10n-ignore (data)
+        default: "N"
+        }
+    }
+
     /// BCP-47 for speaking and listening in the learning language (web `speechLangOf` / `sttLangOf`).
     static var speechLanguage: String {
         switch targetLanguage {

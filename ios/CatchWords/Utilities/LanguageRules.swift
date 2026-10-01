@@ -119,4 +119,47 @@ nonisolated enum LanguageRules {
             return c.latin == 0
         }
     }
+
+    // MARK: R15 — headwords and the word's language (target-profile.ts headwordOk, word-language.ts)
+
+    /// The headword without bracketed notes, spaces and punctuation ("烤肉 (BBQ)" → "烤肉", "don't" → "dont").
+    static func headwordCore(_ raw: String) -> String {
+        var s = raw.replacingOccurrences(of: "[（(【〔\\[][^）)】〕\\]]*[）)】〕\\]]", with: "", options: .regularExpression)
+        s = String(s.unicodeScalars.filter { u in
+            !CharacterSet.whitespacesAndNewlines.contains(u) && !CharacterSet.punctuationCharacters.contains(u)
+                && !"'’‘-‐–—・·.,、。".unicodeScalars.contains(u)
+        }.map(Character.init))
+        return s
+    }
+
+    /// Whether `raw` can be a headword of `target`: Mandarin = Han only; English = Latin letters only;
+    /// Japanese = kana/kanji only (a 1–2 capital prefix before katakana is fine: Tシャツ).
+    static func headwordOk(_ raw: String, target: String) -> Bool {
+        var s = headwordCore(raw)
+        guard !s.isEmpty else { return false }
+        let c = counts(s)
+        switch target {
+        case "en":
+            return c.cjk == 0 && s.unicodeScalars.allSatisfy { (0x41...0x5A).contains($0.value) || (0x61...0x7A).contains($0.value) }
+        case "ja":
+            s = s.replacingOccurrences(of: "^[A-ZＡ-Ｚ]{1,2}(?=[ァ-ヺー])", with: "", options: .regularExpression)  // l10n-ignore (pattern)
+            guard !s.isEmpty else { return false }
+            let jaOnly = s.unicodeScalars.allSatisfy { isKana($0.value) || isHan($0.value) || $0.value == 0x30FC || $0.value == 0x3005 }
+            return jaOnly
+        default:
+            return c.han > 0 && c.kana == 0 && c.latin == 0 && c.hangul == 0
+        }
+    }
+
+    /// web resolveWordLanguage: keep the stored language when the headword fits it; otherwise move
+    /// the word to the one other language it fits (never into Japanese — kana in a Mandarin row is a
+    /// slip of the learner's own language, and Han-only words fit both). An empty language is Mandarin.
+    static func resolveWordLanguage(stored: String?, headword: String) -> String {
+        let raw = (stored ?? "").trimmingCharacters(in: .whitespaces)
+        let lang = ["zh-TW", "en", "ja"].contains(raw) ? raw : "zh-TW"
+        let word = headword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !word.isEmpty, !headwordOk(word, target: lang) else { return lang }
+        let fits = ["zh-TW", "en"].filter { $0 != lang && headwordOk(word, target: $0) }
+        return fits.count == 1 ? fits[0] : lang
+    }
 }

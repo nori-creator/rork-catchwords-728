@@ -15,10 +15,13 @@ import re
 import sys
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "ios", "CatchWords")
-FIELDS = r"(meaningJa|feedbackJa|questionJa|bodyJa|ja|note|exampleTranslation|scene|reason|distinction)"
+FIELDS = r"(meaningJa|feedbackJa|questionJa|bodyJa|ja|note|exampleTranslation|scene|reason|distinction|meaning|form)"
 USE = re.compile(r"(Text\(|accessibilityHint\(|accessibilityLabel\(|meaning:\s|label:\s)[^\n]*?\b([A-Za-z_][\w?.()]*?)\." + FIELDS + r"\b")
 FILTERS = ("ReaderLanguage.", "L10n.readerSafe", "readable(")
-RESOLVED = re.compile(r"(^|[^\w])(word\??|\.word\??|ex|chunk|r|m)$")
+RESOLVED = re.compile(r"(^|[^\w])(word\??|\.word\??)$")
+# Loop variables over the resolved word's extras — only on the pages that draw them.
+EXTRAS_PAGES = {"Views/WordDetailView.swift", "Views/AnswerPanel.swift"}
+EXTRAS_VARS = re.compile(r"(^|[^\w])(ex|chunk|r|m|k|c|p|st|row|extras\??)$")
 SKIP = {"Views/UIPreview.swift"}
 
 problems = []
@@ -31,7 +34,7 @@ for path in sorted(glob.glob(os.path.join(ROOT, "Views", "**", "*.swift"), recur
             continue
         for m in USE.finditer(line):
             base = m.group(2)
-            if RESOLVED.search(base):
+            if RESOLVED.search(base) or (rel in EXTRAS_PAGES and EXTRAS_VARS.search(base)):
                 continue
             problems.append(f"{rel}:{n}: R10 server text shown without the reader-language filter: {line.strip()}")
 if problems:

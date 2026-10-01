@@ -41,13 +41,31 @@ final class SoundService {
 
     private var players: [SFX: AVAudioPlayer] = [:]
     private let synthesizer = AVSpeechSynthesizer()
-    private var voiceCache: (lang: String, voice: AVSpeechSynthesisVoice?)?
-    /// The device voice for the language being learned (picked again if the learning language changes).
-    private var voice: AVSpeechSynthesisVoice? {
-        if let c = voiceCache, c.lang == NativeAPI.targetLanguage { return c.voice }
-        let v = Self.pickVoice()
-        voiceCache = (NativeAPI.targetLanguage, v)
+    private var voiceCache: [String: AVSpeechSynthesisVoice?] = [:]
+    /// The device voice for a language (zh-TW / en / ja), picked once.
+    private func voice(for lang: String) -> AVSpeechSynthesisVoice? {
+        if let v = voiceCache[lang] { return v }
+        let v = Self.pickVoice(Self.bcp47(lang))
+        voiceCache[lang] = v
         return v
+    }
+
+    /// The language a text is read in — from the text itself, so a word is never read in another
+    /// language's voice (R6): kana → Japanese, Latin only → English, Han → the learning language
+    /// (Japanese learners read kanji in Japanese, everyone else in Taiwan Mandarin).
+    static func language(of text: String) -> String {
+        let c = LanguageRules.counts(text)
+        if c.kana > 0 { return "ja" }
+        if c.han == 0, c.latin > 0 { return "en" }
+        return NativeAPI.targetLanguage == "ja" ? "ja" : "zh-TW"
+    }
+
+    static func bcp47(_ lang: String) -> String {
+        switch lang {
+        case "en": "en-US"
+        case "ja": "ja-JP"
+        default: "zh-TW"
+        }
     }
 
     private var levelMultiplier: Float {
@@ -114,7 +132,7 @@ final class SoundService {
         let key = text.unicodeScalars.reduce(into: UInt64(1469598103934665603)) { h, c in
             h = (h ^ UInt64(c.value)) &* 1099511628211
         }
-        return ttsDir.appendingPathComponent("\(NativeAPI.targetLanguage)-\(String(key, radix: 16)).mp3")
+        return ttsDir.appendingPathComponent("\(language(of: text))-\(String(key, radix: 16)).mp3")
     }
 
     /// Warm the cache (e.g. when candidates appear) so the first tap plays at once.
@@ -134,7 +152,7 @@ final class SoundService {
                 enum CodingKeys: String, CodingKey { case locked, audioURL = "audio_url" }
             }
             guard let res = try? await NativeAPI.call(
-                "synthesizeSpeech", ["text": String(text.prefix(400)), "language": NativeAPI.targetLanguage],
+                "synthesizeSpeech", ["text": String(text.prefix(400)), "language": Self.language(of: text)],
                 as: Res.self, timeout: 20
             ), res.locked != true, let raw = res.audioURL else { return nil }
             let data: Data?
@@ -187,9 +205,9 @@ final class SoundService {
         }
     }
 
-    /// Device voice fallback: always the learning language's own voice (never a "close" language).
+    /// Device voice fallback: always the text's own language's voice (never a "close" language).
     private func speakOnDevice(_ text: String) {
-        guard let voice else { return }
+        guard let voice = voice(for: Self.language(of: text)) else { return }
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = voice
@@ -207,8 +225,7 @@ final class SoundService {
         return player
     }
 
-    private static func pickVoice() -> AVSpeechSynthesisVoice? {
-        let lang = NativeAPI.speechLanguage
+    private static func pickVoice(_ lang: String) -> AVSpeechSynthesisVoice? {
         let voices = AVSpeechSynthesisVoice.speechVoices()
             .filter { $0.language == lang }
             .sorted { lhs, rhs in

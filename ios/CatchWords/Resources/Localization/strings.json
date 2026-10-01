@@ -1,4 +1,8 @@
 {
+ "-ing 形": {
+  "en": "-ing form",
+  "zh-TW": "-ing 形"
+ },
  "1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る": {
   "en": "1. Tap “Open Settings” below\n2. Turn on “Camera” and come back to this screen",
   "zh-TW": "1. 點下方的「打開設定」\n2. 開啟「相機」後回到這個畫面"
@@ -151,6 +155,10 @@
   "en": "abc Pinyin",
   "zh-TW": "abc 拼音"
  },
+ "abc ローマ字": {
+  "en": "abc Romaji",
+  "zh-TW": "abc 羅馬字"
+ },
  "iPhoneの写真と同じ切り抜きで図鑑が美しく": {
   "en": "The same cut-outs as iPhone Photos make your collection beautiful",
   "zh-TW": "和 iPhone 照片相同的去背，讓圖鑑更漂亮"
@@ -298,6 +306,10 @@
  "「{1}」を語ごと消します。戻せません。": {
   "en": "Deletes “{1}” with all its words. This can't be undone.",
   "zh-TW": "會連同單字一起刪除「{1}」。無法復原。"
+ },
+ "あ ふりがな": {
+  "en": "Furigana (kana)",
+  "zh-TW": "假名注音"
  },
  "あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。": {
   "en": "Continue later from “Waiting for analysis” on Home. The moment isn't lost.",
@@ -995,6 +1007,10 @@
   "en": "Fashion",
   "zh-TW": "時尚"
  },
+ "フレーズ": {
+  "en": "Phrase",
+  "zh-TW": "片語"
+ },
  "フレームを取得できませんでした": {
   "en": "Couldn't grab a frame",
   "zh-TW": "無法取得畫面"
@@ -1139,6 +1155,14 @@
   "en": "A quick note (optional)",
   "zh-TW": "一句話筆記（選填）"
  },
+ "丁寧さ・敬語": {
+  "en": "Politeness & keigo",
+  "zh-TW": "禮貌程度與敬語"
+ },
+ "三単現": {
+  "en": "3rd person",
+  "zh-TW": "第三人稱單數"
+ },
  "上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。": {
   "en": "Use the icons above to switch between photos, the map, and a list.",
   "zh-TW": "點上方圖示，切換照片、地圖和清單，用喜歡的方式尋找。"
@@ -1270,6 +1294,10 @@
  "仕事・キャリア": {
   "en": "Work & career",
   "zh-TW": "工作、職涯"
+ },
+ "代名詞": {
+  "en": "Pronoun",
+  "zh-TW": "代名詞"
  },
  "似": {
   "en": "syn",
@@ -1499,6 +1527,10 @@
   "en": "Adverb",
   "zh-TW": "副詞"
  },
+ "助数詞": {
+  "en": "Counters",
+  "zh-TW": "助數詞"
+ },
  "効果音": {
   "en": "Sound effects",
   "zh-TW": "音效"
@@ -1610,6 +1642,10 @@
  "取り込めませんでした": {
   "en": "Couldn't import those",
   "zh-TW": "匯入失敗"
+ },
+ "句動詞": {
+  "en": "Phrasal verbs",
+  "zh-TW": "片語動詞"
  },
  "台湾での言い方として不確か": {
   "en": "Uncertain as Taiwan usage",
@@ -1835,9 +1871,17 @@
   "en": "City & architecture",
   "zh-TW": "建築、街景"
  },
+ "強く読む所": {
+  "en": "Stress",
+  "zh-TW": "重音"
+ },
  "形": {
   "en": "Shapes",
   "zh-TW": "形狀"
+ },
+ "形容詞": {
+  "en": "Adjective",
+  "zh-TW": "形容詞"
  },
  "復元できる購入が見つかりませんでした。": {
   "en": "No purchases to restore were found.",
@@ -1919,9 +1963,17 @@
   "en": "Meaning",
   "zh-TW": "意思"
  },
+ "意味によって両方": {
+  "en": "Both, depending on meaning",
+  "zh-TW": "依意思而定，兩種都有"
+ },
  "意味も使い方も、この写真から。例文を確認したら、復習を試してみましょう。": {
   "en": "Discover meanings and examples alongside your photo. Then try recalling the word in a review.",
   "zh-TW": "從這張照片了解意思和用法。看完例句後，試著複習這個單字。"
+ },
+ "感動詞": {
+  "en": "Interjection",
+  "zh-TW": "感嘆詞"
  },
  "戻す": {
   "en": "Restore",
@@ -1946,6 +1998,10 @@
  "振動": {
   "en": "Haptics",
   "zh-TW": "震動"
+ },
+ "接続詞": {
+  "en": "Conjunction",
+  "zh-TW": "連接詞"
  },
  "控えめ": {
   "en": "Subtle",
@@ -1987,9 +2043,25 @@
   "en": "MOE Concised Mandarin Dictionary",
   "zh-TW": "教育部國語辭典簡編本"
  },
+ "数えられない（不可算）": {
+  "en": "Uncountable",
+  "zh-TW": "不可數"
+ },
+ "数えられる（可算）": {
+  "en": "Countable",
+  "zh-TW": "可數"
+ },
+ "数え方と冠詞": {
+  "en": "Countability",
+  "zh-TW": "可數與冠詞"
+ },
  "数字を読み込めませんでした。通信を確かめてください。": {
   "en": "Couldn't load your numbers. Please check your connection.",
   "zh-TW": "無法載入數據。請確認網路連線。"
+ },
+ "文化の一言": {
+  "en": "Culture note",
+  "zh-TW": "文化筆記"
  },
  "文字": {
   "en": "Characters",
@@ -2054,6 +2126,10 @@
  "日本のサイトで検索": {
   "en": "Search Japanese sites",
   "zh-TW": "在日本網站搜尋"
+ },
+ "日本メモ": {
+  "en": "Japan note",
+  "zh-TW": "日本筆記"
  },
  "日本語": {
   "en": "Japanese",
@@ -2130,6 +2206,10 @@
  "替えています…": {
   "en": "Replacing…",
   "zh-TW": "更換中…"
+ },
+ "最上級": {
+  "en": "Superlative",
+  "zh-TW": "最高級"
  },
  "最初の1枚を撮る": {
   "en": "Take your first photo",
@@ -2295,6 +2375,10 @@
   "en": "Almost daily",
   "zh-TW": "幾乎每天"
  },
+ "比較級": {
+  "en": "Comparative",
+  "zh-TW": "比較級"
+ },
  "気になるカードをいつでも作り直せます": {
   "en": "Regenerate any card whenever you like",
   "zh-TW": "隨時重新製作想改的卡片"
@@ -2306,6 +2390,14 @@
  "注音": {
   "en": "Zhuyin",
   "zh-TW": "注音"
+ },
+ "活用": {
+  "en": "Word forms",
+  "zh-TW": "詞形變化"
+ },
+ "活用（動詞・形容詞）": {
+  "en": "Conjugation",
+  "zh-TW": "動詞與形容詞變化"
  },
  "海": {
   "en": "sea",
@@ -2342,6 +2434,10 @@
  "準備ができました！": {
   "en": "You’re all set!",
   "zh-TW": "準備好了！"
+ },
+ "漢字の内訳": {
+  "en": "Kanji breakdown",
+  "zh-TW": "漢字拆解"
  },
  "火": {
   "en": "Tue",
@@ -2643,6 +2739,10 @@
   "en": "Decoration",
   "zh-TW": "裝飾"
  },
+ "複数形": {
+  "en": "Plural",
+  "zh-TW": "複數"
+ },
  "見せる": {
   "en": "Show",
   "zh-TW": "顯示"
@@ -2703,6 +2803,10 @@
   "en": "Language",
   "zh-TW": "語言"
  },
+ "訓読み": {
+  "en": "kun reading",
+  "zh-TW": "訓讀"
+ },
  "記号": {
   "en": "Symbols",
   "zh-TW": "符號"
@@ -2751,9 +2855,17 @@
   "en": "words",
   "zh-TW": "個"
  },
+ "語源": {
+  "en": "Word origin",
+  "zh-TW": "字源"
+ },
  "語源・部首": {
   "en": "Origin & radicals",
   "zh-TW": "字源、部首"
+ },
+ "語種": {
+  "en": "Word origin type",
+  "zh-TW": "詞的來源類型"
  },
  "読みの表記": {
   "en": "Reading notation",
@@ -2855,6 +2967,14 @@
   "en": "Past diary entries and corrections",
   "zh-TW": "過去的日記與批改"
  },
+ "過去分詞": {
+  "en": "Past participle",
+  "zh-TW": "過去分詞"
+ },
+ "過去形": {
+  "en": "Past",
+  "zh-TW": "過去式"
+ },
  "道具": {
   "en": "Tools",
   "zh-TW": "工具"
@@ -2947,6 +3067,10 @@
   "en": "Music & film",
   "zh-TW": "音樂、電影"
  },
+ "音読み": {
+  "en": "on reading",
+  "zh-TW": "音讀"
+ },
  "項目": {
   "en": "Sections",
   "zh-TW": "項目"
@@ -2982,6 +3106,10 @@
  "飲み物": {
   "en": "Drinks",
   "zh-TW": "飲料"
+ },
+ "高低アクセント": {
+  "en": "Pitch accent",
+  "zh-TW": "高低重音"
  },
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",

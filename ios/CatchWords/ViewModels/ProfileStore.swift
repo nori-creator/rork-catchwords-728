@@ -29,18 +29,24 @@ final class ProfileStore {
     static let cefrOptions: [(value: String, label: String)] = ["A1", "A2", "B1", "B2", "C1", "C2"].map { ($0, "CEFR \($0)") }
     // Language names in their own language (an autonym never changes with the display language).
     static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體中文")]  // l10n-ignore (autonyms)
-    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "台灣華語"), ("en", "English")]  // l10n-ignore (autonyms)
+    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "台灣華語"), ("en", "English"), ("ja", "日本語")]  // l10n-ignore (autonyms)
+    /// level-scale.ts JLPT_SCALE: six steps like TOCFL and CEFR; step 6 is "beyond N1".
+    static let jlptOptions: [(value: String, label: String)] = ["N5", "N4", "N3", "N2", "N1", "N1+"].map { ("JLPT-\($0)", "JLPT \($0)") }
 
-    /// TOCFL for 台湾華語, CEFR for English (level-scale.ts).
+    /// TOCFL for 台湾華語, CEFR for English, JLPT for Japanese (level-scale.ts).
     static func levels(for target: String) -> [(value: String, label: String)] {
-        target == "en" ? cefrOptions : levelOptions
+        switch target {
+        case "en": cefrOptions
+        case "ja": jlptOptions
+        default: levelOptions
+        }
     }
 
-    /// Re-maps a stored level onto the other scale by step (TOCFL-4 ⇄ B2).
+    /// Re-maps a stored level onto the other scale by step (TOCFL-4 ⇄ B2 ⇄ JLPT-N2).
     static func remap(_ value: String, to target: String) -> String {
         let all = levels(for: target)
         if all.contains(where: { $0.value == value }) { return value }
-        let step = (levelOptions.firstIndex { $0.value == value } ?? cefrOptions.firstIndex { $0.value == value }) ?? 0
+        let step = [levelOptions, cefrOptions, jlptOptions].lazy.compactMap { list in list.firstIndex { $0.value == value } }.first ?? 0
         return all[min(step, all.count - 1)].value
     }
 

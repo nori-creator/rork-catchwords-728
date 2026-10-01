@@ -53,7 +53,11 @@ struct RootView: View {
             if phase == .signedOut { dex.reset() }
         }
         // Meanings and notes follow the display language too (read again in the new one).
-        .onChange(of: LanguageState.shared.lang) { _, _ in dex.readerLanguageChanged() }
+        .onChange(of: LanguageState.shared.lang) { _, _ in
+            dex.readerLanguageChanged()
+            // Scheduled reminders were written in the old language: write them again (N1).
+            Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
+        }
         .onChange(of: scenePhase) { _, phase in
             // おまかせ reminders follow yesterday's first open and the cards coming due.
             guard phase == .active, auth.phase == .signedIn else { return }

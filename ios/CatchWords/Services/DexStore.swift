@@ -102,7 +102,11 @@ final class DexStore {
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
 
     /// When reviews come due (for おまかせ reminders).
-    var upcomingDueTimes: [Date] { reviews.values.compactMap(\.dueAt) }
+    /// This learning language's cards only (R1).
+    var upcomingDueTimes: [Date] {
+        let mine = Set(stickers.map(\.id))
+        return reviews.filter { mine.contains($0.key) }.values.compactMap(\.dueAt)
+    }
 
     /// The photos the home album shows (the ones taken off the album stay in the dex only).
     var albumStickers: [Sticker] { stickers.filter { !albumHidden.contains($0.id) } }
@@ -184,7 +188,7 @@ final class DexStore {
             "reading_zhuyin": text("reading_zhuyin", c.zhuyin),
             "pinyin": text("pinyin", c.pinyin),
             "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
-            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? "名詞" : c.pos),  // l10n-ignore (data)
+            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? NativeAPI.defaultPos : c.pos),
             "level": text("level", card.level),
             "category_key": text("category_key", card.categoryKey),
             "example_sentence": text("example_sentence", card.exampleSentence),
@@ -397,7 +401,7 @@ final class DexStore {
             "language": language,
             "headword": c.headword,
             "meaning_ja": c.meaningJa.isEmpty ? c.headword : c.meaningJa,
-            "part_of_speech": c.pos.isEmpty ? "名詞" : c.pos,  // l10n-ignore (data)
+            "part_of_speech": c.pos.isEmpty ? NativeAPI.defaultPos : c.pos,
             "level": d?.level ?? "TOCFL-2",
             "category_key": d?.categoryKey ?? "other",
             "extras": extras,

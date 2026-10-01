@@ -407,7 +407,7 @@ struct ScanTag: View {
             .offset(y: bob ? -3 : 3)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + (owned ? L("、取得済み") : ""))
+        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + (owned ? L("、取得済み") : ""))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
         .scaleEffect(isTop ? 1.08 : 1)
         .zIndex(isTop ? 1 : 0)
         .onAppear {
@@ -461,7 +461,8 @@ struct ScanCatchSheet: View {
             if !item.pinyin.isEmpty {
                 Text(item.pinyin).font(.system(size: 14)).foregroundStyle(Theme.muted)
             }
-            Text(item.meaning).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+            Text(item.meaning).font(.system(size: 20, weight: .semibold))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
+                    .foregroundStyle(Theme.foreground)
             HStack(spacing: 6) {
                 if item.isVerified {
                     Label(L("検証済み"), systemImage: "checkmark.seal").foregroundStyle(Theme.ok)

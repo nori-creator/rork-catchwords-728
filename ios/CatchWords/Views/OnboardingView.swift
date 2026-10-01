@@ -46,7 +46,7 @@ struct OnboardingView: View {
         ("ja", L("日本語"), "日本語", "🇯🇵"), ("en", L("英語"), "English", "🇺🇸"), ("zh-TW", L("繁体字中国語"), "繁體中文", "🇹🇼"),  // l10n-ignore (autonyms)
     ] }
     static var targets: [(id: String, label: String, native: String, flag: String)] { [
-        ("zh-TW", L("台湾華語"), "臺灣華語", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸")  // l10n-ignore (autonyms)
+        ("zh-TW", L("台湾華語"), "臺灣華語", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸"), ("ja", L("日本語"), "日本語", "🇯🇵")  // l10n-ignore (autonyms)
     ] }
 
     var body: some View {
@@ -149,13 +149,15 @@ struct OnboardingView: View {
                 ForEach(Self.uiLanguages, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native == l.label ? nil : l.native, isOn: uiLanguage == l.id) {
                         uiLanguage = l.id
+                        if targetLanguage == l.id { targetLanguage = Self.targets.first { $0.id != l.id }?.id ?? "zh-TW" }
                         withAnimation(.easeInOut(duration: 0.25)) { L10n.set(l.id) }
                     }
                 }
             }
         case 1:
             VStack(spacing: 10) {
-                ForEach(Self.targets, id: \.id) { l in
+                // Your own language is not offered as the one to learn (web l1ChoicesFor).
+                ForEach(Self.targets.filter { $0.id != uiLanguage }, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native, isOn: targetLanguage == l.id) {
                         targetLanguage = l.id
                     }

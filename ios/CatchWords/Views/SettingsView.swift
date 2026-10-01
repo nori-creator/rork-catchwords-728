@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("haptics.enabled") private var haptics: Bool = true
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
+    @AppStorage("reading.ja") private var readingJa: String = "kana"
     @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
@@ -132,6 +133,8 @@ struct SettingsView: View {
                 label(L("発音表記")).padding(.top, 6)
                 if isEnglish {
                     ChoicePills(options: [("us", L("IPA アメリカ")), ("uk", L("IPA イギリス"))], selection: $ipaPref)
+                } else if profile.targetLanguage == "ja" {
+                    ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
                 } else {
                     ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: $readingPref)
                 }
