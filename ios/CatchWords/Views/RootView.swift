@@ -52,6 +52,7 @@ struct RootView: View {
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut { dex.reset() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
         // Meanings and notes follow the display language too (read again in the new one).
         .onChange(of: LanguageState.shared.lang) { _, _ in
             dex.readerLanguageChanged()

@@ -143,6 +143,17 @@ final class AuthStore {
         phase = .signedOut
     }
 
+    /// The server no longer accepts this login (signed out everywhere, token revoked): back to the
+    /// login screen with the reason, instead of every request failing quietly.
+    func sessionExpired() {
+        guard phase == .signedIn else { return }
+        client.signOut()
+        isGuest = false
+        phase = .signedOut
+        infoMessage = nil
+        errorMessage = APIError.unauthorized.errorDescription
+    }
+
     private func run(_ work: @escaping () async throws -> Void) async {
         isBusy = true
         errorMessage = nil
