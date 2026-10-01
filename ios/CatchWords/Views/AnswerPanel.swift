@@ -155,7 +155,7 @@ struct AnswerPanel: View {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 4) {
                             Circle().fill(k.ink).frame(width: 7, height: 7)
-                            Text(k.label).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword))).font(.system(size: 11)).foregroundStyle(Theme.muted)
                         }
                     }
                 }

@@ -909,7 +909,7 @@ struct WordDetailView: View {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 5) {
                             Circle().fill(k.ink).frame(width: 8, height: 8)
-                            Text(k.label).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: learningLang)).font(.system(size: 13)).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -1414,6 +1414,11 @@ enum ChunkKind: CaseIterable, Hashable {
         case .adverb: L("副詞")
         case .particle: L("助詞・前置詞")
         }
+    }
+
+    /// 「状態動詞」 is a Mandarin grammar term; English and Japanese call it an adjective.
+    func label(for target: String) -> String {
+        self == .stative && target != "zh-TW" ? L("形容詞") : label
     }
 }
 
