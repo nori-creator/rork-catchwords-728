@@ -132,6 +132,40 @@ nonisolated enum LanguageRules {
         return s
     }
 
+    /// R20 「チャンクに学ぶべき単語の芒果がない」: a usage chunk must contain the word it teaches —
+    /// the headword itself, or (Japanese/English) an inflected form of it. "很+甜" is not a chunk of 芒果.
+    static func mentionsHeadword(_ text: String, headword: String, target: String) -> Bool {
+        let core = headwordCore(headword)
+        guard !core.isEmpty else { return true }
+        switch target {
+        case "en":
+            let words = text.lowercased().split { !$0.isLetter && $0 != "'" }.map(String.init)
+            let heads = headword.lowercased().split { !$0.isLetter }.map(String.init).filter { !$0.isEmpty }
+            guard !heads.isEmpty else { return true }
+            // Every word of the headword appears, allowing regular endings (mango→mangoes, carry→carried, make→making).
+            return heads.allSatisfy { h in
+                var stem = h
+                if stem.count >= 4, stem.hasSuffix("e") || stem.hasSuffix("y") { stem.removeLast() }
+                // Short words (man, go) must match whole: "mankind" is not a form of "man".
+                return words.contains { $0 == h || (h.count >= 4 && $0.hasPrefix(stem)) }
+            }
+        case "ja":
+            let t = headwordCore(text)
+            if t.contains(core) { return true }
+            // Conjugated forms keep the stem: 食べる→食べた, 高い→高くない, ありがとう→ありがとうございます.
+            var stem = core
+            let isHiragana: (Unicode.Scalar) -> Bool = { (0x3041...0x309F).contains($0.value) }
+            if core.unicodeScalars.contains(where: { isHan($0.value) }) {
+                while let last = stem.unicodeScalars.last, isHiragana(last) { stem = String(stem.unicodeScalars.dropLast()) }
+            } else if stem.count >= 3 {
+                stem.removeLast()
+            }
+            return !stem.isEmpty && t.contains(stem)
+        default:
+            return headwordCore(text).contains(core)
+        }
+    }
+
     /// Whether `raw` can be a headword of `target`: Mandarin = Han only; English = Latin letters only;
     /// Japanese = kana/kanji only (a 1–2 capital prefix before katakana is fine: Tシャツ).
     static func headwordOk(_ raw: String, target: String) -> Bool {

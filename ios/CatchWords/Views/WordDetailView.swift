@@ -799,6 +799,8 @@ struct WordDetailView: View {
         for c in raw where !c.parts.isEmpty {
             let text = c.text
             if tooLong(c) || text == headword { continue }
+            // R20: a chunk that does not contain the word it teaches ("很+甜" for 芒果) is not shown.
+            if !LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: learningLang) { continue }
             if text.contains(where: { "。！？!?".contains($0) }) { continue }
             if c.parts.contains(where: { $0.pos.uppercased() == "M" || mwords.contains($0.text) }) { continue }
             if mwords.contains(where: { !$0.isEmpty && text.contains($0) }) { continue }

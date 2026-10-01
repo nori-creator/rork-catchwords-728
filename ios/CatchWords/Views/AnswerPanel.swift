@@ -99,7 +99,11 @@ struct AnswerPanel: View {
     // MARK: - Explanation (explainOf in reviews.functions.ts)
 
     private var chunks: [UsageChunk] {
-        Array((word?.extras?.usageChunks ?? []).filter { !$0.parts.isEmpty }.prefix(3))
+        // R20: only chunks that actually contain the word being learned.
+        let lang = LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword)
+        return Array((word?.extras?.usageChunks ?? []).filter {
+            !$0.parts.isEmpty && LanguageRules.mentionsHeadword($0.parts.map(\.text).joined(separator: " "), headword: headword, target: lang)
+        }.prefix(3))
     }
     private var related: [RelatedWord] { Array((word?.extras?.allRelated ?? []).prefix(4)) }
     private var measures: [MeasureWord] {

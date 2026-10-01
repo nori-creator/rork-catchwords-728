@@ -514,7 +514,8 @@ private struct ReviewPreview: View {
                  "meaning_ja": en ? "mango" : "マンゴー", "example_sentence": "這顆芒果很甜。",
                  "example_translation": en ? "This mango is very sweet." : "このマンゴーはとても甘い。",
                  "extras": ["explain_lang": L10n.lang,
-                            "usage_chunks": [["parts": [["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "very sweet" : "とても甘い"]],
+                            "usage_chunks": [["parts": [["text": "芒果", "pos": "N"], ["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "Mangoes are very sweet" : "マンゴーはとても甘い"],
+                                             ["parts": [["text": "芒果", "pos": "N"], ["text": "冰", "pos": "N"]], "ja": en ? "mango shaved ice" : "マンゴーかき氷"]],
                             "measure_words": [["word": "顆", "zhuyin": "ㄎㄜ", "note": en ? "for round fruit" : "丸い果物に"]]] as [String: Any]]
         }
         let data = (try? JSONSerialization.data(withJSONObject: w)) ?? Data()
