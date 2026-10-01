@@ -104,7 +104,7 @@ struct AnswerPanel: View {
         return Array((word?.extras?.usageChunks ?? []).compactMap { raw -> UsageChunk? in
             // docs/chunk-rules.md C7/C8: the same shape as the word detail draws.
             let c = UsageChunk(parts: ChunkRules.tidy(raw.parts, headword: headword, target: lang, reader: L10n.lang), ja: raw.ja)
-            guard ChunkRules.isPattern(c.parts),
+            guard ChunkRules.isPattern(original: raw.parts, tidied: c.parts),
                   LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: lang) else { return nil }
             return c
         }.prefix(3))

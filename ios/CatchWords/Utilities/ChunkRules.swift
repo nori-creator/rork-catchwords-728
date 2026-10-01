@@ -148,7 +148,8 @@ nonisolated enum ChunkRules {
         guard !core.isEmpty else { return parts }
         var out: [ChunkPart] = []
         for p in parts {
-            if let last = out.last, isNoun(last), isNoun(p),
+            // Noun tags (N…) only: the old role marks S / O are phrases, not words to join.
+            if let last = out.last, last.pos.uppercased().hasPrefix("N"), p.pos.uppercased().hasPrefix("N"),
                last.text.contains(core) || p.text.contains(core),
                (last.text + p.text).count <= 6 {
                 out[out.count - 1] = ChunkPart(text: last.text + p.text, pos: last.pos)
@@ -171,8 +172,11 @@ nonisolated enum ChunkRules {
 
     // MARK: - What is shown
 
-    /// C7: one block is a word, not a way of using it (芒果冰 belongs with the related words).
-    static func isPattern(_ parts: [ChunkPart]) -> Bool { parts.count >= 2 }
+    /// C7: a chunk that was one word split in two (芒果＋冰 → 芒果冰) is a word, not a way of using it.
+    /// An old chunk saved as a single block is kept (web refineUsageChunks does the same).
+    static func isPattern(original: [ChunkPart], tidied: [ChunkPart]) -> Bool {
+        tidied.count >= 2 || original.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }.count < 2
+    }
 
     /// C2 / C5 / C6: a part opens the wheel only when it is not the word being learned, is a concrete noun,
     /// a measure word or a degree word, and has other words to offer.

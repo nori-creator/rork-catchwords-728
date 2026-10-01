@@ -833,7 +833,7 @@ struct WordDetailView: View {
         for r in raw where !r.parts.isEmpty {
             // docs/chunk-rules.md: one word is one block (C7), a Mandarin adjective gets its degree word (C8).
             let c = UsageChunk(parts: ChunkRules.tidy(r.parts, headword: headword, target: learningLang, reader: L10n.lang), ja: r.ja)
-            guard ChunkRules.isPattern(c.parts) else { continue }
+            guard ChunkRules.isPattern(original: r.parts, tidied: c.parts) else { continue }
             let text = c.text
             if tooLong(r) || text == headword { continue }
             // R20: a chunk that does not contain the word it teaches ("很+甜" for 芒果) is not shown.

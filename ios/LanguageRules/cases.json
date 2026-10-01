@@ -1592,5 +1592,31 @@
   "chunk": "芒果:N+甜:Vs",
   "pick": "1=非常",
   "why": "訳の中に元の語が見つからない時は、何を替えたかを添える"
+ },
+ {
+  "id": "C7-old-single",
+  "rule": "C7",
+  "fn": "tidyChunk",
+  "text": "切芒果:",
+  "reader": "ja",
+  "target": "zh-TW",
+  "source": "芒果",
+  "hanOnlyOk": null,
+  "expect": true,
+  "expected": "切芒果:",
+  "why": "札1つで保存された古い型は消さない（合わさって1つになった物だけ落とす）"
+ },
+ {
+  "id": "C7-legacy-role",
+  "rule": "C7",
+  "fn": "tidyChunk",
+  "text": "我:S+芒果:O",
+  "reader": "ja",
+  "target": "zh-TW",
+  "source": "芒果",
+  "hanOnlyOk": null,
+  "expect": true,
+  "expected": "我:S+芒果:O",
+  "why": "古い役割の記号（S/O）は名詞として合わせない"
  }
 ]

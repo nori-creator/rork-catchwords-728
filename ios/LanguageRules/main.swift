@@ -36,8 +36,9 @@ func parseChunk(_ spec: String) -> [ChunkPart] {
 
 /// The drawn chunk: "-" when it is not shown as a pattern; ~ marks a block that opens the wheel.
 func drawChunk(_ spec: String, headword: String, target: String, reader: String) -> String {
-    let parts = ChunkRules.tidy(parseChunk(spec), headword: headword, target: target, reader: reader)
-    guard ChunkRules.isPattern(parts) else { return "-" }
+    let original = parseChunk(spec)
+    let parts = ChunkRules.tidy(original, headword: headword, target: target, reader: reader)
+    guard ChunkRules.isPattern(original: original, tidied: parts) else { return "-" }
     return parts.map { (ChunkRules.isSwappable($0, headword: headword, target: target) ? "~" : "") + "\($0.text):\($0.pos)" }
         .joined(separator: "+")
 }
