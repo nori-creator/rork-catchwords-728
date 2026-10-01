@@ -175,7 +175,8 @@ struct WordDetailView: View {
                         dismiss()
                     } catch {
                         Haptics.warning()
-                        showToast(L("削除できませんでした。もう一度お試しください。"))
+                        let reason = (error as? LocalizedError)?.errorDescription ?? ""
+                        showToast(reason.isEmpty ? L("削除できませんでした。通信を確かめてください。") : reason)
                     }
                 }
             }

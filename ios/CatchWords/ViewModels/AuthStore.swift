@@ -1,4 +1,6 @@
 import SwiftUI
+import AuthenticationServices
+import CryptoKit
 
 nonisolated enum AuthPhase: Equatable, Sendable {
     case checking
@@ -30,6 +32,8 @@ final class AuthStore {
     var isGuest: Bool = false
 
     private let client = SupabaseClient.shared
+    private var currentNonce: String?
+    private var webAuth: WebAuthSession?
 
     /// Session check with an 8s timeout — never an endless silent spinner (route.tsx lesson).
     func bootstrap() async {
@@ -93,48 +97,64 @@ final class AuthStore {
         }
     }
 
-    // MARK: - Google / Apple through the web's sign-in (`/native-auth`)
-
-    /// Lovable Cloud's Google and Apple sign-in go through Lovable's own OAuth window, which an app cannot
-    /// reach directly. The app opens the web's `/native-auth` in a secure browser sheet; the web signs in
-    /// exactly as on the web (so it is the SAME account) and hands the session back to
-    /// `catchwords://auth-callback#access_token=…&refresh_token=…&state=…` (web native-auth.ts).
-    func browserSignInRequest(provider: String) -> (url: URL, state: String)? {
-        let state = Self.randomState()
-        guard var c = URLComponents(url: AppConfig.webBaseURL.appendingPathComponent("native-auth"), resolvingAgainstBaseURL: false) else { return nil }
-        c.queryItems = [URLQueryItem(name: "provider", value: provider), URLQueryItem(name: "state", value: state)]
-        guard let url = c.url else { return nil }
-        return (url, state)
-    }
-
-    /// Accepts the handed-back session only when it carries the `state` this app made (anything else
-    /// could have been injected from outside).
-    func completeBrowserSignIn(_ callback: URL, state: String) async {
-        let f = Self.fragmentFields(callback)
-        guard f["state"] == state, let access = f["access_token"], !access.isEmpty,
-              let refresh = f["refresh_token"], !refresh.isEmpty else {
-            errorMessage = L("ログインに失敗しました。もう一度お試しください。")
+    /// Google / Apple through the web app's bridge (`WebAuthSession`): the system sign-in sheet opens
+    /// `/native-auth`, the web logs in, and hands the session back. Closing the sheet is not an error.
+    func signInWithWeb(provider: String) async {
+        let state = Self.randomNonce()
+        let web = WebAuthSession()
+        webAuth = web
+        defer { webAuth = nil }
+        isBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        awaitingConfirmation = false
+        defer { isBusy = false }
+        do {
+            let url = try await web.signIn(provider: provider, state: state)
+            guard let cb = AuthCallback.parse(url), cb.state == state else {
+                throw APIError.message(L("ログインの応答が正しくありません。もう一度お試しください。"))
+            }
+            try await client.adoptSession(accessToken: cb.accessToken, refreshToken: cb.refreshToken, expiresAt: cb.expiresAt)
+            isGuest = false
+            phase = .signedIn
+            Haptics.success()
+        } catch WebAuthSession.Failure.cancelled {
+            // closed the sheet
+        } catch WebAuthSession.Failure.failed {
+            errorMessage = provider == "apple" ? L("Appleでのログインに失敗しました。") : L("Googleでのログインに失敗しました。")
             Haptics.warning()
-            return
-        }
-        var expiresIn: Double? = f["expires_in"].flatMap { Double($0) }
-        if expiresIn == nil, let at = f["expires_at"].flatMap({ Double($0) }) { expiresIn = at - Date().timeIntervalSince1970 }
-        await run {
-            try await self.client.adoptSession(accessToken: access, refreshToken: refresh, expiresIn: expiresIn)
-            self.isGuest = false
-            self.phase = .signedIn
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? L("エラーが発生しました。")
+            Haptics.warning()
         }
     }
 
-    nonisolated static func fragmentFields(_ url: URL) -> [String: String] {
-        guard let fragment = URLComponents(url: url, resolvingAgainstBaseURL: false)?.fragment else { return [:] }
-        var c = URLComponents()
-        c.query = fragment
-        var out: [String: String] = [:]
-        for item in c.queryItems ?? [] {
-            if let v = item.value { out[item.name] = v }
+    func prepareApple(_ request: ASAuthorizationAppleIDRequest) {
+        let nonce = Self.randomNonce()
+        currentNonce = nonce
+        request.requestedScopes = [.email, .fullName]
+        request.nonce = Self.sha256(nonce)
+    }
+
+    func completeApple(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .failure(let error):
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                errorMessage = L("Appleでのログインに失敗しました。")
+            }
+        case .success(let auth):
+            guard let cred = auth.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = cred.identityToken,
+                  let token = String(data: tokenData, encoding: .utf8),
+                  let nonce = currentNonce else {
+                errorMessage = L("Appleでのログインに失敗しました。")
+                return
+            }
+            await run {
+                try await self.client.signInWithApple(idToken: token, nonce: nonce)
+                self.phase = .signedIn
+            }
         }
-        return out
     }
 
     /// Tries a Supabase anonymous session (so saving works); falls back to a local-only guest entry.
@@ -156,6 +176,17 @@ final class AuthStore {
         phase = .signedOut
     }
 
+    /// The server no longer accepts this login (signed out everywhere, token revoked): back to the
+    /// login screen with the reason, instead of every request failing quietly.
+    func sessionExpired() {
+        guard phase == .signedIn else { return }
+        client.signOut()
+        isGuest = false
+        phase = .signedOut
+        infoMessage = nil
+        errorMessage = APIError.unauthorized.errorDescription
+    }
+
     private func run(_ work: @escaping () async throws -> Void) async {
         isBusy = true
         errorMessage = nil
@@ -171,9 +202,12 @@ final class AuthStore {
         }
     }
 
-    /// The web accepts 16–128 of [A-Za-z0-9_.-] (sanitizeNativeState).
-    private static func randomState(length: Int = 40) -> String {
-        let chars = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+    private static func randomNonce(length: Int = 32) -> String {
+        let chars = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
         return String((0..<length).map { _ in chars.randomElement() ?? "a" })
+    }
+
+    private static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }

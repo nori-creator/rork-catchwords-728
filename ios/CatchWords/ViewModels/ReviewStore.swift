@@ -22,8 +22,8 @@ final class ReviewStore {
     var isLoading: Bool = false
     var hasLoaded: Bool = false
     var loadError: String?
-    /// Shown when an answer could not be saved (the card is not counted and comes back).
-    var gradeNotice: String?
+    /// Set when a grade could not be saved (the card stays on screen to answer again).
+    var gradeError: String?
     var streak: Int = 0
     var doneToday: Int = 0
     var correctCount: Int = 0
@@ -189,38 +189,45 @@ final class ReviewStore {
     /// Graded by the web's own `gradeReview` (reviews.functions.ts): the same scoring (correct=5,
     /// −1 when slow, wrong=1), the same interval engine (SM-2 with the Jev guardrails) and the same
     /// history rows as the web — so a word comes due on the same day on the iPhone and on the web.
-    /// If the server cannot be reached, nothing is written locally (a half-graded card would drift).
-    func grade(_ card: ReviewCard, correct: Bool, responseMs: Int, dex: DexStore) async {
-        if correct { correctCount += 1 } else if !missed.contains(where: { $0.id == card.id }) { missed.append(card) }
-        if isRetry { return }
+    /// If the server cannot be reached, nothing is written locally (a half-graded card would drift):
+    /// returns false, `gradeError` says why, and the card is not counted as done.
+    @discardableResult
+    func grade(_ card: ReviewCard, correct: Bool, responseMs: Int, dex: DexStore) async -> Bool {
+        gradeError = nil
+        if isRetry {
+            if correct { correctCount += 1 } else if !missed.contains(where: { $0.id == card.id }) { missed.append(card) }
+            return true
+        }
         let r = card.review
         let now = Date()
-        guard let rid = r.id else { return }
+        guard let rid = r.id else { return true }
         struct Graded: Decodable {
             let score: Int?
             let intervalDays: Double?
             enum CodingKeys: String, CodingKey { case score, intervalDays = "interval_days" }
         }
-        let graded = try? await NativeAPI.call("gradeReview", [
-            "review_id": rid,
-            "correct": correct,
-            "blur_seen": false,
-            "response_ms": max(0, responseMs),
-        ], as: Graded.self, timeout: 20)
-        guard graded != nil else {
-            // Not recorded on the server: the card stays due and is not counted as done today.
-            gradeNotice = L("答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。")
-            return
+        let graded: Graded
+        do {
+            graded = try await NativeAPI.call("gradeReview", [
+                "review_id": rid,
+                "correct": correct,
+                "blur_seen": false,
+                "response_ms": max(0, responseMs),
+            ], as: Graded.self, timeout: 20)
+        } catch {
+            let reason = (error as? LocalizedError)?.errorDescription ?? ""
+            gradeError = reason.isEmpty ? L("採点を保存できませんでした。もう一度答えてください。") : L("採点を保存できませんでした。もう一度答えてください。\n\(reason)")
+            return false
         }
-        gradeNotice = nil
-        let intervalAfter = graded?.intervalDays.map { Int($0.rounded()) } ?? r.intervalDays
+        if correct { correctCount += 1 } else if !missed.contains(where: { $0.id == card.id }) { missed.append(card) }
+        let intervalAfter = graded.intervalDays.map { Int($0.rounded()) } ?? r.intervalDays
         doneToday += 1
-        if graded != nil,
-           let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: intervalAfter, easeAfter: r.ease) {
+        if let row = ReviewHistoryRow(stickerId: r.stickerId, reviewedAt: now, intervalDaysAfter: intervalAfter, easeAfter: r.ease) {
             allHistory.insert(row, at: 0)
         }
         if streak == 0 || !Calendar.current.isDateInToday(now) { streak = max(streak, 1) }
         await dex.reloadReviews()
+        return true
     }
 
     /// 「全体の記憶率（前後2週間）」 for every sticker that has a review row.

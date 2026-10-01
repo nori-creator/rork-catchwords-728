@@ -86,21 +86,11 @@ final class SupabaseClient {
         try storeSession(json)
     }
 
-    /// Takes over a session the web signed in (`/native-auth`): asks whose token it is, then keeps it.
-    func adoptSession(accessToken: String, refreshToken: String, expiresIn: Double?) async throws {
-        guard let baseURL, let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url, timeoutInterval: 15)
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (data, response) = try await perform(req)
-        guard (200..<300).contains(response.statusCode),
-              let user = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { throw APIError.unauthorized }
-        let json: [String: Any] = [
-            "access_token": accessToken,
-            "refresh_token": refreshToken,
-            "expires_in": max(60, expiresIn ?? 3600),
-            "user": user,
-        ]
+    func signInWithApple(idToken: String, nonce: String) async throws {
+        let json = try await authRequest(
+            path: "token?grant_type=id_token",
+            body: ["provider": "apple", "id_token": idToken, "nonce": nonce]
+        )
         try storeSession(json)
     }
 
@@ -114,7 +104,7 @@ final class SupabaseClient {
 
     /// Merges keys into auth `user_metadata` (the web keeps learning_preferences / notification_preferences there).
     func updateUserMetadata(_ data: [String: Any]) async throws {
-        try await refreshIfNeeded()
+        try await refreshForRequest()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url, timeoutInterval: 15)
@@ -129,7 +119,7 @@ final class SupabaseClient {
 
     /// The signed-in user's `user_metadata` (notification_preferences, learning_preferences…).
     func userMetadata() async throws -> [String: Any] {
-        try await refreshIfNeeded()
+        try await refreshForRequest()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url, timeoutInterval: 15)
@@ -141,11 +131,71 @@ final class SupabaseClient {
         return json["user_metadata"] as? [String: Any] ?? [:]
     }
 
-    func refreshIfNeeded() async throws {
+    /// Refreshes the access token when it is about to expire (or `force`, after a 401).
+    ///
+    /// A refresh token the server no longer accepts (revoked by "sign out everywhere", already rotated,
+    /// expired) means the login is over: the session is dropped, `.sessionExpired` is posted so the app
+    /// returns to the login screen, and `APIError.unauthorized` is thrown. A network or server error keeps
+    /// the session — the caller goes on with the current token and may simply be offline.
+    func refreshIfNeeded(force: Bool = false) async throws {
         guard let current = session else { throw APIError.unauthorized }
-        guard current.expiresAt.timeIntervalSinceNow < 120 else { return }
-        let json = try await authRequest(path: "token?grant_type=refresh_token", body: ["refresh_token": current.refreshToken])
-        try storeSession(json)
+        guard force || current.expiresAt.timeIntervalSinceNow < 120 else { return }
+        // One refresh at a time: refresh tokens rotate, so two concurrent refreshes would make the
+        // second one fail as "already used" and log the user out for nothing.
+        if let running = refreshTask { return try await running.value }
+        let token = current.refreshToken
+        let task = Task<Void, Error> { [self] in
+            defer { refreshTask = nil }
+            try await refreshSession(refreshToken: token)
+        }
+        refreshTask = task
+        try await task.value
+    }
+
+    private var refreshTask: Task<Void, Error>?
+
+    private func refreshSession(refreshToken: String) async throws {
+        guard let baseURL, let url = URL(string: "auth/v1/token?grant_type=refresh_token", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
+        let (data, response) = try await perform(req)
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        if (200..<300).contains(response.statusCode) {
+            try storeSession(json)
+            return
+        }
+        if Self.isRefreshTokenRejected(status: response.statusCode, json: json) {
+            expireSession()
+            throw APIError.unauthorized
+        }
+        let msg = (json["error_description"] as? String) ?? (json["msg"] as? String) ?? ""
+        throw APIError.server(response.statusCode, msg)
+    }
+
+    /// GoTrue answers 400/401 with `error_code` (`refresh_token_not_found`, `refresh_token_already_used`,
+    /// `session_not_found`) or `error: invalid_grant` when the refresh token is dead.
+    private static func isRefreshTokenRejected(status: Int, json: [String: Any]) -> Bool {
+        guard status == 400 || status == 401 || status == 403 else { return false }
+        let code = ((json["error_code"] as? String) ?? (json["code"] as? String) ?? "").lowercased()
+        let err = ((json["error"] as? String) ?? "").lowercased()
+        let desc = ((json["error_description"] as? String) ?? (json["msg"] as? String) ?? "").lowercased()
+        if ["refresh_token_not_found", "refresh_token_already_used", "session_not_found", "session_expired",
+            "user_not_found", "user_banned"].contains(code) { return true }
+        if err == "invalid_grant" { return true }
+        return desc.contains("refresh token") || desc.contains("session")
+    }
+
+    /// The login is over (dead refresh token, or still 401 after a fresh token): drop the session and
+    /// tell the app, which shows the login screen with the "expired" message.
+    func expireSession() {
+        guard session != nil else { return }
+        signOut()
+        NotificationCenter.default.post(name: .sessionExpired, object: nil)
     }
 
     func signOut() {
@@ -175,15 +225,59 @@ final class SupabaseClient {
               let user = json["user"] as? [String: Any],
               let uid = user["id"] as? String else { throw APIError.decoding }
         let expiresIn = (json["expires_in"] as? Double) ?? 3600
-        let s = AuthSession(
+        persist(AuthSession(
             accessToken: access,
             refreshToken: refresh,
             expiresAt: Date().addingTimeInterval(expiresIn),
             userId: uid,
             email: user["email"] as? String
-        )
+        ))
+    }
+
+    private func persist(_ s: AuthSession) {
         session = s
         if let data = try? JSONEncoder().encode(s) { KeychainStore.save(data, account: sessionAccount) }
+    }
+
+    /// Takes over a session the web bridge handed back (Google / Apple via `WebAuthSession`). The user id,
+    /// email and expiry come from the access token itself (a JWT); `GET auth/v1/user` only when the token
+    /// cannot be read.
+    func adoptSession(accessToken: String, refreshToken: String, expiresAt: Date?) async throws {
+        let claims = Self.jwtClaims(accessToken)
+        var uid = claims["sub"] as? String
+        var email = claims["email"] as? String
+        if uid == nil || uid?.isEmpty == true {
+            guard let baseURL, let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+            var req = URLRequest(url: url, timeoutInterval: 15)
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await perform(req)
+            guard (200..<300).contains(response.statusCode),
+                  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let id = json["id"] as? String else { throw APIError.unauthorized }
+            uid = id
+            email = json["email"] as? String
+        }
+        guard let userId = uid else { throw APIError.unauthorized }
+        let exp = (claims["exp"] as? Double).map { Date(timeIntervalSince1970: $0) }
+        persist(AuthSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: expiresAt ?? exp ?? Date().addingTimeInterval(3600),
+            userId: userId,
+            email: email
+        ))
+    }
+
+    /// The payload of a JWT (no signature check — the server verifies the token on every request).
+    nonisolated static func jwtClaims(_ token: String) -> [String: Any] {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return [:] }
+        var b64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return [:] }
+        return json
     }
 
     private static func localizeAuthError(_ msg: String, code: Int) -> String {
@@ -206,18 +300,19 @@ final class SupabaseClient {
         prefer: String? = nil,
         timeout: TimeInterval = 20
     ) async throws -> Data {
-        try await refreshIfNeeded()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "rest/v1/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url, timeoutInterval: timeout)
-        req.httpMethod = method
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let prefer { req.setValue(prefer, forHTTPHeaderField: "Prefer") }
-        if let body { req.httpBody = try JSONSerialization.data(withJSONObject: body) }
-        let (data, response) = try await perform(req)
-        if response.statusCode == 401 { throw APIError.unauthorized }
+        try await refreshForRequest()
+        let bodyData = try body.map { try JSONSerialization.data(withJSONObject: $0) }
+        let (data, response) = try await withTokenRetry { token in
+            guard let baseURL, let url = URL(string: "rest/v1/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
+            var req = URLRequest(url: url, timeoutInterval: timeout)
+            req.httpMethod = method
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let prefer { req.setValue(prefer, forHTTPHeaderField: "Prefer") }
+            req.httpBody = bodyData
+            return try await perform(req)
+        }
         guard (200..<300).contains(response.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             throw APIError.server(response.statusCode, (json?["message"] as? String) ?? "")
@@ -225,10 +320,39 @@ final class SupabaseClient {
         return data
     }
 
+    /// Before a request: refresh an expiring token, but never fail the request for a network hiccup
+    /// during the refresh — the current token may still work (or the request reports offline itself).
+    /// A dead refresh token (`.unauthorized`) does fail it: the user has to log in again.
+    func refreshForRequest() async throws {
+        do {
+            try await refreshIfNeeded()
+        } catch APIError.unauthorized {
+            throw APIError.unauthorized
+        } catch {
+            // offline / server error: go on with the token we have
+        }
+    }
+
+    /// Runs a request with the current token; on 401 refreshes once (forced) and retries. A second 401
+    /// means the login is over.
+    func withTokenRetry(_ send: (String) async throws -> (Data, HTTPURLResponse)) async throws -> (Data, HTTPURLResponse) {
+        guard let token = session?.accessToken else { throw APIError.unauthorized }
+        let first = try await send(token)
+        guard first.1.statusCode == 401 else { return first }
+        try await refreshIfNeeded(force: true)
+        guard let fresh = session?.accessToken else { throw APIError.unauthorized }
+        let second = try await send(fresh)
+        if second.1.statusCode == 401 {
+            expireSession()
+            throw APIError.unauthorized
+        }
+        return second
+    }
+
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)
 
     func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers", upsert: Bool = false) async throws {
-        try await refreshIfNeeded()
+        try await refreshForRequest()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url, timeoutInterval: 60)
@@ -254,7 +378,7 @@ final class SupabaseClient {
 
     func signedURLs(for paths: [String], expiresIn: Int = 60 * 60 * 6) async throws -> [String: URL] {
         guard !paths.isEmpty else { return [:] }
-        try await refreshIfNeeded()
+        try await refreshForRequest()
         guard let baseURL, let token = session?.accessToken,
               let url = URL(string: "storage/v1/object/sign/stickers", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url)
@@ -289,6 +413,11 @@ final class SupabaseClient {
             }
         }
     }
+}
+
+extension Notification.Name {
+    /// Posted by `SupabaseClient` when the login is over (dead refresh token / still 401 after a refresh).
+    static let sessionExpired = Notification.Name("app.catchwords.sessionExpired")
 }
 
 nonisolated enum SupabaseDate {

@@ -9,6 +9,10 @@ final class PlanStore {
     /// PRODUCT.md: "Initial public testing is a free beta. Do not prematurely hard-code a restrictive
     /// daily Catch limit without observing behavior." Off until real usage decides Free/Pro.
     static let catchLimitEnabled = false
+    /// The first App Store version is free only: no "Upgrade to Pro", no purchase / restore buttons
+    /// (the products are not set up in App Store Connect and the server does not check Apple purchases
+    /// yet). Flip together with `catchLimitEnabled` when Pro launches; the StoreKit code stays as is.
+    static let paywallEnabled = false
     static let productIDs = ["catchwords.pro.yearly", "catchwords.pro.monthly"]
 
     var products: [Product] = []
@@ -37,7 +41,7 @@ final class PlanStore {
     func bootstrap() async {
         loadUsage()
         await refreshEntitlements()
-        await loadProducts()
+        if Self.paywallEnabled { await loadProducts() }
         await refreshServerPlan()
     }
 

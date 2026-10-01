@@ -67,6 +67,10 @@
   "en": "AI estimate",
   "zh-TW": "AI 推測"
  },
+ "AIに探してもらう": {
+  "en": "Let AI find it",
+  "zh-TW": "讓 AI 找出來"
+ },
  "AIに添削してもらう": {
   "en": "Ask AI to review",
   "zh-TW": "請 AI 幫忙修改"
@@ -79,21 +83,57 @@
   "en": "Could not read the AI's reply. Please try again; your photo is kept.",
   "zh-TW": "無法讀取 AI 的回覆。請再試一次，照片仍保留著。"
  },
+ "AIは間違いを見つけられませんでした。報告として残しました": {
+  "en": "The AI couldn't find a mistake. Your report has been kept.",
+  "zh-TW": "AI 沒有找到錯誤，已保留你的回報。"
+ },
+ "App Store の価格を読み込めませんでした。通信を確かめて、もう一度お試しください。": {
+  "en": "Couldn't load App Store prices. Check your connection and try again.",
+  "zh-TW": "無法載入 App Store 的價格。請確認網路連線後再試一次。"
+ },
  "Appleでのログインに失敗しました。": {
   "en": "Sign in with Apple failed.",
   "zh-TW": "使用 Apple 登入失敗。"
+ },
+ "Appleでサインイン": {
+  "en": "Sign in with Apple",
+  "zh-TW": "使用 Apple 登入"
+ },
+ "CEFR の外の語": {
+  "en": "Outside the CEFR bands",
+  "zh-TW": "CEFR 之外的字"
  },
  "Dcardで見る": {
   "en": "See it on Dcard",
   "zh-TW": "在 Dcard 上看"
  },
+ "Googleでのログインに失敗しました。": {
+  "en": "Google sign-in failed.",
+  "zh-TW": "Google 登入失敗。"
+ },
+ "Googleで続ける": {
+  "en": "Continue with Google",
+  "zh-TW": "使用 Google 繼續"
+ },
  "Google画像検索で見る": {
   "en": "See on Google Images",
   "zh-TW": "用 Google 圖片搜尋看看"
  },
+ "IPA（アメリカ英語）": {
+  "en": "IPA (American)",
+  "zh-TW": "IPA（美式英語）"
+ },
+ "IPA（イギリス英語）": {
+  "en": "IPA (British)",
+  "zh-TW": "IPA（英式英語）"
+ },
  "Instagram で見る": {
   "en": "See it on Instagram",
   "zh-TW": "在 Instagram 上看"
+ },
+ "JLPT の外の語": {
+  "en": "Outside the JLPT levels",
+  "zh-TW": "JLPT 之外的字"
  },
  "Pro をご利用中です": {
   "en": "You're on Pro",
@@ -126,6 +166,10 @@
  "Weblio辞書": {
   "en": "Weblio Dictionary",
   "zh-TW": "Weblio 辭典"
+ },
+ "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。": {
+  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.",
+  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字與照片都能直接使用。"
  },
  "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
   "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
@@ -251,6 +295,10 @@
   "en": "{1} photos · {2} days",
   "zh-TW": "{1} 張、{2} 天"
  },
+ "{1}級（Band {2}）": {
+  "en": "Level {1} · Band {2}",
+  "zh-TW": "{1}級（Band {2}）"
+ },
  "{1}語": {
   "en": "{1} words",
   "zh-TW": "{1} 個單字"
@@ -266,6 +314,10 @@
  "{1}語を集めました": {
   "en": "You've collected {1} words",
   "zh-TW": "收集了 {1} 個單字"
+ },
+ "{1}（Band {2}）": {
+  "en": "{1} · Band {2}",
+  "zh-TW": "{1}（Band {2}）"
  },
  "{1}／{2} 正解": {
   "en": "{1}/{2} correct",
@@ -291,6 +343,10 @@
   "en": "Which one is “{1}”?",
   "zh-TW": "哪一個是「{1}」？"
  },
+ "「{1}」を{2}に移しました": {
+  "en": "Moved “{1}” to {2}",
+  "zh-TW": "已將「{1}」移到{2}"
+ },
  "「{1}」を外す": {
   "en": "Remove “{1}”",
   "zh-TW": "移除「{1}」"
@@ -310,6 +366,10 @@
  "あ ふりがな": {
   "en": "Furigana (kana)",
   "zh-TW": "假名注音"
+ },
+ "あと {1} 語、期限が来ています。続けられます。": {
+  "en": "Still due: {1} words. You can keep going.",
+  "zh-TW": "還有 {1} 個單字到期，可以繼續。"
  },
  "あと{1}語、もう少し": {
   "en": "{1} words to go — almost there",
@@ -358,6 +418,14 @@
  "いま思い出すと、次に忘れるまでの期間が伸びます。": {
   "en": "Recalling it now makes the memory last longer.",
   "zh-TW": "現在回想，下次忘記前的時間會變長。"
+ },
+ "いま自撮りを撮る": {
+  "en": "Take a selfie now",
+  "zh-TW": "現在自拍"
+ },
+ "うまくいきませんでした": {
+  "en": "That didn't work",
+  "zh-TW": "沒有成功"
  },
  "うまくいきませんでした。もう一度お試しください。": {
   "en": "Something went wrong. Please try again.",
@@ -411,6 +479,10 @@
   "en": "Adding this photo to your dex…",
   "zh-TW": "正在把這張加進圖鑑…"
  },
+ "このアプリについて": {
+  "en": "About this app",
+  "zh-TW": "關於此 App"
+ },
  "このカードは削除できません": {
   "en": "This card can't be deleted.",
   "zh-TW": "無法刪除這張卡片。"
@@ -418,6 +490,10 @@
  "このカードは編集できません": {
   "en": "This card can't be edited.",
   "zh-TW": "無法編輯這張卡片。"
+ },
+ "このパスワードは推測されやすいため使えません。英字と数字を混ぜた、ほかのパスワードにしてください。": {
+  "en": "This password is too easy to guess. Please choose a different one that mixes letters and numbers.",
+  "zh-TW": "這個密碼太容易被猜到，無法使用。請改用英文字母與數字混合的其他密碼。"
  },
  "このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。": {
   "en": "No words could be read from this page. Take a brighter photo of the part where the words are listed.",
@@ -527,6 +603,10 @@
   "en": "Use this image",
   "zh-TW": "就用這張"
  },
+ "この端末では録音できません": {
+  "en": "This device can't record audio",
+  "zh-TW": "這個裝置無法錄音"
+ },
  "この言葉、{1}に{2}でゲットしています。": {
   "en": "You got this word on {1} at {2}.",
   "zh-TW": "這個單字你在{1}於{2}收集過。"
@@ -538,6 +618,10 @@
  "この言葉に出会った記録": {
   "en": "Times you met this word",
   "zh-TW": "遇到這個字的紀錄"
+ },
+ "この言語の音声認識はこの端末では使えません": {
+  "en": "Speech recognition for this language isn't available on this device",
+  "zh-TW": "此裝置無法使用這個語言的語音辨識"
  },
  "この語で合っていますか": {
   "en": "Do these look right?",
@@ -647,6 +731,10 @@
   "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
   "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
  },
+ "ほかの学習言語の単語が{1}語あります。": {
+  "en": "You have {1} words from another learning language.",
+  "zh-TW": "還有{1}個其他學習語言的單字。"
+ },
  "ほかの棚": {
   "en": "Other shelves",
   "zh-TW": "其他書架"
@@ -670,6 +758,10 @@
  "まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。": {
   "en": "Take a quick look around, then photograph something you’d like to learn.",
   "zh-TW": "先看看怎麼使用，接著拍下一樣想學的東西吧。"
+ },
+ "また明日の復習で会いましょう。": {
+  "en": "See you at tomorrow's review.",
+  "zh-TW": "明天複習時再見。"
  },
  "まだしっかり覚えています": {
   "en": "You still remember it well",
@@ -987,10 +1079,6 @@
   "en": "Password",
   "zh-TW": "密碼"
  },
- "このパスワードは推測されやすいため使えません。英字と数字を混ぜた、ほかのパスワードにしてください。": {
-  "en": "This password is too easy to guess. Please choose a different one that mixes letters and numbers.",
-  "zh-TW": "這個密碼太容易被猜到，無法使用。請改用英文字母與數字混合的其他密碼。"
- },
  "パスワードは6文字以上にしてください。": {
   "en": "Your password must be at least 6 characters.",
   "zh-TW": "密碼請設定 6 個字元以上。"
@@ -1059,6 +1147,10 @@
   "en": "Allow the microphone and speech recognition in Settings",
   "zh-TW": "請在設定中允許使用麥克風和語音辨識"
  },
+ "マイクを使えませんでした": {
+  "en": "Couldn't use the microphone",
+  "zh-TW": "無法使用麥克風"
+ },
  "メニューや説明に使う言語です。": {
   "en": "The language for menus and explanations.",
   "zh-TW": "選擇選單與說明使用的語言。"
@@ -1111,9 +1203,17 @@
   "en": "Switch to log in",
   "zh-TW": "切換為登入"
  },
+ "ログインに失敗しました。もう一度お試しください。": {
+  "en": "Sign-in failed. Please try again.",
+  "zh-TW": "登入失敗，請再試一次。"
+ },
  "ログインに失敗しました（{1}）": {
   "en": "Login failed ({1}).",
   "zh-TW": "登入失敗（{1}）"
+ },
+ "ログインの応答が正しくありません。もう一度お試しください。": {
+  "en": "The sign-in response was invalid. Please try again.",
+  "zh-TW": "登入回應無效。請再試一次。"
  },
  "ログインの有効期限が切れました。もう一度ログインしてください。": {
   "en": "Your session has expired. Please log in again.",
@@ -1138,6 +1238,14 @@
  "一覧を開く": {
   "en": "Open list",
   "zh-TW": "打開列表"
+ },
+ "一言を止める": {
+  "en": "Pause the voice note",
+  "zh-TW": "暫停一句話"
+ },
+ "一言を聞く": {
+  "en": "Play the voice note",
+  "zh-TW": "播放一句話"
  },
  "一言メモ（任意）": {
   "en": "A quick note (optional)",
@@ -1166,6 +1274,10 @@
  "並べ替え": {
   "en": "Reorder",
   "zh-TW": "調整順序"
+ },
+ "中学": {
+  "en": "Junior high",
+  "zh-TW": "國中"
  },
  "中立": {
   "en": "Neutral",
@@ -1235,6 +1347,14 @@
   "en": "Couldn't load today's questions.",
   "zh-TW": "無法載入今天的題目。"
  },
+ "今日の分は終わりです": {
+  "en": "That's today's limit",
+  "zh-TW": "今天的份量完成了"
+ },
+ "今日の分は終わりです（{1}回復習しました）。": {
+  "en": "That's today's limit ({1} reviews done).",
+  "zh-TW": "今天的份量完成了（已複習{1}次）。"
+ },
  "今日の復習": {
   "en": "Today's reviews",
   "zh-TW": "今天的複習"
@@ -1270,6 +1390,10 @@
  "今日出す語はありません": {
   "en": "Nothing due today",
   "zh-TW": "今天沒有要出的字"
+ },
+ "今日復習する単語はありません。": {
+  "en": "Nothing to review today.",
+  "zh-TW": "今天沒有要複習的單字。"
  },
  "今日撮ったものから": {
   "en": "From what you caught today",
@@ -1343,6 +1467,14 @@
   "en": "Save",
   "zh-TW": "儲存"
  },
+ "保存しています…": {
+  "en": "Saving…",
+  "zh-TW": "正在儲存…"
+ },
+ "保存できませんでした。もう一度お試しください。": {
+  "en": "Couldn't save it. Please try again.",
+  "zh-TW": "無法儲存，請再試一次。"
+ },
  "保存できませんでした。通信を確かめてください。": {
   "en": "Couldn't save. Please check your connection.",
   "zh-TW": "儲存失敗。請確認網路連線。"
@@ -1359,9 +1491,17 @@
   "en": "Couldn't save.",
   "zh-TW": "儲存失敗。"
  },
+ "保存に時間がかかっています。そのままお待ちください。": {
+  "en": "Saving is taking a while. Please wait.",
+  "zh-TW": "儲存需要一些時間，請稍候。"
+ },
  "候補の形が整いませんでした。もう一度お試しください。": {
   "en": "The suggestions came back incomplete. Please try again.",
   "zh-TW": "候選內容不完整，請再試一次。"
+ },
+ "元に戻す": {
+  "en": "Undo",
+  "zh-TW": "復原"
  },
  "元の写真": {
   "en": "Original photo",
@@ -1370,6 +1510,10 @@
  "元の写真を見る": {
   "en": "See the original photo",
   "zh-TW": "查看原照片"
+ },
+ "元の名前に戻す": {
+  "en": "Restore original name",
+  "zh-TW": "恢復原本的名稱"
  },
  "先月までの本がここに並びます": {
   "en": "Books from past months will line up here",
@@ -1503,9 +1647,17 @@
   "en": "Deleting…",
   "zh-TW": "刪除中…"
  },
+ "削除できませんでした。もう一度お試しください。": {
+  "en": "Couldn't delete it. Please try again.",
+  "zh-TW": "無法刪除，請再試一次。"
+ },
  "削除できませんでした。通信を確かめて、もう一度お試しください。": {
   "en": "Couldn't delete. Check your connection and try again.",
   "zh-TW": "刪除失敗。請確認網路連線後再試一次。"
+ },
+ "削除できませんでした。通信を確かめてください。": {
+  "en": "Couldn't delete. Please check your connection.",
+  "zh-TW": "無法刪除。請確認網路連線。"
  },
  "前に見た語": {
   "en": "seen before",
@@ -1747,13 +1899,25 @@
   "en": "Report",
   "zh-TW": "回報"
  },
+ "報告を受け付けました。確かめてから直します": {
+  "en": "Report received. We'll check it and fix it.",
+  "zh-TW": "已收到回報，確認後會修正。"
+ },
  "場所でリマインド": {
   "en": "Location reminders",
   "zh-TW": "地點提醒"
  },
+ "声で一言を残す": {
+  "en": "Say your note out loud",
+  "zh-TW": "用聲音留一句話"
+ },
  "声で調べる": {
   "en": "Search by voice",
   "zh-TW": "用語音查詢"
+ },
+ "声の一言だけ保存できませんでした": {
+  "en": "Only the voice note could not be saved",
+  "zh-TW": "只有語音的一句話沒能儲存"
  },
  "変更": {
   "en": "Change",
@@ -1766,6 +1930,10 @@
  "外観": {
   "en": "Appearance",
   "zh-TW": "外觀"
+ },
+ "大学院": {
+  "en": "Graduate school",
+  "zh-TW": "研究所"
  },
  "天気": {
   "en": "Weather",
@@ -1810,6 +1978,10 @@
  "学習言語": {
   "en": "Target language",
   "zh-TW": "學習語言"
+ },
+ "学習言語を変える": {
+  "en": "Change learning language",
+  "zh-TW": "更換學習語言"
  },
  "学習設定": {
   "en": "Study settings",
@@ -1995,6 +2167,14 @@
   "en": "Haptics",
   "zh-TW": "震動"
  },
+ "採点を保存できませんでした。もう一度答えてください。": {
+  "en": "Couldn't save your answer. Please answer again.",
+  "zh-TW": "無法儲存作答。請再作答一次。"
+ },
+ "採点を保存できませんでした。もう一度答えてください。\n{1}": {
+  "en": "Couldn't save your answer. Please answer again.\n{1}",
+  "zh-TW": "無法儲存作答。請再作答一次。\n{1}"
+ },
  "接続詞": {
   "en": "Conjunction",
   "zh-TW": "連接詞"
@@ -2074,6 +2254,10 @@
  "文房具": {
   "en": "Stationery",
   "zh-TW": "文具"
+ },
+ "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
+  "en": "Catch a new word and its first review comes up 10 minutes later.",
+  "zh-TW": "捕捉新單字後，10分鐘後會出現第一次複習。"
  },
  "新しい単語を撮ると、ここに出てきます。": {
   "en": "When you photograph new words, they show up here.",
@@ -2299,13 +2483,25 @@
   "en": "Shelf name (up to 24 characters)",
   "zh-TW": "書架名稱（最多 24 個字）"
  },
+ "棚を保存できませんでした。もう一度お試しください。": {
+  "en": "Couldn't save the shelf. Please try again.",
+  "zh-TW": "無法儲存書架，請再試一次。"
+ },
  "棚を変える。いまは{1}": {
   "en": "Change shelf. Currently {1}",
   "zh-TW": "更換書架。目前是{1}"
  },
+ "棚を消せませんでした。もう一度お試しください。": {
+  "en": "Couldn't delete the shelf. Please try again.",
+  "zh-TW": "無法刪除書架，請再試一次。"
+ },
  "棚を移せませんでした": {
   "en": "Couldn't move it to that shelf",
   "zh-TW": "無法移到那個書架"
+ },
+ "棚を移せませんでした。もう一度お試しください。": {
+  "en": "Couldn't move it to that shelf. Please try again.",
+  "zh-TW": "無法移到那個書架，請再試一次。"
  },
  "植物": {
   "en": "Plants",
@@ -2347,9 +2543,21 @@
   "en": "Next",
   "zh-TW": "下一步"
  },
+ "止める（あと{1}秒）": {
+  "en": "Stop ({1}s left)",
+  "zh-TW": "停止（剩 {1} 秒）"
+ },
  "正解！": {
   "en": "Correct!",
   "zh-TW": "答對了！"
+ },
+ "段階を見る": {
+  "en": "Show the scale",
+  "zh-TW": "看等級表"
+ },
+ "段階を閉じる": {
+  "en": "Hide the scale",
+  "zh-TW": "收起等級表"
  },
  "母語": {
   "en": "Your language",
@@ -2559,6 +2767,14 @@
   "en": "Check the answer, then tap “Next”.",
   "zh-TW": "確認答案後，按「下一步」。"
  },
+ "答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。": {
+  "en": "Your answer couldn't be saved. Check your connection (this card will come up again).",
+  "zh-TW": "無法記錄你的答案。請確認網路連線（這張卡片之後會再出現）。"
+ },
+ "級外の語": {
+  "en": "Not in the lists",
+  "zh-TW": "級外的字"
+ },
  "結果を見る": {
   "en": "See results",
   "zh-TW": "查看結果"
@@ -2566,6 +2782,10 @@
  "絵文字": {
   "en": "Emoji",
   "zh-TW": "表情符號"
+ },
+ "続ける": {
+  "en": "Keep going",
+  "zh-TW": "繼續"
  },
  "練習なので、記憶の記録は変わりません。": {
   "en": "This is practice — your memory record won't change.",
@@ -2783,6 +3003,10 @@
   "en": "Photo waiting to be analyzed",
   "zh-TW": "等待分析的照片"
  },
+ "解析待ちの写真が{1}枚あります": {
+  "en": "{1} photos waiting for analysis",
+  "zh-TW": "有 {1} 張照片等待分析"
+ },
  "解説の作り直し": {
   "en": "Regenerate explanations",
   "zh-TW": "重新製作解說"
@@ -2814,6 +3038,10 @@
  "設定": {
   "en": "Settings",
   "zh-TW": "設定"
+ },
+ "設定で枚数を変える": {
+  "en": "Change the limit in Settings",
+  "zh-TW": "到設定更改張數"
  },
  "設定を保存できませんでした": {
   "en": "Couldn't save your settings.",
@@ -2975,6 +3203,10 @@
   "en": "Drop anything that came out wrong with the × — dropped words are not saved.",
   "zh-TW": "有認錯的字，就用右邊的 × 移除。移除的字不會存進來。"
  },
+ "違う項目を選ぶ": {
+  "en": "Pick what's wrong",
+  "zh-TW": "選擇哪裡不對"
+ },
  "選ぶ": {
   "en": "Pick",
   "zh-TW": "選"
@@ -2994,6 +3226,14 @@
  "金": {
   "en": "Fri",
   "zh-TW": "五"
+ },
+ "録った一言を捨てる": {
+  "en": "Discard the recording",
+  "zh-TW": "捨棄錄音"
+ },
+ "録れました": {
+  "en": "Recorded",
+  "zh-TW": "已錄好"
  },
  "閉じる": {
   "en": "Close",
@@ -3079,216 +3319,12 @@
   "en": "Pitch accent",
   "zh-TW": "高低重音"
  },
- "（意味が読み取れていません）": {
-  "en": "(no meaning was read)",
-  "zh-TW": "（沒有讀到意思）"
- },
- "App Store の価格を読み込めませんでした。通信を確かめて、もう一度お試しください。": {
-  "en": "Couldn't load App Store prices. Check your connection and try again.",
-  "zh-TW": "無法載入 App Store 的價格。請確認網路連線後再試一次。"
- },
- "削除できませんでした。もう一度お試しください。": {
-  "en": "Couldn't delete it. Please try again.",
-  "zh-TW": "無法刪除，請再試一次。"
- },
- "保存できませんでした。もう一度お試しください。": {
-  "en": "Couldn't save it. Please try again.",
-  "zh-TW": "無法儲存，請再試一次。"
- },
- "棚を移せませんでした。もう一度お試しください。": {
-  "en": "Couldn't move it to that shelf. Please try again.",
-  "zh-TW": "無法移到那個書架，請再試一次。"
- },
- "答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。": {
-  "en": "Your answer couldn't be saved. Check your connection (this card will come up again).",
-  "zh-TW": "無法記錄你的答案。請確認網路連線（這張卡片之後會再出現）。"
- },
- "Appleでサインイン": {
-  "en": "Sign in with Apple",
-  "zh-TW": "使用 Apple 登入"
- },
- "Googleで続ける": {
-  "en": "Continue with Google",
-  "zh-TW": "使用 Google 繼續"
- },
- "ログインに失敗しました。もう一度お試しください。": {
-  "en": "Sign-in failed. Please try again.",
-  "zh-TW": "登入失敗，請再試一次。"
- },
- "IPA（アメリカ英語）": {
-  "en": "IPA (American)",
-  "zh-TW": "IPA（美式英語）"
- },
- "IPA（イギリス英語）": {
-  "en": "IPA (British)",
-  "zh-TW": "IPA（英式英語）"
- },
- "{1}級（Band {2}）": {
-  "en": "Level {1} · Band {2}",
-  "zh-TW": "{1}級（Band {2}）"
- },
- "{1}（Band {2}）": {
-  "en": "{1} · Band {2}",
-  "zh-TW": "{1}（Band {2}）"
- },
- "級外の語": {
-  "en": "Not in the lists",
-  "zh-TW": "級外的字"
- },
- "CEFR の外の語": {
-  "en": "Outside the CEFR bands",
-  "zh-TW": "CEFR 之外的字"
- },
- "JLPT の外の語": {
-  "en": "Outside the JLPT levels",
-  "zh-TW": "JLPT 之外的字"
- },
- "段階を見る": {
-  "en": "Show the scale",
-  "zh-TW": "看等級表"
- },
- "段階を閉じる": {
-  "en": "Hide the scale",
-  "zh-TW": "收起等級表"
- },
- "中学": {
-  "en": "Junior high",
-  "zh-TW": "國中"
- },
  "高校": {
   "en": "High school",
   "zh-TW": "高中"
  },
- "大学院": {
-  "en": "Graduate school",
-  "zh-TW": "研究所"
- },
- "元の名前に戻す": {
-  "en": "Restore original name",
-  "zh-TW": "恢復原本的名稱"
- },
- "棚を消せませんでした。もう一度お試しください。": {
-  "en": "Couldn't delete the shelf. Please try again.",
-  "zh-TW": "無法刪除書架，請再試一次。"
- },
- "棚を保存できませんでした。もう一度お試しください。": {
-  "en": "Couldn't save the shelf. Please try again.",
-  "zh-TW": "無法儲存書架，請再試一次。"
- },
- "うまくいきませんでした": {
-  "en": "That didn't work",
-  "zh-TW": "沒有成功"
- },
- "「{1}」を{2}に移しました": {
-  "en": "Moved “{1}” to {2}",
-  "zh-TW": "已將「{1}」移到{2}"
- },
- "元に戻す": {
-  "en": "Undo",
-  "zh-TW": "復原"
- },
- "ほかの学習言語の単語が{1}語あります。": {
-  "en": "You have {1} words from another learning language.",
-  "zh-TW": "還有{1}個其他學習語言的單字。"
- },
- "学習言語を変える": {
-  "en": "Change learning language",
-  "zh-TW": "更換學習語言"
- },
- "設定で枚数を変える": {
-  "en": "Change the limit in Settings",
-  "zh-TW": "到設定更改張數"
- },
- "続ける": {
-  "en": "Keep going",
-  "zh-TW": "繼續"
- },
- "今日の分は終わりです": {
-  "en": "That's today's limit",
-  "zh-TW": "今天的份量完成了"
- },
- "今日復習する単語はありません。": {
-  "en": "Nothing to review today.",
-  "zh-TW": "今天沒有要複習的單字。"
- },
- "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
-  "en": "Catch a new word and its first review comes up 10 minutes later.",
-  "zh-TW": "捕捉新單字後，10分鐘後會出現第一次複習。"
- },
- "今日の分は終わりです（{1}回復習しました）。": {
-  "en": "That's today's limit ({1} reviews done).",
-  "zh-TW": "今天的份量完成了（已複習{1}次）。"
- },
- "あと {1} 語、期限が来ています。続けられます。": {
-  "en": "Still due: {1} words. You can keep going.",
-  "zh-TW": "還有 {1} 個單字到期，可以繼續。"
- },
- "また明日の復習で会いましょう。": {
-  "en": "See you at tomorrow's review.",
-  "zh-TW": "明天複習時再見。"
- },
- "保存しています…": {
-  "en": "Saving…",
-  "zh-TW": "正在儲存…"
- },
- "いま自撮りを撮る": {
-  "en": "Take a selfie now",
-  "zh-TW": "現在自拍"
- },
- "AIに探してもらう": {
-  "en": "Let AI find it",
-  "zh-TW": "讓 AI 找出來"
- },
- "違う項目を選ぶ": {
-  "en": "Pick what's wrong",
-  "zh-TW": "選擇哪裡不對"
- },
- "AIは間違いを見つけられませんでした。報告として残しました": {
-  "en": "The AI couldn't find a mistake. Your report has been kept.",
-  "zh-TW": "AI 沒有找到錯誤，已保留你的回報。"
- },
- "報告を受け付けました。確かめてから直します": {
-  "en": "Report received. We'll check it and fix it.",
-  "zh-TW": "已收到回報，確認後會修正。"
- },
- "マイクを使えませんでした": {
-  "en": "Couldn't use the microphone",
-  "zh-TW": "無法使用麥克風"
- },
- "この端末では録音できません": {
-  "en": "This device can't record audio",
-  "zh-TW": "這個裝置無法錄音"
- },
- "止める（あと{1}秒）": {
-  "en": "Stop ({1}s left)",
-  "zh-TW": "停止（剩 {1} 秒）"
- },
- "録れました": {
-  "en": "Recorded",
-  "zh-TW": "已錄好"
- },
- "録った一言を捨てる": {
-  "en": "Discard the recording",
-  "zh-TW": "捨棄錄音"
- },
- "声で一言を残す": {
-  "en": "Say your note out loud",
-  "zh-TW": "用聲音留一句話"
- },
- "声の一言だけ保存できませんでした": {
-  "en": "Only the voice note could not be saved",
-  "zh-TW": "只有語音的一句話沒能儲存"
- },
- "一言を止める": {
-  "en": "Pause the voice note",
-  "zh-TW": "暫停一句話"
- },
- "一言を聞く": {
-  "en": "Play the voice note",
-  "zh-TW": "播放一句話"
- },
- "解析待ちの写真が{1}枚あります": {
-  "en": "{1} photos waiting for analysis",
-  "zh-TW": "有 {1} 張照片等待分析"
+ "（意味が読み取れていません）": {
+  "en": "(no meaning was read)",
+  "zh-TW": "（沒有讀到意思）"
  }
 }

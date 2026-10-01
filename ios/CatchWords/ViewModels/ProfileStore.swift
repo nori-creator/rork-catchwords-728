@@ -21,6 +21,9 @@ final class ProfileStore {
     /// When the account was made (`profiles.created_at`) — day 1 for the milestone albums.
     var createdAt: Date?
     var isLoaded: Bool = false
+    /// The profile could not be read (offline / server down): nothing is known about onboarding, so
+    /// the welcome screens are not shown again; `load()` runs again when the app becomes active.
+    var loadFailed: Bool = false
     var message: String?
 
     private let client = SupabaseClient.shared
@@ -58,7 +61,11 @@ final class ProfileStore {
         if data == nil {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
         }
-        guard let data, let row = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first else { return }
+        guard let data, let row = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first else {
+            loadFailed = true
+            return
+        }
+        loadFailed = false
         displayName = row["display_name"] as? String ?? ""
         avatarURL = row["avatar_url"] as? String
         nativeLanguage = row["native_language"] as? String ?? "ja"

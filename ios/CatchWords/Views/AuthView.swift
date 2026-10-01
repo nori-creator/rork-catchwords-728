@@ -12,7 +12,6 @@ struct AuthView: View {
     /// Nudges the form sideways when sign-in fails, like a head shake.
     @State private var shake: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.webAuthenticationSession) private var webAuth
     @FocusState private var focused: Field?
 
     private enum Field { case email, password }
@@ -26,8 +25,48 @@ struct AuthView: View {
                     .offset(y: appeared ? 0 : 18)
 
                 VStack(spacing: 12) {
-                    providerButton(provider: "apple")
-                    providerButton(provider: "google")
+                    // Google and Apple go through the web app's sign-in (same account as the web).
+                    Button {
+                        Task { await auth.signInWithWeb(provider: "google") }
+                    } label: {
+                        HStack(spacing: 10) {
+                            GoogleMark(size: 20)
+                            Text(L("Googleで続ける")).font(.system(size: 17, weight: .semibold))
+                        }
+                        .foregroundStyle(Color(hex: 0x1F1F1F))
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .background(.white, in: .rect(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0x747775), lineWidth: 1))
+                    }
+                    .buttonStyle(PressableStyle())
+                    .disabled(auth.isBusy)
+                    .accessibilityIdentifier("auth.google")
+
+                    if AppConfig.nativeAppleSignIn {
+                        SignInWithAppleButton(.signIn) { req in
+                            auth.prepareApple(req)
+                        } onCompletion: { result in
+                            Task { await auth.completeApple(result) }
+                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 54)
+                        .clipShape(.rect(cornerRadius: 16))
+                    } else {
+                        Button {
+                            Task { await auth.signInWithWeb(provider: "apple") }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "apple.logo").font(.system(size: 20, weight: .medium))
+                                Text(L("Appleでサインイン")).font(.system(size: 19, weight: .medium))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(.black, in: .rect(cornerRadius: 16))
+                        }
+                        .buttonStyle(PressableStyle())
+                        .disabled(auth.isBusy)
+                        .accessibilityIdentifier("auth.apple")
+                    }
 
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showMail.toggle() }
@@ -43,8 +82,8 @@ struct AuthView: View {
                         .frame(maxWidth: .infinity, minHeight: 54)
                         .glassCard(16)
                     }
-                    .accessibilityIdentifier("auth.mail")
                     .buttonStyle(PressableStyle())
+                    .accessibilityIdentifier("auth.mail")
 
                     if showMail { mailForm.offset(x: shake).transition(.opacity.combined(with: .move(edge: .top))) }
 
@@ -88,7 +127,7 @@ struct AuthView: View {
                     }
                 }
 
-                Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。"))
+                Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。"))
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
@@ -106,51 +145,6 @@ struct AuthView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.85).delay(0.05)) { appeared = true }
-        }
-    }
-
-    /// Apple / Google: the web's own sign-in in a secure browser sheet (see AuthStore.browserSignInRequest).
-    /// Apple's look for its button (black, Apple logo); Google's white button with its "G".
-    private func providerButton(provider: String) -> some View {
-        let isApple = provider == "apple"
-        return Button {
-            signInWithBrowser(provider)
-        } label: {
-            HStack(spacing: 8) {
-                if isApple {
-                    Image(systemName: "apple.logo").font(.system(size: 19, weight: .semibold))
-                } else {
-                    Text("G").font(.system(size: 20, weight: .bold, design: .rounded))  // l10n-ignore (Google's mark)
-                        .foregroundStyle(LinearGradient(colors: [Color(hex: 0x4285F4), Color(hex: 0x34A853), Color(hex: 0xFBBC05), Color(hex: 0xEA4335)],
-                                                        startPoint: .topLeading, endPoint: .bottomTrailing))
-                }
-                Text(isApple ? L("Appleでサインイン") : L("Googleで続ける")).font(.system(size: 17, weight: .semibold))
-            }
-            .foregroundStyle(isApple ? Color.white : Color.black.opacity(0.85))
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(isApple ? Color.black : Color.white, in: .rect(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(isApple ? 0 : 0.15), lineWidth: 1))
-        }
-        .buttonStyle(PressableStyle())
-        .disabled(auth.isBusy)
-        .accessibilityIdentifier("auth.\(provider)")
-    }
-
-    private func signInWithBrowser(_ provider: String) {
-        guard let start = auth.browserSignInRequest(provider: provider) else { return }
-        auth.errorMessage = nil
-        Task {
-            do {
-                // An ephemeral sheet: never silently reuses whichever account Safari is signed in with.
-                let callback = try await webAuth.authenticate(using: start.url, callbackURLScheme: "catchwords",
-                                                             preferredBrowserSession: .ephemeral)
-                await auth.completeBrowserSignIn(callback, state: start.state)
-            } catch let e as ASWebAuthenticationSessionError where e.code == .canceledLogin {
-                // The learner closed the sheet: nothing to report.
-            } catch {
-                auth.errorMessage = L("ログインに失敗しました。もう一度お試しください。")
-                Haptics.warning()
-            }
         }
     }
 
@@ -196,7 +190,6 @@ struct AuthView: View {
                 }
                 .buttonStyle(PressableStyle(scale: 0.97))
                 .contentTransition(.opacity)
-                .accessibilityIdentifier("auth.toggleMode")
                 Spacer()
                 if !isSignUp {
                     Button(L("パスワードを忘れた")) {
@@ -233,6 +226,33 @@ struct AuthView: View {
                 await auth.signIn(email: email, password: password)
             }
         }
+    }
+}
+
+/// Google's four-colour "G", drawn so no image asset is needed (Google sign-in branding).
+private struct GoogleMark: View {
+    var size: CGFloat
+
+    var body: some View {
+        ZStack {
+            arc(from: 45, to: 135, color: Color(hex: 0x34A853))   // green (bottom)
+            arc(from: 135, to: 215, color: Color(hex: 0xFBBC05))  // yellow (left)
+            arc(from: 215, to: 315, color: Color(hex: 0xEA4335))  // red (top)
+            arc(from: 315, to: 360, color: Color(hex: 0x4285F4))  // blue (right, upper)
+            Rectangle()
+                .fill(Color(hex: 0x4285F4))
+                .frame(width: size * 0.5, height: size * 0.2)
+                .offset(x: size * 0.22, y: 0)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private func arc(from a: Double, to b: Double, color: Color) -> some View {
+        Circle()
+            .trim(from: a / 360, to: b / 360)
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.2, lineCap: .butt))
+            .frame(width: size * 0.8, height: size * 0.8)
     }
 }
 

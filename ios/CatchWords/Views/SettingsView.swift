@@ -19,7 +19,6 @@ struct SettingsView: View {
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
-    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
     @AppStorage("motion.pref") private var motionPref: String = "full"
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
@@ -46,7 +45,7 @@ struct SettingsView: View {
                 notifySection
                 appearanceSection
                 feelSection
-                proSection
+                if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
             .padding(.horizontal, 16)
@@ -173,8 +172,6 @@ struct SettingsView: View {
                 SettingsToggle(title: L("カメラロールに保存"), detail: L("撮った写真をスマホの写真アプリにも残します"), isOn: $photoSync)
                 Divider().overlay(Theme.border)
                 SettingsToggle(title: L("切り抜きモード"), detail: L("単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます"), isOn: $cutoutMode)
-                Divider().overlay(Theme.border)
-                SettingsToggle(title: L("3Dの演出"), detail: L("図鑑の本棚を立体で見せます。「視差効果を減らす」がオンの時は出しません"), isOn: $fx3D)
             }
         }
     }
@@ -228,7 +225,7 @@ struct SettingsView: View {
                     options: [("off", L("オフ")), ("subtle", L("控えめ")), ("full", L("しっかり"))],
                     selection: Binding(get: { soundLevel }, set: { v in
                         soundLevel = v
-                        if v != "off" { SoundService.shared.play(.impact) }
+                        if v != "off" { SoundService.shared.play(.landBounce) }
                     })
                 )
                 SettingsToggle(title: L("振動"), detail: nil, isOn: Binding(get: { haptics }, set: { v in
@@ -237,6 +234,18 @@ struct SettingsView: View {
                 }))
                 .padding(.top, 6)
             }
+        }
+    }
+
+    /// Free-only release: just the legal links (the Pro card has them too).
+    private var legalSection: some View {
+        SettingsCard(title: L("このアプリについて")) {
+            HStack(spacing: 18) {
+                Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
+                Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+            }
+            .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
+            .frame(minHeight: 44)
         }
     }
 
@@ -283,7 +292,7 @@ struct SettingsView: View {
 
             deleteZone
 
-            Text("CatchWords for iPhone 1.0")
+            Text("CatchWords for iPhone \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
                 .font(.system(size: 12)).foregroundStyle(Theme.muted)
         }
     }
