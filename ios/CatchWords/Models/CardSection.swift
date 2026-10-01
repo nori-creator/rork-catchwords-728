@@ -113,9 +113,14 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
     /// card-prefs.ts DEFAULT_VISIBLE (2026-09-23), within the language's sections.
     static let defaultVisibleAll: [CardSection] = [.meaning, .example, .usageChunks, .measureWords, .relatedWords, .realUsage]
 
+    /// Each language shows its own grammar section by default where Mandarin shows measure words:
+    /// English word forms and articles, Japanese kanji, conjugation and counters.
     static func defaultVisible(for target: String) -> [CardSection] {
-        let all = sections(for: target)
-        return defaultVisibleAll.filter { all.contains($0) }
+        switch target {
+        case "en": [.meaning, .example, .usageChunks, .forms, .countability, .relatedWords, .realUsage]
+        case "ja": [.meaning, .example, .usageChunks, .kanjiBreakdown, .conjugation, .counters, .relatedWords, .realUsage]
+        default: defaultVisibleAll
+        }
     }
 
     static func defaultOrder(for target: String) -> [CardSection] {

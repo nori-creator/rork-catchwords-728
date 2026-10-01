@@ -53,6 +53,8 @@ struct UIPreviewRoot: View {
             case "book": BookPreview()
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
+            case "jadetail": LanguageCardPreview(kind: .ja)
+            case "endetail": LanguageCardPreview(kind: .en)
             case "settings": SettingsView()
             case "auth": AuthView()
             case "onboarding": OnboardingView {}
@@ -397,6 +399,64 @@ private struct DetailPreview: View {
 
     var body: some View {
         WordDetailView(sticker: Self.sticker, previewFocus: .usageChunks)
+    }
+}
+/// A Japanese word (傘) and an English word (umbrella) as an English / Chinese / Japanese reader sees them —
+/// to check each language's own sections and that every note is in the reader's language.
+private struct LanguageCardPreview: View {
+    enum Kind { case ja, en }
+    let kind: Kind
+
+    private var sticker: Sticker {
+        let zh = L10n.lang == "zh-TW"
+        let obj: [String: Any]
+        switch kind {
+        case .ja:
+            obj = [
+                "id": "w-kasa", "headword": "傘", "reading_zhuyin": "かさ", "pinyin": "kasa", "language": "ja",
+                "meaning_ja": zh ? "雨傘" : "umbrella", "part_of_speech": "名詞",
+                "example_sentence": "雨が降ってきたので、傘をさしました。",
+                "example_translation": zh ? "因為開始下雨了，所以撐了傘。" : "It started to rain, so I put up my umbrella.",
+                "extras": [
+                    "explain_lang": L10n.lang,
+                    "usage_chunks": [
+                        ["parts": [["text": "傘", "pos": "N"], ["text": "を", "pos": "P"], ["text": "さす", "pos": "V"]], "ja": zh ? "撐傘" : "put up an umbrella"],
+                        ["parts": [["text": "傘", "pos": "N"], ["text": "を", "pos": "P"], ["text": "たたむ", "pos": "V"]], "ja": zh ? "把傘收起來" : "fold an umbrella"],
+                    ],
+                    "kanji_breakdown": [["kanji": "傘", "meaning": zh ? "傘" : "umbrella", "on": "サン", "kun": "かさ"]],
+                    "counters": [["word": "一本", "reading": "いっぽん",
+                                  "note": zh ? "細長的東西用「本」來數，傘也是。" : "Long, thin things — umbrellas too — are counted with 本."]],
+                    "related_words": [["word": "日傘", "kind": "rel", "reading": "ひがさ", "note": zh ? "遮陽用的傘" : "a parasol for the sun"]],
+                ] as [String: Any],
+            ]
+        case .en:
+            obj = [
+                "id": "w-umbrella", "headword": "umbrella", "language": "en",
+                "meaning_ja": zh ? "雨傘" : "傘", "part_of_speech": "noun",
+                "example_sentence": "Don't forget your umbrella — it's going to rain.",
+                "example_translation": zh ? "別忘了帶傘，快要下雨了。" : "傘を忘れないで。雨が降りそうだよ。",
+                "extras": [
+                    "explain_lang": L10n.lang,
+                    "usage_chunks": [
+                        ["parts": [["text": "open", "pos": "V"], ["text": "an umbrella", "pos": "N"]], "ja": zh ? "打開傘" : "傘を開く"],
+                        ["parts": [["text": "share", "pos": "V"], ["text": "an umbrella", "pos": "N"]], "ja": zh ? "一起撐一把傘" : "相合い傘をする"],
+                    ],
+                    "forms": ["plural": "umbrellas"],
+                    "countability": ["kind": "countable", "article": "an",
+                                     "note": zh ? "可數名詞，前面用 an（母音開頭）。" : "数えられる名詞。母音で始まるので an を付ける。"],
+                    "stress": ["syllables": ["um", "brel", "la"], "primary": 1],
+                ] as [String: Any],
+            ]
+        }
+        let data = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data()
+        let word = (try? JSONDecoder().decode(Word.self, from: data))
+            .map { ReaderLanguage.resolve($0, explanation: nil, readerMeaning: nil, reader: L10n.lang) }
+        return Sticker(id: "lang-\(kind)", wordId: kind == .ja ? "w-kasa" : "w-umbrella", objectImageUrl: nil, cutoutImageUrl: nil,
+                       selfieImageUrl: nil, caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
+    }
+
+    var body: some View {
+        WordDetailView(sticker: sticker, previewFocus: .usageChunks)
     }
 }
 #endif
