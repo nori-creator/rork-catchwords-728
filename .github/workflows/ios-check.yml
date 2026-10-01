@@ -104,7 +104,10 @@ jobs:
           sleep 5
           kill -INT $REC; wait $REC || true
           # 起動直後に落ちていないか（落ちていれば失敗にする）
-          xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID" || { echo "::error::アプリが起動後に終了しました"; exit 1; }
+          # 一覧はファイルに書いてから探す。`| grep -q` だと見つけた瞬間に grep が閉じ、launchctl が
+          # SIGPIPE で終わり、pipefail のせいで「起動していない」と誤判定する（2026-10-01 に実際に起きた）。
+          xcrun simctl spawn "$UDID" launchctl list > "$RUNNER_TEMP/launchctl.txt" || true
+          grep -q "$BUNDLE_ID" "$RUNNER_TEMP/launchctl.txt" || { echo "::error::アプリが起動後に終了しました"; exit 1; }
 
       - name: 見本の画面を撮る（アニメーションはコマ送り）
         run: |
