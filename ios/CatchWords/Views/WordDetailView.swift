@@ -830,9 +830,12 @@ struct WordDetailView: View {
         let mwords = Set(measures.map(\.word))
         var seen = Set<String>()
         var out: [UsageChunk] = []
-        for c in raw where !c.parts.isEmpty {
+        for r in raw where !r.parts.isEmpty {
+            // docs/chunk-rules.md: one word is one block (C7), a Mandarin adjective gets its degree word (C8).
+            let c = UsageChunk(parts: ChunkRules.tidy(r.parts, headword: headword, target: learningLang, reader: L10n.lang), ja: r.ja)
+            guard ChunkRules.isPattern(c.parts) else { continue }
             let text = c.text
-            if tooLong(c) || text == headword { continue }
+            if tooLong(r) || text == headword { continue }
             // R20: a chunk that does not contain the word it teaches ("很+甜" for 芒果) is not shown.
             if !LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: learningLang) { continue }
             if text.contains(where: { "。！？!?".contains($0) }) { continue }
@@ -1013,22 +1016,8 @@ struct WordDetailView: View {
         return SectionCard(title: L("使い方チャンク"), icon: "square.grid.2x2") {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.offset) { _, chunk in
-                    HStack(alignment: .center, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            FlowRow(spacing: 4) {
-                                ForEach(Array(chunk.parts.enumerated()), id: \.offset) { i, part in
-                                    HStack(spacing: 4) {
-                                        if i > 0 { Text("+").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.45)) }
-                                        chunkBlock(part)
-                                    }
-                                }
-                            }
-                            Text(chunk.ja).font(.system(size: 16)).foregroundStyle(Theme.muted).lineSpacing(3)
-                        }
-                        Spacer(minLength: 0)
-                        PronounceCircle(text: chunk.text, size: 50)
-                    }
-                    .padding(.vertical, 14)
+                    ChunkLineView(chunk: chunk, headword: headword, target: learningLang)
+                        .padding(.vertical, 14)
                     Divider().overlay(Theme.border)
                 }
                 HStack(spacing: 14) {
@@ -1040,24 +1029,14 @@ struct WordDetailView: View {
                     }
                 }
                 .padding(.top, 12)
+                if shown.contains(where: { $0.parts.contains { ChunkRules.isSwappable($0, headword: headword, target: learningLang) } }) {
+                    Text(L("点線の語を押すと、ネイティブがよく入れるほかの語に入れ替えられます。"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.top, 8)
+                }
             }
         }
-    }
-
-    private func chunkBlock(_ part: ChunkPart) -> some View {
-        let kind = ChunkKind(pos: part.pos)
-        let isHead = part.text == headword
-        return Text(part.text)
-            .font(.system(size: 20, weight: .bold))
-            .foregroundStyle(kind.ink.mix(with: .black, by: 0.3))
-            .padding(.horizontal, 12)
-            .frame(minHeight: 48)
-            .background(kind.ink.opacity(isHead ? 0.14 : 0.08), in: .rect(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(kind.ink.opacity(isHead ? 0.75 : 0.35), lineWidth: isHead ? 2.5 : 1.5)
-            )
-            .shadow(color: kind.ink.opacity(isHead ? 0.18 : 0), radius: 6, y: 2)
     }
 
     private func measureCard(_ items: [MeasureWord]) -> some View {

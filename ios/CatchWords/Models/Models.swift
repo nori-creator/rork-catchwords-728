@@ -196,42 +196,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     }
 }
 
-nonisolated struct UsageChunk: Codable, Sendable, Hashable {
-    var parts: [ChunkPart]
-    var ja: String
-
-    init(parts: [ChunkPart], ja: String) {
-        self.parts = parts
-        self.ja = ja
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        parts = (try? c.decode([ChunkPart].self, forKey: .parts)) ?? []
-        ja = (try? c.decode(String.self, forKey: .ja)) ?? ""
-    }
-
-    var text: String { parts.map(\.text).joined() }
-}
-
-nonisolated struct ChunkPart: Codable, Sendable, Hashable {
-    var text: String
-    var pos: String
-    var slot: Bool?
-
-    init(text: String, pos: String, slot: Bool? = nil) {
-        self.text = text
-        self.pos = pos
-        self.slot = slot
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        text = (try? c.decode(String.self, forKey: .text)) ?? ""
-        pos = (try? c.decode(String.self, forKey: .pos)) ?? ""
-        slot = try? c.decodeIfPresent(Bool.self, forKey: .slot)
-    }
-}
+// UsageChunk / ChunkPart / ChunkAlt live in Utilities/ChunkRules.swift with the rules that draw them.
 
 /// extras.related_words entry (RelatedWordSchema): kind is syn / ant / rel.
 nonisolated struct RelatedWord: Codable, Sendable, Hashable {

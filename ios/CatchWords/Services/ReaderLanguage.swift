@@ -118,6 +118,15 @@ nonisolated enum ReaderLanguage {
         e.usageChunks = e.usageChunks?.map { c in
             var c = c
             if looksWrong(c.ja, reader: reader, hanOnlyOk: true) { c.ja = "" }
+            // A swappable part's meaning and its choices' meanings are in the reader's language too (R6).
+            c.parts = c.parts.map { p in
+                var p = p
+                if let j = p.ja, looksWrong(j, reader: reader, hanOnlyOk: true) { p.ja = nil }
+                p.alts = p.alts?.map { a in
+                    looksWrong(a.ja, reader: reader, hanOnlyOk: true) ? ChunkAlt(text: a.text, ja: "") : a
+                }
+                return p
+            }
             return c
         }
         e.measureWords = e.measureWords?.map { m in

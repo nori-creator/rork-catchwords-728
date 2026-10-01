@@ -100,11 +100,16 @@ struct AnswerPanel: View {
 
     private var chunks: [UsageChunk] {
         // R20: only chunks that actually contain the word being learned.
-        let lang = LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword)
-        return Array((word?.extras?.usageChunks ?? []).filter {
-            !$0.parts.isEmpty && LanguageRules.mentionsHeadword($0.parts.map(\.text).joined(separator: " "), headword: headword, target: lang)
+        let lang = learningLang
+        return Array((word?.extras?.usageChunks ?? []).compactMap { raw -> UsageChunk? in
+            // docs/chunk-rules.md C7/C8: the same shape as the word detail draws.
+            let c = UsageChunk(parts: ChunkRules.tidy(raw.parts, headword: headword, target: lang, reader: L10n.lang), ja: raw.ja)
+            guard ChunkRules.isPattern(c.parts),
+                  LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: lang) else { return nil }
+            return c
         }.prefix(3))
     }
+    private var learningLang: String { LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword) }
     private var related: [RelatedWord] { Array((word?.extras?.allRelated ?? []).prefix(4)) }
     private var measures: [MeasureWord] {
         Array((word?.extras?.measureWords ?? []).filter { !$0.word.trimmingCharacters(in: .whitespaces).isEmpty }.prefix(2))
@@ -164,49 +169,18 @@ struct AnswerPanel: View {
         return section(L("よく使う形"), tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(chunks.enumerated()), id: \.offset) { _, chunk in
-                    HStack(alignment: .center, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            FlowRow(spacing: 4) {
-                                ForEach(Array(chunk.parts.enumerated()), id: \.offset) { i, part in
-                                    HStack(spacing: 4) {
-                                        if i > 0 { Text("+").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.5)) }
-                                        block(part)
-                                    }
-                                }
-                            }
-                            if !chunk.ja.isEmpty {
-                                Text(chunk.ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        PronounceCircle(text: chunk.text, size: 36)
-                    }
+                    ChunkLineView(chunk: chunk, headword: headword, target: learningLang, size: .compact)
                 }
                 HStack(spacing: 12) {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 4) {
                             Circle().fill(k.ink).frame(width: 7, height: 7)
-                            Text(k.label(for: LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword))).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: learningLang)).font(.system(size: 11)).foregroundStyle(Theme.muted)
                         }
                     }
                 }
             }
         }
-    }
-
-    private func block(_ part: ChunkPart) -> some View {
-        let kind = ChunkKind(pos: part.pos)
-        let isHead = part.text == headword
-        return Text(part.text)
-            .font(.system(size: 15, weight: .bold))
-            .foregroundStyle(kind.ink.mix(with: .black, by: 0.25))
-            .padding(.horizontal, 10)
-            .frame(minHeight: 34)
-            .background(kind.ink.opacity(isHead ? 0.16 : 0.09), in: .rect(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(kind.ink.opacity(isHead ? 0.8 : 0.35), lineWidth: isHead ? 2 : 1.2)
-            )
     }
 
     private var relatedSection: some View {

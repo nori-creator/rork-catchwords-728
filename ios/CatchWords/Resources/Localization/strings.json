@@ -687,6 +687,14 @@
   "en": "Other ways to say it: {1}",
   "zh-TW": "其他說法 {1}"
  },
+ "ほかの語": {
+  "en": "Other words",
+  "zh-TW": "其他詞"
+ },
+ "ほかの語に入れ替えられます": {
+  "en": "Can be swapped for other words",
+  "zh-TW": "可以換成其他詞"
+ },
  "まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。": {
   "en": "Take a quick look around, then photograph something you’d like to learn.",
   "zh-TW": "先看看怎麼使用，接著拍下一樣想學的東西吧。"
@@ -2526,6 +2534,10 @@
  "火": {
   "en": "Tue",
   "zh-TW": "二"
+ },
+ "点線の語を押すと、ネイティブがよく入れるほかの語に入れ替えられます。": {
+  "en": "Tap a dotted word to swap in other words natives often use there.",
+  "zh-TW": "點一下虛線的詞，就能換成母語人士常放在這裡的其他詞。"
  },
  "無制限": {
   "en": "Unlimited",

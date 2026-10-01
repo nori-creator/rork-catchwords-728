@@ -56,6 +56,7 @@ struct UIPreviewRoot: View {
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
             case "webimg": WebImagesPreview()
+            case "chunks": ChunkWheelPreview()
             case "jadetail": LanguageCardPreview(kind: .ja)
             case "quiz": ReviewPreview(learning: "zh-TW", answered: false)
             case "answer": ReviewPreview(learning: "zh-TW", answered: true)
@@ -554,7 +555,7 @@ private struct ReviewPreview: View {
                  "example_translation": en ? "This mango is very sweet." : "このマンゴーはとても甘い。",
                  "extras": ["explain_lang": L10n.lang,
                             "usage_chunks": [["parts": [["text": "芒果", "pos": "N"], ["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "Mangoes are very sweet" : "マンゴーはとても甘い"],
-                                             ["parts": [["text": "芒果", "pos": "N"], ["text": "冰", "pos": "N"]], "ja": en ? "mango shaved ice" : "マンゴーかき氷"]],
+                                             ["parts": [["text": "切", "pos": "V"], ["text": "芒果", "pos": "N"]], "ja": en ? "cut a mango" : "マンゴーを切る"]],
                             "measure_words": [["word": "顆", "zhuyin": "ㄎㄜ", "note": en ? "for round fruit" : "丸い果物に"]]] as [String: Any]]
         }
         let data = (try? JSONSerialization.data(withJSONObject: w)) ?? Data()
@@ -590,5 +591,43 @@ private struct DonePreview: View {
             ReviewDone(total: 12, correct: 9, doneToday: 12, missed: 3, isRetry: false, canLoadMore: true) {}
                 .padding(16)
         }
+    }
+}
+
+/// Swappable chunk parts with the wheel open (docs/chunk-rules.md C5/C6): 跟＋男朋友＋吵架 and 芒果＋很＋甜.
+private struct ChunkWheelPreview: View {
+    private var reader: String { L10n.lang }
+
+    private func gloss(_ ja: String, _ en: String, _ zh: String) -> String { reader == "en" ? en : reader == "zh-TW" ? zh : ja }
+
+    private var quarrel: UsageChunk {
+        let alts = [("女朋友", "彼女", "girlfriend", "女朋友"), ("朋友", "友達", "a friend", "朋友"), ("同事", "同僚", "a coworker", "同事"),
+                    ("爸媽", "両親", "my parents", "爸媽"), ("室友", "ルームメイト", "a roommate", "室友")]  // l10n-ignore (preview data)
+        return UsageChunk(parts: [
+            ChunkPart(text: "跟", pos: "Prep"),  // l10n-ignore (target word)
+            ChunkPart(text: "男朋友", pos: "N", slot: true, ja: gloss("彼氏", "my boyfriend", "男朋友"),  // l10n-ignore (preview data)
+                      alts: alts.map { ChunkAlt(text: $0.0, ja: gloss($0.1, $0.2, $0.3)) }),
+            ChunkPart(text: "吵架", pos: "V"),  // l10n-ignore (target word)
+        ], ja: gloss("彼氏と喧嘩する", "argue with my boyfriend", "跟男朋友吵架"))  // l10n-ignore (preview data)
+    }
+
+    private var mango: UsageChunk {
+        let raw = [ChunkPart(text: "芒果", pos: "N"), ChunkPart(text: "甜", pos: "Vs")]  // l10n-ignore (target word)
+        return UsageChunk(parts: ChunkRules.tidy(raw, headword: "芒果", target: "zh-TW", reader: reader),  // l10n-ignore (target word)
+                          ja: gloss("マンゴーはとても甘い", "Mangoes are very sweet", "芒果很甜"))  // l10n-ignore (preview data)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                ChunkLineView(chunk: quarrel, headword: "吵架", target: "zh-TW", startOpen: 1)  // l10n-ignore (target word)
+                Divider()
+                ChunkLineView(chunk: mango, headword: "芒果", target: "zh-TW", startOpen: 1)  // l10n-ignore (target word)
+            }
+            .padding(20)
+            .background(.white, in: .rect(cornerRadius: 24))
+            .padding(16)
+        }
+        .background(Theme.background)
     }
 }
