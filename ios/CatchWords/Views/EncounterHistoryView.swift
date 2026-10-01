@@ -1,20 +1,32 @@
 import SwiftUI
 
+/// One photo of a word: the first catch or a re-encounter (server `listStickerPhotos`).
+struct StickerPhoto: Decodable, Identifiable, Equatable {
+    let url: String
+    let takenAt: String
+    let place: String?
+    let first: Bool
+    var id: String { url }
+    enum CodingKeys: String, CodingKey { case url, place, first, takenAt = "taken_at" }
+
+    private struct Res: Decodable { let photos: [StickerPhoto] }
+    /// Kept for the session so the word page and its history section share one request.
+    private static var cache: [String: [StickerPhoto]] = [:]
+
+    static func load(stickerId: String) async -> [StickerPhoto] {
+        if let hit = cache[stickerId] { return hit }
+        guard let res = try? await NativeAPI.call("listStickerPhotos", ["sticker_id": stickerId], as: Res.self) else { return [] }
+        cache[stickerId] = res.photos
+        return res.photos
+    }
+}
+
 /// Web `StickerPhotoHistory`: every photo of this word — the first catch and each re-encounter —
 /// in the order you met it, with where. Hidden when there is only the first photo.
 struct EncounterHistoryView: View {
     let stickerId: String
 
-    private struct Photo: Decodable, Identifiable {
-        let url: String
-        let takenAt: String
-        let place: String?
-        let first: Bool
-        var id: String { url }
-        enum CodingKeys: String, CodingKey { case url, place, first, takenAt = "taken_at" }
-    }
-
-    private struct Res: Decodable { let photos: [Photo] }
+    private typealias Photo = StickerPhoto
 
     @State private var photos: [Photo] = []
     @State private var appeared = false
@@ -45,8 +57,9 @@ struct EncounterHistoryView: View {
             }
         }
         .task(id: stickerId) {
-            guard let res = try? await NativeAPI.call("listStickerPhotos", ["sticker_id": stickerId], as: Res.self) else { return }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { photos = res.photos }
+            let list = await StickerPhoto.load(stickerId: stickerId)
+            guard !list.isEmpty else { return }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { photos = list }
             appeared = true
         }
     }

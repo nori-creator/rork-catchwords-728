@@ -25,6 +25,8 @@ struct ScanView: View {
     @State private var topId: String?
     @State private var doubtful: Set<String> = []
     @State private var touched = false
+    /// Which of the scanned words you already have or have looked at before (web `getScanContext`).
+    @State private var scanContext: ScanContext?
 
     enum Stage: Equatable {
         case idle, sensing, reading, matching
@@ -46,7 +48,7 @@ struct ScanView: View {
                     preview
                     if let frame, !items.isEmpty {
                         ForEach(items) { item in
-                            ScanTag(item: item, owned: dex.owns(headword: item.headword),
+                            ScanTag(item: item, state: dotState(item.headword),
                                     isTop: item.id == topId, isDoubtful: doubtful.contains(item.id)) {
                                 touched = true
                                 tapStart = Date()
@@ -54,6 +56,7 @@ struct ScanView: View {
                                 selected = item
                                 SoundService.shared.speak(item.headword)
                                 ScanLog.tapped(item, ms: tapStart.map { Int(Date().timeIntervalSince($0) * 1000) })
+                                scanContext?.tapped.insert(ScanContext.key(item.headword))
                             }
                             .position(Self.place(item.point, image: frame.size, in: geo.size))
                             .transition(reduceMotion ? .opacity : .scale(scale: 0.4).combined(with: .opacity))
@@ -76,6 +79,7 @@ struct ScanView: View {
             await camera.start()
             location = await LocationService.shared.current()
         }
+        .task { scanContext = await ScanContext.load() }
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear {
             camera.stop()
@@ -219,6 +223,17 @@ struct ScanView: View {
     }
 
     // MARK: - Actions
+
+    /// The 4 discovery states (web `dotStateFor`). Without the server context, the dex on this phone decides.
+    private func dotState(_ headword: String) -> ScanDotState {
+        let key = ScanContext.key(headword)
+        if let ctx = scanContext {
+            if let entry = ctx.owned[key] { return entry.hasPhoto ? .owned : .reunion }
+            return ctx.tapped.contains(key) ? .seen : .new
+        }
+        guard let s = dex.stickers.first(where: { ScanContext.key($0.word?.headword ?? "") == key }) else { return .new }
+        return (s.objectImageUrl ?? s.cutoutImageUrl) != nil ? .owned : .reunion
+    }
 
     /// Asked after the tags are already up, so scanning never waits for it; silently skipped on failure.
     private func rank(_ list: [ScanItem]) async {
@@ -369,10 +384,67 @@ enum ScanLog {
     }
 }
 
+/// What the learner already knows about a scanned word.
+enum ScanDotState {
+    /// Never caught, never tapped: a white light that pings.
+    case new
+    /// Tapped in an earlier scan but not caught: a white light, quiet.
+    case seen
+    /// Caught with a photo: green with a check.
+    case owned
+    /// Caught by text or voice only (no photo yet): amber, softly pulsing — "meet it again".
+    case reunion
+
+    var color: Color {
+        switch self {
+        case .new, .seen: .white
+        case .owned: Color(hex: 0x34D399)
+        case .reunion: Color(hex: 0xFBBF24)
+        }
+    }
+
+    var spoken: String {
+        switch self {
+        case .new: L("はじめて見る語")
+        case .seen: L("前に見た語")
+        case .owned: L("取得済み")
+        case .reunion: L("再会")
+        }
+    }
+}
+
+/// The learner's own words and earlier taps, read once per scan (web `getScanContext`) and matched here.
+struct ScanContext {
+    struct Entry { let stickerId: String; let hasPhoto: Bool; let foundAt: String }
+    var owned: [String: Entry]
+    var tapped: Set<String>
+
+    /// Same normalisation as the server: NFC and trimmed, so variants of one character match.
+    static func key(_ headword: String) -> String {
+        headword.precomposedStringWithCanonicalMapping.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func load() async -> ScanContext? {
+        struct Raw: Decodable {
+            struct E: Decodable {
+                let stickerId: String; let hasPhoto: Bool; let foundAt: String
+                enum CodingKeys: String, CodingKey { case stickerId = "sticker_id", hasPhoto = "has_photo", foundAt = "found_at" }
+            }
+            let owned: [String: E]
+            let tapped: [String]
+        }
+        guard let r = try? await NativeAPI.call("getScanContext", [:], as: Raw.self, timeout: 10) else { return nil }
+        var owned: [String: Entry] = [:]
+        for (k, e) in r.owned { owned[key(k)] = Entry(stickerId: e.stickerId, hasPhoto: e.hasPhoto, foundAt: e.foundAt) }
+        return ScanContext(owned: owned, tapped: Set(r.tapped.map(key)))
+    }
+}
+
 /// The floating word tag with a pin dot.
 struct ScanTag: View {
     let item: ScanItem
-    let owned: Bool
+    let state: ScanDotState
+    private var owned: Bool { state == .owned }
     var isTop: Bool = false
     var isDoubtful: Bool = false
     let onTap: () -> Void
@@ -400,14 +472,12 @@ struct ScanTag: View {
                 .overlay(Capsule().stroke(isTop ? Theme.gold : Theme.primary.opacity(0.5), lineWidth: isTop ? 2.5 : 1.5))
                 .shadow(color: isTop ? Theme.gold.opacity(glow ? 0.8 : 0.3) : .black.opacity(0.3), radius: isTop ? 14 : 8, y: 4)
                 .opacity(isDoubtful ? 0.78 : 1)
-                Circle().fill(Theme.cyan).frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(.white, lineWidth: 2))
-                    .shadow(color: Theme.cyan, radius: 6)
+                pin
             }
             .offset(y: bob ? -3 : 3)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + (owned ? L("、取得済み") : ""))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
+        .accessibilityLabel(L("\(item.headword)、\(item.meaning)") + L10n.comma + state.spoken)  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
         .scaleEffect(isTop ? 1.08 : 1)
         .zIndex(isTop ? 1 : 0)
         .onAppear {
@@ -415,6 +485,27 @@ struct ScanTag: View {
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.6))) { bob = true }
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glow = true }
         }
+    }
+
+    /// The light under the tag: its colour says new / seen / caught / meet-again.
+    private var pin: some View {
+        ZStack {
+            if !reduceMotion && (state == .new || state == .reunion) {
+                // new pings outward; a reunion breathes in amber
+                Circle().fill(state.color.opacity(state == .new ? 0.35 : 0.45))
+                    .frame(width: state == .new ? 24 : 28, height: state == .new ? 24 : 28)
+                    .scaleEffect(glow ? 1.15 : 0.6)
+                    .opacity(glow ? 0 : 1)
+                    .blur(radius: state == .reunion ? 3 : 0)
+            }
+            Circle().fill(state.color).frame(width: 14, height: 14)
+                .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1.5))
+                .shadow(color: state.color.opacity(0.7), radius: 6)
+            if state == .owned {
+                Image(systemName: "checkmark").font(.system(size: 7, weight: .black)).foregroundStyle(.white)
+            }
+        }
+        .frame(width: 28, height: 28)
     }
 }
 

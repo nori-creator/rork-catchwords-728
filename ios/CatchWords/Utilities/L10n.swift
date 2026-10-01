@@ -203,6 +203,9 @@ extension L10n {
                                   "minutes": "minute", "hours": "hour", "pages": "page", "entries": "entry"]
 
     /// Puts the values into `{1}`, `{2}` … (and, in English, makes "1 words" singular).
+    /// The comma between spoken parts in the display language: "、" / ", " / "，".
+    static var comma: String { lang == "en" ? ", " : lang == "ja" ? "、" : "，" }
+
     nonisolated static func fill(_ template: String, _ args: [String], lang: String) -> String {
         var out = template
         for (i, a) in args.enumerated() {

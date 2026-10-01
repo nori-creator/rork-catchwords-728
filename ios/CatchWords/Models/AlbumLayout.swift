@@ -24,18 +24,6 @@ nonisolated struct AlbumBox: Hashable, Sendable {
     var h: Double
 }
 
-/// 指の位置（TS `Pt`）。
-nonisolated struct AlbumPt: Hashable, Sendable {
-    var x: Double
-    var y: Double
-}
-
-/// 触れている指（TS `Grip`）。1本なら b は nil。
-nonisolated struct AlbumGrip: Hashable, Sendable {
-    var a: AlbumPt
-    var b: AlbumPt?
-}
-
 /// 指の動き（TS `Delta`）。
 nonisolated struct AlbumDelta: Hashable, Sendable {
     var dx: Double
@@ -108,11 +96,6 @@ nonisolated struct AvoidItem: Hashable, Sendable {
     var extra: Double = 0
 }
 
-/// TS `captionAlign` の戻り値。
-nonisolated enum CaptionAlign: String, Sendable {
-    case c, l, r
-}
-
 nonisolated enum AlbumLayout {
     // MARK: - 定数（album-place.ts）
 
@@ -124,8 +107,6 @@ nonisolated enum AlbumLayout {
     static let BASE_WIDTH: Double = (1 - 2 * GAP_X) / 3
     /// 1段の高さ（7rem / 316px）。
     static let ROW_H: Double = 112.0 / 316.0
-    /// 升目は3列。
-    static let COLS = 3
     /// 台紙の高さの下限（幅に対する割合）。
     static let MIN_BOARD_H: Double = 1.25
     /// 大きさの下限と上限。
@@ -145,8 +126,6 @@ nonisolated enum AlbumLayout {
 
     // 誌面の自動配置（packCollage）の定数。
     static let COLLAGE_COL_W: Double = 0.47
-    static let COLLAGE_CAP_W: Double = 0.6
-    static let COLLAGE_CAP_MIN: Double = 0.34
     static let COLLAGE_GUTTER: Double = 0.04
     static let COLLAGE_HERO_W: Double = 0.6
     static let COLLAGE_STAGGER: Double = 0.05
@@ -183,33 +162,9 @@ nonisolated enum AlbumLayout {
         Double(cy) * ROW_H + Double(cy - 1) * GAP_Y
     }
 
-    /// 大きさ → 縦横の比（TS `ratioOf`）。
-    static func ratioOf(_ size: AlbumSize) -> Double {
-        let (cx, cy) = SIZE_CELLS(size)
-        return cellsHeight(cy) / cellsWidth(cx)
-    }
-
     /// 大きさ → 初期の倍率（TS `scaleOf`）。
     static func scaleOf(_ size: AlbumSize) -> Double {
         cellsWidth(SIZE_CELLS(size).0) / BASE_WIDTH
-    }
-
-    /// 2点の真ん中（TS `centroid`）。
-    static func centroid(_ g: AlbumGrip) -> AlbumPt {
-        guard let b = g.b else { return g.a }
-        return AlbumPt(x: (g.a.x + b.x) / 2, y: (g.a.y + b.y) / 2)
-    }
-
-    /// 2点の距離（TS `spread`）。
-    static func spread(_ g: AlbumGrip) -> Double {
-        guard let b = g.b else { return 0 }
-        return hypot(b.x - g.a.x, b.y - g.a.y)
-    }
-
-    /// 2点を結ぶ線の角度・度（TS `angle`）。
-    static func angle(_ g: AlbumGrip) -> Double {
-        guard let b = g.b else { return 0 }
-        return (atan2(b.y - g.a.y, b.x - g.a.x) * 180) / Double.pi
     }
 
     /// −180〜180 に畳む（TS `normalizeDeg`、JS の % ＝ truncatingRemainder）。
@@ -217,20 +172,6 @@ nonisolated enum AlbumLayout {
         var d = (deg + 180).truncatingRemainder(dividingBy: 360) - 180
         if d < -180 { d += 360 }
         return d
-    }
-
-    /// 同じ握りの中の指の動き（TS `gestureDelta`）。
-    static func gestureDelta(start: AlbumGrip, now: AlbumGrip) -> AlbumDelta {
-        let c0 = centroid(start)
-        let c1 = centroid(now)
-        let twoFingers = start.b != nil && now.b != nil
-        let s0 = spread(start)
-        return AlbumDelta(
-            dx: c1.x - c0.x,
-            dy: c1.y - c0.y,
-            scale: twoFingers && s0 > 1 ? spread(now) / s0 : 1,
-            rot: twoFingers ? normalizeDeg(angle(now) - angle(start)) : 0
-        )
     }
 
     /// 数を範囲に収める（TS `clamp`、NaN はそのまま通る）。
@@ -261,41 +202,6 @@ nonisolated enum AlbumLayout {
     static func sizePx(_ p: AlbumPlacement, boardW: Double, ratio: Double) -> (w: Double, h: Double) {
         let w = boardW * BASE_WIDTH * p.scale
         return (w, w * ratio)
-    }
-
-    /// 昔の CSS グリッドの流し込みをなぞる（TS `packAuto`、carriage は戻らない）。
-    static func packAuto(_ sizes: [AlbumSize]) -> [AlbumCell] {
-        var taken = Set<AlbumCell>()
-        func fits(_ row: Int, _ col: Int, _ cx: Int, _ cy: Int) -> Bool {
-            if col + cx > COLS { return false }
-            for r in row..<(row + cy) {
-                for c in col..<(col + cx) where taken.contains(AlbumCell(col: c, row: r)) { return false }
-            }
-            return true
-        }
-        var row = 0
-        var col = 0
-        var out: [AlbumCell] = []
-        for size in sizes {
-            let (cx, cy) = SIZE_CELLS(size)
-            while !fits(row, col, cx, cy) {
-                col += 1
-                if col + cx > COLS {
-                    col = 0
-                    row += 1
-                }
-            }
-            for r in row..<(row + cy) {
-                for c in col..<(col + cx) { taken.insert(AlbumCell(col: c, row: r)) }
-            }
-            out.append(AlbumCell(col: col, row: row))
-            col += cx
-            if col >= COLS {
-                col = 0
-                row += 1
-            }
-        }
-        return out
     }
 
     /// JS の `(hash * 31 + charCodeAt(i)) >>> 0` と同じ値（UTF-16 単位・UInt32 で折り返す）。
@@ -346,16 +252,6 @@ nonisolated enum AlbumLayout {
             scale: clamp(num(scale, auto.scale), MIN_SCALE, MAX_SCALE),
             rot: normalizeDeg(num(rot, auto.rot))
         )
-    }
-
-    /// 字をどこに揃えるか（TS `captionAlign`）。
-    static func captionAlign(xFrac: Double, photoWpx: Double, boardW: Double) -> CaptionAlign {
-        if !jsTruthy(boardW) || !jsTruthy(photoWpx) { return .c }
-        let capW = clamp(photoWpx, boardW * COLLAGE_CAP_MIN, boardW * COLLAGE_CAP_W)
-        let cx = xFrac * boardW
-        if cx - capW / 2 < 0 { return .l }
-        if cx + capW / 2 > boardW { return .r }
-        return .c
     }
 
     /// 比を誌面の範囲へ。壊れた値は 1（TS `collageRatio`）。

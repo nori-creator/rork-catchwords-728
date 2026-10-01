@@ -9,6 +9,10 @@ struct AnswerPanel: View {
     let onNext: () -> Void
 
     @Environment(DexStore.self) private var dex
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Drives the entrance: the verdict colour spreads across the band, then the word and buttons rise in.
+    @State private var spread: CGFloat = 0
+    @State private var settled = false
     /// The live word (its meaning arrives in the reader's language after the card was made).
     private var word: Word? { dex.sticker(id: sticker.id)?.word ?? sticker.word }
     private var headword: String { word?.headword ?? "" }
@@ -16,13 +20,25 @@ struct AnswerPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(correct ? L("正解！") : L("もう一度覚えよう"))
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(tint.mix(with: .black, by: 0.25))
-                .padding(.horizontal, 18)
-                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                .background(tint.opacity(0.12))
-                .accessibilityAddTraits(.updatesFrequently)
+            HStack(spacing: 8) {
+                Image(systemName: correct ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .symbolEffect(.bounce, value: settled)
+                Text(correct ? L("正解！") : L("もう一度覚えよう"))
+                    .font(.system(size: 16, weight: .bold))
+            }
+            .foregroundStyle(tint.mix(with: .black, by: 0.25))
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            .background(alignment: .leading) {
+                // The verdict colour spreads from the left edge, like ink soaking in.
+                GeometryReader { geo in
+                    tint.opacity(0.14)
+                        .frame(width: geo.size.width * spread)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
@@ -58,6 +74,17 @@ struct AnswerPanel: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
+            .opacity(settled ? 1 : 0)
+            .offset(y: settled ? 0 : 10)
+        }
+        .onAppear {
+            if reduceMotion {
+                spread = 1
+                settled = true
+                return
+            }
+            withAnimation(.easeOut(duration: 0.32)) { spread = 1 }
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.82).delay(0.08)) { settled = true }
         }
         .background(Theme.card)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
@@ -72,8 +99,17 @@ struct AnswerPanel: View {
     // MARK: - Explanation (explainOf in reviews.functions.ts)
 
     private var chunks: [UsageChunk] {
-        Array((word?.extras?.usageChunks ?? []).filter { !$0.parts.isEmpty }.prefix(3))
+        // R20: only chunks that actually contain the word being learned.
+        let lang = learningLang
+        return Array((word?.extras?.usageChunks ?? []).compactMap { raw -> UsageChunk? in
+            // docs/chunk-rules.md C7/C8: the same shape as the word detail draws.
+            let c = UsageChunk(parts: ChunkRules.tidy(raw.parts, headword: headword, target: lang, reader: L10n.lang), ja: raw.ja)
+            guard ChunkRules.isPattern(original: raw.parts, tidied: c.parts),
+                  LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: lang) else { return nil }
+            return c
+        }.prefix(3))
     }
+    private var learningLang: String { LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword) }
     private var related: [RelatedWord] { Array((word?.extras?.allRelated ?? []).prefix(4)) }
     private var measures: [MeasureWord] {
         Array((word?.extras?.measureWords ?? []).filter { !$0.word.trimmingCharacters(in: .whitespaces).isEmpty }.prefix(2))
@@ -133,49 +169,18 @@ struct AnswerPanel: View {
         return section(L("よく使う形"), tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(chunks.enumerated()), id: \.offset) { _, chunk in
-                    HStack(alignment: .center, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            FlowRow(spacing: 4) {
-                                ForEach(Array(chunk.parts.enumerated()), id: \.offset) { i, part in
-                                    HStack(spacing: 4) {
-                                        if i > 0 { Text("+").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.5)) }
-                                        block(part)
-                                    }
-                                }
-                            }
-                            if !chunk.ja.isEmpty {
-                                Text(chunk.ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        PronounceCircle(text: chunk.text, size: 36)
-                    }
+                    ChunkLineView(chunk: chunk, headword: headword, target: learningLang, size: .compact)
                 }
                 HStack(spacing: 12) {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 4) {
                             Circle().fill(k.ink).frame(width: 7, height: 7)
-                            Text(k.label(for: LanguageRules.resolveWordLanguage(stored: word?.language, headword: headword))).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: learningLang)).font(.system(size: 11)).foregroundStyle(Theme.muted)
                         }
                     }
                 }
             }
         }
-    }
-
-    private func block(_ part: ChunkPart) -> some View {
-        let kind = ChunkKind(pos: part.pos)
-        let isHead = part.text == headword
-        return Text(part.text)
-            .font(.system(size: 15, weight: .bold))
-            .foregroundStyle(kind.ink.mix(with: .black, by: 0.25))
-            .padding(.horizontal, 10)
-            .frame(minHeight: 34)
-            .background(kind.ink.opacity(isHead ? 0.16 : 0.09), in: .rect(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(kind.ink.opacity(isHead ? 0.8 : 0.35), lineWidth: isHead ? 2 : 1.2)
-            )
     }
 
     private var relatedSection: some View {

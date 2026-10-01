@@ -13,8 +13,6 @@ struct CatchDraft {
     let location: CLLocation?
     let placeName: String?
     let captureType: String
-    /// The spoken one-liner (a local m4a), uploaded after the save.
-    var voiceNote: URL? = nil
 }
 
 enum SaveOutcome {
@@ -57,7 +55,7 @@ final class DexStore {
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
-    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "voice_video_url", "placeholder_image_url"]
+    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit"]
     private static var selectColumns: String {
         ([baseColumns] + optionalColumns + ["word:words(*)"]).joined(separator: ",")
     }
@@ -148,7 +146,6 @@ final class DexStore {
                 paths.append(p)
                 paths.append(p + ".thumb.webp")
             }
-            if let v = s.voiceNotePath, signed[v] == nil { paths.append(v) }
         }
         guard !paths.isEmpty else { return }
         for chunk in stride(from: 0, to: paths.count, by: 200).map({ Array(paths[$0..<min($0 + 200, paths.count)]) }) {
@@ -219,10 +216,6 @@ final class DexStore {
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
         saveToPhotosIfEnabled(draft.photo)
-        if let note = draft.voiceNote {
-            // Never holds up the catch (web: 保存を1ミリ秒も遅くしない).
-            Task { await attachVoiceNote(note, to: sticker.id, uid: uid) }
-        }
         return .created(sticker)
     }
 
@@ -386,72 +379,6 @@ final class DexStore {
         return (res.encounterCount ?? owned.encounterCount + 1, image != nil || cut != nil)
     }
 
-    private func findWord(headword: String) async throws -> Word? {
-        let data = try await client.rest("GET", "words?language=eq.\(language)&headword=eq.\(Self.enc(headword))&select=*&limit=1")
-        return try JSONDecoder().decode([Word].self, from: data).first
-    }
-
-    private func ensureWord(candidate c: Candidate, details d: CardDetails?) async throws -> String {
-        if let w = try await findWord(headword: c.headword) { return w.id }
-        var extras: Any = [String: Any]()
-        if let e = d?.extras, let data = try? JSONEncoder().encode(e), let obj = try? JSONSerialization.jsonObject(with: data) {
-            extras = obj
-        }
-        var row: [String: Any] = [
-            "language": language,
-            "headword": c.headword,
-            "meaning_ja": c.meaningJa.isEmpty ? c.headword : c.meaningJa,
-            "part_of_speech": c.pos.isEmpty ? NativeAPI.defaultPos : c.pos,
-            "level": d?.level ?? "TOCFL-2",
-            "category_key": d?.categoryKey ?? "other",
-            "extras": extras,
-            "source": "ai",
-            "entry_type": "word",
-        ]
-        if let uid = client.userId { row["created_by"] = uid }
-        if !c.zhuyin.isEmpty { row["reading_zhuyin"] = c.zhuyin }
-        if !c.pinyin.isEmpty { row["pinyin"] = c.pinyin }
-        if let ex = d?.exampleSentence, !ex.isEmpty { row["example_sentence"] = ex }
-        if let tr = d?.exampleTranslation, !tr.isEmpty { row["example_translation"] = tr }
-
-        do {
-            return try await insertWord(row)
-        } catch APIError.server(let code, _) where code == 409 || code == 400 || code == 23503 {
-            if let w = try await findWord(headword: c.headword) { return w.id }
-            row["category_key"] = "other"
-            return try await insertWord(row)
-        }
-    }
-
-    /// Uploads the one-liner to `{user}/{sticker}/voice.mp4` (web voiceNotePath, re-recording
-    /// overwrites) and links it with `setStickerVoiceVideo`.
-    func attachVoiceNote(_ file: URL, to stickerId: String, uid: String) async {
-        defer { try? FileManager.default.removeItem(at: file) }
-        guard let data = try? Data(contentsOf: file), !data.isEmpty, data.count <= 12 * 1024 * 1024 else { return }
-        let path = "\(uid)/\(stickerId)/voice.mp4"
-        struct Saved: Decodable { let saved: Bool }
-        do {
-            try await client.upload(data, path: path, contentType: "audio/mp4", upsert: true)
-            let res = try await NativeAPI.call("setStickerVoiceVideo", ["sticker_id": stickerId, "voice_video_path": path], as: Saved.self)
-            guard res.saved else { return }
-            replace(stickerId) { old in
-                var s = old
-                s.voiceNotePath = path
-                return s
-            }
-            if let map = try? await client.signedURLs(for: [path]) { signed.merge(map) { _, new in new } }
-        } catch {
-            Haptics.warning()
-        }
-    }
-
-    private func insertWord(_ row: [String: Any]) async throws -> String {
-        let data = try await client.rest("POST", "words?select=id", body: row, prefer: "return=representation")
-        guard let arr = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-              let id = arr.first?["id"] as? String else { throw APIError.decoding }
-        return id
-    }
-
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
         guard let image, let jpeg = ImageTools.jpegForUpload(image) else { return nil }
         let path = "\(uid)/\(ts)-\(kind).jpg"
@@ -503,34 +430,68 @@ final class DexStore {
         if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
     }
 
+    /// Words already given an internet picture this launch (use-auto-hero.ts triedRef). A failed try is
+    /// forgotten, so a word that only met a bad connection is not left without a picture for good.
+    private var heroTried: Set<String> = []
+
+    /// A word with no picture of its own gets one from the internet as its stand-in (web useAutoHero:
+    /// 「単語の詳細の見出しの画像はネットからその単語を表す画像を添付して」). A word with a photo, a
+    /// selfie or a stand-in already is never touched.
+    func autoHero(_ sticker: Sticker) async {
+        guard !sticker.hasOwnPhoto, sticker.placeholderImageUrl == nil, !heroTried.contains(sticker.id),
+              let word = sticker.word else { return }
+        heroTried.insert(sticker.id)
+        do {
+            guard let first = try await WebImages.search(headword: word.headword, meaning: word.meaningJa).first else { return }
+            try await setPlaceholder(sticker, to: first)
+        } catch {
+            heroTried.remove(sticker.id)
+        }
+    }
+
+    /// Makes an internet picture the word's stand-in (web setStickerPlaceholder). It is not the
+    /// learner's photo, so a photo taken later still comes first.
+    func setPlaceholder(_ sticker: Sticker, to candidate: WebImageCandidate) async throws {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        let image = try await WebImages.image(for: candidate)
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        guard let path = try await uploadJPEG(ImageTools.resized(image, maxSide: 1024), uid: uid, ts: ts, kind: "placeholder") else {
+            throw APIError.decoding
+        }
+        _ = try await NativeAPI.call("setStickerPlaceholder", [
+            "sticker_id": sticker.id, "placeholder_path": path, "placeholder_credit": candidate.creditPayload,
+        ])
+        ImageCache.shared.set(image, for: path)
+        await reload(stickerId: sticker.id)
+        if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
+    }
+
     func addCutout(to sticker: Sticker, image: UIImage) async throws {
         guard let uid = client.userId else { throw APIError.unauthorized }
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         guard let path = await uploadPNG(image, uid: uid, ts: ts, kind: "cutout") else {
             throw APIError.message(L("切り抜きの保存に失敗しました。"))
         }
-        _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["cutout_image_url": path])
+        _ = try await NativeAPI.call("attachStickerCutout", ["sticker_id": sticker.id, "cutout_path": path])
         ImageCache.shared.set(image, for: path)
         replace(sticker.id) { old in
-            Sticker(
-                id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: path,
-                selfieImageUrl: old.selfieImageUrl, caption: old.caption, locationName: old.locationName,
-                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng, shelfKey: old.shelfKey
-            )
+            var s = old
+            s.cutoutImageUrl = path
+            return s
         }
     }
 
     /// Saves the sticker's one-line note (ひと言). Empty clears it.
     func updateCaption(_ sticker: Sticker, caption: String) async throws {
-        let trimmed = caption.trimmingCharacters(in: .whitespacesAndNewlines)
-        let value: Any = trimmed.isEmpty ? NSNull() : trimmed
-        _ = try await client.rest("PATCH", "stickers?id=eq.\(sticker.id)", body: ["caption": value])
+        // The server keeps 500 characters (stickers.functions.ts CAPTION_MAX).
+        let trimmed = String(caption.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        _ = try await NativeAPI.call("updateStickerCaption", ["sticker_id": sticker.id, "caption": trimmed])
+        // Change only the caption: rebuilding the sticker field by field dropped the chosen picture,
+        // the stand-in image and its credit until the next reload.
         replace(sticker.id) { old in
-            Sticker(
-                id: old.id, wordId: old.wordId, objectImageUrl: old.objectImageUrl, cutoutImageUrl: old.cutoutImageUrl,
-                selfieImageUrl: old.selfieImageUrl, caption: trimmed.isEmpty ? nil : trimmed, locationName: old.locationName,
-                takenAt: old.takenAt, captureType: old.captureType, word: old.word, lat: old.lat, lng: old.lng, shelfKey: old.shelfKey
-            )
+            var s = old
+            s.caption = trimmed.isEmpty ? nil : trimmed
+            return s
         }
     }
 
@@ -630,7 +591,6 @@ final class DexStore {
         Category.custom = Dictionary(rows.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
     }
 
-    /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
     /// Which picture shows this word on its detail page (web setStickerHeroRole; nil = default order).
     func setHeroRole(_ sticker: Sticker, role: String?) async throws {
         struct Saved: Decodable { let saved: Bool }
@@ -645,6 +605,7 @@ final class DexStore {
         }
     }
 
+    /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
     func move(_ sticker: Sticker, to key: String?) async throws {
         _ = try await NativeAPI.call("setStickerCategory", ["sticker_id": sticker.id, "key": key.map { $0 as Any } ?? NSNull()])
         replace(sticker.id) { old in
@@ -719,23 +680,14 @@ final class DexStore {
         ], as: ReportFix.self, timeout: 90)
     }
 
-    func report(headword: String, kind: String, note: String) async throws {
-        guard let uid = client.userId else { throw APIError.unauthorized }
-        _ = try await client.rest("POST", "entry_reports", body: [
-            "user_id": uid,
-            "headword": String(headword.prefix(80)),
-            "kind": kind,
-            "note": String(note.prefix(500)),
-        ])
-    }
-
     private func replace(_ id: String, _ transform: (Sticker) -> Sticker) {
         guard let i = stickers.firstIndex(where: { $0.id == id }) else { return }
         stickers[i] = transform(stickers[i])
     }
 
+    /// Web `deleteSticker`: the row and its photo files (and thumbnails) go together.
     func delete(_ sticker: Sticker) async throws {
-        _ = try await client.rest("DELETE", "stickers?id=eq.\(sticker.id)")
+        _ = try await NativeAPI.call("deleteSticker", ["sticker_id": sticker.id])
         stickers.removeAll { $0.id == sticker.id }
     }
 

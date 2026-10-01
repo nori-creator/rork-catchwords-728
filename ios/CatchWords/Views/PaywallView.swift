@@ -14,7 +14,7 @@ struct PaywallView: View {
         ("infinity", L("撮影・キャッチが無制限"), L("1日3回の上限がなくなります")),
         ("scissors", L("被写体の切り抜きも無制限"), L("iPhoneの写真と同じ切り抜きで図鑑が美しく")),
         ("wand.and.stars", L("解説の作り直し"), L("気になるカードをいつでも作り直せます")),
-        ("heart.fill", L("開発を応援"), L("新しい機能が毎月届きます")),
+        ("heart.fill", L("開発を応援"), L("これからの機能づくりを支えます")),
     ]
 
     var body: some View {
@@ -30,6 +30,7 @@ struct PaywallView: View {
                                 .frame(width: 44, height: 44)
                                 .background(Theme.card, in: Circle())
                         }
+                        .buttonStyle(PressableStyle(scale: 0.9))
                         .accessibilityLabel(L("閉じる"))
                     }
                     ZStack {
@@ -82,9 +83,12 @@ struct PaywallView: View {
                     .disabled(plan.products.isEmpty)
                     if let msg = plan.message {
                         Text(msg).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                            .multilineTextAlignment(.center)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     HStack(spacing: 18) {
                         Button(L("購入を復元")) { Task { await plan.restore(); if plan.isPro { dismiss() } } }
+                            .buttonStyle(PressableStyle(scale: 0.97))
                         Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
                         Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
                     }
@@ -104,6 +108,16 @@ struct PaywallView: View {
             appeared = true
             withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { float = true }
         }
+    }
+
+    /// How much cheaper the yearly plan is than 12 months of the monthly one, from the real store prices.
+    private var yearlySaving: Int? {
+        guard let y = plan.products.first(where: { $0.subscription?.subscriptionPeriod.unit == .year }),
+              let m = plan.products.first(where: { $0.subscription?.subscriptionPeriod.unit == .month }) else { return nil }
+        let full = m.price * 12
+        guard full > 0, y.price < full else { return nil }
+        let pct = NSDecimalNumber(decimal: (full - y.price) / full * 100).intValue
+        return pct >= 5 ? pct : nil
     }
 
     @ViewBuilder
@@ -127,11 +141,12 @@ struct PaywallView: View {
                             Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)
                                 .foregroundStyle(selected ? Theme.primary : Theme.muted)
+                                .contentTransition(.symbolEffect(.replace))
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Text(isYearly ? L("年額プラン") : L("月額プラン")).font(.system(size: 16, weight: .bold))
-                                    if isYearly {
-                                        Text(L("いちばん選ばれています"))
+                                    if isYearly, let off = yearlySaving {
+                                        Text(L("\(off)%おトク"))
                                             .font(.system(size: 10, weight: .bold))
                                             .foregroundStyle(.black)
                                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -148,8 +163,9 @@ struct PaywallView: View {
                             Text(product.displayPrice).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
                         }
                         .padding(16)
-                        .background(Theme.card, in: .rect(cornerRadius: 18))
-                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(selected ? Theme.primary : Theme.border, lineWidth: selected ? 2 : 1))
+                        .background(selected ? Theme.primary.opacity(0.06) : Theme.card, in: .rect(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(selected ? Theme.primary : Theme.border, lineWidth: selected ? 2 : 1))
+                        .scaleEffect(selected ? 1 : 0.985)
                     }
                     .buttonStyle(PressableStyle(scale: 0.98))
                 }

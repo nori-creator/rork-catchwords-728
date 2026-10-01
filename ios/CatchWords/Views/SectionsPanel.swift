@@ -26,8 +26,15 @@ struct SectionsPanel: View {
             List {
                 ForEach(prefs.order) { section in
                     row(section)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 8))
+                        // Each item is its own card, so dragging the handle lifts a card off the stack.
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(prefs.isVisible(section) ? Theme.card : Theme.secondary.opacity(0.6))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                                .padding(.horizontal, 8)
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 14))
                 }
                 .onMove { from, to in
                     Haptics.selection()
@@ -35,6 +42,7 @@ struct SectionsPanel: View {
                 }
             }
             .listStyle(.plain)
+            .listRowSpacing(6)
             .scrollContentBackground(.hidden)
             .environment(\.editMode, .constant(.active))
         }

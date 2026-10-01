@@ -54,7 +54,6 @@ final class CaptureViewModel {
     var isCheckingOwned: Bool = false
     var caption: String = ""
     /// The spoken one-liner next to the memo (web VoiceCaptionButton).
-    let voiceNote = VoiceNoteRecorder()
     var placeName: String?
     var location: CLLocation?
     var captureType: String = "photo"
@@ -285,12 +284,6 @@ final class CaptureViewModel {
         }
     }
 
-    func useOriginal() {
-        cutoutTask?.cancel()
-        isCutting = false
-        cutoutLift = nil
-        withAnimation(.snappy) { cutout = nil }
-    }
 
     /// Waits for a cut-out that is still running (a failed one simply leaves the photo).
     func awaitCutout() async {
@@ -333,8 +326,7 @@ final class CaptureViewModel {
         let base = photo ?? Self.textCard(for: picked.headword)
         return CatchDraft(
             candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
-            caption: caption, location: location, placeName: placeName, captureType: captureType,
-            voiceNote: voiceNote.detachedCopy()
+            caption: caption, location: location, placeName: placeName, captureType: captureType
         )
     }
 
@@ -387,7 +379,6 @@ final class CaptureViewModel {
         cutout = nil
         cutoutLift = nil
         caption = ""
-        voiceNote.discard()
         placeName = nil
         location = nil
         restoredPendingId = nil

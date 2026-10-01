@@ -36,6 +36,15 @@ struct WordDetailView: View {
     @State private var isFixing: Bool = false
     @State private var newPhoto: PhotosPickerItem?
     @State private var isReplacing: Bool = false
+    /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
+    @State private var laterPhotos: [StickerPhoto] = []
+    @State private var heroPage: Int = 0
+    /// ネットの画像 (web WebImagesBody): the search result, the 「別の画像」 round, and the one being applied.
+    @State private var webCandidates: [WebImageCandidate] = []
+    @State private var webRound: Int = 0
+    @State private var webLoading: Bool = false
+    @State private var applyingWeb: String?
+    @State private var confirmWeb: WebImageCandidate?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
@@ -43,8 +52,10 @@ struct WordDetailView: View {
     private var extras: WordExtras? { word?.extras }
     private var headword: String { word?.headword ?? "" }
 
+    /// The learner's own pictures; a word caught without one shows its internet stand-in instead.
     private var photos: [String] {
-        [current.cutoutImageUrl, current.objectImageUrl].compactMap { $0 }
+        let own = [current.cutoutImageUrl, current.objectImageUrl].compactMap { $0 }
+        return own.isEmpty ? [current.placeholderImageUrl].compactMap { $0 } : own
     }
 
     var body: some View {
@@ -55,9 +66,6 @@ struct WordDetailView: View {
                 VStack(spacing: 16) {
                     if !photos.isEmpty { photoHero }
                     metaCard
-                    if let v = current.voiceNotePath {
-                        VoiceNoteRow(url: dex.url(for: v, preferThumb: false))
-                    }
                     heroCard
                     if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     EncounterHistoryView(stickerId: current.id)
@@ -101,6 +109,14 @@ struct WordDetailView: View {
             }
         }
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
+        .task(id: current.id) { await dex.autoHero(current) }
+        .task(id: "\(headword)|\(webRound)|\(visibleSections.contains(.webImages))") { await loadWebImages() }
+        .confirmationDialog(L("いまの写真を、この画像に差し替えますか？元には戻せません。"),
+                            isPresented: confirmingWeb,
+                            titleVisibility: .visible, presenting: confirmWeb) { c in
+            Button(L("この画像にする")) { applyWeb(c) }
+            Button(L("キャンセル"), role: .cancel) {}
+        }
         .onAppear { prefs.use(learningLang) }
         .onChange(of: learningLang) { _, l in prefs.use(l) }
         .onAppear { applyHeroRole(animated: false) }
@@ -259,7 +275,7 @@ struct WordDetailView: View {
 
     /// Being written right now: one section (auto-fill) or the reader's whole explanation.
     private func isFilling(_ s: CardSection) -> Bool {
-        filling.contains(s) || (s != .realUsage && dex.generatingWords.contains(current.wordId))
+        filling.contains(s) || (!s.isExternal && dex.generatingWords.contains(current.wordId))
     }
 
     private func posLabel(_ pos: String) -> String {
@@ -278,11 +294,99 @@ struct WordDetailView: View {
     // MARK: - Photo hero (flips to the selfie like a card)
 
     private var frontPath: String? {
-        showCutout ? (current.cutoutImageUrl ?? current.objectImageUrl) : (current.objectImageUrl ?? current.cutoutImageUrl)
+        showCutout ? (current.cutoutImageUrl ?? current.objectImageUrl ?? current.placeholderImageUrl)
+            : (current.objectImageUrl ?? current.cutoutImageUrl ?? current.placeholderImageUrl)
     }
     private var hasSelfie: Bool { current.selfieImageUrl != nil }
 
+    /// The hero, plus the photos from later encounters to swipe through.
     private var photoHero: some View {
+        heroFace
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { v in
+                        guard !laterPhotos.isEmpty, !showSelfie,
+                              abs(v.translation.width) > abs(v.translation.height) * 1.4 else { return }
+                        let next = v.translation.width < -50 ? heroPage + 1 : v.translation.width > 50 ? heroPage - 1 : heroPage
+                        let clamped = min(max(next, 0), laterPhotos.count)
+                        guard clamped != heroPage else { return }
+                        Haptics.selection()
+                        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.38, dampingFraction: 0.86)) { heroPage = clamped }
+                    }
+            )
+            .overlay(alignment: .bottom) {
+                if !laterPhotos.isEmpty, !showSelfie {
+                    HStack(spacing: 6) {
+                        ForEach(0...laterPhotos.count, id: \.self) { i in
+                            Capsule().fill(.white.opacity(i == heroPage ? 1 : 0.5))
+                                .frame(width: i == heroPage ? 18 : 7, height: 7)
+                        }
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(.black.opacity(0.35), in: Capsule())
+                    .padding(.bottom, 14)
+                    .animation(.snappy, value: heroPage)
+                    .accessibilityHidden(true)
+                }
+            }
+            .accessibilityAdjustableAction { dir in
+                guard !laterPhotos.isEmpty else { return }
+                switch dir {
+                case .increment: heroPage = min(heroPage + 1, laterPhotos.count)
+                case .decrement: heroPage = max(heroPage - 1, 0)
+                @unknown default: break
+                }
+            }
+            .task(id: current.id) {
+                let all = await StickerPhoto.load(stickerId: current.id)
+                laterPhotos = all.filter { !$0.first }
+                heroPage = 0
+            }
+    }
+
+    /// A later encounter's photo in the hero, with when and where it was taken.
+    private func laterFace(_ p: StickerPhoto, number: Int) -> some View {
+        Color(hex: 0xEEF3F9)
+            .aspectRatio(0.8, contentMode: .fit)
+            .overlay {
+                AsyncImage(url: URL(string: p.url)) { phase in
+                    if let img = phase.image { img.resizable().scaledToFill() } else { ProgressView() }
+                }
+                .allowsHitTesting(false)
+            }
+            .overlay(alignment: .topLeading) {
+                HStack(spacing: 6) {
+                    Text(L("\(number)回目"))
+                        .font(.system(size: 12, weight: .bold))
+                    if let d = SupabaseDate.parse(p.takenAt) {
+                        Text(JPDate.monthDay(d)).font(.system(size: 12)).monospacedDigit()
+                    }
+                    if let place = p.place, !place.isEmpty {
+                        Text(place).font(.system(size: 12)).lineLimit(1)
+                    }
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(.black.opacity(0.55), in: Capsule())
+                .padding(12)
+            }
+            .clipShape(.rect(cornerRadius: 28, style: .continuous))
+            .shadow(color: .black.opacity(0.14), radius: 16, y: 8)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L("\(number)回目に撮った写真"))
+            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
+    }
+
+    @ViewBuilder
+    private var heroFace: some View {
+        if heroPage > 0, let p = laterPhotos[safe: heroPage - 1] {
+            laterFace(p, number: heroPage + 1).id(p.id)
+        } else {
+            mainFace
+        }
+    }
+
+    private var mainFace: some View {
         let back = showSelfie
         let path = back ? current.selfieImageUrl : frontPath
         let isCut = !back && showCutout && path == current.cutoutImageUrl
@@ -305,6 +409,21 @@ struct WordDetailView: View {
                         .background(.black.opacity(0.55), in: Capsule())
                         .padding(12)
                         .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                // An internet picture says whose it is (Unsplash asks for the photographer's name).
+                if !back, path != nil, path == current.placeholderImageUrl, let name = current.placeholderCredit?.name, !name.isEmpty {
+                    Label(name, systemImage: "camera")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .padding(12)
+                        .allowsHitTesting(false)
+                        .accessibilityLabel(L("撮影：\(name)"))
                 }
             }
             .clipShape(.rect(cornerRadius: 28, style: .continuous))
@@ -624,6 +743,7 @@ struct WordDetailView: View {
         case .mnemonic: !(extras?.mnemonic ?? "").isEmpty
         case .taiwanNote: learningLang == "zh-TW" && !taiwanText.isEmpty
         case .realUsage: !headword.isEmpty
+        case .webImages: !webCandidates.isEmpty
         case .forms: !forms.isEmpty
         case .countability: extras?.countability != nil
         case .phrasalVerbs: !phrasals.isEmpty
@@ -642,7 +762,7 @@ struct WordDetailView: View {
     @ViewBuilder
     private func sectionView(_ s: CardSection) -> some View {
         sectionBody(s)
-            .environment(\.sectionRefresh, s == .realUsage ? nil : SectionRefresh(running: refreshing.contains(s)) {
+            .environment(\.sectionRefresh, s.isExternal ? nil : SectionRefresh(running: refreshing.contains(s)) {
                 regenerate(s)
             })
     }
@@ -675,6 +795,7 @@ struct WordDetailView: View {
         case .mnemonic: textCard(s.title, icon: s.icon, extras?.mnemonic ?? "")
         case .taiwanNote: textCard(s.title, icon: s.icon, taiwanText)
         case .realUsage: realUsageCard
+        case .webImages: webImagesCard
         case .forms: formsCard
         case .countability: countabilityCard
         case .phrasalVerbs: phrasalCard
@@ -706,9 +827,14 @@ struct WordDetailView: View {
         let mwords = Set(measures.map(\.word))
         var seen = Set<String>()
         var out: [UsageChunk] = []
-        for c in raw where !c.parts.isEmpty {
+        for r in raw where !r.parts.isEmpty {
+            // docs/chunk-rules.md: one word is one block (C7), a Mandarin adjective gets its degree word (C8).
+            let c = UsageChunk(parts: ChunkRules.tidy(r.parts, headword: headword, target: learningLang, reader: L10n.lang), ja: r.ja)
+            guard ChunkRules.isPattern(original: r.parts, tidied: c.parts) else { continue }
             let text = c.text
-            if tooLong(c) || text == headword { continue }
+            if tooLong(r) || text == headword { continue }
+            // R20: a chunk that does not contain the word it teaches ("很+甜" for 芒果) is not shown.
+            if !LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: learningLang) { continue }
             if text.contains(where: { "。！？!?".contains($0) }) { continue }
             if c.parts.contains(where: { $0.pos.uppercased() == "M" || mwords.contains($0.text) }) { continue }
             if mwords.contains(where: { !$0.isEmpty && text.contains($0) }) { continue }
@@ -776,7 +902,7 @@ struct WordDetailView: View {
         await dex.loadExplanation(wordId: current.wordId, target: target)
         // A whole explanation is being written for this reader: its sections arrive together.
         guard !Task.isCancelled, !dex.generatingWords.contains(current.wordId) else { return }
-        let missing = visibleSections.filter { $0 != .realUsage && !hasContent($0) }
+        let missing = visibleSections.filter { !$0.isExternal && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId
         guard !Task.isCancelled else { return }
@@ -797,7 +923,7 @@ struct WordDetailView: View {
     private func reportAndFix() {
         let note = reportNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let wordId = current.wordId
-        let candidates = ["pronunciation", "pos"] + visibleSections.filter { $0 != .realUsage && hasContent($0) }.map(\.rawValue)
+        let candidates = ["pronunciation", "pos"] + visibleSections.filter { !$0.isExternal && hasContent($0) }.map(\.rawValue)
         isFixing = true
         Task {
             defer { isFixing = false }
@@ -826,19 +952,6 @@ struct WordDetailView: View {
         }
     }
 
-    private func sendReport(_ kind: String) {
-        let head = headword
-        Task {
-            do {
-                try await dex.report(headword: head, kind: kind, note: "")
-                Haptics.success()
-                showToast(L("報告を受け付けました。確かめてから直します"))
-            } catch {
-                Haptics.warning()
-                showToast(L("報告に失敗しました"))
-            }
-        }
-    }
 
     private func showToast(_ text: String) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }
@@ -887,22 +1000,8 @@ struct WordDetailView: View {
         return SectionCard(title: L("使い方チャンク"), icon: "square.grid.2x2") {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.offset) { _, chunk in
-                    HStack(alignment: .center, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            FlowRow(spacing: 4) {
-                                ForEach(Array(chunk.parts.enumerated()), id: \.offset) { i, part in
-                                    HStack(spacing: 4) {
-                                        if i > 0 { Text("+").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.muted.opacity(0.45)) }
-                                        chunkBlock(part)
-                                    }
-                                }
-                            }
-                            Text(chunk.ja).font(.system(size: 16)).foregroundStyle(Theme.muted).lineSpacing(3)
-                        }
-                        Spacer(minLength: 0)
-                        PronounceCircle(text: chunk.text, size: 50)
-                    }
-                    .padding(.vertical, 14)
+                    ChunkLineView(chunk: chunk, headword: headword, target: learningLang)
+                        .padding(.vertical, 14)
                     Divider().overlay(Theme.border)
                 }
                 HStack(spacing: 14) {
@@ -914,24 +1013,14 @@ struct WordDetailView: View {
                     }
                 }
                 .padding(.top, 12)
+                if shown.contains(where: { $0.parts.contains { ChunkRules.isSwappable($0, headword: headword, target: learningLang) } }) {
+                    Text(L("点線の語を押すと、ネイティブがよく入れるほかの語に入れ替えられます。"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.top, 8)
+                }
             }
         }
-    }
-
-    private func chunkBlock(_ part: ChunkPart) -> some View {
-        let kind = ChunkKind(pos: part.pos)
-        let isHead = part.text == headword
-        return Text(part.text)
-            .font(.system(size: 20, weight: .bold))
-            .foregroundStyle(kind.ink.mix(with: .black, by: 0.3))
-            .padding(.horizontal, 12)
-            .frame(minHeight: 48)
-            .background(kind.ink.opacity(isHead ? 0.14 : 0.08), in: .rect(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(kind.ink.opacity(isHead ? 0.75 : 0.35), lineWidth: isHead ? 2.5 : 1.5)
-            )
-            .shadow(color: kind.ink.opacity(isHead ? 0.18 : 0), radius: 6, y: 2)
     }
 
     private func measureCard(_ items: [MeasureWord]) -> some View {
@@ -1225,6 +1314,141 @@ struct WordDetailView: View {
                 ("📰", L("台湾のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
                 ("📖", L("教育部國語辭典簡編本"), "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
             ]
+        }
+    }
+
+    // MARK: - ネットの画像 (web WebImagesBody)
+
+    private var confirmingWeb: Binding<Bool> {
+        Binding(get: { confirmWeb != nil }, set: { if !$0 { confirmWeb = nil } })
+    }
+
+    /// Three pictures at a time; 「別の画像」 searches again (the web shows a different three each round).
+    private var shownWeb: [WebImageCandidate] {
+        let pages = max(1, Int((Double(webCandidates.count) / 3).rounded(.up)))
+        let off = webRound % pages
+        let page = Array(webCandidates.dropFirst(off * 3).prefix(3))
+        return page.isEmpty ? Array(webCandidates.prefix(3)) : page
+    }
+
+    /// The section is drawn only once a picture has arrived (web: 画像が表示されない時はその項目を表示しない).
+    private func loadWebImages() async {
+        guard visibleSections.contains(.webImages), !headword.isEmpty else { return }
+        webLoading = true
+        defer { webLoading = false }
+        guard let found = try? await WebImages.search(headword: headword, meaning: word?.meaningJa, round: webRound),
+              !Task.isCancelled else { return }
+        withAnimation(.snappy) { webCandidates = found }
+    }
+
+    private var webImagesCard: some View {
+        SectionCard(title: CardSection.webImages.title, icon: CardSection.webImages.icon) {
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(shownWeb) { c in webTile(c) }
+                }
+                HStack(spacing: 14) {
+                    Button {
+                        Haptics.selection()
+                        webRound += 1
+                    } label: {
+                        HStack(spacing: 5) {
+                            if webLoading { ProgressView().controlSize(.mini) } else { Image(systemName: "arrow.clockwise") }
+                            Text(L("別の画像"))
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.foreground)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 36)
+                        .background(Theme.secondary, in: Capsule())
+                        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+                    }
+                    .buttonStyle(PressableStyle(scale: 0.95))
+                    .disabled(webLoading)
+                    if let url = URL(string: "https://www.google.com/search?tbm=isch&q=\(headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                        Button { openURL(url) } label: {
+                            Label(L("Google画像検索で見る"), systemImage: "arrow.up.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.primaryInk)
+                                .frame(minHeight: 36)
+                        }
+                    }
+                }
+                Text(L("画像をタップすると、この単語の写真にできます。"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.muted)
+            }
+        }
+    }
+
+    private func webTile(_ c: WebImageCandidate) -> some View {
+        Button { pickWeb(c) } label: {
+            Color(hex: 0xEEF3F9)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let img = WebImages.inlineImage(c) {
+                        Image(uiImage: img).resizable().scaledToFill()
+                    } else {
+                        AsyncImage(url: c.previewURL) { phase in
+                            if let img = phase.image { img.resizable().scaledToFill() } else { ProgressView() }
+                        }
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if let name = c.credit?.name, !name.isEmpty {
+                        Text(name)
+                            .font(.system(size: 10, weight: .medium))
+                            .lineLimit(1)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .frame(maxWidth: .infinity)
+                            .background(.black.opacity(0.5))
+                    }
+                }
+                .overlay {
+                    if applyingWeb == c.url {
+                        ZStack {
+                            Color.black.opacity(0.35)
+                            ProgressView().tint(.white)
+                        }
+                    }
+                }
+                .clipShape(.rect(cornerRadius: 12, style: .continuous))
+                .contentShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(PressableStyle(scale: 0.95))
+        .disabled(applyingWeb != nil)
+        .accessibilityLabel(L("この画像にする"))
+    }
+
+    /// A word with a photo of its own asks first: the photo is replaced and cannot come back
+    /// (web applyWebImage). A word without one takes the picture as its stand-in, with its credit.
+    private func pickWeb(_ c: WebImageCandidate) {
+        guard applyingWeb == nil else { return }
+        if current.objectImageUrl != nil || current.cutoutImageUrl != nil {
+            confirmWeb = c
+        } else {
+            applyWeb(c)
+        }
+    }
+
+    private func applyWeb(_ c: WebImageCandidate) {
+        applyingWeb = c.url
+        Task {
+            defer { applyingWeb = nil }
+            do {
+                if current.objectImageUrl != nil || current.cutoutImageUrl != nil {
+                    try await dex.replacePhoto(current, with: try await WebImages.image(for: c))
+                } else {
+                    try await dex.setPlaceholder(current, to: c)
+                }
+                Haptics.success()
+                showToast(L("画像を変更しました"))
+            } catch {
+                Haptics.warning()
+                showToast(L("写真を替えられませんでした"))
+            }
         }
     }
 

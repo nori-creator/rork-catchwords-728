@@ -182,9 +182,6 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         return (synonyms ?? []).map { RelatedWord(word: $0, kind: "syn") } + (antonyms ?? []).map { RelatedWord(word: $0, kind: "ant") }
     }
 
-    /// "Draw only what exists" — the web app's rule: a section without content has no header.
-    var hasMeters: Bool { frequencyLevel != nil || resolvedRegister != nil }
-
     /// `register_scale` first, else map the legacy free-text tag (register-scale.ts).
     var resolvedRegister: Int? {
         if let registerScale { return max(-2, min(2, registerScale)) }
@@ -196,42 +193,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     }
 }
 
-nonisolated struct UsageChunk: Codable, Sendable, Hashable {
-    var parts: [ChunkPart]
-    var ja: String
-
-    init(parts: [ChunkPart], ja: String) {
-        self.parts = parts
-        self.ja = ja
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        parts = (try? c.decode([ChunkPart].self, forKey: .parts)) ?? []
-        ja = (try? c.decode(String.self, forKey: .ja)) ?? ""
-    }
-
-    var text: String { parts.map(\.text).joined() }
-}
-
-nonisolated struct ChunkPart: Codable, Sendable, Hashable {
-    var text: String
-    var pos: String
-    var slot: Bool?
-
-    init(text: String, pos: String, slot: Bool? = nil) {
-        self.text = text
-        self.pos = pos
-        self.slot = slot
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        text = (try? c.decode(String.self, forKey: .text)) ?? ""
-        pos = (try? c.decode(String.self, forKey: .pos)) ?? ""
-        slot = try? c.decodeIfPresent(Bool.self, forKey: .slot)
-    }
-}
+// UsageChunk / ChunkPart / ChunkAlt live in Utilities/ChunkRules.swift with the rules that draw them.
 
 /// extras.related_words entry (RelatedWordSchema): kind is syn / ant / rel.
 nonisolated struct RelatedWord: Codable, Sendable, Hashable {
@@ -366,9 +328,9 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     let id: String
     let wordId: String
     let objectImageUrl: String?
-    let cutoutImageUrl: String?
+    var cutoutImageUrl: String?
     let selfieImageUrl: String?
-    let caption: String?
+    var caption: String?
     let locationName: String?
     let takenAt: Date
     let captureType: String?
@@ -379,16 +341,25 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var shelfKey: String? = nil
     /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
     var heroRole: String? = nil
-    /// The spoken one-liner recorded at the catch (`stickers.voice_video_url`, a storage path).
-    var voiceNotePath: String? = nil
     /// Stand-in picture of a card caught without a photo (`stickers.placeholder_image_url`).
     var placeholderImageUrl: String? = nil
+    /// Who made that stand-in picture (`stickers.placeholder_credit`): shown on it, as Unsplash asks.
+    var placeholderCredit: PlaceholderCredit? = nil
+
+    nonisolated struct PlaceholderCredit: Codable, Sendable, Hashable {
+        var name: String?
+        var link: String?
+        var source: String?
+    }
+
+    /// The learner took or chose a picture of their own (web sticker-photo.ts hasOwnPhoto).
+    var hasOwnPhoto: Bool { objectImageUrl != nil || cutoutImageUrl != nil || selfieImageUrl != nil }
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
         case heroRole = "hero_role"
-        case voiceNotePath = "voice_video_url"
         case placeholderImageUrl = "placeholder_image_url"
+        case placeholderCredit = "placeholder_credit"
         case wordId = "word_id"
         case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"
@@ -651,7 +622,6 @@ nonisolated struct OwnedWord: Codable, Sendable, Hashable {
 
     var takenDate: Date? { SupabaseDate.parse(takenAt) }
 }
-
 
 /// Row of `user_shelves`: a shelf the learner made or renamed (web categories.functions.ts).
 nonisolated struct UserShelf: Codable, Sendable, Hashable {

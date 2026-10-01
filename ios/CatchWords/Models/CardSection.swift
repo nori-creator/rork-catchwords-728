@@ -2,11 +2,12 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Sections of the word card (target-profile.ts `sections`, minus web_images). Which ones exist
+/// Sections of the word card (target-profile.ts `sections`). Which ones exist
 /// depends on the learning language — measure words only in Mandarin, articles only in English,
 /// kanji and keigo only in Japanese — so a card never shows a heading that is wrong for its language.
 nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Sendable {
     case meaning
+    case webImages = "web_images"
     case example
     case examplesExtra = "examples_extra"
     case usageChunks = "usage_chunks"
@@ -34,17 +35,20 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
 
     var id: String { rawValue }
 
+    /// Sections that only look outside (links, internet pictures): nothing for the AI to write or fix.
+    var isExternal: Bool { self == .realUsage || self == .webImages }
+
     /// The sections a card in `target` can have, in the web's order (target-profile.ts).
     static func sections(for target: String) -> [CardSection] {
         switch target {
         case "en":
-            [.meaning, .example, .examplesExtra, .usageChunks, .forms, .countability, .phrasalVerbs, .relatedWords,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .forms, .countability, .phrasalVerbs, .relatedWords,
              .stress, .pronunciationTips, .etymology, .mnemonic, .cultureNote, .realUsage]
         case "ja":
-            [.meaning, .example, .examplesExtra, .usageChunks, .kanjiBreakdown, .conjugation, .politeness, .counters,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .kanjiBreakdown, .conjugation, .politeness, .counters,
              .relatedWords, .pitchAccent, .pronunciationTips, .wordOrigin, .etymology, .mnemonic, .japanNote, .realUsage]
         default:
-            [.meaning, .example, .examplesExtra, .usageChunks, .measureWords, .relatedWords, .pronunciationTips,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .measureWords, .relatedWords, .pronunciationTips,
              .etymology, .mnemonic, .taiwanNote, .realUsage]
         }
     }
@@ -58,6 +62,7 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
     var title: String {
         switch self {
         case .meaning: L("意味")
+        case .webImages: L("ネットの画像")
         case .example: L("例文")
         case .examplesExtra: L("追加の例文")
         case .usageChunks: L("使い方チャンク")
@@ -107,6 +112,7 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
         case .mnemonic: "lightbulb"
         case .taiwanNote, .cultureNote, .japanNote: "mappin"
         case .realUsage: "film"
+        case .webImages: "photo.on.rectangle.angled"
         }
     }
 
@@ -161,6 +167,10 @@ final class CardPrefsStore {
         let known = s.order.compactMap(CardSection.init(rawValue:)).filter { all.contains($0) }
         order = known + CardSection.defaultOrder(for: target).filter { !known.contains($0) }
         hidden = Set(s.hidden.compactMap(CardSection.init(rawValue:)).filter { all.contains($0) })
+        // A section added after the choice was saved (ネットの画像) starts the way a new card would show
+        // it, not shown just because it was missing from the saved hidden list.
+        let defaults = CardSection.defaultVisible(for: target)
+        hidden.formUnion(all.filter { !known.contains($0) && !defaults.contains($0) })
     }
 
     var visible: [CardSection] { order.filter { !hidden.contains($0) } }
@@ -190,49 +200,7 @@ final class CardPrefsStore {
 }
 
 extension String {
-    /// Contains at least one Han character — the "is this Chinese" gate (looksLikeTargetLanguage / isTargetHeadword).
-    nonisolated var hasHan: Bool {
-        unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) || (0x3400...0x4DBF).contains($0.value) || (0xF900...0xFAFF).contains($0.value) }
-    }
-
     /// Written in the learning language at all (an example sentence, a wordbook headword): Han for
     /// Taiwan Mandarin, kana or kanji for Japanese, Latin letters for English.
     nonisolated func isIn(target: String) -> Bool { LanguageRules.isIn(self, target: target) }
-
-    /// headwordCore: bracketed notes and surrounding punctuation don't count toward the judgement.
-    nonisolated private var headwordCore: String {
-        replacingOccurrences(of: "[（(【〔\\[][^）)】〕\\]]*[）)】〕\\]]", with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-    }
-
-    /// target-language.ts isZhHeadword: Han only — kana, Latin, Hangul or Cyrillic anywhere drops it (「シャーペン」, 「pencil」).
-    nonisolated var isZhHeadword: Bool {
-        let core = headwordCore
-        guard core.hasHan else { return false }
-        return !core.unicodeScalars.contains { s in
-            let v = s.value
-            return (0x3040...0x30FF).contains(v) || (0x31F0...0x31FF).contains(v) || (0xFF66...0xFF9F).contains(v)
-                || (0x41...0x5A).contains(v) || (0x61...0x7A).contains(v) || (0xC0...0x24F).contains(v)
-                || (0xFF21...0xFF3A).contains(v) || (0xFF41...0xFF5A).contains(v)
-                || (0xAC00...0xD7AF).contains(v) || (0x1100...0x11FF).contains(v) || (0x0400...0x04FF).contains(v)
-        }
-    }
-
-    /// coerceTargetHeadword: fix once before discarding — keep the longest leading part that passes
-    /// (「烤肉 (BBQ)」→「烤肉」). Returns nil when nothing passes; never lets the native language through.
-    nonisolated var coercedZhHeadword: String? {
-        let text = trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return nil }
-        if text.isZhHeadword { return text }
-        var best: String?
-        var prefix = ""
-        for ch in text {
-            prefix.append(ch)
-            let head = prefix.trimmingCharacters(in: .whitespaces)
-            if !head.isEmpty, head.isZhHeadword { best = head }
-        }
-        guard let best else { return nil }
-        let trimmed = best.replacingOccurrences(of: "[\\s，、。．・…！？!?,.:;：；「」『』（）()【】〔〕\\[\\]{}\"'’”—–~〜-]+$", with: "", options: .regularExpression)
-        return !trimmed.isEmpty && trimmed.isZhHeadword ? trimmed : best
-    }
 }

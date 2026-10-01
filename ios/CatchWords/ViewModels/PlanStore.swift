@@ -109,10 +109,6 @@ final class PlanStore {
         usedToday = day == Self.dayKey() ? UserDefaults.standard.integer(forKey: "plan.used") : 0
     }
 
-    private static func dayKey() -> String {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Asia/Tokyo") ?? .current
-        let c = cal.dateComponents([.year, .month, .day], from: Date())
-        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
-    }
+    /// The app's "today" is one calendar everywhere: Taiwan midnight, like the web (`SRS.taipeiDay`).
+    private static func dayKey() -> String { SRS.taipeiDay(Date()) }
 }

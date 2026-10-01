@@ -27,14 +27,14 @@
 
 ### 1-1. バンドル ID を決める（最初の提出の前に1回だけ）
 
-- 今のバンドル ID は `app.rork.v075or6kicdigi0jhlze3`（Rork が自動で付けたもの）です。
-- 一度提出すると変えられません（Apple の決まり）。
-- **おすすめ:** 最初の提出の前に、Rork の Project Settings で自分用の ID に変える（例: `com.自分の名前.catchwords`）。利用者には見えませんが、Rork の名前が永久に残らなくなります。
-- すでに提出済みなら、今の ID のまま使い続けます（それでも問題なく動きます）。
+- バンドル ID は **`com.nori.catchwords`**（2026-10-01 に Rork の自動の名前 `app.rork.v075or6kicdigi0jhlze3` から変更。まだ一度も提出していなかったため変えられた）。
+- 一度 App Store Connect に提出すると変えられません（Apple の決まり）。
+- **データベースとログインは Lovable Cloud（Lovable が管理する Supabase）にある。** 自分の Supabase アカウントには入っていないので、Supabase の管理画面は使わない。
+- **iPhone・iPad の「Appleでサインイン」は、ログインの仕組み側にこのバンドル ID を登録するまで失敗する見込み**（ネイティブのアプリの Apple サインインは、アプリのバンドル ID を許可された相手として登録する必要がある）。Lovable Cloud でその登録ができるかは未確認。**それまではメールアドレスとパスワードでログインして確かめる**（Web 版を Google で登録した人は、ログイン画面の「パスワードを忘れた」でパスワードを作ってから入る）。
 
 ### 1-2. Web 版を先に公開する
 
-iOS 版の AI・保存は、Web 版のサーバ（`/api/native-ai`、`/api/native-fn`）を通ります。
+iOS 版の AI・保存は、Web 版のサーバ（`/api/native-fn`）を通ります。iOS 版が呼ぶ関数が Web 版に全部あるかは、ワークフロー「iOS ↔ Web contract（約束の確認）」が毎日確かめます。
 
 1. Web 版の PR（`nori-creator/Lovable-catch-words-app`）を main に取り込む。
 2. Lovable の編集画面で右上の **Publish → Update** を押す。
@@ -89,14 +89,21 @@ GitHub のリポジトリ → **Settings** → **Secrets and variables** → **A
 | `APPLE_TEAM_ID` | 2-3 のチーム ID |
 | `ASC_KEY_ID` | 2-2 のキー ID |
 | `ASC_ISSUER_ID` | 2-2 の Issuer ID |
-| `ASC_KEY_P8_BASE64` | .p8 ファイルを base64 という形の文字列にしたもの（下を参照） |
+| `ASC_KEY_P8` | .p8 ファイルをメモ帳などで開いた中身を**そのまま全部**（`-----BEGIN PRIVATE KEY-----` から `-----END PRIVATE KEY-----` まで） |
 
-`.p8` を base64 にするには、Claude に「この .p8 を base64 にして Secrets に入れる手順を教えて」と頼むか、次のどちらかを実行します。
-
-- Windows（PowerShell）: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXX.p8"))`
-- Mac: `base64 -i AuthKey_XXXX.p8`
+（以前の `ASC_KEY_P8_BASE64`（base64 にした文字列）を入れてある場合は、それでも動きます。）
 
 **.p8 の中身はチャットや Issue に貼らないでください。** 入れる場所は GitHub の Secrets だけです。
+
+### 2-4b. 端末を1台登録する（最初の1回だけ）
+
+自動の署名は、送る前に一度「開発用」で署名するため、Apple Developer に iPhone か iPad が1台以上登録されている必要があります（無いと「Your team has no devices」で止まる）。
+
+1. iPad の「UDID」（端末ごとの40桁ほどの番号）を調べる
+   - **Mac**: iPad をケーブルでつなぐ → Finder の左に出る iPad を押す → 名前の下の灰色の文字（機種名・シリアル番号）を何回か押すと「UDID」に変わる → 右クリックで「UDID をコピー」
+   - **Windows**: Microsoft Store の「Apple デバイス」アプリを入れる → iPad をケーブルでつなぐ → iPad を選ぶ → シリアル番号を押すと UDID に変わる → コピー
+2. https://developer.apple.com/account → Certificates, IDs & Profiles → **Devices** → 「＋」
+3. Platform: iOS／Device Name: `iPad`／Device ID (UDID): 1 でコピーした番号 → Continue → Register
 
 ### 2-5. Rork なしで1回送ってみる（解約の前に）
 

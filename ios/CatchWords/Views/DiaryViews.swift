@@ -1,49 +1,5 @@
 import SwiftUI
 
-/// The diary line under an album page (HomeShelf `onWrite`): shows the day's text in the hand font,
-/// or a "日記を書く" pill. Tapping opens the writing sheet in place.
-struct DiaryLine: View {
-    let day: Date
-    let onWrite: (Date) -> Void
-    @Environment(DiaryStore.self) private var diary
-
-    var body: some View {
-        let text = diary.text(for: day)
-        let pending = diary.draft(for: day)
-        VStack(alignment: .leading, spacing: 10) {
-            if !text.isEmpty {
-                Text(text)
-                    .font(AppFont.hand(19))
-                    .foregroundStyle(Color(hex: 0x33291F))
-                    .lineSpacing(6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 14)
-                    .background {
-                        RuledPaper().clipShape(.rect(cornerRadius: 10))
-                    }
-            }
-            HStack(spacing: 8) {
-                Button { onWrite(day) } label: {
-                    Label(text.isEmpty ? L("日記を書く") : L("日記を書き直す"), systemImage: "pencil.line")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.primaryInk)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 44)
-                        .background(.white.opacity(0.85), in: Capsule())
-                        .overlay(Capsule().stroke(Theme.primary.opacity(0.25), lineWidth: 1))
-                }
-                .buttonStyle(PressableStyle())
-                if pending != nil {
-                    Label(L("未送信の下書き"), systemImage: "icloud.slash")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Theme.muted)
-                }
-            }
-        }
-        .task(id: DiaryStore.key(day)) { await diary.loadMonth(of: day) }
-    }
-}
 
 /// Faint ruled lines behind the diary text (paper, no blue rule on the prose itself).
 struct RuledPaper: View {

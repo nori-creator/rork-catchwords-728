@@ -61,15 +61,26 @@ struct HomeView: View {
                 .padding(.horizontal, 22)
                 .padding(.bottom, 8)
 
-                MonthBookView(
-                    days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
-                    startAtEnd: true,
-                    onOpen: { router.detailSticker = $0 },
-                    onWrite: { writingDay = WritingDay(date: $0) },
-                    onCamera: { router.tab = .camera }
-                )
+                Group {
+                    if let err = dex.loadError, dex.stickers.isEmpty {
+                        // Nothing to show yet and the dex could not be read: say so, offer a retry.
+                        AlbumLoadFailed(message: err) { Task { await dex.load() } }
+                    } else if !dex.hasLoaded, dex.stickers.isEmpty {
+                        AlbumSkeleton()
+                    } else {
+                        MonthBookView(
+                            days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
+                            startAtEnd: true,
+                            onOpen: { router.detailSticker = $0 },
+                            onWrite: { writingDay = WritingDay(date: $0) },
+                            onCamera: { router.tab = .camera }
+                        )
+                        .transition(.opacity)
+                    }
+                }
                 .frame(height: max(520, UIScreen.main.bounds.height * 0.66))
                 .padding(.horizontal, 12)
+                .animation(.easeOut(duration: 0.3), value: dex.hasLoaded)
                 .tourAnchor(.album)
 
                 Button { showJournal = true } label: {
@@ -152,42 +163,6 @@ struct HomeView: View {
     }
 }
 
-/// album-span.ts — weeks start on Monday; keys are local dates (never UTC, never ISO week numbers).
-enum AlbumSpan: String, CaseIterable, Identifiable {
-    case day, week, month
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .day: L("日ごと")
-        case .week: L("週ごと")
-        case .month: L("月ごと")
-        }
-    }
-
-    func start(of d: Date) -> Date {
-        let cal = Calendar.current
-        let day = cal.startOfDay(for: d)
-        switch self {
-        case .day: return day
-        case .week:
-            let back = (cal.component(.weekday, from: day) + 5) % 7
-            return cal.date(byAdding: .day, value: -back, to: day) ?? day
-        case .month:
-            return cal.date(from: cal.dateComponents([.year, .month], from: day)) ?? day
-        }
-    }
-
-    func heading(_ key: Date) -> String {
-        switch self {
-        case .day: return JPDate.monthDayWeek(key)
-        case .week:
-            let end = Calendar.current.date(byAdding: .day, value: 6, to: key) ?? key
-            return "\(JPDate.monthDay(key)) – \(JPDate.monthDay(end))"
-        case .month:
-            return JPDate.yearMonth(key)
-        }
-    }
-}
 
 struct WritingDay: Identifiable {
     let date: Date
@@ -360,232 +335,7 @@ private struct Globe: View {
     }
 }
 
-// MARK: - Album page
-
-/// A day's page: photo prints (white border + corners / tape) — words without a photo sit on the paper as text only.
-struct AlbumPage: View {
-    let items: [Sticker]
-    let isToday: Bool
-    let onOpen: (Sticker) -> Void
-    let onCamera: () -> Void
-    @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
-
-    var body: some View {
-        let wall = Wallpaper(rawValue: wallRaw) ?? .paper
-        VStack(spacing: 0) {
-            if items.isEmpty {
-                VStack(spacing: 16) {
-                    Text(L("今日のページはまだ白紙です。"))
-                        .font(AppFont.hand(20))
-                        .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
-                    if isToday {
-                        Button(action: onCamera) {
-                            Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 22)
-                                .frame(minHeight: 48)
-                                .background(Theme.primary, in: Capsule())
-                                .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
-                        }
-                        .buttonStyle(PressableStyle())
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: 260)
-            } else {
-                // Web album-day-layout: the same collage (and the same hand-placed positions) as the web.
-                CollageBoard(items: items, editable: isToday, onOpen: onOpen)
-            }
-        }
-        .padding(14 + wall.inset)
-        .background {
-            WallpaperSurface(kind: wall)
-                .shadow(color: Color(hex: 0x5A4630, opacity: wall == .frame ? 0.35 : 0.18), radius: 16, y: 8)
-        }
-    }
-
-    @ViewBuilder
-    private var layout: some View {
-        let first = items[0]
-        let side = Array(items.dropFirst().prefix(2))
-        let rest = Array(items.dropFirst(3))
-        GeometryReader { geo in
-            let w = geo.size.width
-            HStack(alignment: .top, spacing: 10) {
-                AlbumPrint(sticker: first, style: .tape, width: w * 0.58, onOpen: onOpen)
-                    .rotationEffect(.degrees(-1))
-                VStack(spacing: 14) {
-                    ForEach(side) { s in
-                        AlbumPrint(sticker: s, style: .corners, width: w * 0.38, onOpen: onOpen)
-                            .rotationEffect(.degrees(tilt(s)))
-                    }
-                }
-                .padding(.top, 20)
-            }
-        }
-        .frame(height: topHeight(sideCount: side.count))
-
-        if !rest.isEmpty {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 16) {
-                ForEach(rest) { s in
-                    GeometryReader { geo in
-                        AlbumPrint(sticker: s, style: s.id.hashValue.isMultiple(of: 2) ? .corners : .tape, width: geo.size.width, onOpen: onOpen)
-                            .rotationEffect(.degrees(tilt(s)))
-                    }
-                    .aspectRatio(0.8, contentMode: .fit)
-                }
-            }
-            .padding(.top, 16)
-        }
-    }
-
-    private func topHeight(sideCount: Int) -> CGFloat {
-        let screen = UIScreen.main.bounds.width - 60
-        let big = screen * 0.58 * 1.2 + 20
-        let small = CGFloat(sideCount) * (screen * 0.38 * 1.32 + 14) + 20
-        return max(big, small)
-    }
-
-    private func tilt(_ s: Sticker) -> Double {
-        let h = abs(s.id.unicodeScalars.reduce(0) { $0 &+ Int($1.value) })
-        return Double(h % 5) - 2
-    }
-}
-
-enum PrintStyle { case tape, corners }
-
-struct AlbumPrint: View {
-    @Environment(DexStore.self) private var dex
-    let sticker: Sticker
-    let style: PrintStyle
-    let width: CGFloat
-    let onOpen: (Sticker) -> Void
-
-    var body: some View {
-        printView
-            // Web: 「ホームアルバムだけから消す。図鑑からは消さない。あとから戻せる」.
-            .contextMenu {
-                Button(L("この単語をひらく"), systemImage: "book") { onOpen(sticker) }
-                Button(L("アルバムから外す（図鑑には残ります）"), systemImage: "eye.slash", role: .destructive) {
-                    Haptics.impact(.light)
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                        Task { await dex.setAlbumHidden(sticker.id, hidden: true) }
-                    }
-                }
-            }
-    }
-
-    @ViewBuilder
-    private var printView: some View {
-        let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
-        Button { onOpen(sticker) } label: {
-            if path == nil {
-                // No photo: the word written straight on the paper — no print, no rule.
-                VStack(spacing: 4) {
-                    Text(sticker.word?.headword ?? "").font(.system(size: 26, weight: .bold)).foregroundStyle(Color(hex: 0x33291F))
-                    Text(JPDate.time(sticker.takenAt)).font(.system(size: 12)).foregroundStyle(Color(hex: 0x33291F).opacity(0.55))
-                }
-                .frame(width: width, height: width * 0.8)
-            } else {
-                VStack(spacing: 6) {
-                    Theme.secondary
-                        .frame(width: width - 14, height: (width - 14) * 1.08)
-                        .overlay {
-                            StickerImage(path: path, url: dex.url(for: path), contentMode: sticker.objectImageUrl == nil ? .fit : .fill)
-                                .allowsHitTesting(false)
-                        }
-                        .clipShape(.rect(cornerRadius: 3))
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(sticker.word?.headword ?? "")
-                            .font(.system(size: width > 160 ? 21 : 16, weight: .bold))
-                            .foregroundStyle(Color(hex: 0x241C14))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Text(JPDate.time(sticker.takenAt))
-                            .font(.system(size: width > 160 ? 13 : 11))
-                            .foregroundStyle(Color(hex: 0x241C14).opacity(0.6))
-                    }
-                    .padding(.bottom, 4)
-                }
-                .padding(7)
-                .background(Color(hex: 0xFFFEFB))
-                .overlay { LinearGradient(colors: [.white.opacity(0.25), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing).allowsHitTesting(false) }
-                .shadow(color: .black.opacity(0.16), radius: 5, x: 1, y: 3)
-                .overlay(alignment: .top) {
-                    if style == .tape {
-                        Rectangle()
-                            .fill(Color(hex: 0xC9D6EE, opacity: 0.85))
-                            .overlay(
-                                HStack(spacing: 3) { ForEach(0..<14, id: \.self) { _ in Rectangle().fill(.white.opacity(0.35)).frame(width: 1.5) } }
-                            )
-                            .frame(width: min(90, width * 0.4), height: 18)
-                            .rotationEffect(.degrees(-2))
-                            .offset(y: -9)
-                    }
-                }
-                .overlay {
-                    if style == .corners { PhotoCorners() }
-                }
-            }
-        }
-        .buttonStyle(PressableStyle(scale: 0.97))
-        .accessibilityLabel(sticker.word?.headword ?? L("写真"))
-    }
-}
-
-/// Four dark triangular photo corners.
-private struct PhotoCorners: View {
-    var body: some View {
-        GeometryReader { geo in
-            let s: CGFloat = 22
-            let color = Color(hex: 0x4A3C30)
-            ForEach(0..<4, id: \.self) { i in
-                Path { p in
-                    p.move(to: .zero)
-                    p.addLine(to: CGPoint(x: s, y: 0))
-                    p.addLine(to: CGPoint(x: 0, y: s))
-                    p.closeSubpath()
-                }
-                .fill(color)
-                .frame(width: s, height: s)
-                .rotationEffect(.degrees(Double(i) * 90))
-                .position(
-                    x: (i == 0 || i == 3) ? s / 2 - 5 : geo.size.width - s / 2 + 5,
-                    y: (i == 0 || i == 1) ? s / 2 - 5 : geo.size.height - s / 2 + 5
-                )
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// The Blender album with the newest catch on its cover (3D on, motion not reduced).
-/// Nothing is drawn until the cover photo is ready, and nothing at all without catches.
-struct HomeAlbum3D: View {
-    let sticker: Sticker?
-    @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
-    @State private var cover: UIImage?
-
-    var body: some View {
-        Group {
-            if fx3D, !reduceMotion, let cover {
-                Album3DView(cover: cover)
-                    .frame(height: 170)
-                    .id(sticker?.id)
-                    .transition(.opacity)
-            }
-        }
-        .task(id: sticker?.id) {
-            guard let s = sticker, let path = s.cutoutImageUrl ?? s.objectImageUrl else { cover = nil; return }
-            if let img = ImageCache.shared.image(for: path) { cover = img; return }
-            guard let url = dex.url(for: path, preferThumb: false) else { return }
-            let img = await ImageCache.shared.load(url: url, key: path)
-            withAnimation(.easeOut(duration: 0.3)) { cover = img }
-        }
-    }
-}
+// MARK: - Album
 
 /// Web `album-hidden-tray`: photos taken off the album, each with 「戻す」. Collapsed by default.
 struct AlbumHiddenTray: View {
@@ -643,5 +393,87 @@ struct AlbumHiddenTray: View {
             .padding(.vertical, 6)
             .background(Color(hex: 0xFFFBF2).opacity(0.8), in: .rect(cornerRadius: 16, style: .continuous))
         }
+    }
+}
+
+/// The album's shape while the dex is still loading: a blank page with soft photo frames that shimmer,
+/// so the home screen is never an empty white sheet.
+struct AlbumSkeleton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var phase: CGFloat = -1
+
+    var body: some View {
+        let paper = Color(hex: 0xFFFDF8)
+        let frame = Color(hex: 0x33291F, opacity: 0.07)
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(paper)
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 18) {
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 120, height: 16)
+                    HStack(spacing: 16) {
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 130, height: 130).rotationEffect(.degrees(-4))
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 118, height: 118).rotationEffect(.degrees(3))
+                    }
+                    HStack(spacing: 16) {
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 112, height: 112).rotationEffect(.degrees(2))
+                        RoundedRectangle(cornerRadius: 14).fill(frame).frame(width: 126, height: 126).rotationEffect(.degrees(-3))
+                    }
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 200, height: 12)
+                    RoundedRectangle(cornerRadius: 6).fill(frame).frame(width: 150, height: 12)
+                }
+                .padding(24)
+            }
+            .overlay {
+                // A soft band of light that sweeps across while waiting.
+                GeometryReader { geo in
+                    // Soft and narrow, so the frames underneath stay visible while it passes.
+                    LinearGradient(colors: [.clear, .white.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.3)
+                        .offset(x: geo.size.width * phase)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .allowsHitTesting(false)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L("読み込み中"))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) { phase = 1.5 }
+            }
+    }
+}
+
+/// The album could not be loaded (offline, server down): a calm message and a retry button.
+struct AlbumLoadFailed: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(Color(hex: 0xFFFDF8))
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+            .overlay {
+                VStack(spacing: 14) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.45))
+                    Text(L("アルバムを読み込めませんでした"))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x33291F))
+                    Text(message)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
+                        .multilineTextAlignment(.center)
+                    Button(action: onRetry) {
+                        Label(L("もう一度読み込む"), systemImage: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                            .padding(.horizontal, 22).frame(minHeight: 48)
+                            .background(Theme.primary, in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                .padding(28)
+            }
     }
 }

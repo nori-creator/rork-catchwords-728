@@ -48,13 +48,14 @@ struct UIPreviewRoot: View {
                 AnalyzingView(photo: PreviewFixtures.photo,
                               previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
                                                CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
-            case "album": AlbumPreview()
             case "hero": HeroPickerPreview()
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
             case "book": BookPreview()
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
+            case "webimg": WebImagesPreview()
+            case "chunks": ChunkWheelPreview()
             case "jadetail": LanguageCardPreview(kind: .ja)
             case "quiz": ReviewPreview(learning: "zh-TW", answered: false)
             case "answer": ReviewPreview(learning: "zh-TW", answered: true)
@@ -67,6 +68,11 @@ struct UIPreviewRoot: View {
             case "paywall": PaywallView()
             case "dex": DexView()
             case "wordbook": WordbookView()
+            case "done": DonePreview()
+            case "homeload": VStack(spacing: 20) {
+                AlbumSkeleton().frame(height: 440)
+                AlbumLoadFailed(message: L("通信できませんでした。電波のよい場所でもう一度お試しください。")) {}.frame(height: 300)
+            }.padding(16).background(HomeBackground())
             default: Text("unknown preview: \(name)")
             }
         }
@@ -209,37 +215,6 @@ private struct RewardPreview: View {
                 round += 1
             }
         }
-    }
-}
-
-/// Today's album page (web collage layout) with four made-up catches whose photos sit in the image cache.
-private struct AlbumPreview: View {
-    private static let words = [("芒果", "マンゴー"), ("盤子", "お皿"), ("咖啡", "コーヒー"), ("雨傘", "傘")]
-
-    private static let stickers: [Sticker] = words.enumerated().compactMap { i, w in
-        let json = #"{"id":"w\#(i)","headword":"\#(w.0)","meaning_ja":"\#(w.1)"}"#
-        guard let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8)) else { return nil }
-        let path = "preview/\(i).jpg"
-        let img = UIGraphicsImageRenderer(size: CGSize(width: 600, height: i % 2 == 0 ? 760 : 480)).image { ctx in
-            let hues: [CGFloat] = [0.12, 0.55, 0.08, 0.62]
-            UIColor(hue: hues[i], saturation: 0.45, brightness: 0.92, alpha: 1).setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 760))
-            UIColor(hue: hues[i], saturation: 0.7, brightness: 0.7, alpha: 1).setFill()
-            ctx.cgContext.fillEllipse(in: CGRect(x: 150, y: 150, width: 300, height: 260))
-        }
-        ImageCache.shared.set(img, for: path)
-        return Sticker(id: "s\(i)", wordId: "w\(i)", objectImageUrl: path, cutoutImageUrl: nil, selfieImageUrl: nil,
-                       caption: i == 2 ? "駅前のカフェで" : nil, locationName: nil,
-                       takenAt: Date().addingTimeInterval(Double(-i) * 1800), captureType: "photo", word: word)
-    }
-
-    var body: some View {
-        ScrollView {
-            AlbumPage(items: Self.stickers, isToday: true, onOpen: { _ in }, onCamera: {})
-                .padding(16)
-                .padding(.top, 50)
-        }
-        .background(AppBackground())
     }
 }
 
@@ -422,8 +397,46 @@ private struct DetailPreview: View {
                        caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
     }
 
+    var focus: CardSection = .usageChunks
+
     var body: some View {
-        WordDetailView(sticker: Self.sticker, previewFocus: .usageChunks)
+        WordDetailView(sticker: Self.sticker, previewFocus: focus)
+    }
+
+    static var previewSticker: Sticker { sticker }
+}
+
+/// ネットの画像 with three stand-in pictures (no network in CI): the section shows once pictures arrive.
+private struct WebImagesPreview: View {
+    init() {
+        CardPrefsStore.shared.use("zh-TW")
+        CardPrefsStore.shared.setVisible(.webImages, true)
+        let word = DetailPreview.previewSticker.word
+        let looks: [(String, UInt32, UInt32, String)] = [
+            ("fork.knife", 0xF4A261, 0xE76F51, "Mei Lin"), ("flame.fill", 0x2A9D8F, 0x264653, "Kenji Ito"),
+            ("frying.pan.fill", 0xE9C46A, 0xF4A261, "Ana Ruiz"),
+        ]
+        let candidates: [WebImageCandidate] = looks.compactMap { symbol, top, bottom, name in
+            let size = CGSize(width: 360, height: 360)
+            let img = UIGraphicsImageRenderer(size: size).image { ctx in
+                let colors = [UIColor(Color(hex: top)).cgColor, UIColor(Color(hex: bottom)).cgColor] as CFArray
+                if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+                    ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+                }
+                let cfg = UIImage.SymbolConfiguration(pointSize: 120, weight: .semibold)
+                if let sym = UIImage(systemName: symbol, withConfiguration: cfg)?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+                    sym.draw(at: CGPoint(x: (size.width - sym.size.width) / 2, y: (size.height - sym.size.height) / 2))
+                }
+            }
+            guard let jpeg = img.jpegData(compressionQuality: 0.8) else { return nil }
+            return WebImageCandidate(url: "data:image/jpeg;base64,\(jpeg.base64EncodedString())", thumb: nil, source: "unsplash",
+                                     credit: .init(name: name, link: nil))
+        }
+        WebImages.seed(headword: word?.headword ?? "", meaning: word?.meaningJa, candidates: candidates)
+    }
+
+    var body: some View {
+        DetailPreview(focus: .webImages)
     }
 }
 /// A Japanese word (傘) and an English word (umbrella) as an English / Chinese / Japanese reader sees them —
@@ -509,7 +522,8 @@ private struct ReviewPreview: View {
                  "meaning_ja": en ? "mango" : "マンゴー", "example_sentence": "這顆芒果很甜。",
                  "example_translation": en ? "This mango is very sweet." : "このマンゴーはとても甘い。",
                  "extras": ["explain_lang": L10n.lang,
-                            "usage_chunks": [["parts": [["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "very sweet" : "とても甘い"]],
+                            "usage_chunks": [["parts": [["text": "芒果", "pos": "N"], ["text": "很", "pos": "ADV"], ["text": "甜", "pos": "VS"]], "ja": en ? "Mangoes are very sweet" : "マンゴーはとても甘い"],
+                                             ["parts": [["text": "切", "pos": "V"], ["text": "芒果", "pos": "N"]], "ja": en ? "cut a mango" : "マンゴーを切る"]],
                             "measure_words": [["word": "顆", "zhuyin": "ㄎㄜ", "note": en ? "for round fruit" : "丸い果物に"]]] as [String: Any]]
         }
         let data = (try? JSONSerialization.data(withJSONObject: w)) ?? Data()
@@ -536,3 +550,52 @@ private struct ReviewPreview: View {
     }
 }
 #endif
+
+/// The end of a review round: score ring, missed words to try again, and "review more".
+private struct DonePreview: View {
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ReviewDone(total: 12, correct: 9, doneToday: 12, missed: 3, isRetry: false, canLoadMore: true) {}
+                .padding(16)
+        }
+    }
+}
+
+/// Swappable chunk parts with the wheel open (docs/chunk-rules.md C5/C6): 跟＋男朋友＋吵架 and 芒果＋很＋甜.
+private struct ChunkWheelPreview: View {
+    private var reader: String { L10n.lang }
+
+    private func gloss(_ ja: String, _ en: String, _ zh: String) -> String { reader == "en" ? en : reader == "zh-TW" ? zh : ja }
+
+    private var quarrel: UsageChunk {
+        let alts = [("女朋友", "彼女", "girlfriend", "女朋友"), ("朋友", "友達", "a friend", "朋友"), ("同事", "同僚", "a coworker", "同事"),
+                    ("爸媽", "両親", "my parents", "爸媽"), ("室友", "ルームメイト", "a roommate", "室友")]  // l10n-ignore (preview data)
+        return UsageChunk(parts: [
+            ChunkPart(text: "跟", pos: "Prep"),  // l10n-ignore (target word)
+            ChunkPart(text: "男朋友", pos: "N", slot: true, ja: gloss("彼氏", "my boyfriend", "男朋友"),  // l10n-ignore (preview data)
+                      alts: alts.map { ChunkAlt(text: $0.0, ja: gloss($0.1, $0.2, $0.3)) }),
+            ChunkPart(text: "吵架", pos: "V"),  // l10n-ignore (target word)
+        ], ja: gloss("彼氏と喧嘩する", "argue with my boyfriend", "跟男朋友吵架"))  // l10n-ignore (preview data)
+    }
+
+    private var mango: UsageChunk {
+        let raw = [ChunkPart(text: "芒果", pos: "N"), ChunkPart(text: "甜", pos: "Vs")]  // l10n-ignore (target word)
+        return UsageChunk(parts: ChunkRules.tidy(raw, headword: "芒果", target: "zh-TW", reader: reader),  // l10n-ignore (target word)
+                          ja: gloss("マンゴーはとても甘い", "Mangoes are very sweet", "芒果很甜"))  // l10n-ignore (preview data)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                ChunkLineView(chunk: quarrel, headword: "吵架", target: "zh-TW", startOpen: 1)  // l10n-ignore (target word)
+                Divider()
+                ChunkLineView(chunk: mango, headword: "芒果", target: "zh-TW", startOpen: 1)  // l10n-ignore (target word)
+            }
+            .padding(20)
+            .background(.white, in: .rect(cornerRadius: 24))
+            .padding(16)
+        }
+        .background(Theme.background)
+    }
+}
