@@ -225,6 +225,9 @@ struct ReviewView: View {
         } else {
             ReviewDone(total: store.queue.count, correct: store.correctCount, doneToday: store.doneToday,
                        missed: store.missed.count, isRetry: store.isRetry, canLoadMore: store.moreAvailable && !store.isRetry,
+                       capped: store.capped || (store.moreAvailable && store.doneToday >= profile.effectiveReviewLimit),
+                       dueRemaining: store.dueRemaining,
+                       onSettings: { router.tab = .settings },
                        onRetry: {
                            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { store.startRetry() }
                        },
@@ -459,6 +462,9 @@ struct ReviewDone: View {
     var missed: Int = 0
     var isRetry: Bool = false
     var canLoadMore: Bool = false
+    var capped: Bool = false
+    var dueRemaining: Int = 0
+    var onSettings: () -> Void = {}
     var onRetry: () -> Void = {}
     var onMore: () -> Void = {}
     let onCamera: () -> Void
@@ -523,9 +529,18 @@ struct ReviewDone: View {
                     Text(L("練習なので、記憶の記録は変わりません。"))
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 }
+                if capped {
+                    Button(action: onSettings) {
+                        Label(L("設定で枚数を変える"), systemImage: "slider.horizontal.3")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Theme.primary.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                }
                 if canLoadMore {
                     Button(action: onMore) {
-                        Label(L("もっと復習する"), systemImage: "plus.circle")
+                        Label(capped ? L("もっと復習する") : L("続ける"), systemImage: "plus.circle")
                             .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.card, in: Capsule())
@@ -553,14 +568,18 @@ struct ReviewDone: View {
     }
 
     private var title: String {
-        if total == 0 { return L("今日の復習はおしまいです") }
+        if total == 0 { return capped ? L("今日の分は終わりです") : L("今日復習する単語はありません。") }
         if isRetry { return missed == 0 ? L("ぜんぶ覚え直せました") : L("あと\(missed)語、もう少し") }
         return L("\(total)問中 \(correct)問 正解")
     }
 
+    /// web DoneState / EmptyState: more due → keep going; limit used up; or all done until tomorrow.
     private var subtitle: String {
-        if total == 0 { return L("新しい単語を撮ると、ここに出てきます。") }
-        return L("今日は\(doneToday)回復習しました。")
+        if total == 0 && !capped { return L("新しい単語をキャッチすると、10分後に最初の復習が出ます。") }
+        if isRetry || total == 0 { return L("今日は\(doneToday)回復習しました。") }
+        if capped { return L("今日の分は終わりです（\(doneToday)回復習しました）。") }
+        if dueRemaining > 0 { return L("あと \(dueRemaining) 語、期限が来ています。続けられます。") }
+        return L("また明日の復習で会いましょう。")
     }
 
     private func play() async {

@@ -33,6 +33,10 @@ final class ReviewStore {
     var isRetry: Bool = false
     /// More cards are due than the daily limit let into this round.
     var moreAvailable: Bool = false
+    /// Today's limit is used up while cards are still due (web review-batch.ts "capped").
+    var capped: Bool = false
+    /// Due cards left after this batch (web `dueRemaining`).
+    var dueRemaining: Int = 0
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
 
@@ -121,9 +125,12 @@ final class ReviewStore {
                 return ReviewCard(review: r, sticker: s)
             }
             await historyTask  // doneToday is now this language's count
-            let room = max(1, limit - doneToday)
+            // The daily limit reached: nothing more today (web getDueReviews returns [] then), but say so.
+            let room = max(0, limit - doneToday)
             queue = Array(cards.prefix(room))
-            moreAvailable = cards.count > room
+            capped = room == 0 && !cards.isEmpty
+            dueRemaining = cards.count - queue.count
+            moreAvailable = dueRemaining > 0
             missed = []
             isRetry = false
             loadedTarget = NativeAPI.targetLanguage

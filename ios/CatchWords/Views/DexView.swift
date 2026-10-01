@@ -98,6 +98,7 @@ struct DexView: View {
     @State private var shelfEdit: ShelfEdit?
     @State private var deleteShelfKey: String?
     @State private var moveError: String?
+    @State private var undoMove: UndoMove?
 
     /// Create (key nil) or rename a shelf.
     struct ShelfEdit: Identifiable {
@@ -122,6 +123,20 @@ struct DexView: View {
                 Haptics.success()
             } catch {
                 Haptics.warning()
+                moveError = L("棚を保存できませんでした。もう一度お試しください。")
+            }
+        }
+    }
+
+    /// A renamed built-in shelf back to its own name and emoji (the server drops the rename).
+    private func restoreShelf(_ key: String) {
+        Task {
+            do {
+                try await dex.deleteShelf(key: key)
+                Haptics.success()
+            } catch {
+                Haptics.warning()
+                moveError = L("棚を保存できませんでした。もう一度お試しください。")
             }
         }
     }
@@ -356,7 +371,9 @@ struct DexView: View {
         } else if dex.isLoading && !dex.hasLoaded {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dex.hasLoaded && filtered.isEmpty {
-            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty) { router.tab = .camera }
+            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty,
+                         otherLanguageCount: dex.otherLanguageCount,
+                         onSettings: { router.tab = .settings }) { router.tab = .camera }
                 .padding(.top, 130)
         } else {
             switch mode {
@@ -392,6 +409,7 @@ struct DexView: View {
                         if !items.isEmpty {
                             CategoryShelf(key: key, stickers: items, landedId: landedId, impactTick: impactTick,
                                           onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key },
+                                          onRestore: Category.isBuiltin(key) && Category.custom[key] != nil ? { restoreShelf(key) } : nil,
                                           onDrop: { id in drop(id, on: key, proxy: proxy) }) { s in
                                 router.detailSticker = s
                             }
@@ -417,10 +435,13 @@ struct DexView: View {
                 .padding(.bottom, 120)
             }
             .refreshable { await dex.load() }
-            .alert(L("棚を移せませんでした"), isPresented: Binding(get: { moveError != nil }, set: { if !$0 { moveError = nil } })) {
+            .alert(L("うまくいきませんでした"), isPresented: Binding(get: { moveError != nil }, set: { if !$0 { moveError = nil } })) {
                 Button(L("閉じる"), role: .cancel) { moveError = nil }
             } message: {
                 Text(moveError ?? "")
+            }
+            .overlay(alignment: .bottom) {
+                if let u = undoMove { undoBanner(u) }
             }
             .onChange(of: router.landingStickerId) { _, id in
                 guard let id else { return }
@@ -444,7 +465,9 @@ struct DexView: View {
             Button(L("消す（語は元の棚に戻ります）"), role: .destructive) {
                 guard let key = deleteShelfKey else { return }
                 deleteShelfKey = nil
-                Task { try? await dex.deleteShelf(key: key) }
+                Task {
+                    do { try await dex.deleteShelf(key: key) } catch { moveError = L("棚を消せませんでした。もう一度お試しください。") }
+                }
             }
         }
     }
@@ -485,17 +508,61 @@ struct DexView: View {
     private func drop(_ id: String, on key: String, proxy: ScrollViewProxy) -> Bool {
         guard let s = dex.sticker(id: id), s.categoryKey != key else { return false }
         let aiKey = Category.key(for: s.word?.categoryKey)
+        let before = s.shelfKey
         Haptics.impact(.medium)
         Task {
             do {
                 try await dex.move(s, to: key == aiKey ? nil : key)
                 land(id, proxy: proxy)
+                showUndo(UndoMove(stickerId: id, previousShelf: before, word: s.word?.headword ?? "", shelf: key))
             } catch {
                 Haptics.warning()
                 moveError = (error as? LocalizedError)?.errorDescription ?? L("通信できませんでした。電波のよい場所でもう一度お試しください。")
             }
         }
         return true
+    }
+
+    /// 「X を Y に移しました ・ 元に戻す」 for a few seconds after a move (web DexCategoryDrag undo).
+    private func showUndo(_ u: UndoMove) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { undoMove = u }
+        Task {
+            try? await Task.sleep(for: .seconds(5))
+            withAnimation(.easeOut(duration: 0.25)) { if undoMove?.id == u.id { undoMove = nil } }
+        }
+    }
+
+    private func undo(_ u: UndoMove) {
+        withAnimation(.easeOut(duration: 0.2)) { undoMove = nil }
+        guard let s = dex.sticker(id: u.stickerId) else { return }
+        Task {
+            do {
+                try await dex.move(s, to: u.previousShelf)
+                Haptics.selection()
+            } catch {
+                Haptics.warning()
+                moveError = L("棚を移せませんでした。もう一度お試しください。")
+            }
+        }
+    }
+
+    private func undoBanner(_ u: UndoMove) -> some View {
+        HStack(spacing: 12) {
+            Text(L("「\(u.word)」を\(Category.label(for: u.shelf))に移しました"))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+            Spacer(minLength: 4)
+            Button(L("元に戻す")) { undo(u) }
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Theme.gold)
+                .frame(minHeight: 44)
+        }
+        .padding(.horizontal, 18)
+        .background(Theme.foreground.opacity(0.92), in: Capsule())
+        .padding(.horizontal, 16)
+        .padding(.bottom, 104)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private func land(_ id: String, proxy: ScrollViewProxy) {
@@ -527,6 +594,8 @@ struct CategoryShelf: View {
     let impactTick: Int
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    /// A built-in shelf the learner renamed: back to its own name (web CategorySheet 「元の名前に戻す」).
+    var onRestore: (() -> Void)? = nil
     /// A word's id dropped on this shelf; returns whether it was taken.
     var onDrop: ((String) -> Bool)? = nil
     let onTap: (Sticker) -> Void
@@ -544,6 +613,7 @@ struct CategoryShelf: View {
                 if onEdit != nil || onDelete != nil {
                     Menu {
                         if let onEdit { Button(L("名前と絵文字を変える"), systemImage: "pencil", action: onEdit) }
+                        if let onRestore { Button(L("元の名前に戻す"), systemImage: "arrow.uturn.backward", action: onRestore) }
                         if let onDelete { Button(L("この棚を消す"), systemImage: "trash", role: .destructive, action: onDelete) }
                     } label: {
                         Image(systemName: "ellipsis")
@@ -1178,6 +1248,8 @@ struct MapVisit: Identifiable {
 
 struct EmptyDexView: View {
     let isFiltered: Bool
+    var otherLanguageCount: Int = 0
+    var onSettings: () -> Void = {}
     let onCamera: () -> Void
 
     var body: some View {
@@ -1191,9 +1263,29 @@ struct EmptyDexView: View {
             if !isFiltered {
                 PrimaryButton(title: L("最初の1枚を撮る"), icon: "camera.fill", sheen: true, action: onCamera)
                     .frame(maxWidth: 260)
+                if otherLanguageCount > 0 {
+                    // The words are not gone: they belong to another learning language.
+                    Text(L("ほかの学習言語の単語が\(otherLanguageCount)語あります。"))
+                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 6)
+                    Button(L("学習言語を変える"), action: onSettings)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.primaryInk)
+                        .frame(minHeight: 44)
+                }
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
     }
+}
+
+/// A shelf move that can still be undone.
+struct UndoMove: Equatable {
+    let id = UUID()
+    let stickerId: String
+    let previousShelf: String?
+    let word: String
+    let shelf: String
 }

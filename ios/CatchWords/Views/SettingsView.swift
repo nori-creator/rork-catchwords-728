@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("reading.ja") private var readingJa: String = "kana"
+    @AppStorage("reading.en") private var readingEn: String = "ipa-us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
@@ -128,11 +129,12 @@ struct SettingsView: View {
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
-                // English shows its IPA as the dictionary gives it; there is nothing to choose.
-                if !isEnglish { label(L("発音表記")).padding(.top, 6) }
-                if profile.targetLanguage == "ja" {
+                label(L("発音表記")).padding(.top, 6)
+                if isEnglish {
+                    ChoicePills(options: [("ipa-us", L("IPA（アメリカ英語）")), ("ipa-uk", L("IPA（イギリス英語）"))], selection: $readingEn)
+                } else if profile.targetLanguage == "ja" {
                     ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
-                } else if !isEnglish {
+                } else {
                     ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: $readingPref)
                 }
                 if let m = profile.message {

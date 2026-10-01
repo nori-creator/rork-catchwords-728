@@ -11,6 +11,7 @@ struct WordDetailView: View {
     /// DEBUG preview: open scrolled to this section so the simulator frame shows it.
     var previewFocus: CardSection? = nil
 
+    @AppStorage("reading.en") private var readingEn: String = "ipa-us"
     @State private var isCutting: Bool = false
     @State private var cutoutMessage: String?
     @State private var prefs: CardPrefsStore = .shared
@@ -236,10 +237,24 @@ struct WordDetailView: View {
             }
             FlowRow(spacing: 8) {
                 if let pos = word?.partOfSpeech, !pos.isEmpty { chip(posLabel(pos)) }
+                LevelLadder(level: word?.level, language: learningLang)
                 if let r = extras?.resolvedRegister { chip(registerLabel(r)) }
+                // A word outside the level lists: the exams it appears in instead (web exam-tags.ts).
+                if LevelLadder.step(word?.level) == 0 {
+                    ForEach(ExamTags.labels(extras?.examTags), id: \.self) { chip($0) }
+                }
             }
-            // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
-            if (word?.readingZhuyin ?? "").isEmpty, let p = word?.pinyin, !p.isEmpty {
+            if learningLang == "en" {
+                // English: the IPA the learner picked (設定 › 発音表記). US is reading_zhuyin, UK is pinyin (web reading_alt).
+                let us = (word?.readingZhuyin ?? "").trimmingCharacters(in: .whitespaces)
+                let uk = (word?.pinyin ?? "").trimmingCharacters(in: .whitespaces)
+                let ipa = readingEn == "ipa-uk" && !uk.isEmpty ? uk : (us.isEmpty ? uk : us)
+                if !ipa.isEmpty {
+                    Text("/\(ipa.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/")
+                        .font(.system(size: 17)).foregroundStyle(Theme.muted)
+                }
+            } else if (word?.readingZhuyin ?? "").isEmpty, let p = word?.pinyin, !p.isEmpty {
+                // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
                 Text(p).font(.system(size: 14)).foregroundStyle(Theme.muted)
             }
             HStack {

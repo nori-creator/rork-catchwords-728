@@ -97,6 +97,8 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var counters: [CounterWord]?
     var wordOrigin: String?
     var japanNote: String?
+    /// Exams a word outside the level lists appears in (`exam_tags`, from the dictionary row: toefl, ielts…).
+    var examTags: [String]?
 
     enum CodingKeys: String, CodingKey {
         case mnemonic, synonyms, antonyms, etymology, radicals, trivia
@@ -123,6 +125,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         case usageChunks = "usage_chunks"
         case usageContext = "usage_context"
         case measureWords = "measure_words"
+        case examTags = "exam_tags"
     }
 
     init(frequencyLevel: Int? = nil, registerScale: Int? = nil, registerTag: String? = nil,
@@ -174,6 +177,7 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         counters = (try? c.decodeIfPresent([CounterWord].self, forKey: .counters)).flatMap { $0 }
         wordOrigin = (try? c.decodeIfPresent(String.self, forKey: .wordOrigin)).flatMap { $0 }
         japanNote = (try? c.decodeIfPresent(String.self, forKey: .japanNote)).flatMap { $0 }
+        examTags = (try? c.decodeIfPresent([String].self, forKey: .examTags)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).

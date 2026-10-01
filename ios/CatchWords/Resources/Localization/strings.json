@@ -3114,5 +3114,117 @@
  "ログインに失敗しました。もう一度お試しください。": {
   "en": "Sign-in failed. Please try again.",
   "zh-TW": "登入失敗，請再試一次。"
+ },
+ "IPA（アメリカ英語）": {
+  "en": "IPA (American)",
+  "zh-TW": "IPA（美式英語）"
+ },
+ "IPA（イギリス英語）": {
+  "en": "IPA (British)",
+  "zh-TW": "IPA（英式英語）"
+ },
+ "{1}級（Band {2}）": {
+  "en": "Level {1} · Band {2}",
+  "zh-TW": "{1}級（Band {2}）"
+ },
+ "{1}（Band {2}）": {
+  "en": "{1} · Band {2}",
+  "zh-TW": "{1}（Band {2}）"
+ },
+ "級外の語": {
+  "en": "Not in the lists",
+  "zh-TW": "級外的字"
+ },
+ "CEFR の外の語": {
+  "en": "Outside the CEFR bands",
+  "zh-TW": "CEFR 之外的字"
+ },
+ "JLPT の外の語": {
+  "en": "Outside the JLPT levels",
+  "zh-TW": "JLPT 之外的字"
+ },
+ "段階を見る": {
+  "en": "Show the scale",
+  "zh-TW": "看等級表"
+ },
+ "段階を閉じる": {
+  "en": "Hide the scale",
+  "zh-TW": "收起等級表"
+ },
+ "中学": {
+  "en": "Junior high",
+  "zh-TW": "國中"
+ },
+ "高校": {
+  "en": "High school",
+  "zh-TW": "高中"
+ },
+ "大学院": {
+  "en": "Graduate school",
+  "zh-TW": "研究所"
+ },
+ "元の名前に戻す": {
+  "en": "Restore original name",
+  "zh-TW": "恢復原本的名稱"
+ },
+ "棚を消せませんでした。もう一度お試しください。": {
+  "en": "Couldn't delete the shelf. Please try again.",
+  "zh-TW": "無法刪除書架，請再試一次。"
+ },
+ "棚を保存できませんでした。もう一度お試しください。": {
+  "en": "Couldn't save the shelf. Please try again.",
+  "zh-TW": "無法儲存書架，請再試一次。"
+ },
+ "うまくいきませんでした": {
+  "en": "That didn't work",
+  "zh-TW": "沒有成功"
+ },
+ "「{1}」を{2}に移しました": {
+  "en": "Moved “{1}” to {2}",
+  "zh-TW": "已將「{1}」移到{2}"
+ },
+ "元に戻す": {
+  "en": "Undo",
+  "zh-TW": "復原"
+ },
+ "ほかの学習言語の単語が{1}語あります。": {
+  "en": "You have {1} words from another learning language.",
+  "zh-TW": "還有{1}個其他學習語言的單字。"
+ },
+ "学習言語を変える": {
+  "en": "Change learning language",
+  "zh-TW": "更換學習語言"
+ },
+ "設定で枚数を変える": {
+  "en": "Change the limit in Settings",
+  "zh-TW": "到設定更改張數"
+ },
+ "続ける": {
+  "en": "Keep going",
+  "zh-TW": "繼續"
+ },
+ "今日の分は終わりです": {
+  "en": "That's today's limit",
+  "zh-TW": "今天的份量完成了"
+ },
+ "今日復習する単語はありません。": {
+  "en": "Nothing to review today.",
+  "zh-TW": "今天沒有要複習的單字。"
+ },
+ "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
+  "en": "Catch a new word and its first review comes up 10 minutes later.",
+  "zh-TW": "捕捉新單字後，10分鐘後會出現第一次複習。"
+ },
+ "今日の分は終わりです（{1}回復習しました）。": {
+  "en": "That's today's limit ({1} reviews done).",
+  "zh-TW": "今天的份量完成了（已複習{1}次）。"
+ },
+ "あと {1} 語、期限が来ています。続けられます。": {
+  "en": "Still due: {1} words. You can keep going.",
+  "zh-TW": "還有 {1} 個單字到期，可以繼續。"
+ },
+ "また明日の復習で会いましょう。": {
+  "en": "See you at tomorrow's review.",
+  "zh-TW": "明天複習時再見。"
  }
 }
