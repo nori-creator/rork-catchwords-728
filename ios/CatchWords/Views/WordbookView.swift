@@ -591,7 +591,7 @@ struct WordbookShelf: View {
             Button(role: .destructive) { onDelete(book) } label: { Label(L("「\(book.title)」を消す"), systemImage: "trash") }
         }
         .accessibilityLabel(book.title)
-        .accessibilityValue(L("今日 \(book.due)語") + (L10n.lang == "en" ? ", " : L10n.lang == "ja" ? "、" : "，") + L("覚えた \(book.learned)／\(book.total)"))
+        .accessibilityValue(L("今日 \(book.due)語") + L10n.comma + L("覚えた \(book.learned)／\(book.total)"))
         .accessibilityHint(L("この単語帳を復習する"))
     }
 }

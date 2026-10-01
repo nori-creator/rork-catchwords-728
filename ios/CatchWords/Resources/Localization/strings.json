@@ -639,6 +639,10 @@
   "en": "First photo taken",
   "zh-TW": "第一次拍的照片"
  },
+ "はじめて見る語": {
+  "en": "new word",
+  "zh-TW": "第一次看到的字"
+ },
  "はじめる": {
   "en": "Get started",
   "zh-TW": "開始使用"
@@ -1427,6 +1431,10 @@
   "en": "Overall retention (±2 weeks)",
   "zh-TW": "整體記憶率（前後兩週）"
  },
+ "再会": {
+  "en": "meet again",
+  "zh-TW": "再次相遇"
+ },
  "再会{1}回目": {
   "en": "Reunion #{1}",
   "zh-TW": "第 {1} 次重逢"
@@ -1542,6 +1550,10 @@
  "削除できませんでした。通信を確かめて、もう一度お試しください。": {
   "en": "Couldn't delete. Check your connection and try again.",
   "zh-TW": "刪除失敗。請確認網路連線後再試一次。"
+ },
+ "前に見た語": {
+  "en": "seen before",
+  "zh-TW": "之前看過的字"
  },
  "前のページ": {
   "en": "Previous page",
@@ -1682,6 +1694,10 @@
  "取り込めませんでした": {
   "en": "Couldn't import those",
   "zh-TW": "匯入失敗"
+ },
+ "取得済み": {
+  "en": "collected",
+  "zh-TW": "已收集"
  },
  "句動詞": {
   "en": "Phrasal verbs",
