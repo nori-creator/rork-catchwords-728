@@ -117,13 +117,7 @@ extension String {
 
     /// Written in the learning language at all (an example sentence, a wordbook headword): Han for
     /// Taiwan Mandarin, kana or kanji for Japanese, Latin letters for English.
-    nonisolated func isIn(target: String) -> Bool {
-        switch target {
-        case "en": return unicodeScalars.contains { (0x41...0x5A).contains($0.value) || (0x61...0x7A).contains($0.value) }
-        case "ja": return hasHan || unicodeScalars.contains { (0x3041...0x30FA).contains($0.value) }
-        default: return hasHan
-        }
-    }
+    nonisolated func isIn(target: String) -> Bool { LanguageRules.isIn(self, target: target) }
 
     /// headwordCore: bracketed notes and surrounding punctuation don't count toward the judgement.
     nonisolated private var headwordCore: String {

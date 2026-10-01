@@ -23,44 +23,10 @@ nonisolated enum ReaderLanguage {
         return choices.first ?? "ja"
     }
 
-    // MARK: - looksWrongForReader (note-language.ts)
+    // MARK: - looksWrongForReader (note-language.ts) — rules live in LanguageRules
 
-    private static func isKana(_ v: UInt32) -> Bool { (0x3041...0x309F).contains(v) || (0x30A0...0x30FF).contains(v) }
-    private static func isHan(_ v: UInt32) -> Bool { (0x3400...0x4DBF).contains(v) || (0x4E00...0x9FFF).contains(v) || v == 0x3005 }
-    private static func isHangul(_ v: UInt32) -> Bool { (0xAC00...0xD7AF).contains(v) }
-    private static func isLatin(_ v: UInt32) -> Bool { (0x41...0x5A).contains(v) || (0x61...0x7A).contains(v) }
-
-    /// Whether a translation or note does NOT look written in `reader` (copies of the source sentence
-    /// count as wrong in every language). Unknown cases are kept — a right translation is never dropped.
     static func looksWrong(_ text: String?, reader: String, source: String? = nil, hanOnlyOk: Bool = false) -> Bool {
-        let s = (text ?? "").filter { !$0.isWhitespace }
-        guard !s.isEmpty else { return false }
-        let strip: (String) -> String = { $0.filter { !$0.isWhitespace && !"。．.,，、!！?？「」『』\"'“”‘’".contains($0) } }
-        if let source, !strip(source).isEmpty, strip(source) == strip(s) { return true }
-        var kana = 0, han = 0, hangul = 0, latin = 0
-        for u in s.unicodeScalars {
-            let v = u.value
-            if isKana(v) { kana += 1 } else if isHan(v) { han += 1 } else if isHangul(v) { hangul += 1 } else if isLatin(v) { latin += 1 }
-        }
-        let cjk = kana + han + hangul
-        let latinWords = (text ?? "").split(whereSeparator: { !($0.isASCII && $0.isLetter) }).filter { $0.count >= 2 }.count
-        let mostlyLatin = latin >= 5 && latin > cjk * 3 && latinWords >= 2
-        switch reader {
-        case "ja":
-            // A run of Han only (≥5 chars, no kana, no Latin) is Chinese, unless han-only is allowed.
-            if !hanOnlyOk, s.count >= 5, kana == 0, latin == 0, hangul == 0, han > 0 { return true }
-            if han == 0, kana == 0, latin >= 5 { return true }
-            return mostlyLatin
-        case "zh-TW":
-            // Japanese: kana makes up a real part of it (a Chinese note may quote one kana word).
-            if kana >= 2, kana * 3 >= han { return true }
-            if han == 0, latin >= 5 { return true }
-            return mostlyLatin
-        case "en":
-            return cjk >= 2 && cjk > latin
-        default:
-            return false
-        }
+        LanguageRules.looksWrong(text, reader: reader, source: source, hanOnlyOk: hanOnlyOk)
     }
 
     /// The first of `texts` written in the display language, or "" (never another language).

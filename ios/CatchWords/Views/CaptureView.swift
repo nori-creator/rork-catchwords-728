@@ -408,7 +408,7 @@ struct CaptureView: View {
     private var textSearchSheet: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                TextField("", text: $searchText, prompt: Text(L("例: マンゴー / 芒果")).foregroundStyle(Theme.muted))
+                TextField("", text: $searchText, prompt: Text(L("例: \(NativeAPI.sample(.search))")).foregroundStyle(Theme.muted))
                     .font(.system(size: 18))
                     .padding(.horizontal, 16)
                     .frame(minHeight: 54)
@@ -711,7 +711,7 @@ struct PendingListView: View {
                                 Text(item.createdAt, format: .dateTime.month().day().hour().minute())
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(Theme.foreground)
-                                Text(item.reason).font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(2)
+                                Text(L10n.readerSafe(item.reason, fallback: L("解析待ちの写真"))).font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(2)
                             }
                             Spacer()
                             Image(systemName: "arrow.clockwise.circle.fill").font(.title2).foregroundStyle(Theme.primary)

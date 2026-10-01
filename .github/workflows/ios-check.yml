@@ -35,7 +35,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 表示の言語が混ざらないか確かめる（訳のない日本語があれば失敗）
-        run: python3 scripts/check_l10n.py
+        run: |
+          python3 scripts/check_l10n.py
+          python3 scripts/check_server_text.py
+
+      - name: 言語の混在の規則を、過去の事例すべてで確かめる（docs/language-rules.md）
+        run: |
+          swiftc -O ios/CatchWords/Utilities/LanguageRules.swift ios/LanguageRules/main.swift -o "$RUNNER_TEMP/language-rules"
+          "$RUNNER_TEMP/language-rules" ios/LanguageRules/cases.json
 
       - name: Xcode の版を表示
         run: xcodebuild -version

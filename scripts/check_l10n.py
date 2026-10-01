@@ -11,7 +11,8 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from l10n_lib import JP_CORE, ignored, is_wrapped, key_of, line_of, scan  # noqa: E402
 import re
-KANA = re.compile(r"[ぁ-んァ-ヶ]")
+KANA = re.compile(r"[ぁ-んァ-ヶー]")
+HAN = re.compile(r"[一-鿿㐀-䶿]")
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "ios", "CatchWords")
 SKIP = {"Views/UIPreview.swift"}  # DEBUG-only fixtures for the simulator check
@@ -42,8 +43,13 @@ def main():
                 t = entry.get(lang, "")
                 if not t:
                     problems.append(f"{rel}:{line_of(src, start)}: missing {lang}: \"{k}\"")
-                elif lang == "en" and KANA.search(t):
-                    problems.append(f"{rel}:{line_of(src, start)}: en contains Japanese: \"{t}\"")
+                elif lang == "en" and (KANA.search(t) or HAN.search(t)):
+                    # R1 (docs/language-rules.md): English never carries kana or Han. A learning-language
+                    # sample goes in as a {n} value from NativeAPI.sample, never into the translation.
+                    problems.append(f"{rel}:{line_of(src, start)}: R1 en contains Japanese/Chinese: \"{t}\"")
+                elif lang == "zh-TW" and KANA.search(t):
+                    # R2: Traditional Chinese never carries kana.
+                    problems.append(f"{rel}:{line_of(src, start)}: R2 zh-TW contains kana: \"{t}\"")
                 # placeholders must survive translation
                 for i in range(1, 10):
                     ph = "{%d}" % i

@@ -18,6 +18,22 @@ enum NativeAPI {
         default: L("台湾華語")
         }
     }
+    /// A sample word / sentence in the learning language for input placeholders (never in the wrong language).
+    static func sample(_ kind: SampleKind) -> String {
+        switch (kind, targetLanguage) {
+        case (.word, "en"): "chair"  // l10n-ignore (learning-language sample)
+        case (.word, "ja"): "椅子"  // l10n-ignore (learning-language sample)
+        case (.word, _): "椅子"  // l10n-ignore (learning-language sample)
+        case (.search, "en"): "mango"  // l10n-ignore (learning-language sample)
+        case (.search, "ja"): "マンゴー"  // l10n-ignore (learning-language sample)
+        case (.search, _): "芒果"  // l10n-ignore (learning-language sample)
+        case (.diary, "en"): "This morning I went to a café…"  // l10n-ignore (learning-language sample)
+        case (.diary, "ja"): "今朝、カフェに行きました…"  // l10n-ignore (learning-language sample)
+        case (.diary, _): "今天早上我去咖啡店…"  // l10n-ignore (learning-language sample)
+        }
+    }
+    enum SampleKind { case word, search, diary }
+
     /// BCP-47 for speaking and listening in the learning language (web `speechLangOf` / `sttLangOf`).
     static var speechLanguage: String {
         switch targetLanguage {

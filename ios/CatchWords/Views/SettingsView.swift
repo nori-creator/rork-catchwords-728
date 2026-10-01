@@ -312,7 +312,7 @@ struct SettingsView: View {
                 Text(L("撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。"))
                     .font(.system(size: 13)).foregroundStyle(Theme.muted)
                 Text(L("確認のため「削除」と入力してください")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
-                TextField(L("削除"), text: $deleteText)
+                TextField(L10n.lang == "en" ? "DELETE" : L("削除"), text: $deleteText)  // the confirm word itself
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(minHeight: 46)
                     .background(Theme.card, in: .rect(cornerRadius: 14))

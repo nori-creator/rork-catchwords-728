@@ -238,8 +238,8 @@ struct CandidatePickerView: View {
                 .foregroundStyle(Theme.muted)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
-            if note, !c.distinction.isEmpty {
-                Text(c.distinction)
+            if note, !ReaderLanguage.shown(c.distinction, hanOnlyOk: false).isEmpty {
+                Text(ReaderLanguage.shown(c.distinction, hanOnlyOk: false))
                     .font(.system(size: size >= 34 ? 14 : 12))
                     .foregroundStyle(Theme.primaryInk)
                     .lineLimit(2)
@@ -256,7 +256,7 @@ struct CandidatePickerView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.muted)
             HStack(spacing: 8) {
-                TextField("", text: $typed, prompt: Text(L("例: 椅子")).foregroundStyle(Theme.muted.opacity(0.7)))
+                TextField("", text: $typed, prompt: Text(L("例: \(NativeAPI.sample(.word))")).foregroundStyle(Theme.muted.opacity(0.7)))
                     .font(.system(size: 16))
                     .foregroundStyle(Theme.foreground)
                     .focused($inputFocused)

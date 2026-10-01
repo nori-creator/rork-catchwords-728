@@ -190,7 +190,7 @@ struct DiaryComposer: View {
             .background(RuledPaper().clipShape(.rect(cornerRadius: 14)))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text(isToday ? L("例: 今天早上我去咖啡店…") : L("この日のことを、学んでいる言葉で書いてみよう"))
+                    Text(isToday ? L("例: \(NativeAPI.sample(.diary))") : L("この日のことを、学んでいる言葉で書いてみよう"))
                         .font(AppFont.hand(19))
                         .foregroundStyle(Theme.muted.opacity(0.7))
                         .padding(.horizontal, 18).padding(.vertical, 20)
