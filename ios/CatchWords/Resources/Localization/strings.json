@@ -119,10 +119,6 @@
   "en": "Weblio Dictionary",
   "zh-TW": "Weblio 辭典"
  },
- "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
-  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
-  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字和照片都能直接使用。\n用 Google 註冊的人，可以在登入畫面的「忘記密碼」為同一個帳號設定密碼。"
- },
  "Xで見る": {
   "en": "See it on X",
   "zh-TW": "在 X 上看"
@@ -3070,5 +3066,25 @@
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",
   "zh-TW": "（沒有讀到意思）"
+ },
+ "Googleで続ける": {
+  "en": "Continue with Google",
+  "zh-TW": "使用 Google 繼續"
+ },
+ "Appleでサインイン": {
+  "en": "Sign in with Apple",
+  "zh-TW": "使用 Apple 登入"
+ },
+ "Googleでのログインに失敗しました。": {
+  "en": "Google sign-in failed.",
+  "zh-TW": "Google 登入失敗。"
+ },
+ "ログインの応答が正しくありません。もう一度お試しください。": {
+  "en": "The sign-in response was invalid. Please try again.",
+  "zh-TW": "登入回應無效。請再試一次。"
+ },
+ "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。": {
+  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.",
+  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字與照片都能直接使用。"
  }
 }

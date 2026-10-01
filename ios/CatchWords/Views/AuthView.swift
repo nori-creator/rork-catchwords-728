@@ -25,14 +25,46 @@ struct AuthView: View {
                     .offset(y: appeared ? 0 : 18)
 
                 VStack(spacing: 12) {
-                    SignInWithAppleButton(.signIn) { req in
-                        auth.prepareApple(req)
-                    } onCompletion: { result in
-                        Task { await auth.completeApple(result) }
+                    // Google and Apple go through the web app's sign-in (same account as the web).
+                    Button {
+                        Task { await auth.signInWithWeb(provider: "google") }
+                    } label: {
+                        HStack(spacing: 10) {
+                            GoogleMark(size: 20)
+                            Text(L("Googleで続ける")).font(.system(size: 17, weight: .semibold))
+                        }
+                        .foregroundStyle(Color(hex: 0x1F1F1F))
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .background(.white, in: .rect(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0x747775), lineWidth: 1))
                     }
-                    .signInWithAppleButtonStyle(.black)
-                    .frame(height: 54)
-                    .clipShape(.rect(cornerRadius: 16))
+                    .buttonStyle(PressableStyle())
+                    .disabled(auth.isBusy)
+
+                    if AppConfig.nativeAppleSignIn {
+                        SignInWithAppleButton(.signIn) { req in
+                            auth.prepareApple(req)
+                        } onCompletion: { result in
+                            Task { await auth.completeApple(result) }
+                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 54)
+                        .clipShape(.rect(cornerRadius: 16))
+                    } else {
+                        Button {
+                            Task { await auth.signInWithWeb(provider: "apple") }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "apple.logo").font(.system(size: 20, weight: .medium))
+                                Text(L("Appleでサインイン")).font(.system(size: 19, weight: .medium))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(.black, in: .rect(cornerRadius: 16))
+                        }
+                        .buttonStyle(PressableStyle())
+                        .disabled(auth.isBusy)
+                    }
 
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showMail.toggle() }
@@ -92,7 +124,7 @@ struct AuthView: View {
                     }
                 }
 
-                Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。"))
+                Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。"))
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
@@ -188,6 +220,33 @@ struct AuthView: View {
                 await auth.signIn(email: email, password: password)
             }
         }
+    }
+}
+
+/// Google's four-colour "G", drawn so no image asset is needed (Google sign-in branding).
+private struct GoogleMark: View {
+    var size: CGFloat
+
+    var body: some View {
+        ZStack {
+            arc(from: 45, to: 135, color: Color(hex: 0x34A853))   // green (bottom)
+            arc(from: 135, to: 215, color: Color(hex: 0xFBBC05))  // yellow (left)
+            arc(from: 215, to: 315, color: Color(hex: 0xEA4335))  // red (top)
+            arc(from: 315, to: 360, color: Color(hex: 0x4285F4))  // blue (right, upper)
+            Rectangle()
+                .fill(Color(hex: 0x4285F4))
+                .frame(width: size * 0.5, height: size * 0.2)
+                .offset(x: size * 0.22, y: 0)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private func arc(from a: Double, to b: Double, color: Color) -> some View {
+        Circle()
+            .trim(from: a / 360, to: b / 360)
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.2, lineCap: .butt))
+            .frame(width: size * 0.8, height: size * 0.8)
     }
 }
 

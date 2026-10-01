@@ -225,15 +225,59 @@ final class SupabaseClient {
               let user = json["user"] as? [String: Any],
               let uid = user["id"] as? String else { throw APIError.decoding }
         let expiresIn = (json["expires_in"] as? Double) ?? 3600
-        let s = AuthSession(
+        persist(AuthSession(
             accessToken: access,
             refreshToken: refresh,
             expiresAt: Date().addingTimeInterval(expiresIn),
             userId: uid,
             email: user["email"] as? String
-        )
+        ))
+    }
+
+    private func persist(_ s: AuthSession) {
         session = s
         if let data = try? JSONEncoder().encode(s) { KeychainStore.save(data, account: sessionAccount) }
+    }
+
+    /// Takes over a session the web bridge handed back (Google / Apple via `WebAuthSession`). The user id,
+    /// email and expiry come from the access token itself (a JWT); `GET auth/v1/user` only when the token
+    /// cannot be read.
+    func adoptSession(accessToken: String, refreshToken: String, expiresAt: Date?) async throws {
+        let claims = Self.jwtClaims(accessToken)
+        var uid = claims["sub"] as? String
+        var email = claims["email"] as? String
+        if uid == nil || uid?.isEmpty == true {
+            guard let baseURL, let url = URL(string: "auth/v1/user", relativeTo: baseURL) else { throw APIError.notConfigured }
+            var req = URLRequest(url: url, timeoutInterval: 15)
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await perform(req)
+            guard (200..<300).contains(response.statusCode),
+                  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let id = json["id"] as? String else { throw APIError.unauthorized }
+            uid = id
+            email = json["email"] as? String
+        }
+        guard let userId = uid else { throw APIError.unauthorized }
+        let exp = (claims["exp"] as? Double).map { Date(timeIntervalSince1970: $0) }
+        persist(AuthSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: expiresAt ?? exp ?? Date().addingTimeInterval(3600),
+            userId: userId,
+            email: email
+        ))
+    }
+
+    /// The payload of a JWT (no signature check — the server verifies the token on every request).
+    nonisolated static func jwtClaims(_ token: String) -> [String: Any] {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return [:] }
+        var b64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return [:] }
+        return json
     }
 
     private static func localizeAuthError(_ msg: String, code: Int) -> String {

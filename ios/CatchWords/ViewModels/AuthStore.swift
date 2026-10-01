@@ -33,6 +33,7 @@ final class AuthStore {
 
     private let client = SupabaseClient.shared
     private var currentNonce: String?
+    private var webAuth: WebAuthSession?
 
     /// Session check with an 8s timeout — never an endless silent spinner (route.tsx lesson).
     func bootstrap() async {
@@ -93,6 +94,38 @@ final class AuthStore {
         await run {
             try await self.client.sendPasswordReset(email: email)
             self.infoMessage = L("パスワード設定用のメールを送りました。")
+        }
+    }
+
+    /// Google / Apple through the web app's bridge (`WebAuthSession`): the system sign-in sheet opens
+    /// `/native-auth`, the web logs in, and hands the session back. Closing the sheet is not an error.
+    func signInWithWeb(provider: String) async {
+        let state = Self.randomNonce()
+        let web = WebAuthSession()
+        webAuth = web
+        defer { webAuth = nil }
+        isBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        awaitingConfirmation = false
+        defer { isBusy = false }
+        do {
+            let url = try await web.signIn(provider: provider, state: state)
+            guard let cb = AuthCallback.parse(url), cb.state == state else {
+                throw APIError.message(L("ログインの応答が正しくありません。もう一度お試しください。"))
+            }
+            try await client.adoptSession(accessToken: cb.accessToken, refreshToken: cb.refreshToken, expiresAt: cb.expiresAt)
+            isGuest = false
+            phase = .signedIn
+            Haptics.success()
+        } catch WebAuthSession.Failure.cancelled {
+            // closed the sheet
+        } catch WebAuthSession.Failure.failed {
+            errorMessage = provider == "apple" ? L("Appleでのログインに失敗しました。") : L("Googleでのログインに失敗しました。")
+            Haptics.warning()
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? L("エラーが発生しました。")
+            Haptics.warning()
         }
     }
 
