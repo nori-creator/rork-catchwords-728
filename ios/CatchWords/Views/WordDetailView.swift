@@ -1384,11 +1384,13 @@ struct SectionCard<Content: View>: View {
 
 /// Chunk colors by grammatical role: noun blue, verb red, stative green, adverb gold.
 enum ChunkKind: CaseIterable, Hashable {
-    case noun, verb, stative, adverb
+    case noun, verb, stative, adverb, particle
 
     init(pos: String) {
         let p = pos.uppercased()
         if p.hasPrefix("ADV") || p == "D" { self = .adverb }
+        // Japanese particles (を・に・が) and English prepositions / articles: the glue between the words.
+        else if ["P", "PART", "PREP", "DET", "ART"].contains(p) || p.contains("助詞") || p.contains("前置") { self = .particle }  // l10n-ignore (matching server POS)
         else if p.hasPrefix("VS") || p == "A" || p == "C" || p.contains("形容") || p.contains("状態") { self = .stative }  // l10n-ignore (matching server POS)
         else if p.hasPrefix("V") || p.contains("動") { self = .verb }  // l10n-ignore (matching server POS)
         else { self = .noun }
@@ -1400,6 +1402,7 @@ enum ChunkKind: CaseIterable, Hashable {
         case .verb: Color(hex: 0xE5484D)
         case .stative: Color(hex: 0x2FA84F)
         case .adverb: Color(hex: 0xA08A2E)
+        case .particle: Color(hex: 0x7C8798)
         }
     }
 
@@ -1409,6 +1412,7 @@ enum ChunkKind: CaseIterable, Hashable {
         case .verb: L("動詞")
         case .stative: L("状態動詞(形容詞)")
         case .adverb: L("副詞")
+        case .particle: L("助詞・前置詞")
         }
     }
 }

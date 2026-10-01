@@ -231,7 +231,7 @@ struct DexView: View {
                 Spacer(minLength: 0)
 
                 Button { toggleMenu(.category) } label: {
-                    pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? L("カテゴリー"),
+                    pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? L("棚"),
                          active: categoryFilter != nil, open: openMenu == .category)
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
