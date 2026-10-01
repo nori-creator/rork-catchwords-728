@@ -55,6 +55,7 @@ struct UIPreviewRoot: View {
             case "book": BookPreview()
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
+            case "webimg": WebImagesPreview()
             case "jadetail": LanguageCardPreview(kind: .ja)
             case "quiz": ReviewPreview(learning: "zh-TW", answered: false)
             case "answer": ReviewPreview(learning: "zh-TW", answered: true)
@@ -427,8 +428,46 @@ private struct DetailPreview: View {
                        caption: nil, locationName: nil, takenAt: Date(), captureType: "photo", word: word)
     }
 
+    var focus: CardSection = .usageChunks
+
     var body: some View {
-        WordDetailView(sticker: Self.sticker, previewFocus: .usageChunks)
+        WordDetailView(sticker: Self.sticker, previewFocus: focus)
+    }
+
+    static var previewSticker: Sticker { sticker }
+}
+
+/// ネットの画像 with three stand-in pictures (no network in CI): the section shows once pictures arrive.
+private struct WebImagesPreview: View {
+    init() {
+        CardPrefsStore.shared.use("zh-TW")
+        CardPrefsStore.shared.setVisible(.webImages, true)
+        let word = DetailPreview.previewSticker.word
+        let looks: [(String, UInt32, UInt32, String)] = [
+            ("fork.knife", 0xF4A261, 0xE76F51, "Mei Lin"), ("flame.fill", 0x2A9D8F, 0x264653, "Kenji Ito"),
+            ("frying.pan.fill", 0xE9C46A, 0xF4A261, "Ana Ruiz"),
+        ]
+        let candidates: [WebImageCandidate] = looks.compactMap { symbol, top, bottom, name in
+            let size = CGSize(width: 360, height: 360)
+            let img = UIGraphicsImageRenderer(size: size).image { ctx in
+                let colors = [UIColor(Color(hex: top)).cgColor, UIColor(Color(hex: bottom)).cgColor] as CFArray
+                if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+                    ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+                }
+                let cfg = UIImage.SymbolConfiguration(pointSize: 120, weight: .semibold)
+                if let sym = UIImage(systemName: symbol, withConfiguration: cfg)?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+                    sym.draw(at: CGPoint(x: (size.width - sym.size.width) / 2, y: (size.height - sym.size.height) / 2))
+                }
+            }
+            guard let jpeg = img.jpegData(compressionQuality: 0.8) else { return nil }
+            return WebImageCandidate(url: "data:image/jpeg;base64,\(jpeg.base64EncodedString())", thumb: nil, source: "unsplash",
+                                     credit: .init(name: name, link: nil))
+        }
+        WebImages.seed(headword: word?.headword ?? "", meaning: word?.meaningJa, candidates: candidates)
+    }
+
+    var body: some View {
+        DetailPreview(focus: .webImages)
     }
 }
 /// A Japanese word (傘) and an English word (umbrella) as an English / Chinese / Japanese reader sees them —

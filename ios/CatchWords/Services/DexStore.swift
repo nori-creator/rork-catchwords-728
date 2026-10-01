@@ -57,7 +57,7 @@ final class DexStore {
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
-    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "voice_video_url", "placeholder_image_url"]
+    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "voice_video_url", "placeholder_image_url", "placeholder_credit"]
     private static var selectColumns: String {
         ([baseColumns] + optionalColumns + ["word:words(*)"]).joined(separator: ",")
     }
@@ -498,6 +498,42 @@ final class DexStore {
             throw APIError.message(L("写真を読み込めませんでした。"))
         }
         _ = try await NativeAPI.call("replaceStickerPhoto", ["sticker_id": sticker.id, "object_path": path])
+        ImageCache.shared.set(image, for: path)
+        await reload(stickerId: sticker.id)
+        if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
+    }
+
+    /// Words already given an internet picture this launch (use-auto-hero.ts triedRef). A failed try is
+    /// forgotten, so a word that only met a bad connection is not left without a picture for good.
+    private var heroTried: Set<String> = []
+
+    /// A word with no picture of its own gets one from the internet as its stand-in (web useAutoHero:
+    /// 「単語の詳細の見出しの画像はネットからその単語を表す画像を添付して」). A word with a photo, a
+    /// selfie or a stand-in already is never touched.
+    func autoHero(_ sticker: Sticker) async {
+        guard !sticker.hasOwnPhoto, sticker.placeholderImageUrl == nil, !heroTried.contains(sticker.id),
+              let word = sticker.word else { return }
+        heroTried.insert(sticker.id)
+        do {
+            guard let first = try await WebImages.search(headword: word.headword, meaning: word.meaningJa).first else { return }
+            try await setPlaceholder(sticker, to: first)
+        } catch {
+            heroTried.remove(sticker.id)
+        }
+    }
+
+    /// Makes an internet picture the word's stand-in (web setStickerPlaceholder). It is not the
+    /// learner's photo, so a photo taken later still comes first.
+    func setPlaceholder(_ sticker: Sticker, to candidate: WebImageCandidate) async throws {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        let image = try await WebImages.image(for: candidate)
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        guard let path = try await uploadJPEG(ImageTools.resized(image, maxSide: 1024), uid: uid, ts: ts, kind: "placeholder") else {
+            throw APIError.decoding
+        }
+        _ = try await NativeAPI.call("setStickerPlaceholder", [
+            "sticker_id": sticker.id, "placeholder_path": path, "placeholder_credit": candidate.creditPayload,
+        ])
         ImageCache.shared.set(image, for: path)
         await reload(stickerId: sticker.id)
         if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }

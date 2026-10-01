@@ -39,6 +39,12 @@ struct WordDetailView: View {
     /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
     @State private var laterPhotos: [StickerPhoto] = []
     @State private var heroPage: Int = 0
+    /// ネットの画像 (web WebImagesBody): the search result, the 「別の画像」 round, and the one being applied.
+    @State private var webCandidates: [WebImageCandidate] = []
+    @State private var webRound: Int = 0
+    @State private var webLoading: Bool = false
+    @State private var applyingWeb: String?
+    @State private var confirmWeb: WebImageCandidate?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
@@ -46,8 +52,10 @@ struct WordDetailView: View {
     private var extras: WordExtras? { word?.extras }
     private var headword: String { word?.headword ?? "" }
 
+    /// The learner's own pictures; a word caught without one shows its internet stand-in instead.
     private var photos: [String] {
-        [current.cutoutImageUrl, current.objectImageUrl].compactMap { $0 }
+        let own = [current.cutoutImageUrl, current.objectImageUrl].compactMap { $0 }
+        return own.isEmpty ? [current.placeholderImageUrl].compactMap { $0 } : own
     }
 
     var body: some View {
@@ -104,6 +112,14 @@ struct WordDetailView: View {
             }
         }
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
+        .task(id: current.id) { await dex.autoHero(current) }
+        .task(id: "\(headword)|\(webRound)|\(visibleSections.contains(.webImages))") { await loadWebImages() }
+        .confirmationDialog(L("いまの写真を、この画像に差し替えますか？元には戻せません。"),
+                            isPresented: confirmingWeb,
+                            titleVisibility: .visible, presenting: confirmWeb) { c in
+            Button(L("この画像にする")) { applyWeb(c) }
+            Button(L("キャンセル"), role: .cancel) {}
+        }
         .onAppear { prefs.use(learningLang) }
         .onChange(of: learningLang) { _, l in prefs.use(l) }
         .onAppear { applyHeroRole(animated: false) }
@@ -262,7 +278,7 @@ struct WordDetailView: View {
 
     /// Being written right now: one section (auto-fill) or the reader's whole explanation.
     private func isFilling(_ s: CardSection) -> Bool {
-        filling.contains(s) || (s != .realUsage && dex.generatingWords.contains(current.wordId))
+        filling.contains(s) || (!s.isExternal && dex.generatingWords.contains(current.wordId))
     }
 
     private func posLabel(_ pos: String) -> String {
@@ -281,7 +297,8 @@ struct WordDetailView: View {
     // MARK: - Photo hero (flips to the selfie like a card)
 
     private var frontPath: String? {
-        showCutout ? (current.cutoutImageUrl ?? current.objectImageUrl) : (current.objectImageUrl ?? current.cutoutImageUrl)
+        showCutout ? (current.cutoutImageUrl ?? current.objectImageUrl ?? current.placeholderImageUrl)
+            : (current.objectImageUrl ?? current.cutoutImageUrl ?? current.placeholderImageUrl)
     }
     private var hasSelfie: Bool { current.selfieImageUrl != nil }
 
@@ -395,6 +412,21 @@ struct WordDetailView: View {
                         .background(.black.opacity(0.55), in: Capsule())
                         .padding(12)
                         .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                // An internet picture says whose it is (Unsplash asks for the photographer's name).
+                if !back, path != nil, path == current.placeholderImageUrl, let name = current.placeholderCredit?.name, !name.isEmpty {
+                    Label(name, systemImage: "camera")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .padding(12)
+                        .allowsHitTesting(false)
+                        .accessibilityLabel(L("撮影：\(name)"))
                 }
             }
             .clipShape(.rect(cornerRadius: 28, style: .continuous))
@@ -714,6 +746,7 @@ struct WordDetailView: View {
         case .mnemonic: !(extras?.mnemonic ?? "").isEmpty
         case .taiwanNote: learningLang == "zh-TW" && !taiwanText.isEmpty
         case .realUsage: !headword.isEmpty
+        case .webImages: !webCandidates.isEmpty
         case .forms: !forms.isEmpty
         case .countability: extras?.countability != nil
         case .phrasalVerbs: !phrasals.isEmpty
@@ -732,7 +765,7 @@ struct WordDetailView: View {
     @ViewBuilder
     private func sectionView(_ s: CardSection) -> some View {
         sectionBody(s)
-            .environment(\.sectionRefresh, s == .realUsage ? nil : SectionRefresh(running: refreshing.contains(s)) {
+            .environment(\.sectionRefresh, s.isExternal ? nil : SectionRefresh(running: refreshing.contains(s)) {
                 regenerate(s)
             })
     }
@@ -765,6 +798,7 @@ struct WordDetailView: View {
         case .mnemonic: textCard(s.title, icon: s.icon, extras?.mnemonic ?? "")
         case .taiwanNote: textCard(s.title, icon: s.icon, taiwanText)
         case .realUsage: realUsageCard
+        case .webImages: webImagesCard
         case .forms: formsCard
         case .countability: countabilityCard
         case .phrasalVerbs: phrasalCard
@@ -868,7 +902,7 @@ struct WordDetailView: View {
         await dex.loadExplanation(wordId: current.wordId, target: target)
         // A whole explanation is being written for this reader: its sections arrive together.
         guard !Task.isCancelled, !dex.generatingWords.contains(current.wordId) else { return }
-        let missing = visibleSections.filter { $0 != .realUsage && !hasContent($0) }
+        let missing = visibleSections.filter { !$0.isExternal && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId
         guard !Task.isCancelled else { return }
@@ -889,7 +923,7 @@ struct WordDetailView: View {
     private func reportAndFix() {
         let note = reportNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let wordId = current.wordId
-        let candidates = ["pronunciation", "pos"] + visibleSections.filter { $0 != .realUsage && hasContent($0) }.map(\.rawValue)
+        let candidates = ["pronunciation", "pos"] + visibleSections.filter { !$0.isExternal && hasContent($0) }.map(\.rawValue)
         isFixing = true
         Task {
             defer { isFixing = false }
@@ -1317,6 +1351,141 @@ struct WordDetailView: View {
                 ("📰", L("台湾のサイトで検索"), "https://www.google.com/search?q=\(q)&hl=zh-TW&gl=TW&cr=countryTW&lr=lang_zh-TW"),
                 ("📖", L("教育部國語辭典簡編本"), "https://dict.concised.moe.edu.tw/search.jsp?word=\(q)"),
             ]
+        }
+    }
+
+    // MARK: - ネットの画像 (web WebImagesBody)
+
+    private var confirmingWeb: Binding<Bool> {
+        Binding(get: { confirmWeb != nil }, set: { if !$0 { confirmWeb = nil } })
+    }
+
+    /// Three pictures at a time; 「別の画像」 searches again (the web shows a different three each round).
+    private var shownWeb: [WebImageCandidate] {
+        let pages = max(1, Int((Double(webCandidates.count) / 3).rounded(.up)))
+        let off = webRound % pages
+        let page = Array(webCandidates.dropFirst(off * 3).prefix(3))
+        return page.isEmpty ? Array(webCandidates.prefix(3)) : page
+    }
+
+    /// The section is drawn only once a picture has arrived (web: 画像が表示されない時はその項目を表示しない).
+    private func loadWebImages() async {
+        guard visibleSections.contains(.webImages), !headword.isEmpty else { return }
+        webLoading = true
+        defer { webLoading = false }
+        guard let found = try? await WebImages.search(headword: headword, meaning: word?.meaningJa, round: webRound),
+              !Task.isCancelled else { return }
+        withAnimation(.snappy) { webCandidates = found }
+    }
+
+    private var webImagesCard: some View {
+        SectionCard(title: CardSection.webImages.title, icon: CardSection.webImages.icon) {
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(shownWeb) { c in webTile(c) }
+                }
+                HStack(spacing: 14) {
+                    Button {
+                        Haptics.selection()
+                        webRound += 1
+                    } label: {
+                        HStack(spacing: 5) {
+                            if webLoading { ProgressView().controlSize(.mini) } else { Image(systemName: "arrow.clockwise") }
+                            Text(L("別の画像"))
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.foreground)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 36)
+                        .background(Theme.secondary, in: Capsule())
+                        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+                    }
+                    .buttonStyle(PressableStyle(scale: 0.95))
+                    .disabled(webLoading)
+                    if let url = URL(string: "https://www.google.com/search?tbm=isch&q=\(headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                        Button { openURL(url) } label: {
+                            Label(L("Google画像検索で見る"), systemImage: "arrow.up.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.primaryInk)
+                                .frame(minHeight: 36)
+                        }
+                    }
+                }
+                Text(L("画像をタップすると、この単語の写真にできます。"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.muted)
+            }
+        }
+    }
+
+    private func webTile(_ c: WebImageCandidate) -> some View {
+        Button { pickWeb(c) } label: {
+            Color(hex: 0xEEF3F9)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let img = WebImages.inlineImage(c) {
+                        Image(uiImage: img).resizable().scaledToFill()
+                    } else {
+                        AsyncImage(url: c.previewURL) { phase in
+                            if let img = phase.image { img.resizable().scaledToFill() } else { ProgressView() }
+                        }
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if let name = c.credit?.name, !name.isEmpty {
+                        Text(name)
+                            .font(.system(size: 10, weight: .medium))
+                            .lineLimit(1)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .frame(maxWidth: .infinity)
+                            .background(.black.opacity(0.5))
+                    }
+                }
+                .overlay {
+                    if applyingWeb == c.url {
+                        ZStack {
+                            Color.black.opacity(0.35)
+                            ProgressView().tint(.white)
+                        }
+                    }
+                }
+                .clipShape(.rect(cornerRadius: 12, style: .continuous))
+                .contentShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(PressableStyle(scale: 0.95))
+        .disabled(applyingWeb != nil)
+        .accessibilityLabel(L("この画像にする"))
+    }
+
+    /// A word with a photo of its own asks first: the photo is replaced and cannot come back
+    /// (web applyWebImage). A word without one takes the picture as its stand-in, with its credit.
+    private func pickWeb(_ c: WebImageCandidate) {
+        guard applyingWeb == nil else { return }
+        if current.objectImageUrl != nil || current.cutoutImageUrl != nil {
+            confirmWeb = c
+        } else {
+            applyWeb(c)
+        }
+    }
+
+    private func applyWeb(_ c: WebImageCandidate) {
+        applyingWeb = c.url
+        Task {
+            defer { applyingWeb = nil }
+            do {
+                if current.objectImageUrl != nil || current.cutoutImageUrl != nil {
+                    try await dex.replacePhoto(current, with: try await WebImages.image(for: c))
+                } else {
+                    try await dex.setPlaceholder(current, to: c)
+                }
+                Haptics.success()
+                showToast(L("画像を変更しました"))
+            } catch {
+                Haptics.warning()
+                showToast(L("写真を替えられませんでした"))
+            }
         }
     }
 

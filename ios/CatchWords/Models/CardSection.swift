@@ -2,11 +2,12 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Sections of the word card (target-profile.ts `sections`, minus web_images). Which ones exist
+/// Sections of the word card (target-profile.ts `sections`). Which ones exist
 /// depends on the learning language — measure words only in Mandarin, articles only in English,
 /// kanji and keigo only in Japanese — so a card never shows a heading that is wrong for its language.
 nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Sendable {
     case meaning
+    case webImages = "web_images"
     case example
     case examplesExtra = "examples_extra"
     case usageChunks = "usage_chunks"
@@ -34,17 +35,20 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
 
     var id: String { rawValue }
 
+    /// Sections that only look outside (links, internet pictures): nothing for the AI to write or fix.
+    var isExternal: Bool { self == .realUsage || self == .webImages }
+
     /// The sections a card in `target` can have, in the web's order (target-profile.ts).
     static func sections(for target: String) -> [CardSection] {
         switch target {
         case "en":
-            [.meaning, .example, .examplesExtra, .usageChunks, .forms, .countability, .phrasalVerbs, .relatedWords,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .forms, .countability, .phrasalVerbs, .relatedWords,
              .stress, .pronunciationTips, .etymology, .mnemonic, .cultureNote, .realUsage]
         case "ja":
-            [.meaning, .example, .examplesExtra, .usageChunks, .kanjiBreakdown, .conjugation, .politeness, .counters,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .kanjiBreakdown, .conjugation, .politeness, .counters,
              .relatedWords, .pitchAccent, .pronunciationTips, .wordOrigin, .etymology, .mnemonic, .japanNote, .realUsage]
         default:
-            [.meaning, .example, .examplesExtra, .usageChunks, .measureWords, .relatedWords, .pronunciationTips,
+            [.meaning, .webImages, .example, .examplesExtra, .usageChunks, .measureWords, .relatedWords, .pronunciationTips,
              .etymology, .mnemonic, .taiwanNote, .realUsage]
         }
     }
@@ -58,6 +62,7 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
     var title: String {
         switch self {
         case .meaning: L("意味")
+        case .webImages: L("ネットの画像")
         case .example: L("例文")
         case .examplesExtra: L("追加の例文")
         case .usageChunks: L("使い方チャンク")
@@ -107,6 +112,7 @@ nonisolated enum CardSection: String, CaseIterable, Codable, Identifiable, Senda
         case .mnemonic: "lightbulb"
         case .taiwanNote, .cultureNote, .japanNote: "mappin"
         case .realUsage: "film"
+        case .webImages: "photo.on.rectangle.angled"
         }
     }
 
@@ -161,6 +167,10 @@ final class CardPrefsStore {
         let known = s.order.compactMap(CardSection.init(rawValue:)).filter { all.contains($0) }
         order = known + CardSection.defaultOrder(for: target).filter { !known.contains($0) }
         hidden = Set(s.hidden.compactMap(CardSection.init(rawValue:)).filter { all.contains($0) })
+        // A section added after the choice was saved (ネットの画像) starts the way a new card would show
+        // it, not shown just because it was missing from the saved hidden list.
+        let defaults = CardSection.defaultVisible(for: target)
+        hidden.formUnion(all.filter { !known.contains($0) && !defaults.contains($0) })
     }
 
     var visible: [CardSection] { order.filter { !hidden.contains($0) } }

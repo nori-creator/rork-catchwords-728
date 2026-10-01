@@ -383,12 +383,24 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var voiceNotePath: String? = nil
     /// Stand-in picture of a card caught without a photo (`stickers.placeholder_image_url`).
     var placeholderImageUrl: String? = nil
+    /// Who made that stand-in picture (`stickers.placeholder_credit`): shown on it, as Unsplash asks.
+    var placeholderCredit: PlaceholderCredit? = nil
+
+    nonisolated struct PlaceholderCredit: Codable, Sendable, Hashable {
+        var name: String?
+        var link: String?
+        var source: String?
+    }
+
+    /// The learner took or chose a picture of their own (web sticker-photo.ts hasOwnPhoto).
+    var hasOwnPhoto: Bool { objectImageUrl != nil || cutoutImageUrl != nil || selfieImageUrl != nil }
 
     enum CodingKeys: String, CodingKey {
         case id, caption, word, lat, lng
         case heroRole = "hero_role"
         case voiceNotePath = "voice_video_url"
         case placeholderImageUrl = "placeholder_image_url"
+        case placeholderCredit = "placeholder_credit"
         case wordId = "word_id"
         case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"

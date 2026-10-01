@@ -166,6 +166,20 @@ nonisolated enum LanguageRules {
         }
     }
 
+    /// hero-image.ts heroSearchQuery: the words an image search gets for a word's picture. The first
+    /// sense of the reader's meaning (自転車, not 腳踏車 — a Mandarin query returns shop photos and
+    /// text), without brackets or 〜 placeholders; the headword when nothing is left; at most 40 characters.
+    static func heroSearchQuery(headword: String?, meaning: String?) -> String {
+        let head = (headword ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Brackets first: 「自転車（口語では腳踏車）」 must not be cut at a 、 inside the brackets.
+        let noBrackets = (meaning ?? "").replacingOccurrences(
+            of: "[（(【〈《\\[「][^）)】〉》\\]」]*[）)】〉》\\]」]", with: " ", options: .regularExpression)
+        let first = noBrackets.split(omittingEmptySubsequences: false) { "、,，;；/・|".contains($0) }.first.map(String.init) ?? ""
+        let cleaned = first.replacingOccurrences(of: "[〜～…]", with: " ", options: .regularExpression)
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return String((cleaned.isEmpty ? head : cleaned).prefix(40))
+    }
+
     /// Whether `raw` can be a headword of `target`: Mandarin = Han only; English = Latin letters only;
     /// Japanese = kana/kanji only (a 1–2 capital prefix before katakana is fine: Tシャツ).
     static func headwordOk(_ raw: String, target: String) -> Bool {

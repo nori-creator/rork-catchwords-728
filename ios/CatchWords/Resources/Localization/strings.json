@@ -87,6 +87,10 @@
   "en": "See it on Dcard",
   "zh-TW": "在 Dcard 上看"
  },
+ "Google画像検索で見る": {
+  "en": "See on Google Images",
+  "zh-TW": "用 Google 圖片搜尋看看"
+ },
  "IPA アメリカ": {
   "en": "IPA (US)",
   "zh-TW": "IPA 美式"
@@ -355,6 +359,10 @@
   "en": "Try again now",
   "zh-TW": "現在就再試一次"
  },
+ "いまの写真を、この画像に差し替えますか？元には戻せません。": {
+  "en": "Replace the current photo with this image? This can't be undone.",
+  "zh-TW": "要把現在的照片換成這張圖片嗎？換了就回不去了。"
+ },
  "いま復習する": {
   "en": "Review now",
   "zh-TW": "現在複習"
@@ -530,6 +538,10 @@
  "この機能は Pro 限定です。": {
   "en": "This is a Pro feature.",
   "zh-TW": "此功能為 Pro 專屬。"
+ },
+ "この画像にする": {
+  "en": "Use this image",
+  "zh-TW": "就用這張"
  },
  "この言葉、{1}に{2}でゲットしています。": {
   "en": "You got this word on {1} at {2}.",
@@ -1010,6 +1022,10 @@
  "ネイティブならこう言う": {
   "en": "A native would say",
   "zh-TW": "母語者會這樣說"
+ },
+ "ネットの画像": {
+  "en": "Images from the web",
+  "zh-TW": "網路上的圖片"
  },
  "ノート": {
   "en": "Notebook",
@@ -1534,6 +1550,10 @@
  "別のものを撮る": {
   "en": "Shoot something else",
   "zh-TW": "拍別的東西"
+ },
+ "別の画像": {
+  "en": "Other images",
+  "zh-TW": "其他圖片"
  },
  "利用規約": {
   "en": "Terms of Service",
@@ -2091,6 +2111,10 @@
   "en": "Where it was taken",
   "zh-TW": "拍攝地"
  },
+ "撮影：{1}": {
+  "en": "Photo by {1}",
+  "zh-TW": "攝影：{1}"
+ },
  "教科書や自作のリストを撮ると、そこに並ぶ語をまとめて取り込んで、図鑑とは別に復習できます。": {
   "en": "Photograph a textbook page or your own list to bring every word in at once and review it apart from your dex.",
   "zh-TW": "拍下課本的一頁或自己整理的清單，上面的字會一次全部匯入，可以跟圖鑑分開複習。"
@@ -2523,9 +2547,17 @@
   "en": "The AI couldn't read the image.",
   "zh-TW": "AI 讀取圖片失敗。"
  },
+ "画像をタップすると、この単語の写真にできます。": {
+  "en": "Tap an image to make it this word's photo.",
+  "zh-TW": "點一下圖片，就能設成這個單字的照片。"
+ },
  "画像をタップで自撮りにフリップ": {
   "en": "Tap the photo to flip to your selfie",
   "zh-TW": "點圖片翻到自拍"
+ },
+ "画像を変更しました": {
+  "en": "Photo updated",
+  "zh-TW": "已更換圖片"
  },
  "画像を読み取れませんでした": {
   "en": "Couldn't read the image.",

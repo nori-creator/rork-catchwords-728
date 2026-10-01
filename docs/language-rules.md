@@ -37,6 +37,7 @@ CatchWords の画面には、3種類の言葉が同時に出る。
 | R18 | 復習は学習言語の語だけ：問題・件数・連続日数・保持率・通知の時刻・4択の受け皿。学習言語を変えたら作り直す | `ReviewStore` / `DexStore.upcomingDueTimes` | レビューで確認 |
 | R19 | 読み上げは**その文の言語**の声で（かな→日本語、欧文→英語、漢字→学習言語） | `SoundService.language(of:)` | レビューで確認 |
 | R20 | 使い方の型（チャンク）には**学ぶ語そのもの**（日本語・英語は活用形も可）を必ず入れる。「芒果」の型に「很+甜」だけを出さない。入っていない型は表示しない | `LanguageRules.mentionsHeadword`（答えの画面・単語の詳細）、Web `refineUsageChunks` と指示文 | `cases.json`（`mentionsHeadword`） |
+| R21 | 単語の画像を探す言葉は**読む人の意味の最初の語義**（括弧・〜を落とす）。見出し語（例: 腳踏車）で探すと通販の写真や字の画像が返る。意味が空なら見出し語 | `LanguageRules.heroSearchQuery`（`WebImages.search`）、Web `heroSearchQuery` | `cases.json`（`heroSearchQuery`） |
 
 判定の中身は `ios/CatchWords/Utilities/LanguageRules.swift` に1つだけ置く（Web版 `note-language.ts` の
 `looksWrongForReader` と同じ考え方）。**画面ごとに判定を書かない。**
