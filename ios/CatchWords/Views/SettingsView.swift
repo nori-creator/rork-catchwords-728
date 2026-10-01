@@ -15,14 +15,12 @@ struct SettingsView: View {
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("reading.ja") private var readingJa: String = "kana"
-    @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = true
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage(Scene3D.enabledKey) private var fx3D: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
     @AppStorage("motion.pref") private var motionPref: String = "full"
-    @AppStorage(Wallpaper.key) private var wallRaw: String = Wallpaper.paper.rawValue
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
     @AppStorage(ReminderService.timesKey) private var reminderTimes: String = ReminderService.defaultTime
     @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
@@ -130,12 +128,11 @@ struct SettingsView: View {
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
-                label(L("発音表記")).padding(.top, 6)
-                if isEnglish {
-                    ChoicePills(options: [("us", L("IPA アメリカ")), ("uk", L("IPA イギリス"))], selection: $ipaPref)
-                } else if profile.targetLanguage == "ja" {
+                // English shows its IPA as the dictionary gives it; there is nothing to choose.
+                if !isEnglish { label(L("発音表記")).padding(.top, 6) }
+                if profile.targetLanguage == "ja" {
                     ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
-                } else {
+                } else if !isEnglish {
                     ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: $readingPref)
                 }
                 if let m = profile.message {
@@ -213,15 +210,6 @@ struct SettingsView: View {
                     .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 label(L("アニメーション")).padding(.top, 6)
                 ChoicePills(options: [("system", L("自動")), ("full", L("見せる")), ("reduce", L("減らす"))], selection: $motionPref)
-                label(L("ホームの壁紙")).padding(.top, 10)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
-                    ForEach(Wallpaper.allCases) { w in
-                        WallpaperSwatch(kind: w, isSelected: wallRaw == w.rawValue) {
-                            Haptics.selection()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { wallRaw = w.rawValue }
-                        }
-                    }
-                }
             }
         }
     }

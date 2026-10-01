@@ -91,14 +91,6 @@
   "en": "See on Google Images",
   "zh-TW": "用 Google 圖片搜尋看看"
  },
- "IPA アメリカ": {
-  "en": "IPA (US)",
-  "zh-TW": "IPA 美式"
- },
- "IPA イギリス": {
-  "en": "IPA (UK)",
-  "zh-TW": "IPA 英式"
- },
  "Instagram で見る": {
   "en": "See it on Instagram",
   "zh-TW": "在 Instagram 上看"
@@ -767,10 +759,6 @@
   "en": "Animation",
   "zh-TW": "動畫"
  },
- "アメリカ式": {
-  "en": "American",
-  "zh-TW": "美式"
- },
  "アルバムから外した写真 {1}": {
   "en": "Photos removed from the album: {1}",
   "zh-TW": "從相簿移除的照片 {1}"
@@ -786,10 +774,6 @@
  "アート": {
   "en": "Art",
   "zh-TW": "藝術"
- },
- "イギリス式": {
-  "en": "British",
-  "zh-TW": "英式"
  },
  "インターネットに接続できません。": {
   "en": "Can't connect to the internet.",
@@ -878,10 +862,6 @@
  "コトバンク": {
   "en": "Kotobank",
   "zh-TW": "Kotobank 辭典"
- },
- "コルクと画鋲": {
-  "en": "Corkboard",
-  "zh-TW": "軟木板與圖釘"
  },
  "サインアウト": {
   "en": "Sign out",
@@ -999,10 +979,6 @@
   "en": "Images from the web",
   "zh-TW": "網路上的圖片"
  },
- "ノート": {
-  "en": "Notebook",
-  "zh-TW": "筆記本"
- },
  "バッグ": {
   "en": "Bags",
   "zh-TW": "包包"
@@ -1070,10 +1046,6 @@
  "ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。": {
   "en": "The home album always uses light colors to keep its paper feel.",
   "zh-TW": "首頁相簿為了保留紙張質感，一律以明亮色彩顯示。"
- },
- "ホームの壁紙": {
-  "en": "Home wallpaper",
-  "zh-TW": "首頁桌布"
  },
  "ホームへ": {
   "en": "Go home",
@@ -1774,10 +1746,6 @@
  "場所でリマインド": {
   "en": "Location reminders",
   "zh-TW": "地點提醒"
- },
- "壁": {
-  "en": "Wall",
-  "zh-TW": "牆面"
  },
  "声で調べる": {
   "en": "Search by voice",
@@ -2515,10 +2483,6 @@
   "en": "Phonetic notation",
   "zh-TW": "發音標記"
  },
- "発音記号": {
-  "en": "Phonetic symbols",
-  "zh-TW": "音標"
- },
  "目標レベル": {
   "en": "Target level",
   "zh-TW": "目標等級"
@@ -2590,10 +2554,6 @@
  "答えを確かめたら「次へ」。": {
   "en": "Check the answer, then tap “Next”.",
   "zh-TW": "確認答案後，按「下一步」。"
- },
- "紙": {
-  "en": "Paper",
-  "zh-TW": "紙"
  },
  "結果を見る": {
   "en": "See results",
@@ -3086,10 +3046,6 @@
  "項目の再生成は Pro 限定です": {
   "en": "Regenerating sections is a Pro feature.",
   "zh-TW": "重新產生項目為 Pro 專屬功能。"
- },
- "額縁": {
-  "en": "Picture frame",
-  "zh-TW": "畫框"
  },
  "顔": {
   "en": "Face",

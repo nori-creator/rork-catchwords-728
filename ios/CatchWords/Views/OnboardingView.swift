@@ -25,7 +25,6 @@ struct OnboardingView: View {
     @State private var isSaving: Bool = false
     @State private var showMenu: Bool = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
-    @AppStorage("ipa.pref") private var ipaPref: String = "us"
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("haptics.enabled") private var hapticsOn: Bool = true
 
@@ -315,12 +314,7 @@ struct OnboardingView: View {
                     Picker(L("学ぶ言語"), selection: $targetLanguage) {
                         ForEach(Self.targets, id: \.id) { Text($0.label).tag($0.id) }
                     }
-                    if targetLanguage == "en" {
-                        Picker(L("発音記号"), selection: $ipaPref) {
-                            Text(L("アメリカ式")).tag("us")
-                            Text(L("イギリス式")).tag("uk")
-                        }
-                    } else {
+                    if targetLanguage != "en" {
                         Picker(L("読みの表記"), selection: $readingPref) {
                             Text(L("注音")).tag("zhuyin")
                             Text(L("拼音")).tag("pinyin")
