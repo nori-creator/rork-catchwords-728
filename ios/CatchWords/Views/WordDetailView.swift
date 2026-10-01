@@ -36,6 +36,9 @@ struct WordDetailView: View {
     @State private var isFixing: Bool = false
     @State private var newPhoto: PhotosPickerItem?
     @State private var isReplacing: Bool = false
+    /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
+    @State private var laterPhotos: [StickerPhoto] = []
+    @State private var heroPage: Int = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
@@ -282,7 +285,94 @@ struct WordDetailView: View {
     }
     private var hasSelfie: Bool { current.selfieImageUrl != nil }
 
+    /// The hero, plus the photos from later encounters to swipe through.
     private var photoHero: some View {
+        heroFace
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { v in
+                        guard !laterPhotos.isEmpty, !showSelfie,
+                              abs(v.translation.width) > abs(v.translation.height) * 1.4 else { return }
+                        let next = v.translation.width < -50 ? heroPage + 1 : v.translation.width > 50 ? heroPage - 1 : heroPage
+                        let clamped = min(max(next, 0), laterPhotos.count)
+                        guard clamped != heroPage else { return }
+                        Haptics.selection()
+                        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.38, dampingFraction: 0.86)) { heroPage = clamped }
+                    }
+            )
+            .overlay(alignment: .bottom) {
+                if !laterPhotos.isEmpty, !showSelfie {
+                    HStack(spacing: 6) {
+                        ForEach(0...laterPhotos.count, id: \.self) { i in
+                            Capsule().fill(.white.opacity(i == heroPage ? 1 : 0.5))
+                                .frame(width: i == heroPage ? 18 : 7, height: 7)
+                        }
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(.black.opacity(0.35), in: Capsule())
+                    .padding(.bottom, 14)
+                    .animation(.snappy, value: heroPage)
+                    .accessibilityHidden(true)
+                }
+            }
+            .accessibilityAdjustableAction { dir in
+                guard !laterPhotos.isEmpty else { return }
+                switch dir {
+                case .increment: heroPage = min(heroPage + 1, laterPhotos.count)
+                case .decrement: heroPage = max(heroPage - 1, 0)
+                @unknown default: break
+                }
+            }
+            .task(id: current.id) {
+                let all = await StickerPhoto.load(stickerId: current.id)
+                laterPhotos = all.filter { !$0.first }
+                heroPage = 0
+            }
+    }
+
+    /// A later encounter's photo in the hero, with when and where it was taken.
+    private func laterFace(_ p: StickerPhoto, number: Int) -> some View {
+        Color(hex: 0xEEF3F9)
+            .aspectRatio(0.8, contentMode: .fit)
+            .overlay {
+                AsyncImage(url: URL(string: p.url)) { phase in
+                    if let img = phase.image { img.resizable().scaledToFill() } else { ProgressView() }
+                }
+                .allowsHitTesting(false)
+            }
+            .overlay(alignment: .topLeading) {
+                HStack(spacing: 6) {
+                    Text(L("\(number)回目"))
+                        .font(.system(size: 12, weight: .bold))
+                    if let d = SupabaseDate.parse(p.takenAt) {
+                        Text(JPDate.monthDay(d)).font(.system(size: 12)).monospacedDigit()
+                    }
+                    if let place = p.place, !place.isEmpty {
+                        Text(place).font(.system(size: 12)).lineLimit(1)
+                    }
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(.black.opacity(0.55), in: Capsule())
+                .padding(12)
+            }
+            .clipShape(.rect(cornerRadius: 28, style: .continuous))
+            .shadow(color: .black.opacity(0.14), radius: 16, y: 8)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L("\(number)回目に撮った写真"))
+            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
+    }
+
+    @ViewBuilder
+    private var heroFace: some View {
+        if heroPage > 0, let p = laterPhotos[safe: heroPage - 1] {
+            laterFace(p, number: heroPage + 1).id(p.id)
+        } else {
+            mainFace
+        }
+    }
+
+    private var mainFace: some View {
         let back = showSelfie
         let path = back ? current.selfieImageUrl : frontPath
         let isCut = !back && showCutout && path == current.cutoutImageUrl
