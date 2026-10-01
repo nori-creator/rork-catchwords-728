@@ -1,0 +1,151 @@
+# iOS 版の全画面の自動テスト（本番に触れないデモ用サーバーで動かす）
+#
+# 何をするか:
+#   1. GitHub が用意する Mac のシミュレーターで、アプリを「デモモード」（-uiDemo）で起動する。
+#      デモモードは本番のサーバーにつながず、アプリの中の決まったデータで答える。
+#   2. 表示言語（日本語・英語・繁體中文）× 学習言語（台湾華語・英語・日本語）の 6 通りそれぞれで、
+#      ホーム → 図鑑 → 単語の詳細 → 文字で調べて図鑑に追加 → 復習（4択）→ 単語帳 → 設定 →
+#      サインアウト → メールでログイン、を自動で操作する（ios/CatchWordsUITests/FullTourTests.swift）。
+#   3. 1 画面ごとに写真を撮り、画面の文字に「表示言語でも学習言語でもない文字」が混ざっていないか調べる。
+#   4. 写真と結果を ci-previews ブランチの runs/<ブランチ名>-uitest/ に置く（Claude が読める場所）。
+#
+# 限界: シミュレーターではカメラと「被写体の切り抜き」は動かない。音声は鳴らない。
+name: iOS UI test（全画面の自動テスト）
+
+# デモ用サーバー（ios/CatchWords/Services/Demo）が入るまでは手動でだけ動かす（本番につながないため）。
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-uitest-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  tour:
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: シミュレーターを選んで起動する
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          runtimes = sorted((k for k in d if "iOS" in k), reverse=True)
+          for rt in runtimes:
+              phones = [x for x in d[rt] if x["name"].startswith("iPhone") and "Pro" in x["name"] and "Max" not in x["name"]]
+              phones = phones or [x for x in d[rt] if x["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[-1]["udid"]); break
+          ')
+          echo "$UDID" > "$RUNNER_TEMP/udid"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: 全画面を自動で操作する（6 通りの言語の組み合わせ）
+        working-directory: ios
+        run: |
+          set -o pipefail
+          UDID=$(cat "$RUNNER_TEMP/udid")
+          xcodebuild test \
+            -project CatchWords.xcodeproj \
+            -scheme CatchWords \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            -only-testing:CatchWordsUITests/FullTourTests \
+            -resultBundlePath "$RUNNER_TEMP/tour.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "$RUNNER_TEMP/test.log" | grep -E "error:|Test Case|failed|passed|TEST (SUCCEEDED|FAILED)|BUILD FAILED" || true
+          grep -q "TEST SUCCEEDED" "$RUNNER_TEMP/test.log" && echo "ok" > "$RUNNER_TEMP/verdict" || echo "failed" > "$RUNNER_TEMP/verdict"
+
+      - name: 写真と結果を取り出す
+        if: always()
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/uitest"
+          mkdir -p "$OUT/raw"
+          [ -d "$RUNNER_TEMP/tour.xcresult" ] || { echo "結果がありません（組み立てに失敗した可能性）"; grep -E "error:" "$RUNNER_TEMP/test.log" | head -30 > "$OUT/failures.txt"; exit 0; }
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/tour.xcresult" --output-path "$OUT/raw" || true
+          # manifest.json から人の読める名前に付け替える
+          python3 - "$OUT" <<'PY'
+          import json, os, shutil, sys
+          out = sys.argv[1]
+          raw = os.path.join(out, "raw")
+          try:
+              manifest = json.load(open(os.path.join(raw, "manifest.json")))
+          except Exception:
+              manifest = []
+          for test in manifest:
+              for a in test.get("attachments", []):
+                  name = (a.get("suggestedHumanReadableName") or a.get("exportedFileName") or "").split("_0_")[0]
+                  src = os.path.join(raw, a.get("exportedFileName", ""))
+                  if os.path.exists(src) and name:
+                      base = name if name.endswith(".png") else name + ".png"
+                      shutil.copy(src, os.path.join(out, base.replace("/", "_")))
+          PY
+          xcrun xcresulttool get test-results tests --path "$RUNNER_TEMP/tour.xcresult" > "$OUT/tests.json" 2>/dev/null || true
+          python3 - "$OUT" <<'PY'
+          import json, sys, os
+          out = sys.argv[1]
+          lines = []
+          def walk(n, path):
+              name = n.get("name", "")
+              if n.get("nodeType") == "Failure Message":
+                  lines.append(f"{path}: {name}")
+              for c in n.get("children", []) or []:
+                  walk(c, (path + " / " + name) if n.get("nodeType") in ("Test Case",) else path or name)
+          try:
+              data = json.load(open(os.path.join(out, "tests.json")))
+              for n in data.get("testNodes", []):
+                  walk(n, "")
+          except Exception as e:
+              lines.append(f"(could not read results: {e})")
+          open(os.path.join(out, "failures.txt"), "w").write("\n".join(lines) + "\n")
+          print(f"{len(lines)} failure messages")
+          print("\n".join(lines[:80]))
+          PY
+          rm -rf "$OUT/raw"
+          ls "$OUT" | head -50
+
+      - name: ci-previews ブランチに置く
+        if: always()
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -uo pipefail
+          SRC="$RUNNER_TEMP/uitest"
+          [ -d "$SRC" ] || exit 0
+          DEST="$RUNNER_TEMP/previews-branch"
+          git clone --quiet --depth 1 --branch ci-previews "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$DEST" 2>/dev/null || {
+            mkdir -p "$DEST" && cd "$DEST" && git init --quiet && git checkout --quiet -b ci-previews && \
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          }
+          cd "$DEST"
+          DIR="runs/$(echo "$HEAD_REF" | tr '/' '_')-uitest"
+          rm -rf "$DIR" && mkdir -p "$DIR"
+          cp "$SRC"/*.png "$DIR"/ 2>/dev/null || true
+          cp "$SRC"/failures.txt "$DIR"/ 2>/dev/null || true
+          cp "$RUNNER_TEMP/verdict" "$DIR"/VERDICT 2>/dev/null || true
+          echo "${{ github.sha }}" > "$DIR/COMMIT"
+          git add -A
+          git -c user.name="ios-uitest" -c user.email="ios-uitest@users.noreply.github.com" commit --quiet -m "ui test for $HEAD_REF @ ${{ github.sha }}" || exit 0
+          for i in 1 2 3; do git pull --quiet --rebase origin ci-previews 2>/dev/null; git push --quiet origin ci-previews && break; sleep 3; done
+
+      - name: 結果を保存する
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-uitest-report
+          path: |
+            ${{ runner.temp }}/uitest
+            ${{ runner.temp }}/test.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: 失敗があれば赤にする
+        if: always()
+        run: |
+          [ "$(cat "$RUNNER_TEMP/verdict" 2>/dev/null)" = "ok" ] || { echo "::error::自動テストに失敗がありました（failures.txt を見てください）"; exit 1; }

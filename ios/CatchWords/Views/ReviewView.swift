@@ -173,6 +173,7 @@ struct ReviewView: View {
                 .background(Theme.primary.opacity(0.08), in: .rect(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(PressableStyle(scale: 0.98))
+            .accessibilityIdentifier("review.wordbooks")
             GeometryReader { geo in
                 let p = store.queue.isEmpty ? 0 : CGFloat(store.index) / CGFloat(store.queue.count)
                 ZStack(alignment: .leading) {

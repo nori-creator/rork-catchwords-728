@@ -74,6 +74,7 @@ struct SettingsView: View {
         }
         .confirmationDialog(L("サインアウトしますか？"), isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button(L("サインアウト"), role: .destructive) { auth.signOut() }
+                .accessibilityIdentifier("settings.signOut.confirm")
         }
     }
 
@@ -289,6 +290,7 @@ struct SettingsView: View {
                     .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
             }
             .buttonStyle(PressableStyle())
+            .accessibilityIdentifier("settings.signOut")
 
             deleteZone
 
@@ -632,6 +634,7 @@ struct WheelCard: View {
                         .background(Theme.primary, in: Capsule())
                 }
                 .buttonStyle(PressableStyle())
+                .accessibilityIdentifier("wheel.close")
             }
             .padding(.horizontal, 20).padding(.vertical, 16)
             .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
