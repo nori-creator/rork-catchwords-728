@@ -3226,5 +3226,65 @@
  "また明日の復習で会いましょう。": {
   "en": "See you at tomorrow's review.",
   "zh-TW": "明天複習時再見。"
+ },
+ "保存しています…": {
+  "en": "Saving…",
+  "zh-TW": "正在儲存…"
+ },
+ "いま自撮りを撮る": {
+  "en": "Take a selfie now",
+  "zh-TW": "現在自拍"
+ },
+ "AIに探してもらう": {
+  "en": "Let AI find it",
+  "zh-TW": "讓 AI 找出來"
+ },
+ "違う項目を選ぶ": {
+  "en": "Pick what's wrong",
+  "zh-TW": "選擇哪裡不對"
+ },
+ "AIは間違いを見つけられませんでした。報告として残しました": {
+  "en": "The AI couldn't find a mistake. Your report has been kept.",
+  "zh-TW": "AI 沒有找到錯誤，已保留你的回報。"
+ },
+ "報告を受け付けました。確かめてから直します": {
+  "en": "Report received. We'll check it and fix it.",
+  "zh-TW": "已收到回報，確認後會修正。"
+ },
+ "マイクを使えませんでした": {
+  "en": "Couldn't use the microphone",
+  "zh-TW": "無法使用麥克風"
+ },
+ "この端末では録音できません": {
+  "en": "This device can't record audio",
+  "zh-TW": "這個裝置無法錄音"
+ },
+ "止める（あと{1}秒）": {
+  "en": "Stop ({1}s left)",
+  "zh-TW": "停止（剩 {1} 秒）"
+ },
+ "録れました": {
+  "en": "Recorded",
+  "zh-TW": "已錄好"
+ },
+ "録った一言を捨てる": {
+  "en": "Discard the recording",
+  "zh-TW": "捨棄錄音"
+ },
+ "声で一言を残す": {
+  "en": "Say your note out loud",
+  "zh-TW": "用聲音留一句話"
+ },
+ "声の一言だけ保存できませんでした": {
+  "en": "Only the voice note could not be saved",
+  "zh-TW": "只有語音的一句話沒能儲存"
+ },
+ "一言を止める": {
+  "en": "Pause the voice note",
+  "zh-TW": "暫停一句話"
+ },
+ "一言を聞く": {
+  "en": "Play the voice note",
+  "zh-TW": "播放一句話"
  }
 }

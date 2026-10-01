@@ -333,7 +333,7 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     let wordId: String
     let objectImageUrl: String?
     var cutoutImageUrl: String?
-    let selfieImageUrl: String?
+    var selfieImageUrl: String?
     var caption: String?
     let locationName: String?
     let takenAt: Date
@@ -349,6 +349,8 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var placeholderImageUrl: String? = nil
     /// Who made that stand-in picture (`stickers.placeholder_credit`): shown on it, as Unsplash asks.
     var placeholderCredit: PlaceholderCredit? = nil
+    /// The spoken one-line note (`stickers.voice_video_url`, a storage path).
+    var voiceVideoUrl: String? = nil
 
     nonisolated struct PlaceholderCredit: Codable, Sendable, Hashable {
         var name: String?
@@ -364,6 +366,7 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         case heroRole = "hero_role"
         case placeholderImageUrl = "placeholder_image_url"
         case placeholderCredit = "placeholder_credit"
+        case voiceVideoUrl = "voice_video_url"
         case wordId = "word_id"
         case shelfKey = "shelf_key"
         case objectImageUrl = "object_image_url"

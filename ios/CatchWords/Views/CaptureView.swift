@@ -502,6 +502,14 @@ struct CaptureView: View {
         Task {
             do {
                 let outcome = try await dex.save(draft)
+                // The voice note goes up after the catch, in the background (web voice-note-upload.ts).
+                if case .created(let saved) = outcome, let url = vm.voiceNote.fileURL, let audio = try? Data(contentsOf: url) {
+                    Task {
+                        if !(await dex.attachVoiceNote(to: saved, audio: audio)) {
+                            vm.showToast(L("声の一言だけ保存できませんでした"))
+                        }
+                    }
+                }
                 plan.recordCatch()
                 vm.releasePending()
                 dex.refreshPending()

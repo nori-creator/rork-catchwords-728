@@ -11,6 +11,10 @@ struct WordDetailView: View {
     /// DEBUG preview: open scrolled to this section so the simulator frame shows it.
     var previewFocus: CardSection? = nil
 
+    @State private var voicePlayer = VoiceNotePlayer()
+    @State private var takingSelfie: Bool = false
+    @State private var isAddingSelfie: Bool = false
+    @State private var autoplayed: String = ""
     @AppStorage("reading.en") private var readingEn: String = "ipa-us"
     @State private var isCutting: Bool = false
     @State private var cutoutMessage: String?
@@ -111,6 +115,13 @@ struct WordDetailView: View {
         }
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
         .task(id: current.id) { await dex.autoHero(current) }
+        .task(id: current.id + "|play") {
+            // The word is read once when its page opens (web WordCard autoplay, 400 ms).
+            guard autoplayed != current.id else { return }
+            autoplayed = current.id
+            try? await Task.sleep(for: .milliseconds(400))
+            if !Task.isCancelled { SoundService.shared.speak(headword) }
+        }
         .task(id: "\(headword)|\(webRound)|\(visibleSections.contains(.webImages))") { await loadWebImages() }
         .confirmationDialog(L("いまの写真を、この画像に差し替えますか？元には戻せません。"),
                             isPresented: confirmingWeb,
@@ -259,9 +270,17 @@ struct WordDetailView: View {
             }
             HStack {
                 Spacer()
-                Button {
-                    reportNote = ""
-                    reporting = true
+                // web ReportButton: let the AI find what is wrong, or point at the item yourself.
+                Menu {
+                    Button(L("AIに探してもらう"), systemImage: "sparkle.magnifyingglass") {
+                        reportNote = ""
+                        reporting = true
+                    }
+                    Section(L("違う項目を選ぶ")) {
+                        ForEach(reportItems, id: \.self) { item in
+                            Button(Self.itemTitle(item)) { reportAndFix(item: item) }
+                        }
+                    }
                 } label: {
                     HStack(spacing: 5) {
                         if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
@@ -564,6 +583,15 @@ struct WordDetailView: View {
                 Image(systemName: "clock").font(.system(size: 14))
                 Text(JPDate.full(current.takenAt)).font(.system(size: 14)).monospacedDigit()
                 Spacer(minLength: 8)
+                if let v = current.voiceVideoUrl, let url = dex.signed[v] {
+                    Button { voicePlayer.toggle(url: url) } label: {
+                        Image(systemName: voicePlayer.isPlaying ? "pause.circle.fill" : "waveform.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundStyle(Theme.primary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel(voicePlayer.isPlaying ? L("一言を止める") : L("一言を聞く"))
+                }
                 placeChip
             }
             .foregroundStyle(Theme.foreground.opacity(0.75))
@@ -946,21 +974,30 @@ struct WordDetailView: View {
     }
 
     /// Web reportAndFixSection (item = auto): the AI finds the wrong item among what is on screen.
-    private func reportAndFix() {
-        let note = reportNote.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// What can be reported: the reading, the part of speech and every section shown with content.
+    private var reportItems: [String] {
+        ["pronunciation", "pos"] + visibleSections.filter { !$0.isExternal && hasContent($0) }.map(\.rawValue)
+    }
+
+    private func reportAndFix(item: String = "auto") {
+        let note = item == "auto" ? reportNote.trimmingCharacters(in: .whitespacesAndNewlines) : ""
         let wordId = current.wordId
-        let candidates = ["pronunciation", "pos"] + visibleSections.filter { !$0.isExternal && hasContent($0) }.map(\.rawValue)
+        let candidates = reportItems
         isFixing = true
         Task {
             defer { isFixing = false }
             do {
-                let r = try await dex.reportAndFix(wordId: wordId, candidates: candidates, note: note)
+                let r = try await dex.reportAndFix(wordId: wordId, item: item, candidates: candidates, note: note)
                 await dex.reload(stickerId: current.id)
                 Haptics.success()
-                if r.fixed {
-                    showToast(L("「\(Self.itemTitle(r.item))」を直しました"))
+                // web ReportButton: fixed / the AI found nothing (kept as a report) / recorded to be checked.
+                let done = r.item ?? (item == "auto" ? nil : item)
+                if r.fixed, let done {
+                    showToast(L("「\(Self.itemTitle(done))」を直しました"))
+                } else if item == "auto" && done == nil {
+                    showToast(L("AIは間違いを見つけられませんでした。報告として残しました"))
                 } else {
-                    showToast(L("確かめました。間違いは見つかりませんでした"))
+                    showToast(L("報告を受け付けました。確かめてから直します"))
                 }
             } catch {
                 Haptics.warning()
@@ -978,6 +1015,18 @@ struct WordDetailView: View {
         }
     }
 
+
+    private func addSelfie(_ image: UIImage) async {
+        isAddingSelfie = true
+        defer { isAddingSelfie = false }
+        do {
+            try await dex.addSelfie(to: current, image: image)
+            Haptics.success()
+        } catch {
+            Haptics.warning()
+            showToast(L("保存できませんでした。もう一度お試しください。"))
+        }
+    }
 
     private func moveShelf(to key: String?) async {
         do {
@@ -1518,6 +1567,23 @@ struct WordDetailView: View {
             Label(days == 0 ? L("今日キャッチしました") : L("\(days)日前にキャッチしました"), systemImage: "clock.arrow.circlepath")
                 .font(AppFont.hand(16))
                 .foregroundStyle(Theme.muted)
+            // No selfie yet: offer to take one now (web PhotoAddButtons).
+            if current.selfieImageUrl == nil && current.hasOwnPhoto {
+                Button { takingSelfie = true } label: {
+                    Label(isAddingSelfie ? L("保存しています…") : L("いま自撮りを撮る"), systemImage: "camera")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.primaryInk)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Theme.primary.opacity(0.12), in: .rect(cornerRadius: 16))
+                }
+                .buttonStyle(PressableStyle())
+                .disabled(isAddingSelfie)
+                .accessibilityIdentifier("detail.addSelfie")
+                .fullScreenCover(isPresented: $takingSelfie) {
+                    SelfieCamera { image in Task { await addSelfie(image) } }
+                        .ignoresSafeArea()
+                }
+            }
             HStack {
             PhotosPicker(selection: $newPhoto, matching: .images) {
                 Label(isReplacing ? L("替えています…") : L("写真を替える"), systemImage: "photo.badge.arrow.down")
