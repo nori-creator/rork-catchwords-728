@@ -79,7 +79,8 @@ struct DexView: View {
     @Environment(AppRouter.self) private var router
 
     @State private var mode: DexMode = .grid
-    @State private var categoryFilter: String?
+    /// One of the dex's 20 categories (DexCatalog), or nil for all.
+    @State private var categoryFilter: Int?
     @State private var dayFilter: Date?
     @State private var query: String = ""
     @State private var showCalendar: Bool = false
@@ -95,14 +96,18 @@ struct DexView: View {
 
     private var lang: String { NativeAPI.targetLanguage }
 
-    private var categoryCounts: [(key: String, count: Int)] {
-        var counts: [String: Int] = [:]
-        for s in dex.stickers { counts[s.categoryKey, default: 0] += 1 }
-        let order = Category.orderedKeys
+    private var categoryCounts: [(no: Int, count: Int)] {
+        var counts: [Int: Int] = [:]
+        for s in dex.stickers { counts[DexBook.category(of: s, lang: lang), default: 0] += 1 }
         return counts.map { ($0.key, $0.value) }.sorted {
-            $0.count != $1.count ? $0.count > $1.count
-                : (order.firstIndex(of: $0.key) ?? 99) < (order.firstIndex(of: $1.key) ?? 99)
+            $0.count != $1.count ? $0.count > $1.count : $0.no < $1.no
         }
+    }
+
+    /// A dex category's emoji and name, for the filter pill and its menu.
+    private func categoryTitle(_ no: Int) -> String {
+        let emoji = DexCatalog.categories.first { $0.no == no }?.emoji ?? "✨"
+        return "\(emoji) \(DexCatalog.label(no))"
     }
 
     private var dayCounts: [(day: Date, count: Int)] {
@@ -115,7 +120,7 @@ struct DexView: View {
     private var filtered: [Sticker] {
         let q = query.trimmingCharacters(in: .whitespaces)
         return dex.stickers.filter { s in
-            if let categoryFilter, s.categoryKey != categoryFilter { return false }
+            if let categoryFilter, DexBook.category(of: s, lang: lang) != categoryFilter { return false }
             if let dayFilter, !Calendar.current.isDate(s.takenAt, inSameDayAs: dayFilter) { return false }
             if !q.isEmpty {
                 let w = s.word
@@ -235,7 +240,7 @@ struct DexView: View {
     private var filterPills: some View {
         HStack(spacing: 8) {
             Button { toggleMenu(.category) } label: {
-                pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? L("棚"),
+                pill(categoryFilter.map { categoryTitle($0) } ?? L("カテゴリー"),
                      active: categoryFilter != nil, open: openMenu == .category)
             }
             .buttonStyle(PressableStyle(scale: 0.95))
@@ -290,10 +295,9 @@ struct DexView: View {
             DexDropdownRow(title: L("すべて"), count: nil, isSelected: categoryFilter == nil) {
                 pick { categoryFilter = nil }
             }
-            ForEach(categoryCounts, id: \.key) { item in
-                DexDropdownRow(title: "\(Category.emoji(for: item.key)) \(Category.label(for: item.key))",
-                               count: item.count, isSelected: categoryFilter == item.key) {
-                    pick { categoryFilter = item.key }
+            ForEach(categoryCounts, id: \.no) { item in
+                DexDropdownRow(title: categoryTitle(item.no), count: item.count, isSelected: categoryFilter == item.no) {
+                    pick { categoryFilter = item.no }
                 }
             }
         }
@@ -432,12 +436,13 @@ struct DexView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 Color.clear.frame(height: max(0, headerHeight - 14))
-                ForEach(Category.allOrderedKeys, id: \.self) { key in
-                    let items = filtered.filter { $0.categoryKey == key }
+                // Grouped by the dex's 20 categories, in their order.
+                ForEach(DexCatalog.categories) { cat in
+                    let items = filtered.filter { DexBook.category(of: $0, lang: lang) == cat.no }
                     if !items.isEmpty {
                         HStack(spacing: 6) {
-                            Text(Category.emoji(for: key)).font(.system(size: 17))
-                            Text(Category.label(for: key)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Text(cat.emoji).font(.system(size: 17))
+                            Text(cat.label).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
                             Spacer()
                             Text("\(items.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
                         }

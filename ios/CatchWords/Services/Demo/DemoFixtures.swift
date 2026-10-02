@@ -13,7 +13,7 @@ import Foundation
 ///   (index 0-5 are seeded with photos, 6 without a photo, 7-8 are new words offered by the AI functions)
 /// - variants: other names of a word (CandidatePickerView "other ways to say it")
 /// - distinctions, wordbook, journal, prompts, patterns, synth (templates for unknown headwords),
-///   places (lat / lng / name per reader), common (shelf labels, caption, generic feedback, display name)
+///   places (lat / lng / name per reader), common (caption, generic feedback, display name)
 nonisolated enum DemoFixtures {
     /// The parsed pack for a learning language ("zh-TW", "en", "ja"); empty when it cannot be read.
     static func pack(for language: String) -> [String: Any] {
@@ -1942,16 +1942,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "common": {
-      "shelf_favorites": {
-       "ja": "お気に入り",
-       "en": "Favorites",
-       "zh-TW": "我的最愛"
-      },
-      "shelf_fruit": {
-       "ja": "くだもの",
-       "en": "Fruits",
-       "zh-TW": "水果類"
-      },
       "caption": {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",
@@ -4244,16 +4234,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "common": {
-      "shelf_favorites": {
-       "ja": "お気に入り",
-       "en": "Favorites",
-       "zh-TW": "我的最愛"
-      },
-      "shelf_fruit": {
-       "ja": "くだもの",
-       "en": "Fruits",
-       "zh-TW": "水果類"
-      },
       "caption": {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",
@@ -6710,16 +6690,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "common": {
-      "shelf_favorites": {
-       "ja": "お気に入り",
-       "en": "Favorites",
-       "zh-TW": "我的最愛"
-      },
-      "shelf_fruit": {
-       "ja": "くだもの",
-       "en": "Fruits",
-       "zh-TW": "水果類"
-      },
       "caption": {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",

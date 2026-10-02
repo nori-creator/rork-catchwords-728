@@ -97,7 +97,7 @@ nonisolated enum DexCatalog {
         "medicine": 20, "other": 20,
     ]
 
-    /// The dex category of a category key; anything unknown (a learner's own shelf, a missing key) is その他.
+    /// The dex category of a category key; anything unknown (an old custom key, a missing key) is その他.
     static func category(forKey key: String?) -> Int {
         guard let key else { return 20 }
         return keyToCategory[key] ?? 20

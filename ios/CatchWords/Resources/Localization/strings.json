@@ -191,10 +191,6 @@
   "en": "{1} · {2} words",
   "zh-TW": "{1} {2} 個單字"
  },
- "{1} {2}（AIのおすすめ）": {
-  "en": "{1} {2} (AI pick)",
-  "zh-TW": "{1} {2}（AI 推薦）"
- },
  "{1}%おトク": {
   "en": "Save {1}%",
   "zh-TW": "省 {1}%"
@@ -238,10 +234,6 @@
  "{1}の日記が保存されていません": {
   "en": "Your diary for {1} hasn't been saved",
   "zh-TW": "{1}的日記尚未儲存"
- },
- "{1}の棚を編集": {
-  "en": "Edit the {1} shelf",
-  "zh-TW": "編輯「{1}」書架"
  },
  "{1}を作っています": {
   "en": "Making {1}",
@@ -575,18 +567,6 @@
   "en": "No words match these filters yet",
   "zh-TW": "還沒有符合這些條件的單字"
  },
- "この棚の名前は、あなたの図鑑だけで変わります。": {
-  "en": "This shelf name changes only in your own collection.",
-  "zh-TW": "這個書架名稱只會在你的圖鑑中變更。"
- },
- "この棚を消しますか？": {
-  "en": "Delete this shelf?",
-  "zh-TW": "要刪除這個書架嗎？"
- },
- "この棚を消す": {
-  "en": "Delete this shelf",
-  "zh-TW": "刪除這個書架"
- },
  "この機能は Pro 限定です。": {
   "en": "This is a Pro feature.",
   "zh-TW": "此功能為 Pro 專屬。"
@@ -718,10 +698,6 @@
  "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。": {
   "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
   "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
- },
- "ほかの棚": {
-  "en": "Other shelves",
-  "zh-TW": "其他書架"
  },
  "ほかの言い方": {
   "en": "Other ways to say it",
@@ -1595,10 +1571,6 @@
   "en": "Couldn't load the photo.",
   "zh-TW": "無法讀取照片。"
  },
- "写真を長押ししたまま、別の棚へ動かせます。": {
-  "en": "Press and hold a photo to drag it to another shelf.",
-  "zh-TW": "長按照片，就能拖到別的書架。"
- },
  "切り抜いています": {
   "en": "Cutting out",
   "zh-TW": "正在去背"
@@ -1714,10 +1686,6 @@
  "単語の詳細で、この写真を表紙にします。": {
   "en": "This photo becomes the cover on the word's page.",
   "zh-TW": "在單字詳細頁用這張照片當封面。"
- },
- "単語の詳細の「棚」から、語をこの棚に移せます。": {
-  "en": "Move words to this shelf from “Shelf” on a word's page.",
-  "zh-TW": "可以從單字詳細頁的「書架」把單字移到這個書架。"
  },
  "単語をひらく": {
   "en": "Open the word",
@@ -2487,38 +2455,6 @@
   "en": "These are guide settings. When you finish the guide, they carry over to your account.",
   "zh-TW": "這是導覽中的設定。完成導覽後會直接套用到你的帳號。"
  },
- "棚": {
-  "en": "Shelf",
-  "zh-TW": "書架"
- },
- "棚の名前と絵文字": {
-  "en": "Shelf name and emoji",
-  "zh-TW": "書架名稱和表情符號"
- },
- "棚の名前（24文字まで）": {
-  "en": "Shelf name (up to 24 characters)",
-  "zh-TW": "書架名稱（最多 24 個字）"
- },
- "棚を保存できませんでした。もう一度お試しください。": {
-  "en": "Couldn't save the shelf. Please try again.",
-  "zh-TW": "無法儲存書架，請再試一次。"
- },
- "棚を変える。いまは{1}": {
-  "en": "Change shelf. Currently {1}",
-  "zh-TW": "更換書架。目前是{1}"
- },
- "棚を消せませんでした。もう一度お試しください。": {
-  "en": "Couldn't delete the shelf. Please try again.",
-  "zh-TW": "無法刪除書架，請再試一次。"
- },
- "棚を移せませんでした": {
-  "en": "Couldn't move it to that shelf",
-  "zh-TW": "無法移到那個書架"
- },
- "棚を移せませんでした。もう一度お試しください。": {
-  "en": "Couldn't move it to that shelf. Please try again.",
-  "zh-TW": "無法移到那個書架，請再試一次。"
- },
  "植物": {
   "en": "Plants",
   "zh-TW": "植物"
@@ -2602,10 +2538,6 @@
  "消す": {
   "en": "Delete",
   "zh-TW": "刪除"
- },
- "消す（語は元の棚に戻ります）": {
-  "en": "Delete (words go back to their original shelf)",
-  "zh-TW": "刪除（單字會回到原本的書架）"
  },
  "消せませんでした": {
   "en": "Couldn't delete it",
@@ -2818,10 +2750,6 @@
  "自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。": {
   "en": "Use your photo as a clue in a four-choice review. Recall the moment behind the word.",
   "zh-TW": "看自己的照片做四選一，從相遇的場景想起單字，不用死背字表。"
- },
- "自分の棚を作る": {
-  "en": "Create your own shelf",
-  "zh-TW": "建立自己的書架"
  },
  "自動": {
   "en": "Auto",

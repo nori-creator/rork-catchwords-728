@@ -80,12 +80,10 @@ enum DexBook {
     /// Shadows shown per category (owner: 3–5; the first 5 items not caught yet, in catalog order).
     static let shadowCount = 5
 
-    /// Where a caught word sits: its catalog item's category, else its shelf. A learner's own shelf is not a
-    /// gallery category, so a word moved there stays under the AI's category.
+    /// Where a caught word sits: its catalog item's category, else its category key's (`Sticker.categoryKey`).
     static func category(of s: Sticker, lang: String) -> Int {
         if let it = DexCatalog.item(headword: s.word?.headword, lang: lang) { return it.category }
-        let key = Category.isBuiltin(s.categoryKey) ? s.categoryKey : s.word?.categoryKey
-        return DexCatalog.category(forKey: key)
+        return DexCatalog.category(forKey: s.categoryKey)
     }
 
     /// The landing word, while its light is on the way (`filled` false: drawn as its shadow / an empty square)

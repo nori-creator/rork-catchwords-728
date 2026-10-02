@@ -529,48 +529,6 @@ struct WordDetailView: View {
 
     // MARK: - Meta (date, place, one-liner)
 
-    /// 棚: move this word to another shelf (web setStickerCategory). The AI's own category is listed first.
-    private var shelfPicker: some View {
-        let aiKey = Category.key(for: word?.categoryKey)
-        let used = Set(dex.stickers.map(\.categoryKey))
-        let keys = Category.allOrderedKeys.filter { used.contains($0) || !Category.isBuiltin($0) || $0 == aiKey }
-        return Menu {
-            Button {
-                Task { await moveShelf(to: nil) }
-            } label: {
-                Label(L("\(Category.emoji(for: aiKey)) \(Category.label(for: aiKey))（AIのおすすめ）"),
-                      systemImage: current.shelfKey == nil ? "checkmark" : "sparkles")
-            }
-            Section(L("ほかの棚")) {
-                ForEach(keys.filter { $0 != aiKey }, id: \.self) { key in
-                    Button {
-                        Task { await moveShelf(to: key) }
-                    } label: {
-                        if current.shelfKey == key {
-                            Label("\(Category.emoji(for: key)) \(Category.label(for: key))", systemImage: "checkmark")
-                        } else {
-                            Text("\(Category.emoji(for: key)) \(Category.label(for: key))")
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "books.vertical").font(.system(size: 14))
-                Text(L("棚")).font(.system(size: 14)).foregroundStyle(Theme.muted)
-                Spacer()
-                Text("\(Category.emoji(for: current.categoryKey)) \(Category.label(for: current.categoryKey))")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.foreground)
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 12)).foregroundStyle(Theme.muted)
-            }
-            .foregroundStyle(Theme.foreground.opacity(0.75))
-            .frame(minHeight: 40)
-            .contentShape(.rect)
-        }
-        .accessibilityLabel(L("棚を変える。いまは\(Category.label(for: current.categoryKey))"))
-    }
-
     private var metaCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -599,8 +557,6 @@ struct WordDetailView: View {
             }
             .buttonStyle(PressableStyle(scale: 0.98))
             .accessibilityLabel(L("ひと言を編集"))
-            Divider().overlay(Theme.border)
-            shelfPicker
             if let pct = dex.memoryPercent(for: current) {
                 Divider().overlay(Theme.border)
                 memoryRow(pct)
@@ -1010,16 +966,6 @@ struct WordDetailView: View {
         } catch {
             Haptics.warning()
             showToast(L("保存できませんでした。もう一度お試しください。"))
-        }
-    }
-
-    private func moveShelf(to key: String?) async {
-        do {
-            try await dex.move(current, to: key)
-            Haptics.selection()
-        } catch {
-            Haptics.warning()
-            showToast(L("棚を移せませんでした。もう一度お試しください。"))
         }
     }
 

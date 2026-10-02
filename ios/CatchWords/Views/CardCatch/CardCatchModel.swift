@@ -318,7 +318,7 @@ final class CardCatchModel {
         chosen = (o, w)
         starsOrigin = CCClock.now
         vm.choose(o.source, word: w)
-        // .catbg: the category colour (the candidate's shelf hint; the card's own category once it arrives)
+        // .catbg: the category colour (the candidate's category hint; the card's own category once it arrives)
         let lang = NativeAPI.targetLanguage
         if !(w.categoryKey ?? "").isEmpty || DexCatalog.item(headword: w.headword, lang: lang) != nil {
             showCategory(CCCategory.from(headword: w.headword, categoryKey: w.categoryKey))
