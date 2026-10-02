@@ -459,10 +459,6 @@
   "en": "Specific name",
   "zh-TW": "具體名稱"
  },
- "ここで撮った思い出 {1}": {
-  "en": "Memories here: {1}",
-  "zh-TW": "在這裡拍下的回憶 {1}"
- },
  "ここで覚えた単語": {
   "en": "A word you learned here",
   "zh-TW": "在這裡學到的單字"
@@ -1815,10 +1811,6 @@
   "en": "Learning Taiwanese Mandarin",
   "zh-TW": "正在學台灣華語"
  },
- "右に思い出 {1}": {
-  "en": "Memories to the right: {1}",
-  "zh-TW": "右邊還有回憶 {1}"
- },
  "名前": {
   "en": "Name",
   "zh-TW": "名稱"
@@ -1994,10 +1986,6 @@
  "山": {
   "en": "Mountains",
   "zh-TW": "山"
- },
- "左に思い出 {1}": {
-  "en": "Memories to the left: {1}",
-  "zh-TW": "左邊還有回憶 {1}"
  },
  "年額 ¥7,800 / 月額 ¥980（予定）": {
   "en": "¥7,800/year · ¥980/month (planned)",
