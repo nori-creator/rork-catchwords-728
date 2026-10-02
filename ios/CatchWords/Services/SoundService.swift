@@ -15,6 +15,20 @@ enum SFX: String, CaseIterable {
     // The owner's pick from the web prototype ("bubble pon"): a page opening / going back.
     case ponOpen = "pon-bubble-open"
     case ponBack = "pon-bubble-back"
+    // The card-catch prototype's synthesized SFX (docs/prototype/cardcatch-src.html `SFX`), rendered offline by
+    // scripts/render_cardcatch_sfx.py. "cands" and "charge"/"fly" are the provisional picks (trio / harp).
+    case ccShutter = "cc-shutter"
+    case ccTick = "cc-tick"
+    case ccScanStart = "cc-scan-start"
+    case ccFound = "cc-found"
+    case ccPop = "cc-pop"
+    case ccCands1 = "cc-cands-1"
+    case ccCands2 = "cc-cands-2"
+    case ccCands3 = "cc-cands-3"
+    case ccCharge = "cc-charge-harp"
+    case ccFly = "cc-fly-harp"
+    case ccReveal = "cc-reveal"
+    case ccTwinkle = "cc-twinkle"
 
     var gain: Float {
         switch self {
@@ -29,14 +43,24 @@ enum SFX: String, CaseIterable {
         case .landBounce: 1.0
         case .ponOpen: 0.9
         case .ponBack: 0.8
+        // Rendered at the prototype's loudness relative to the pon (same 0.9); two files were turned down
+        // in rendering to avoid clipping and get that back here (render report: ×2.803 and ×1.640).
+        case .ccShutter: 0.9 * 2.803
+        case .ccReveal: 0.9 * 1.640
+        case .ccTick, .ccScanStart, .ccFound, .ccPop, .ccCands1, .ccCands2, .ccCands3,
+             .ccCharge, .ccFly, .ccTwinkle: 0.9
         }
     }
 
-    /// The pon files are AAC (.m4a); everything else is the web's mp3.
+    /// The card-catch sounds can overlap themselves (the prototype starts a new WebAudio voice each time).
+    var isCardCatch: Bool { rawValue.hasPrefix("cc-") }
+
+    /// The pon and card-catch files are AAC (.m4a); everything else is the web's mp3.
     var fileExtension: String {
+        if isCardCatch { return "m4a" }
         switch self {
-        case .ponOpen, .ponBack: "m4a"
-        default: "mp3"
+        case .ponOpen, .ponBack: return "m4a"
+        default: return "mp3"
         }
     }
 
@@ -105,6 +129,22 @@ final class SoundService {
         player.volume = min(1, sfx.gain * volume * level)
         player.play()
     }
+
+    /// Plays `sfx` on a fresh player so it can overlap an earlier play of the same sound (the prototype's
+    /// pops come 130 ms apart and each rings out). Same level rules as `play`.
+    func playLayered(_ sfx: SFX, volume: Float = 1) {
+        let level = levelMultiplier
+        guard level > 0,
+              let url = Bundle.main.url(forResource: sfx.rawValue, withExtension: sfx.fileExtension),
+              let player = try? AVAudioPlayer(contentsOf: url) else { return }
+        layered.removeAll { !$0.isPlaying }
+        player.currentTime = sfx.offset
+        player.volume = min(1, sfx.gain * volume * level)
+        player.play()
+        layered.append(player)
+    }
+
+    private var layered: [AVAudioPlayer] = []
 
     /// A page opening (dex, word detail, tab) or going back: the bubble pon plus its matching tap.
     /// The sound follows the sound level ("off" is silent); the tap follows the vibration switch.
