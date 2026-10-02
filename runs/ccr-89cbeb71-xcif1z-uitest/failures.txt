@@ -1,0 +1,6 @@
+CatchWords / test_1_ja_zh(): FullTourTests.swift:120: failed - [ja/zh-TW] the word card did not open after searching
+CatchWords / test_2_ja_en(): FullTourTests.swift:120: failed - [ja/en] the word card did not open after searching
+CatchWords / test_3_en_zh(): FullTourTests.swift:120: failed - [en/zh-TW] the word card did not open after searching
+CatchWords / test_4_en_ja(): FullTourTests.swift:120: failed - [en/ja] the word card did not open after searching
+CatchWords / test_5_zh_en(): FullTourTests.swift:120: failed - [zh-TW/en] the word card did not open after searching
+CatchWords / test_6_zh_ja(): FullTourTests.swift:120: failed - [zh-TW/ja] the word card did not open after searching
