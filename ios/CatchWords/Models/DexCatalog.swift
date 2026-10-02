@@ -1,6 +1,7 @@
 import Foundation
 
-// The dex's 20 categories and the things they show as shadows (owner decisions 2026-10-02).
+// The dex's 20 categories and the things they show as shadows (owner decisions 2026-10-02; the 20 categories and
+// their colours re-selected the same day — no その他 category).
 //
 // * 20 categories in this order, each with 5 base items: the base 100, numbered No.001–100 in table order
 //   (category 1 items 1–5 = 001–005 … category 20 = 096–100). Base items keep their number caught or not.
@@ -62,45 +63,46 @@ nonisolated enum DexCatalog {
     static func label(_ no: Int) -> String {
         switch no {
         case 1: L("飲み物")
-        case 2: L("料理")
+        case 2: L("料理・屋台")
         case 3: L("果物・野菜")
-        case 4: L("パン・お菓子")
+        case 4: L("お菓子・パン")
         case 5: L("食器・台所")
-        case 6: L("家具・部屋")
-        case 7: L("家電・電子機器")
-        case 8: L("文房具・本")
-        case 9: L("服")
-        case 10: L("身につける物")
-        case 11: L("日用品")
-        case 12: L("乗り物")
-        case 13: L("建物・お店")
-        case 14: L("街の物")
-        case 15: L("動物")
-        case 16: L("植物・花")
-        case 17: L("自然・空")
-        case 18: L("人・体")
-        case 19: L("遊び・趣味")
-        case 20: L("その他")
-        default: L("その他")
+        case 6: L("家具・インテリア")
+        case 7: L("家電")
+        case 8: L("スマホ・パソコン")
+        case 9: L("文房具・本")
+        case 10: L("洗面・日用品")
+        case 11: L("服")
+        case 12: L("靴・バッグ・小物")
+        case 13: L("乗り物")
+        case 14: L("建物・お店")
+        case 15: L("道・街の物")
+        case 16: L("動物")
+        case 17: L("植物・花")
+        case 18: L("空・自然")
+        case 19: L("スポーツ・遊び")
+        case 20: L("人・体")
+        default: L("洗面・日用品")
         }
     }
 
     /// Every one of the app's 54 category keys (Models/Category.swift) → its dex category (1–20).
     static let keyToCategory: [String: Int] = [
-        "fruit": 3, "vegetable": 3, "drink": 1, "food": 2, "dessert": 4, "vehicle": 12, "transport": 12,
-        "building": 13, "street": 14, "sign": 14, "shop": 13, "home": 6, "furniture": 6, "appliance": 7,
-        "kitchenware": 5, "tool": 11, "clothes": 9, "accessory": 10, "shoes": 10, "bag": 10, "jewelry": 10,
-        "clothing_part": 9, "stationery": 8, "book": 8, "tech": 7, "gadget": 7, "toy": 19, "game": 19, "sport": 19,
-        "instrument": 19, "art": 19, "decoration": 6, "animal": 15, "plant": 16, "flower": 16, "nature": 17,
-        "weather": 17, "sky": 17, "water": 17, "mountain": 17, "body": 18, "face": 18, "hand": 18, "person": 18,
-        "family": 18, "job": 18, "character": 20, "symbol": 20, "color": 20, "shape": 20, "money": 20, "document": 8,
-        "medicine": 20, "other": 20,
+        "drink": 1, "food": 2, "fruit": 3, "vegetable": 3, "dessert": 4, "kitchenware": 5, "home": 6, "furniture": 6,
+        "decoration": 6, "appliance": 7, "tech": 8, "gadget": 8, "stationery": 9, "book": 9, "document": 9,
+        "tool": 10, "medicine": 10, "money": 10, "color": 10, "shape": 10, "other": 10, "clothes": 11,
+        "clothing_part": 11, "accessory": 12, "shoes": 12, "bag": 12, "jewelry": 12, "vehicle": 13, "transport": 13,
+        "building": 14, "shop": 14, "street": 15, "sign": 15, "character": 15, "symbol": 15, "animal": 16,
+        "plant": 17, "flower": 17, "nature": 18, "weather": 18, "sky": 18, "water": 18, "mountain": 18, "toy": 19,
+        "game": 19, "sport": 19, "instrument": 19, "art": 19, "body": 20, "face": 20, "hand": 20, "person": 20,
+        "family": 20, "job": 20,
     ]
 
-    /// The dex category of a category key; anything unknown (an old custom key, a missing key) is その他.
+    /// The dex category of a category key; anything unknown (an old custom key, a missing key) goes with "other"
+    /// into 10 (洗面・日用品) — there is no その他 category.
     static func category(forKey key: String?) -> Int {
-        guard let key else { return 20 }
-        return keyToCategory[key] ?? 20
+        guard let key else { return 10 }
+        return keyToCategory[key] ?? 10
     }
 
     /// Where a word belongs: the catalog item's category when its headword is in the catalog, else its key's.
@@ -110,7 +112,7 @@ nonisolated enum DexCatalog {
 
     private typealias Table = (no: Int, emoji: String, base: [Raw], extra: [Raw])
 
-    private static let c1: Table = (1, "🥤", [
+    private static let c1: Table = (1, "🧋", [
         r("bubbletea", "珍珠奶茶", "bubble tea", "タピオカミルクティー"),  // l10n-ignore (catalog headwords)
         r("coffee", "咖啡", "coffee", "コーヒー", "cup.and.saucer"),  // l10n-ignore (catalog headwords)
         r("tea", "茶", "tea", "お茶"),  // l10n-ignore (catalog headwords)
@@ -141,19 +143,19 @@ nonisolated enum DexCatalog {
         r("bun", "包子", "steamed bun", "肉まん"),  // l10n-ignore (catalog headwords)
     ], [
         r("egg", "蛋", "egg", "卵"),  // l10n-ignore (catalog headwords)
+        r("braisedporkrice", "滷肉飯", "braised pork rice", "魯肉飯"),  // l10n-ignore (catalog headwords)
         r("friedrice", "炒飯", "fried rice", "チャーハン"),  // l10n-ignore (catalog headwords)
         r("soup", "湯", "soup", "スープ"),  // l10n-ignore (catalog headwords)
-        r("braisedporkrice", "滷肉飯", "braised pork rice", "魯肉飯"),  // l10n-ignore (catalog headwords)
         r("beefnoodles", "牛肉麵", "beef noodle soup", "牛肉麺"),  // l10n-ignore (catalog headwords)
+        r("danbing", "蛋餅", "egg crepe", "ダンビン"),  // l10n-ignore (catalog headwords)
         r("sandwich", "三明治", "sandwich", "サンドイッチ"),  // l10n-ignore (catalog headwords)
         r("tofu", "豆腐", "tofu", "豆腐"),  // l10n-ignore (catalog headwords)
         r("porridge", "粥", "congee", "お粥"),  // l10n-ignore (catalog headwords)
-        r("hotpot", "火鍋", "hot pot", "火鍋"),  // l10n-ignore (catalog headwords)
         r("friedchicken", "炸雞", "fried chicken", "フライドチキン"),  // l10n-ignore (catalog headwords)
         r("stinkytofu", "臭豆腐", "stinky tofu", "臭豆腐"),  // l10n-ignore (catalog headwords)
+        r("hotpot", "火鍋", "hot pot", "火鍋"),  // l10n-ignore (catalog headwords)
+        r("scallionpancake", "蔥油餅", "scallion pancake", "ねぎ餅"),  // l10n-ignore (catalog headwords)
         r("hamburger", "漢堡", "hamburger", "ハンバーガー"),  // l10n-ignore (catalog headwords)
-        r("sushi", "壽司", "sushi", "寿司"),  // l10n-ignore (catalog headwords)
-        r("pizza", "披薩", "pizza", "ピザ"),  // l10n-ignore (catalog headwords)
     ])
 
     private static let c3: Table = (3, "🍎", [
@@ -202,7 +204,7 @@ nonisolated enum DexCatalog {
         r("popcorn", "爆米花", "popcorn", "ポップコーン", "popcorn"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c5: Table = (5, "🍳", [
+    private static let c5: Table = (5, "🥢", [
         r("cup", "杯子", "cup", "コップ", "mug"),  // l10n-ignore (catalog headwords)
         r("bowl", "碗", "bowl", "お椀"),  // l10n-ignore (catalog headwords)
         r("chopsticks", "筷子", "chopsticks", "箸"),  // l10n-ignore (catalog headwords)
@@ -211,11 +213,12 @@ nonisolated enum DexCatalog {
     ], [
         r("fork", "叉子", "fork", "フォーク"),  // l10n-ignore (catalog headwords)
         r("knife", "刀子", "knife", "ナイフ"),  // l10n-ignore (catalog headwords)
+        r("straw", "吸管", "straw", "ストロー"),  // l10n-ignore (catalog headwords)
+        r("papercup", "紙杯", "paper cup", "紙コップ"),  // l10n-ignore (catalog headwords)
         r("pot", "鍋子", "pot", "鍋"),  // l10n-ignore (catalog headwords)
         r("fryingpan", "平底鍋", "frying pan", "フライパン", "frying.pan"),  // l10n-ignore (catalog headwords)
         r("glass", "玻璃杯", "glass", "グラス"),  // l10n-ignore (catalog headwords)
         r("kettle", "水壺", "kettle", "やかん"),  // l10n-ignore (catalog headwords)
-        r("straw", "吸管", "straw", "ストロー"),  // l10n-ignore (catalog headwords)
         r("cuttingboard", "砧板", "cutting board", "まな板"),  // l10n-ignore (catalog headwords)
         r("bentobox", "便當盒", "bento box", "弁当箱"),  // l10n-ignore (catalog headwords)
         r("thermos", "保溫瓶", "thermos", "水筒"),  // l10n-ignore (catalog headwords)
@@ -230,48 +233,71 @@ nonisolated enum DexCatalog {
         r("table", "桌子", "table", "テーブル", "table.furniture"),  // l10n-ignore (catalog headwords)
         r("bed", "床", "bed", "ベッド", "bed.double"),  // l10n-ignore (catalog headwords)
         r("sofa", "沙發", "sofa", "ソファ", "sofa"),  // l10n-ignore (catalog headwords)
-        r("window", "窗戶", "window", "窓", "window.casement"),  // l10n-ignore (catalog headwords)
+        r("clock", "時鐘", "clock", "時計", "clock"),  // l10n-ignore (catalog headwords)
     ], [
+        r("window", "窗戶", "window", "窓", "window.casement"),  // l10n-ignore (catalog headwords)
         r("door", "門", "door", "ドア", "door.left.hand.closed"),  // l10n-ignore (catalog headwords)
         r("light", "電燈", "light", "電気", "lightbulb"),  // l10n-ignore (catalog headwords)
-        r("curtain", "窗簾", "curtain", "カーテン", "curtains.closed"),  // l10n-ignore (catalog headwords)
         r("desk", "書桌", "desk", "机"),  // l10n-ignore (catalog headwords)
-        r("lamp", "檯燈", "desk lamp", "電気スタンド", "lamp.desk"),  // l10n-ignore (catalog headwords)
+        r("curtain", "窗簾", "curtain", "カーテン", "curtains.closed"),  // l10n-ignore (catalog headwords)
         r("mirror", "鏡子", "mirror", "鏡"),  // l10n-ignore (catalog headwords)
         r("pillow", "枕頭", "pillow", "枕"),  // l10n-ignore (catalog headwords)
         r("blanket", "被子", "blanket", "布団"),  // l10n-ignore (catalog headwords)
         r("cabinet", "櫃子", "cabinet", "戸棚", "cabinet"),  // l10n-ignore (catalog headwords)
+        r("lamp", "檯燈", "desk lamp", "電気スタンド", "lamp.desk"),  // l10n-ignore (catalog headwords)
         r("bookshelf", "書架", "bookshelf", "本棚", "books.vertical"),  // l10n-ignore (catalog headwords)
         r("stairs", "樓梯", "stairs", "階段", "stairs"),  // l10n-ignore (catalog headwords)
-        r("toilet", "馬桶", "toilet", "トイレ", "toilet"),  // l10n-ignore (catalog headwords)
-        r("sink", "洗手台", "sink", "洗面台", "sink"),  // l10n-ignore (catalog headwords)
+        r("alarmclock", "鬧鐘", "alarm clock", "目覚まし時計", "alarm"),  // l10n-ignore (catalog headwords)
         r("calendar", "月曆", "calendar", "カレンダー", "calendar"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c7: Table = (7, "💻", [
-        r("phone", "手機", "phone", "スマホ", "iphone"),  // l10n-ignore (catalog headwords)
-        r("computer", "電腦", "computer", "パソコン", "laptopcomputer"),  // l10n-ignore (catalog headwords)
-        r("tv", "電視", "TV", "テレビ", "tv"),  // l10n-ignore (catalog headwords)
+    private static let c7: Table = (7, "🔌", [
         r("aircon", "冷氣", "air conditioner", "エアコン", "air.conditioner.horizontal"),  // l10n-ignore (catalog headwords)
-        r("headphones", "耳機", "headphones", "イヤホン", "headphones"),  // l10n-ignore (catalog headwords)
-    ], [
-        r("fan", "電風扇", "electric fan", "扇風機", "fan.desk"),  // l10n-ignore (catalog headwords)
         r("refrigerator", "冰箱", "fridge", "冷蔵庫", "refrigerator"),  // l10n-ignore (catalog headwords)
-        r("charger", "充電器", "charger", "充電器", "powerplug"),  // l10n-ignore (catalog headwords)
+        r("tv", "電視", "TV", "テレビ", "tv"),  // l10n-ignore (catalog headwords)
+        r("washingmachine", "洗衣機", "washing machine", "洗濯機", "washer"),  // l10n-ignore (catalog headwords)
+        r("fan", "電風扇", "electric fan", "扇風機", "fan.desk"),  // l10n-ignore (catalog headwords)
+    ], [
         r("ricecooker", "電鍋", "rice cooker", "炊飯器"),  // l10n-ignore (catalog headwords)
         r("microwave", "微波爐", "microwave", "電子レンジ", "microwave"),  // l10n-ignore (catalog headwords)
-        r("washingmachine", "洗衣機", "washing machine", "洗濯機", "washer"),  // l10n-ignore (catalog headwords)
-        r("tablet", "平板", "tablet", "タブレット", "ipad"),  // l10n-ignore (catalog headwords)
-        r("keyboard", "鍵盤", "keyboard", "キーボード", "keyboard"),  // l10n-ignore (catalog headwords)
-        r("computermouse", "滑鼠", "computer mouse", "マウス", "computermouse"),  // l10n-ignore (catalog headwords)
         r("hairdryer", "吹風機", "hair dryer", "ドライヤー"),  // l10n-ignore (catalog headwords)
-        r("powerbank", "行動電源", "power bank", "モバイルバッテリー"),  // l10n-ignore (catalog headwords)
-        r("remote", "遙控器", "remote control", "リモコン"),  // l10n-ignore (catalog headwords)
-        r("speaker", "喇叭", "speaker", "スピーカー", "hifispeaker"),  // l10n-ignore (catalog headwords)
+        r("remote", "遙控器", "remote control", "リモコン", "av.remote"),  // l10n-ignore (catalog headwords)
+        r("waterdispenser", "飲水機", "water dispenser", "ウォーターサーバー"),  // l10n-ignore (catalog headwords)
         r("dehumidifier", "除濕機", "dehumidifier", "除湿機", "dehumidifier"),  // l10n-ignore (catalog headwords)
+        r("vacuum", "吸塵器", "vacuum cleaner", "掃除機"),  // l10n-ignore (catalog headwords)
+        r("hotwaterpot", "熱水瓶", "electric water pot", "電気ポット"),  // l10n-ignore (catalog headwords)
+        r("oven", "烤箱", "oven", "オーブン", "oven"),  // l10n-ignore (catalog headwords)
+        r("airpurifier", "空氣清淨機", "air purifier", "空気清浄機", "air.purifier"),  // l10n-ignore (catalog headwords)
+        r("inductioncooker", "電磁爐", "induction cooker", "IHコンロ", "cooktop"),  // l10n-ignore (catalog headwords)
+        r("clothesdryer", "烘衣機", "clothes dryer", "衣類乾燥機", "dryer"),  // l10n-ignore (catalog headwords)
+        r("iron", "熨斗", "iron", "アイロン"),  // l10n-ignore (catalog headwords)
+        r("toaster", "烤麵包機", "toaster", "トースター"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c8: Table = (8, "✏️", [
+    private static let c8: Table = (8, "📱", [
+        r("phone", "手機", "phone", "スマホ", "iphone"),  // l10n-ignore (catalog headwords)
+        r("computer", "電腦", "computer", "パソコン", "laptopcomputer"),  // l10n-ignore (catalog headwords)
+        r("headphones", "耳機", "headphones", "イヤホン", "headphones"),  // l10n-ignore (catalog headwords)
+        r("charger", "充電器", "charger", "充電器", "powerplug"),  // l10n-ignore (catalog headwords)
+        r("camera", "相機", "camera", "カメラ", "camera"),  // l10n-ignore (catalog headwords)
+    ], [
+        r("powerbank", "行動電源", "power bank", "モバイルバッテリー"),  // l10n-ignore (catalog headwords)
+        r("chargingcable", "充電線", "charging cable", "充電ケーブル", "cable.connector"),  // l10n-ignore (catalog headwords)
+        r("tablet", "平板", "tablet", "タブレット", "ipad"),  // l10n-ignore (catalog headwords)
+        r("phonecase", "手機殼", "phone case", "スマホケース"),  // l10n-ignore (catalog headwords)
+        r("battery", "電池", "battery", "電池", "battery.100"),  // l10n-ignore (catalog headwords)
+        r("keyboard", "鍵盤", "keyboard", "キーボード", "keyboard"),  // l10n-ignore (catalog headwords)
+        r("computermouse", "滑鼠", "computer mouse", "マウス", "computermouse"),  // l10n-ignore (catalog headwords)
+        r("monitor", "螢幕", "monitor", "モニター", "display"),  // l10n-ignore (catalog headwords)
+        r("speaker", "喇叭", "speaker", "スピーカー", "hifispeaker"),  // l10n-ignore (catalog headwords)
+        r("usbdrive", "隨身碟", "USB flash drive", "USBメモリ"),  // l10n-ignore (catalog headwords)
+        r("printer", "印表機", "printer", "プリンター", "printer"),  // l10n-ignore (catalog headwords)
+        r("smartwatch", "智慧手錶", "smartwatch", "スマートウォッチ", "applewatch"),  // l10n-ignore (catalog headwords)
+        r("microphone", "麥克風", "microphone", "マイク", "mic"),  // l10n-ignore (catalog headwords)
+        r("router", "路由器", "router", "ルーター", "wifi.router"),  // l10n-ignore (catalog headwords)
+    ])
+
+    private static let c9: Table = (9, "✏️", [
         r("book", "書", "book", "本", "book.closed"),  // l10n-ignore (catalog headwords)
         r("pen", "筆", "pen", "ペン", "pencil"),  // l10n-ignore (catalog headwords)
         r("notebook", "筆記本", "notebook", "ノート"),  // l10n-ignore (catalog headwords)
@@ -280,21 +306,46 @@ nonisolated enum DexCatalog {
     ], [
         r("pencil", "鉛筆", "pencil", "鉛筆"),  // l10n-ignore (catalog headwords)
         r("paper", "紙", "paper", "紙", "doc"),  // l10n-ignore (catalog headwords)
+        r("comic", "漫畫", "comic", "漫画"),  // l10n-ignore (catalog headwords)
         r("ruler", "尺", "ruler", "定規", "ruler"),  // l10n-ignore (catalog headwords)
         r("tape", "膠帶", "tape", "テープ"),  // l10n-ignore (catalog headwords)
-        r("newspaper", "報紙", "newspaper", "新聞", "newspaper"),  // l10n-ignore (catalog headwords)
-        r("magazine", "雜誌", "magazine", "雑誌", "magazine"),  // l10n-ignore (catalog headwords)
-        r("envelope", "信封", "envelope", "封筒", "envelope"),  // l10n-ignore (catalog headwords)
         r("pencilcase", "鉛筆盒", "pencil case", "筆箱"),  // l10n-ignore (catalog headwords)
         r("marker", "麥克筆", "marker", "マーカー"),  // l10n-ignore (catalog headwords)
         r("glue", "膠水", "glue", "のり"),  // l10n-ignore (catalog headwords)
-        r("paperclip", "迴紋針", "paper clip", "クリップ", "paperclip"),  // l10n-ignore (catalog headwords)
+        r("envelope", "信封", "envelope", "封筒", "envelope"),  // l10n-ignore (catalog headwords)
+        r("newspaper", "報紙", "newspaper", "新聞", "newspaper"),  // l10n-ignore (catalog headwords)
+        r("magazine", "雜誌", "magazine", "雑誌", "magazine"),  // l10n-ignore (catalog headwords)
         r("folder", "資料夾", "folder", "フォルダー", "folder"),  // l10n-ignore (catalog headwords)
         r("stapler", "釘書機", "stapler", "ホッチキス"),  // l10n-ignore (catalog headwords)
+        r("paperclip", "迴紋針", "paper clip", "クリップ", "paperclip"),  // l10n-ignore (catalog headwords)
         r("dictionary", "字典", "dictionary", "辞書"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c9: Table = (9, "👕", [
+    private static let c10: Table = (10, "🪥", [
+        r("toothbrush", "牙刷", "toothbrush", "歯ブラシ"),  // l10n-ignore (catalog headwords)
+        r("towel", "毛巾", "towel", "タオル"),  // l10n-ignore (catalog headwords)
+        r("tissue", "衛生紙", "tissue", "ティッシュ"),  // l10n-ignore (catalog headwords)
+        r("key", "鑰匙", "key", "鍵", "key"),  // l10n-ignore (catalog headwords)
+        r("medicine", "藥", "medicine", "薬", "pills"),  // l10n-ignore (catalog headwords)
+    ], [
+        r("money", "錢", "money", "お金", "banknote"),  // l10n-ignore (catalog headwords)
+        r("plasticbag", "塑膠袋", "plastic bag", "ビニール袋", "bag"),  // l10n-ignore (catalog headwords)
+        r("toothpaste", "牙膏", "toothpaste", "歯磨き粉"),  // l10n-ignore (catalog headwords)
+        r("coin", "硬幣", "coin", "硬貨"),  // l10n-ignore (catalog headwords)
+        r("soap", "肥皂", "soap", "石けん"),  // l10n-ignore (catalog headwords)
+        r("shampoo", "洗髮精", "shampoo", "シャンプー"),  // l10n-ignore (catalog headwords)
+        r("trashbag", "垃圾袋", "trash bag", "ゴミ袋"),  // l10n-ignore (catalog headwords)
+        r("transitcard", "悠遊卡", "transit card", "交通系ICカード"),  // l10n-ignore (catalog headwords)
+        r("receipt", "發票", "receipt", "レシート"),  // l10n-ignore (catalog headwords)
+        r("toilet", "馬桶", "toilet", "トイレ", "toilet"),  // l10n-ignore (catalog headwords)
+        r("sink", "洗手台", "sink", "洗面台", "sink"),  // l10n-ignore (catalog headwords)
+        r("wetwipes", "濕紙巾", "wet wipes", "ウェットティッシュ"),  // l10n-ignore (catalog headwords)
+        r("creditcard", "信用卡", "credit card", "クレジットカード", "creditcard"),  // l10n-ignore (catalog headwords)
+        r("bandage", "OK繃", "bandage", "絆創膏", "bandage"),  // l10n-ignore (catalog headwords)
+        r("hanger", "衣架", "hanger", "ハンガー", "hanger"),  // l10n-ignore (catalog headwords)
+    ])
+
+    private static let c11: Table = (11, "👕", [
         r("clothes", "衣服", "clothes", "服", "tshirt"),  // l10n-ignore (catalog headwords)
         r("pants", "褲子", "pants", "ズボン"),  // l10n-ignore (catalog headwords)
         r("jacket", "外套", "jacket", "上着", "jacket"),  // l10n-ignore (catalog headwords)
@@ -317,53 +368,31 @@ nonisolated enum DexCatalog {
         r("necktie", "領帶", "necktie", "ネクタイ"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c10: Table = (10, "👟", [
+    private static let c12: Table = (12, "👟", [
         r("shoes", "鞋子", "shoes", "靴", "shoe"),  // l10n-ignore (catalog headwords)
         r("hat", "帽子", "hat", "帽子", "hat.cap"),  // l10n-ignore (catalog headwords)
         r("glasses", "眼鏡", "glasses", "眼鏡", "eyeglasses"),  // l10n-ignore (catalog headwords)
         r("bag", "包包", "bag", "かばん", "handbag"),  // l10n-ignore (catalog headwords)
-        r("watch", "手錶", "watch", "腕時計", "watch.analog"),  // l10n-ignore (catalog headwords)
+        r("umbrella", "雨傘", "umbrella", "傘", "umbrella"),  // l10n-ignore (catalog headwords)
     ], [
+        r("watch", "手錶", "watch", "腕時計", "watch.analog"),  // l10n-ignore (catalog headwords)
         r("backpack", "背包", "backpack", "リュック", "backpack"),  // l10n-ignore (catalog headwords)
         r("mask", "口罩", "face mask", "マスク"),  // l10n-ignore (catalog headwords)
         r("slippers", "拖鞋", "slippers", "スリッパ"),  // l10n-ignore (catalog headwords)
+        r("wallet", "錢包", "wallet", "財布", "wallet.bifold"),  // l10n-ignore (catalog headwords)
         r("helmet", "安全帽", "helmet", "ヘルメット", "helmet"),  // l10n-ignore (catalog headwords)
         r("sneakers", "球鞋", "sneakers", "スニーカー", "shoe.2"),  // l10n-ignore (catalog headwords)
         r("sunglasses", "太陽眼鏡", "sunglasses", "サングラス", "sunglasses"),  // l10n-ignore (catalog headwords)
-        r("wallet", "錢包", "wallet", "財布", "wallet.bifold"),  // l10n-ignore (catalog headwords)
-        r("ring", "戒指", "ring", "指輪"),  // l10n-ignore (catalog headwords)
-        r("necklace", "項鍊", "necklace", "ネックレス"),  // l10n-ignore (catalog headwords)
-        r("earrings", "耳環", "earrings", "イヤリング"),  // l10n-ignore (catalog headwords)
+        r("suitcase", "行李箱", "suitcase", "スーツケース", "suitcase.rolling"),  // l10n-ignore (catalog headwords)
         r("belt", "皮帶", "belt", "ベルト"),  // l10n-ignore (catalog headwords)
         r("hairtie", "髮圈", "hair tie", "ヘアゴム"),  // l10n-ignore (catalog headwords)
+        r("earrings", "耳環", "earrings", "イヤリング"),  // l10n-ignore (catalog headwords)
+        r("necklace", "項鍊", "necklace", "ネックレス"),  // l10n-ignore (catalog headwords)
+        r("ring", "戒指", "ring", "指輪"),  // l10n-ignore (catalog headwords)
         r("gloves", "手套", "gloves", "手袋"),  // l10n-ignore (catalog headwords)
-        r("suitcase", "行李箱", "suitcase", "スーツケース", "suitcase.rolling"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c11: Table = (11, "🪥", [
-        r("toothbrush", "牙刷", "toothbrush", "歯ブラシ"),  // l10n-ignore (catalog headwords)
-        r("towel", "毛巾", "towel", "タオル"),  // l10n-ignore (catalog headwords)
-        r("umbrella", "雨傘", "umbrella", "傘", "umbrella"),  // l10n-ignore (catalog headwords)
-        r("key", "鑰匙", "key", "鍵", "key"),  // l10n-ignore (catalog headwords)
-        r("tissue", "衛生紙", "tissue", "ティッシュ"),  // l10n-ignore (catalog headwords)
-    ], [
-        r("toothpaste", "牙膏", "toothpaste", "歯磨き粉"),  // l10n-ignore (catalog headwords)
-        r("soap", "肥皂", "soap", "石けん"),  // l10n-ignore (catalog headwords)
-        r("shampoo", "洗髮精", "shampoo", "シャンプー"),  // l10n-ignore (catalog headwords)
-        r("trashbag", "垃圾袋", "trash bag", "ゴミ袋"),  // l10n-ignore (catalog headwords)
-        r("comb", "梳子", "comb", "くし", "comb"),  // l10n-ignore (catalog headwords)
-        r("hanger", "衣架", "hanger", "ハンガー", "hanger"),  // l10n-ignore (catalog headwords)
-        r("wetwipes", "濕紙巾", "wet wipes", "ウェットティッシュ"),  // l10n-ignore (catalog headwords)
-        r("broom", "掃把", "broom", "ほうき"),  // l10n-ignore (catalog headwords)
-        r("bucket", "水桶", "bucket", "バケツ"),  // l10n-ignore (catalog headwords)
-        r("lighter", "打火機", "lighter", "ライター"),  // l10n-ignore (catalog headwords)
-        r("lock", "鎖", "lock", "錠", "lock"),  // l10n-ignore (catalog headwords)
-        r("hammer", "鐵鎚", "hammer", "金づち", "hammer"),  // l10n-ignore (catalog headwords)
-        r("razor", "刮鬍刀", "razor", "カミソリ"),  // l10n-ignore (catalog headwords)
-        r("mosquitocoil", "蚊香", "mosquito coil", "蚊取り線香"),  // l10n-ignore (catalog headwords)
-    ])
-
-    private static let c12: Table = (12, "🛵", [
+    private static let c13: Table = (13, "🛵", [
         r("scooter", "機車", "scooter", "バイク", "motorcycle"),  // l10n-ignore (catalog headwords)
         r("bus", "公車", "bus", "バス", "bus"),  // l10n-ignore (catalog headwords)
         r("bicycle", "腳踏車", "bicycle", "自転車", "bicycle"),  // l10n-ignore (catalog headwords)
@@ -385,7 +414,7 @@ nonisolated enum DexCatalog {
         r("cablecar", "纜車", "cable car", "ロープウェイ", "cablecar"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c13: Table = (13, "🏪", [
+    private static let c14: Table = (14, "🏪", [
         r("conveniencestore", "便利商店", "convenience store", "コンビニ", "storefront"),  // l10n-ignore (catalog headwords)
         r("temple", "廟", "temple", "お寺"),  // l10n-ignore (catalog headwords)
         r("school", "學校", "school", "学校"),  // l10n-ignore (catalog headwords)
@@ -408,7 +437,7 @@ nonisolated enum DexCatalog {
         r("library", "圖書館", "library", "図書館"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c14: Table = (14, "🚦", [
+    private static let c15: Table = (15, "🚦", [
         r("trafficlight", "紅綠燈", "traffic light", "信号"),  // l10n-ignore (catalog headwords)
         r("signboard", "招牌", "signboard", "看板", "signpost.right"),  // l10n-ignore (catalog headwords)
         r("trashcan", "垃圾桶", "trash can", "ゴミ箱", "trash"),  // l10n-ignore (catalog headwords)
@@ -430,7 +459,7 @@ nonisolated enum DexCatalog {
         r("atm", "提款機", "ATM", "ATM"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c15: Table = (15, "🐾", [
+    private static let c16: Table = (16, "🐾", [
         r("dog", "狗", "dog", "犬", "dog"),  // l10n-ignore (catalog headwords)
         r("cat", "貓", "cat", "猫", "cat"),  // l10n-ignore (catalog headwords)
         r("bird", "鳥", "bird", "鳥", "bird"),  // l10n-ignore (catalog headwords)
@@ -453,7 +482,7 @@ nonisolated enum DexCatalog {
         r("ladybug", "瓢蟲", "ladybug", "テントウムシ", "ladybug"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c16: Table = (16, "🌿", [
+    private static let c17: Table = (17, "🌿", [
         r("flower", "花", "flower", "花", "camera.macro"),  // l10n-ignore (catalog headwords)
         r("tree", "樹", "tree", "木", "tree"),  // l10n-ignore (catalog headwords)
         r("grass", "草", "grass", "草"),  // l10n-ignore (catalog headwords)
@@ -474,7 +503,7 @@ nonisolated enum DexCatalog {
         r("seed", "種子", "seed", "種"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c17: Table = (17, "⛰️", [
+    private static let c18: Table = (18, "⛅", [
         r("sky", "天空", "sky", "空", "cloud.sun"),  // l10n-ignore (catalog headwords)
         r("cloud", "雲", "cloud", "雲", "cloud"),  // l10n-ignore (catalog headwords)
         r("mountain", "山", "mountain", "山", "mountain.2"),  // l10n-ignore (catalog headwords)
@@ -497,7 +526,29 @@ nonisolated enum DexCatalog {
         r("sand", "沙子", "sand", "砂"),  // l10n-ignore (catalog headwords)
     ])
 
-    private static let c18: Table = (18, "🖐️", [
+    private static let c19: Table = (19, "⚽", [
+        r("ball", "球", "ball", "ボール", "soccerball"),  // l10n-ignore (catalog headwords)
+        r("toy", "玩具", "toy", "おもちゃ", "teddybear"),  // l10n-ignore (catalog headwords)
+        r("guitar", "吉他", "guitar", "ギター", "guitars"),  // l10n-ignore (catalog headwords)
+        r("gameconsole", "遊戲機", "game console", "ゲーム機", "gamecontroller"),  // l10n-ignore (catalog headwords)
+        r("balloon", "氣球", "balloon", "風船", "balloon"),  // l10n-ignore (catalog headwords)
+    ], [
+        r("basketball", "籃球", "basketball", "バスケットボール", "basketball"),  // l10n-ignore (catalog headwords)
+        r("badminton", "羽毛球", "badminton", "バドミントン"),  // l10n-ignore (catalog headwords)
+        r("baseball", "棒球", "baseball", "野球", "baseball"),  // l10n-ignore (catalog headwords)
+        r("tabletennis", "桌球", "table tennis", "卓球"),  // l10n-ignore (catalog headwords)
+        r("clawmachine", "夾娃娃機", "claw machine", "クレーンゲーム"),  // l10n-ignore (catalog headwords)
+        r("cards", "撲克牌", "playing cards", "トランプ"),  // l10n-ignore (catalog headwords)
+        r("doll", "娃娃", "doll", "人形"),  // l10n-ignore (catalog headwords)
+        r("puzzle", "拼圖", "jigsaw puzzle", "パズル", "puzzlepiece"),  // l10n-ignore (catalog headwords)
+        r("movie", "電影", "movie", "映画", "film"),  // l10n-ignore (catalog headwords)
+        r("piano", "鋼琴", "piano", "ピアノ", "pianokeys"),  // l10n-ignore (catalog headwords)
+        r("skateboard", "滑板", "skateboard", "スケボー", "skateboard"),  // l10n-ignore (catalog headwords)
+        r("dice", "骰子", "dice", "サイコロ", "dice"),  // l10n-ignore (catalog headwords)
+        r("kite", "風箏", "kite", "凧"),  // l10n-ignore (catalog headwords)
+    ])
+
+    private static let c20: Table = (20, "🖐️", [
         r("hand", "手", "hand", "手", "hand.raised"),  // l10n-ignore (catalog headwords)
         r("face", "臉", "face", "顔", "face.smiling"),  // l10n-ignore (catalog headwords)
         r("eye", "眼睛", "eye", "目", "eye"),  // l10n-ignore (catalog headwords)
@@ -518,52 +569,6 @@ nonisolated enum DexCatalog {
         r("teacher", "老師", "teacher", "先生"),  // l10n-ignore (catalog headwords)
         r("grandmother", "阿嬤", "grandmother", "おばあちゃん"),  // l10n-ignore (catalog headwords)
         r("shopowner", "老闆", "shop owner", "店主"),  // l10n-ignore (catalog headwords)
-    ])
-
-    private static let c19: Table = (19, "⚽", [
-        r("ball", "球", "ball", "ボール", "soccerball"),  // l10n-ignore (catalog headwords)
-        r("toy", "玩具", "toy", "おもちゃ", "teddybear"),  // l10n-ignore (catalog headwords)
-        r("guitar", "吉他", "guitar", "ギター", "guitars"),  // l10n-ignore (catalog headwords)
-        r("camera", "相機", "camera", "カメラ", "camera"),  // l10n-ignore (catalog headwords)
-        r("gameconsole", "遊戲機", "game console", "ゲーム機", "gamecontroller"),  // l10n-ignore (catalog headwords)
-    ], [
-        r("basketball", "籃球", "basketball", "バスケットボール", "basketball"),  // l10n-ignore (catalog headwords)
-        r("badminton", "羽毛球", "badminton", "バドミントン"),  // l10n-ignore (catalog headwords)
-        r("baseball", "棒球", "baseball", "野球", "baseball"),  // l10n-ignore (catalog headwords)
-        r("comic", "漫畫", "comic", "漫画"),  // l10n-ignore (catalog headwords)
-        r("clawmachine", "夾娃娃機", "claw machine", "クレーンゲーム"),  // l10n-ignore (catalog headwords)
-        r("doll", "娃娃", "doll", "人形"),  // l10n-ignore (catalog headwords)
-        r("puzzle", "拼圖", "jigsaw puzzle", "パズル", "puzzlepiece"),  // l10n-ignore (catalog headwords)
-        r("cards", "撲克牌", "playing cards", "トランプ"),  // l10n-ignore (catalog headwords)
-        r("piano", "鋼琴", "piano", "ピアノ", "pianokeys"),  // l10n-ignore (catalog headwords)
-        r("balloon", "氣球", "balloon", "風船", "balloon"),  // l10n-ignore (catalog headwords)
-        r("movie", "電影", "movie", "映画", "film"),  // l10n-ignore (catalog headwords)
-        r("skateboard", "滑板", "skateboard", "スケボー", "skateboard"),  // l10n-ignore (catalog headwords)
-        r("dice", "骰子", "dice", "サイコロ", "dice"),  // l10n-ignore (catalog headwords)
-        r("kite", "風箏", "kite", "凧"),  // l10n-ignore (catalog headwords)
-    ])
-
-    private static let c20: Table = (20, "💊", [
-        r("money", "錢", "money", "お金", "banknote"),  // l10n-ignore (catalog headwords)
-        r("medicine", "藥", "medicine", "薬", "pills"),  // l10n-ignore (catalog headwords)
-        r("clock", "時鐘", "clock", "時計", "clock"),  // l10n-ignore (catalog headwords)
-        r("battery", "電池", "battery", "電池", "battery.100"),  // l10n-ignore (catalog headwords)
-        r("plasticbag", "塑膠袋", "plastic bag", "ビニール袋", "bag"),  // l10n-ignore (catalog headwords)
-    ], [
-        r("coin", "硬幣", "coin", "硬貨"),  // l10n-ignore (catalog headwords)
-        r("receipt", "發票", "receipt", "レシート"),  // l10n-ignore (catalog headwords)
-        r("creditcard", "信用卡", "credit card", "クレジットカード", "creditcard"),  // l10n-ignore (catalog headwords)
-        r("transitcard", "悠遊卡", "transit card", "交通系ICカード"),  // l10n-ignore (catalog headwords)
-        r("box", "箱子", "box", "箱", "shippingbox"),  // l10n-ignore (catalog headwords)
-        r("bottle", "瓶子", "bottle", "瓶"),  // l10n-ignore (catalog headwords)
-        r("bandage", "OK繃", "bandage", "絆創膏", "bandage"),  // l10n-ignore (catalog headwords)
-        r("gift", "禮物", "gift", "プレゼント", "gift"),  // l10n-ignore (catalog headwords)
-        r("ticket", "票", "ticket", "チケット", "ticket"),  // l10n-ignore (catalog headwords)
-        r("alarmclock", "鬧鐘", "alarm clock", "目覚まし時計", "alarm"),  // l10n-ignore (catalog headwords)
-        r("papercup", "紙杯", "paper cup", "紙コップ"),  // l10n-ignore (catalog headwords)
-        r("rope", "繩子", "rope", "ロープ"),  // l10n-ignore (catalog headwords)
-        r("bell", "鈴", "bell", "ベル", "bell"),  // l10n-ignore (catalog headwords)
-        r("thermometer", "溫度計", "thermometer", "温度計", "thermometer.medium"),  // l10n-ignore (catalog headwords)
     ])
 
     static let categories: [DexCategory] = {

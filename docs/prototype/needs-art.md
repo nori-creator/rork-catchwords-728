@@ -8,9 +8,9 @@
 - 一覧の元は `ios/CatchWords/Models/DexCatalog.swift`（項目を変えたらこの表も直す）。
 - No. は基本の 100 個だけ（001–100）。それ以外は捕まえた順に 101 から番号が付くので、ここでは「—」。
 
-合計 **219** 個（全 376 項目のうち）。
+合計 **219** 個（全 379 項目のうち）。
 
-## 1. 🥤 飲み物（15）
+## 1. 🧋 飲み物（15）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@
 | — | `yogurtdrink` | 優酪乳 | drinkable yogurt | 飲むヨーグルト |
 | — | `hotcocoa` | 熱可可 | hot chocolate | ココア |
 
-## 2. 🍜 料理（19）
+## 2. 🍜 料理・屋台（19）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -40,19 +40,19 @@
 | 009 | `dumplings` | 水餃 | dumplings | 水餃子 |
 | 010 | `bun` | 包子 | steamed bun | 肉まん |
 | — | `egg` | 蛋 | egg | 卵 |
+| — | `braisedporkrice` | 滷肉飯 | braised pork rice | 魯肉飯 |
 | — | `friedrice` | 炒飯 | fried rice | チャーハン |
 | — | `soup` | 湯 | soup | スープ |
-| — | `braisedporkrice` | 滷肉飯 | braised pork rice | 魯肉飯 |
 | — | `beefnoodles` | 牛肉麵 | beef noodle soup | 牛肉麺 |
+| — | `danbing` | 蛋餅 | egg crepe | ダンビン |
 | — | `sandwich` | 三明治 | sandwich | サンドイッチ |
 | — | `tofu` | 豆腐 | tofu | 豆腐 |
 | — | `porridge` | 粥 | congee | お粥 |
-| — | `hotpot` | 火鍋 | hot pot | 火鍋 |
 | — | `friedchicken` | 炸雞 | fried chicken | フライドチキン |
 | — | `stinkytofu` | 臭豆腐 | stinky tofu | 臭豆腐 |
+| — | `hotpot` | 火鍋 | hot pot | 火鍋 |
+| — | `scallionpancake` | 蔥油餅 | scallion pancake | ねぎ餅 |
 | — | `hamburger` | 漢堡 | hamburger | ハンバーガー |
-| — | `sushi` | 壽司 | sushi | 寿司 |
-| — | `pizza` | 披薩 | pizza | ピザ |
 
 ## 3. 🍎 果物・野菜（18）
 
@@ -77,7 +77,7 @@
 | — | `cucumber` | 小黃瓜 | cucumber | きゅうり |
 | — | `potato` | 馬鈴薯 | potato | じゃがいも |
 
-## 4. 🍰 パン・お菓子（17）
+## 4. 🍰 お菓子・パン（17）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@
 | — | `waffle` | 鬆餅 | waffle | ワッフル |
 | — | `jelly` | 果凍 | jelly | ゼリー |
 
-## 5. 🍳 食器・台所（17）
+## 5. 🥢 食器・台所（18）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -109,10 +109,11 @@
 | 025 | `spoon` | 湯匙 | spoon | スプーン |
 | — | `fork` | 叉子 | fork | フォーク |
 | — | `knife` | 刀子 | knife | ナイフ |
+| — | `straw` | 吸管 | straw | ストロー |
+| — | `papercup` | 紙杯 | paper cup | 紙コップ |
 | — | `pot` | 鍋子 | pot | 鍋 |
 | — | `glass` | 玻璃杯 | glass | グラス |
 | — | `kettle` | 水壺 | kettle | やかん |
-| — | `straw` | 吸管 | straw | ストロー |
 | — | `cuttingboard` | 砧板 | cutting board | まな板 |
 | — | `bentobox` | 便當盒 | bento box | 弁当箱 |
 | — | `thermos` | 保溫瓶 | thermos | 水筒 |
@@ -121,7 +122,7 @@
 | — | `sponge` | 菜瓜布 | scrub sponge | スポンジ |
 | — | `dishsoap` | 洗碗精 | dish soap | 食器用洗剤 |
 
-## 6. 🛋️ 家具・部屋（4）
+## 6. 🛋️ 家具・インテリア（4）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -130,21 +131,33 @@
 | — | `pillow` | 枕頭 | pillow | 枕 |
 | — | `blanket` | 被子 | blanket | 布団 |
 
-## 7. 💻 家電・電子機器（4）
+## 7. 🔌 家電（7）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
 | — | `ricecooker` | 電鍋 | rice cooker | 炊飯器 |
 | — | `hairdryer` | 吹風機 | hair dryer | ドライヤー |
-| — | `powerbank` | 行動電源 | power bank | モバイルバッテリー |
-| — | `remote` | 遙控器 | remote control | リモコン |
+| — | `waterdispenser` | 飲水機 | water dispenser | ウォーターサーバー |
+| — | `vacuum` | 吸塵器 | vacuum cleaner | 掃除機 |
+| — | `hotwaterpot` | 熱水瓶 | electric water pot | 電気ポット |
+| — | `iron` | 熨斗 | iron | アイロン |
+| — | `toaster` | 烤麵包機 | toaster | トースター |
 
-## 8. ✏️ 文房具・本（8）
+## 8. 📱 スマホ・パソコン（3）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
-| 038 | `notebook` | 筆記本 | notebook | ノート |
+| — | `powerbank` | 行動電源 | power bank | モバイルバッテリー |
+| — | `phonecase` | 手機殼 | phone case | スマホケース |
+| — | `usbdrive` | 隨身碟 | USB flash drive | USBメモリ |
+
+## 9. ✏️ 文房具・本（9）
+
+| No. | id | 台湾華語 | English | 日本語 |
+|---|---|---|---|---|
+| 043 | `notebook` | 筆記本 | notebook | ノート |
 | — | `pencil` | 鉛筆 | pencil | 鉛筆 |
+| — | `comic` | 漫畫 | comic | 漫画 |
 | — | `tape` | 膠帶 | tape | テープ |
 | — | `pencilcase` | 鉛筆盒 | pencil case | 筆箱 |
 | — | `marker` | 麥克筆 | marker | マーカー |
@@ -152,13 +165,29 @@
 | — | `stapler` | 釘書機 | stapler | ホッチキス |
 | — | `dictionary` | 字典 | dictionary | 辞書 |
 
-## 9. 👕 服（17）
+## 10. 🪥 洗面・日用品（11）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
-| 042 | `pants` | 褲子 | pants | ズボン |
-| 044 | `skirt` | 裙子 | skirt | スカート |
-| 045 | `socks` | 襪子 | socks | 靴下 |
+| 046 | `toothbrush` | 牙刷 | toothbrush | 歯ブラシ |
+| 047 | `towel` | 毛巾 | towel | タオル |
+| 048 | `tissue` | 衛生紙 | tissue | ティッシュ |
+| — | `toothpaste` | 牙膏 | toothpaste | 歯磨き粉 |
+| — | `coin` | 硬幣 | coin | 硬貨 |
+| — | `soap` | 肥皂 | soap | 石けん |
+| — | `shampoo` | 洗髮精 | shampoo | シャンプー |
+| — | `trashbag` | 垃圾袋 | trash bag | ゴミ袋 |
+| — | `transitcard` | 悠遊卡 | transit card | 交通系ICカード |
+| — | `receipt` | 發票 | receipt | レシート |
+| — | `wetwipes` | 濕紙巾 | wet wipes | ウェットティッシュ |
+
+## 11. 👕 服（17）
+
+| No. | id | 台湾華語 | English | 日本語 |
+|---|---|---|---|---|
+| 052 | `pants` | 褲子 | pants | ズボン |
+| 054 | `skirt` | 裙子 | skirt | スカート |
+| 055 | `socks` | 襪子 | socks | 靴下 |
 | — | `tshirt` | T恤 | T-shirt | Tシャツ |
 | — | `shirt` | 襯衫 | shirt | シャツ |
 | — | `shorts` | 短褲 | shorts | 短パン |
@@ -174,38 +203,20 @@
 | — | `scarf` | 圍巾 | scarf | マフラー |
 | — | `necktie` | 領帶 | necktie | ネクタイ |
 
-## 10. 👟 身につける物（8）
+## 12. 👟 靴・バッグ・小物（8）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
 | — | `mask` | 口罩 | face mask | マスク |
 | — | `slippers` | 拖鞋 | slippers | スリッパ |
-| — | `ring` | 戒指 | ring | 指輪 |
-| — | `necklace` | 項鍊 | necklace | ネックレス |
-| — | `earrings` | 耳環 | earrings | イヤリング |
 | — | `belt` | 皮帶 | belt | ベルト |
 | — | `hairtie` | 髮圈 | hair tie | ヘアゴム |
+| — | `earrings` | 耳環 | earrings | イヤリング |
+| — | `necklace` | 項鍊 | necklace | ネックレス |
+| — | `ring` | 戒指 | ring | 指輪 |
 | — | `gloves` | 手套 | gloves | 手袋 |
 
-## 11. 🪥 日用品（13）
-
-| No. | id | 台湾華語 | English | 日本語 |
-|---|---|---|---|---|
-| 051 | `toothbrush` | 牙刷 | toothbrush | 歯ブラシ |
-| 052 | `towel` | 毛巾 | towel | タオル |
-| 055 | `tissue` | 衛生紙 | tissue | ティッシュ |
-| — | `toothpaste` | 牙膏 | toothpaste | 歯磨き粉 |
-| — | `soap` | 肥皂 | soap | 石けん |
-| — | `shampoo` | 洗髮精 | shampoo | シャンプー |
-| — | `trashbag` | 垃圾袋 | trash bag | ゴミ袋 |
-| — | `wetwipes` | 濕紙巾 | wet wipes | ウェットティッシュ |
-| — | `broom` | 掃把 | broom | ほうき |
-| — | `bucket` | 水桶 | bucket | バケツ |
-| — | `lighter` | 打火機 | lighter | ライター |
-| — | `razor` | 刮鬍刀 | razor | カミソリ |
-| — | `mosquitocoil` | 蚊香 | mosquito coil | 蚊取り線香 |
-
-## 12. 🛵 乗り物（6）
+## 13. 🛵 乗り物（6）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -216,13 +227,13 @@
 | — | `policecar` | 警車 | police car | パトカー |
 | — | `firetruck` | 消防車 | fire truck | 消防車 |
 
-## 13. 🏪 建物・お店（10）
+## 14. 🏪 建物・お店（10）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
-| 062 | `temple` | 廟 | temple | お寺 |
-| 063 | `school` | 學校 | school | 学校 |
-| 065 | `nightmarket` | 夜市 | night market | 夜市 |
+| 067 | `temple` | 廟 | temple | お寺 |
+| 068 | `school` | 學校 | school | 学校 |
+| 070 | `nightmarket` | 夜市 | night market | 夜市 |
 | — | `breakfastshop` | 早餐店 | breakfast shop | 朝ごはん屋 |
 | — | `park` | 公園 | park | 公園 |
 | — | `station` | 車站 | station | 駅 |
@@ -231,13 +242,13 @@
 | — | `postoffice` | 郵局 | post office | 郵便局 |
 | — | `library` | 圖書館 | library | 図書館 |
 
-## 14. 🚦 街の物（12）
+## 15. 🚦 道・街の物（12）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
-| 066 | `trafficlight` | 紅綠燈 | traffic light | 信号 |
-| 069 | `streetlight` | 路燈 | streetlight | 街灯 |
-| 070 | `crosswalk` | 斑馬線 | crosswalk | 横断歩道 |
+| 071 | `trafficlight` | 紅綠燈 | traffic light | 信号 |
+| 074 | `streetlight` | 路燈 | streetlight | 街灯 |
+| 075 | `crosswalk` | 斑馬線 | crosswalk | 横断歩道 |
 | — | `busstop` | 公車站 | bus stop | バス停 |
 | — | `bench` | 長椅 | bench | ベンチ |
 | — | `mailbox` | 郵筒 | mailbox | ポスト |
@@ -248,7 +259,7 @@
 | — | `firehydrant` | 消防栓 | fire hydrant | 消火栓 |
 | — | `atm` | 提款機 | ATM | ATM |
 
-## 15. 🐾 動物（10）
+## 16. 🐾 動物（10）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -263,12 +274,12 @@
 | — | `frog` | 青蛙 | frog | カエル |
 | — | `hamster` | 倉鼠 | hamster | ハムスター |
 
-## 16. 🌿 植物・花（14）
+## 17. 🌿 植物・花（14）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
-| 078 | `grass` | 草 | grass | 草 |
-| 080 | `pottedplant` | 盆栽 | potted plant | 鉢植え |
+| 083 | `grass` | 草 | grass | 草 |
+| 085 | `pottedplant` | 盆栽 | potted plant | 鉢植え |
 | — | `banyan` | 榕樹 | banyan tree | ガジュマル |
 | — | `palmtree` | 椰子樹 | palm tree | ヤシの木 |
 | — | `cactus` | 仙人掌 | cactus | サボテン |
@@ -282,7 +293,7 @@
 | — | `lotus` | 蓮花 | lotus | ハス |
 | — | `seed` | 種子 | seed | 種 |
 
-## 17. ⛰️ 自然・空（5）
+## 18. ⛅ 空・自然（5）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -292,7 +303,18 @@
 | — | `puddle` | 水坑 | puddle | 水たまり |
 | — | `sand` | 沙子 | sand | 砂 |
 
-## 18. 🖐️ 人・体（10）
+## 19. ⚽ スポーツ・遊び（6）
+
+| No. | id | 台湾華語 | English | 日本語 |
+|---|---|---|---|---|
+| — | `badminton` | 羽毛球 | badminton | バドミントン |
+| — | `tabletennis` | 桌球 | table tennis | 卓球 |
+| — | `clawmachine` | 夾娃娃機 | claw machine | クレーンゲーム |
+| — | `cards` | 撲克牌 | playing cards | トランプ |
+| — | `doll` | 娃娃 | doll | 人形 |
+| — | `kite` | 風箏 | kite | 凧 |
+
+## 20. 🖐️ 人・体（10）
 
 | No. | id | 台湾華語 | English | 日本語 |
 |---|---|---|---|---|
@@ -306,25 +328,3 @@
 | — | `teacher` | 老師 | teacher | 先生 |
 | — | `grandmother` | 阿嬤 | grandmother | おばあちゃん |
 | — | `shopowner` | 老闆 | shop owner | 店主 |
-
-## 19. ⚽ 遊び・趣味（6）
-
-| No. | id | 台湾華語 | English | 日本語 |
-|---|---|---|---|---|
-| — | `badminton` | 羽毛球 | badminton | バドミントン |
-| — | `comic` | 漫畫 | comic | 漫画 |
-| — | `clawmachine` | 夾娃娃機 | claw machine | クレーンゲーム |
-| — | `doll` | 娃娃 | doll | 人形 |
-| — | `cards` | 撲克牌 | playing cards | トランプ |
-| — | `kite` | 風箏 | kite | 凧 |
-
-## 20. 💊 その他（6）
-
-| No. | id | 台湾華語 | English | 日本語 |
-|---|---|---|---|---|
-| — | `coin` | 硬幣 | coin | 硬貨 |
-| — | `receipt` | 發票 | receipt | レシート |
-| — | `transitcard` | 悠遊卡 | transit card | 交通系ICカード |
-| — | `bottle` | 瓶子 | bottle | 瓶 |
-| — | `papercup` | 紙杯 | paper cup | 紙コップ |
-| — | `rope` | 繩子 | rope | ロープ |

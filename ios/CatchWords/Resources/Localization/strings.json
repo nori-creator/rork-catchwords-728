@@ -435,6 +435,10 @@
   "en": "Shops",
   "zh-TW": "店家"
  },
+ "お菓子・パン": {
+  "en": "Sweets & Bread",
+  "zh-TW": "點心、麵包"
+ },
  "お金": {
   "en": "Money",
   "zh-TW": "金錢"
@@ -1003,6 +1007,14 @@
   "en": "Sports",
   "zh-TW": "運動"
  },
+ "スポーツ・遊び": {
+  "en": "Sports & Play",
+  "zh-TW": "運動、遊戲"
+ },
+ "スマホ・パソコン": {
+  "en": "Phones & Computers",
+  "zh-TW": "手機、電腦"
+ },
  "スライド": {
   "en": "Slides",
   "zh-TW": "滑動"
@@ -1074,10 +1086,6 @@
  "パスワード設定用のメールを送りました。": {
   "en": "We sent you an email to set your password.",
   "zh-TW": "已寄出設定密碼的電子郵件。"
- },
- "パン・お菓子": {
-  "en": "Bread & Sweets",
-  "zh-TW": "麵包、點心"
  },
  "ビジネス": {
   "en": "Business",
@@ -1959,9 +1967,9 @@
   "en": "Furniture",
   "zh-TW": "家具"
  },
- "家具・部屋": {
-  "en": "Furniture & Rooms",
-  "zh-TW": "家具、房間"
+ "家具・インテリア": {
+  "en": "Furniture & Interior",
+  "zh-TW": "家具、室內擺設"
  },
  "家族": {
   "en": "Family",
@@ -1970,10 +1978,6 @@
  "家電": {
   "en": "Appliances",
   "zh-TW": "家電"
- },
- "家電・電子機器": {
-  "en": "Appliances & Electronics",
-  "zh-TW": "家電、電子產品"
  },
  "対象を解析しています": {
   "en": "Reading the object…",
@@ -2227,9 +2231,9 @@
   "en": "Stationery & Books",
   "zh-TW": "文具、書"
  },
- "料理": {
-  "en": "Dishes",
-  "zh-TW": "料理"
+ "料理・屋台": {
+  "en": "Dishes & Street Food",
+  "zh-TW": "料理、小吃"
  },
  "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
   "en": "Catch a new word and its first review comes up 10 minutes later.",
@@ -2298,10 +2302,6 @@
  "日本語を学習中": {
   "en": "Learning Japanese",
   "zh-TW": "正在學日文"
- },
- "日用品": {
-  "en": "Daily Necessities",
-  "zh-TW": "日用品"
  },
  "日記": {
   "en": "Diary",
@@ -2523,6 +2523,10 @@
   "en": "Zhuyin",
   "zh-TW": "注音"
  },
+ "洗面・日用品": {
+  "en": "Toiletries & Daily Goods",
+  "zh-TW": "盥洗、日用品"
+ },
  "活用": {
   "en": "Word forms",
   "zh-TW": "詞形變化"
@@ -2703,6 +2707,10 @@
   "en": "Sky",
   "zh-TW": "天空"
  },
+ "空・自然": {
+  "en": "Sky & Nature",
+  "zh-TW": "天空、大自然"
+ },
  "答えを確かめたら「次へ」。": {
   "en": "Check the answer, then tap “Next”.",
   "zh-TW": "確認答案後，按「下一步」。"
@@ -2771,10 +2779,6 @@
   "en": "Nature",
   "zh-TW": "自然"
  },
- "自然・空": {
-  "en": "Nature & Sky",
-  "zh-TW": "自然、天空"
- },
  "興味のあるテーマを選んでください（複数選択可）。": {
   "en": "Choose the topics you enjoy. Select as many as you like.",
   "zh-TW": "選擇感興趣的主題，可以複選。"
@@ -2834,10 +2838,6 @@
  "街で見つけた物が、学びたい言葉になる。": {
   "en": "What you find on the street becomes the language you're learning.",
   "zh-TW": "街上看到的東西，變成你想學的語言。"
- },
- "街の物": {
-  "en": "Things on the Street",
-  "zh-TW": "街上的東西"
  },
  "街並み": {
   "en": "Streets",
@@ -3067,10 +3067,6 @@
   "en": "Wear",
   "zh-TW": "穿戴"
  },
- "身につける物": {
-  "en": "Things You Wear",
-  "zh-TW": "穿戴用品"
- },
  "身の回り": {
   "en": "Everyday things",
   "zh-TW": "生活用品"
@@ -3127,10 +3123,6 @@
   "en": "Week",
   "zh-TW": "週"
  },
- "遊び・趣味": {
-  "en": "Play & Hobbies",
-  "zh-TW": "遊戲、興趣"
- },
  "過去の日記": {
   "en": "Past entries",
   "zh-TW": "以前的日記"
@@ -3146,6 +3138,10 @@
  "過去形": {
   "en": "Past",
   "zh-TW": "過去式"
+ },
+ "道・街の物": {
+  "en": "Streets & Street Things",
+  "zh-TW": "道路、街上的東西"
  },
  "道具": {
   "en": "Tools",
@@ -3218,6 +3214,10 @@
  "靴": {
   "en": "Shoes",
   "zh-TW": "鞋子"
+ },
+ "靴・バッグ・小物": {
+  "en": "Shoes, Bags & Accessories",
+  "zh-TW": "鞋子、包包、配件"
  },
  "音と手ざわり": {
   "en": "Sound & haptics",

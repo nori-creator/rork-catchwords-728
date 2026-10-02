@@ -7,33 +7,32 @@ struct CCCategory: Equatable {
     /// DexCatalog category number, 1…20.
     let no: Int
 
-    /// No. → (b1, b2). Categories 2, 9, 13, 15 and 16 keep the prototype's own food / thing / city /
-    /// animal / plant colours.
+    /// No. → (b1, b2). The 20 colours re-selected with the categories (2026-10-02).
     private static let palette: [Int: (UInt32, UInt32)] = [
-        1: (0xF6E3CF, 0xC58B55),   // 飲み物
-        2: (0xFFE6A0, 0xF2A93B),   // 料理
-        3: (0xFFD5CC, 0xE9553F),   // 果物・野菜
-        4: (0xFFE0EC, 0xE97AA8),   // パン・お菓子
-        5: (0xD5F2EE, 0x3FAE9F),   // 食器・台所
-        6: (0xEEE3D6, 0xA57E58),   // 家具・部屋
-        7: (0xDCE1EC, 0x6A7896),   // 家電・電子機器
-        8: (0xFFF3B8, 0xE2B81F),   // 文房具・本
-        9: (0xE6DCFF, 0x9C86EA),   // 服
-        10: (0xF8DDF4, 0xC462B6),  // 身につける物
-        11: (0xEEF6CC, 0xA6BE3A),  // 日用品
-        12: (0xDDE0FF, 0x5E6BE0),  // 乗り物
-        13: (0xCBE6FF, 0x5B9BE8),  // 建物・お店
-        14: (0xE2E5E9, 0x7F8893),  // 街の物
-        15: (0xFFD3B8, 0xE98352),  // 動物
-        16: (0xD4F59A, 0x7CC242),  // 植物・花
-        17: (0xCDEFF5, 0x2FA3B8),  // 自然・空
-        18: (0xFFDDE2, 0xE0607A),  // 人・体
-        19: (0xDDF5E6, 0x41B36B),  // 遊び・趣味
-        20: (0xEBDDF0, 0x8E5BA6),  // その他
+        1:  (0xFAE5D4, 0xC49367),  // 飲み物
+        2:  (0xFFE4C2, 0xE19B34),  // 料理・屋台
+        3:  (0xFFDCD5, 0xE57065),  // 果物・野菜
+        4:  (0xFFDCE8, 0xE77FA1),  // お菓子・パン
+        5:  (0xCAF5E4, 0x30B792),  // 食器・台所
+        6:  (0xF6E6DD, 0xA9836E),  // 家具・インテリア
+        7:  (0xE0ECF3, 0x86A3B5),  // 家電
+        8:  (0xEDE2FF, 0xA383E3),  // スマホ・パソコン
+        9:  (0xFAE8BE, 0xECBE3F),  // 文房具・本
+        10: (0xC7F4F0, 0x2DC2BB),  // 洗面・日用品
+        11: (0xF9DFFF, 0xBA7DC8),  // 服
+        12: (0xFFDCF2, 0xDB78B2),  // 靴・バッグ・小物
+        13: (0xDBE9FF, 0x6B86E1),  // 乗り物
+        14: (0xD3EFFA, 0x529EB7),  // 建物・お店
+        15: (0xE5EAF0, 0x8794A1),  // 道・街の物
+        16: (0xFFDFCA, 0xEA8751),  // 動物
+        17: (0xD5F4D2, 0x68B460),  // 植物・花
+        18: (0xCEEFFF, 0x60BCF4),  // 空・自然
+        19: (0xEAEEC0, 0xC1C73F),  // スポーツ・遊び
+        20: (0xFAE3E2, 0xC99593),  // 人・体
     ]
 
-    var b1: UInt32 { (Self.palette[no] ?? Self.palette[20]!).0 }
-    var b2: UInt32 { (Self.palette[no] ?? Self.palette[20]!).1 }
+    var b1: UInt32 { (Self.palette[no] ?? Self.palette[10]!).0 }
+    var b2: UInt32 { (Self.palette[no] ?? Self.palette[10]!).1 }
 
     /// The card's studio colour for one of the 20 dex categories (DexCatalog).
     static func forDex(_ no: Int) -> CCCategory { CCCategory(no: no) }
