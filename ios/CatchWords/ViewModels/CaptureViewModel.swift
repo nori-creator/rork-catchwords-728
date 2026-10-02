@@ -65,6 +65,15 @@ final class CaptureViewModel {
     /// The failure was "no connection" (web shows WifiOff; otherwise Sparkles).
     var failedOffline: Bool = false
 
+    // Card catch (docs/prototype/cardcatch-src.html): the photo flow's objects, cut-outs and boxes.
+    /// The objects in the photo (candidates grouped per object, each with its Vision cut-out and box).
+    var objects: [CatchObject] = []
+    /// When the shutter was pressed (the prototype starts the analysis 260 ms after `shoot()`).
+    var shotAt: Double?
+    /// The photo flow uses the card catch; search, scan and text catches keep the picker and sticker card.
+    var usesCardCatch: Bool { captureType == "photo" && photo != nil }
+    private var masksTask: Task<InstanceMasks?, Never>?
+
     // Re-encounter ("再会！")
     var owned: OwnedWord?
     var reencCount: Int?
@@ -97,10 +106,20 @@ final class CaptureViewModel {
         detectOutcome = nil
         searchError = nil
         owned = nil
+        objects = []
+        shotAt = nil
         captureType = mode == .scan ? "scan" : "photo"
         let textOnly = mode == .scan
         step = askSelfie ? .selfie : .processing
-        if !askSelfie { SoundService.shared.startAnalyzeLoop() }
+        // The card catch has its own sounds (no BGM in the prototype); scan keeps the analyze loop.
+        if !askSelfie, textOnly { SoundService.shared.startAnalyzeLoop() }
+        // One foreground-instance request per photo, started with the server call and reused for every object.
+        masksTask?.cancel()
+        if textOnly {
+            masksTask = nil
+        } else {
+            masksTask = Task<InstanceMasks?, Never> { await CutoutService.instanceMasks(from: image) }
+        }
         // A photo restored from the queue is never queued again (one entry per photo, not per retry).
         if let rid = restoredPendingId {
             pendingId = rid
@@ -115,6 +134,15 @@ final class CaptureViewModel {
                     ? try await AIService.shared.detectScan(image: image)
                     : try await AIService.shared.suggest(image: image)
                 guard token == runToken else { return }
+                if !textOnly {
+                    let masks = await masksTask?.value
+                    let size = image.size
+                    let built = await Task.detached(priority: .userInitiated) {
+                        CatchObject.build(candidates: found, masks: masks, photoSize: size)
+                    }.value
+                    guard token == runToken else { return }
+                    objects = built
+                }
                 detectOutcome = .success(found)
             } catch {
                 guard token == runToken else { return }
@@ -142,7 +170,7 @@ final class CaptureViewModel {
         guard step == .selfie else { return }
         selfie = image
         if detectOutcome == nil {
-            SoundService.shared.startAnalyzeLoop()
+            if !usesCardCatch { SoundService.shared.startAnalyzeLoop() }
             withAnimation(.easeInOut(duration: 0.3)) { step = .processing }
         } else {
             advanceAfterDetect()
@@ -155,6 +183,11 @@ final class CaptureViewModel {
         switch outcome {
         case .success(let found):
             candidates = found
+            if usesCardCatch {
+                // The card catch plays its own analysis (focus brackets) and then shows the objects.
+                step = .select
+                return
+            }
             Haptics.impact(.medium)
             withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
         case .failure(let error):
@@ -257,6 +290,43 @@ final class CaptureViewModel {
 
     private struct OwnedCheck: Decodable { let owned: OwnedWord? }
 
+    /// Card catch: a word chosen in the sheet (`chooseWord`). The light/card animation is already running;
+    /// the owned-word check decides between the card (details load next) and the re-encounter.
+    /// The sticker is the object's cut-out (cut-out mode on), else the photo.
+    func choose(_ object: CatchObject, word: Candidate) {
+        guard !isCheckingOwned else { return }
+        let token = runToken
+        picked = word
+        details = nil
+        detailsTask = nil
+        searchError = nil
+        cutoutTask?.cancel()
+        isCutting = false
+        cutoutLift = nil
+        cutout = Self.cutoutMode ? object.cut : nil
+        isCheckingOwned = true
+        Task {
+            let found = try? await NativeAPI.call(
+                "checkOwnedWord",
+                ["headword": word.headword, "language": NativeAPI.targetLanguage],
+                as: OwnedCheck.self, timeout: 15
+            )
+            guard token == runToken, picked == word else { return }
+            isCheckingOwned = false
+            if let o = found?.owned {
+                owned = o
+                reencCount = nil
+                reencFailed = false
+                reencPhotoSaved = false
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { step = .reencounter }
+            } else {
+                // Fail open: a broken check must never block a new catch.
+                step = .card
+                loadDetails(for: word)
+            }
+        }
+    }
+
     /// Settings → 切り抜きモード (web `catchSpeed`, default on). Off = keep the photo as the sticker.
     static let cutoutModeKey = "capture.cutoutMode"
     static var cutoutMode: Bool { UserDefaults.standard.object(forKey: cutoutModeKey) as? Bool ?? true }
@@ -307,8 +377,12 @@ final class CaptureViewModel {
                 withAnimation(.easeOut(duration: 0.3)) { details = d }
             } else if step == .card {
                 showToast(L("カード生成に失敗しました"))
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
-                    step = candidates.isEmpty ? .camera : .select
+                if usesCardCatch {
+                    step = .select   // the card catch goes back to its objects
+                } else {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                        step = candidates.isEmpty ? .camera : .select
+                    }
                 }
             }
         }
@@ -372,6 +446,10 @@ final class CaptureViewModel {
         runToken += 1
         SoundService.shared.stopAnalyzeLoop()
         cutoutTask?.cancel()
+        masksTask?.cancel()
+        masksTask = nil
+        objects = []
+        shotAt = nil
         if let pid = pendingId { PendingQueue.shared.remove(id: pid) }
         pendingId = nil
         photo = nil
