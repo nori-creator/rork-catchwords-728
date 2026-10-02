@@ -5,11 +5,13 @@ import SwiftUI
 /// in a pale blue room, like choosing a card pack. The middle card faces you up front; the cards on either
 /// side swing back along the ring (outer edge toward you) and the next ones peek, smaller, behind them.
 /// The floor reflects each card, a light streak crosses a card's face as it passes the middle, and small
-/// sparks blink in the air.
+/// sparks blink in the air. The middle card is a holo card: its foil shimmers and it leans with the phone.
 ///
 /// Position and pose are worked out from one number every frame (`CarouselSpring.value`, in cards), so the
-/// ring follows the finger 1:1 and never lags a frame behind. On release it glides to the nearest card on a
-/// spring that keeps the finger's speed (Apple's `.smooth`, or `.snappy` after a fast flick).
+/// ring follows the finger 1:1 and never lags a frame behind. On release the flick's momentum is projected
+/// to the card it would coast to, and a critically damped spring (response 0.5) carries the finger's speed
+/// into the snap. Only `CoverFlowStage` reads that per-frame number; this view (dots, photo row, sound)
+/// redraws only when the middle card changes (`CarouselSpring.index`).
 struct DexCoverFlow: View {
     @Environment(DexStore.self) private var dex
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,13 +21,12 @@ struct DexCoverFlow: View {
     var initialIndex = 0
 
     @State private var spring = CarouselSpring()
-    @State private var dragFrom: Double?
     @State private var lastSlideSound: CFTimeInterval = 0
     @State private var muteSlideSound = false
 
     private var center: Int {
         guard !stickers.isEmpty else { return 0 }
-        return max(0, min(stickers.count - 1, Int(spring.value.rounded())))
+        return max(0, min(stickers.count - 1, spring.index))
     }
 
     var body: some View {
@@ -35,7 +36,8 @@ struct DexCoverFlow: View {
             let w = min(geo.size.width * 0.72, 310,
                         max(128, (geo.size.height - 16 - 24 - 64 - 120) / (1.48 * 1.18)))
             VStack(spacing: 0) {
-                stage(width: geo.size.width, cardWidth: w)
+                CoverFlowStage(spring: spring, stickers: stickers, stageWidth: geo.size.width, cardWidth: w,
+                               reduceMotion: reduceMotion, onOpen: onOpen, bring: bring)
                     .frame(height: 16 + w * 1.48 * 1.18)
                 dots
                 thumbnails
@@ -49,8 +51,8 @@ struct DexCoverFlow: View {
         }
         .onChange(of: center) { _, _ in
             if muteSlideSound { muteSlideSound = false; return }
-            // A card reached the middle: the recorded "suh" (web: `el-gallery-slide`, gain 0.8), never closer
-            // than 70ms so a fast flick past many cards doesn't jam.
+            // A card reached the middle: the recorded "suh" (web: `el-gallery-slide`, gain 0.8) and a selection
+            // tick, never closer than 70ms so a fast flick past many cards doesn't jam.
             let now = CACurrentMediaTime()
             guard now - lastSlideSound >= 0.07 else { return }
             lastSlideSound = now
@@ -62,104 +64,6 @@ struct DexCoverFlow: View {
             spring.set(Double(max(0, min(stickers.count - 1, initialIndex))))
         }
         .onDisappear { spring.stop() }
-    }
-
-    // MARK: Stage
-
-    private func stage(width: CGFloat, cardWidth w: CGFloat) -> some View {
-        let ch = w * 1.48
-        let stageH = 16 + ch * 1.18
-        let step = w * CarouselPose.step
-        let pos = spring.value
-        let range = visibleRange(around: pos)
-        return ZStack(alignment: .topLeading) {
-            // The white light pooled at the middle card's feet (no pedestal — R15).
-            EllipticalGradient(colors: [.white.opacity(0.95), .white.opacity(0)], center: .center)
-                .frame(width: w * 2.2, height: w * 0.5)
-                .position(x: width / 2, y: 16 + ch - w * 0.12 + w * 0.25)
-                .allowsHitTesting(false)
-            ForEach(range, id: \.self) { i in
-                // `stickers` can shrink (a delete) between computing the range and drawing it.
-                if stickers.indices.contains(i) {
-                    slot(i, pos: pos, stageWidth: width, stageHeight: stageH, cardWidth: w)
-                }
-            }
-        }
-        .frame(width: width, height: stageH, alignment: .topLeading)
-        .contentShape(Rectangle())
-        .clipped()
-        .gesture(
-            DragGesture(minimumDistance: 6)
-                .onChanged { g in
-                    if dragFrom == nil {
-                        spring.stop()
-                        dragFrom = spring.value
-                    }
-                    let maxPos = Double(max(0, stickers.count - 1))
-                    var x = (dragFrom ?? 0) - g.translation.width / step
-                    // Resistance past the ends instead of a hard stop.
-                    if x < 0 { x = -Self.rubberband(-x, 2) } else if x > maxPos { x = maxPos + Self.rubberband(x - maxPos, 2) }
-                    spring.set(x)
-                }
-                .onEnded { g in
-                    dragFrom = nil
-                    let pxPerSecond = -g.velocity.width
-                    let v = pxPerSecond / step
-                    let projected = spring.value + Self.projectMomentum(v)
-                    let target = Double(max(0, min(stickers.count - 1, Int(projected.rounded()))))
-                    if reduceMotion {
-                        spring.set(target)
-                    } else {
-                        // Only a quick flick gets the slight overshoot (Apple's snappy).
-                        spring.to(target, response: 0.5, damping: abs(pxPerSecond) > 600 ? 0.85 : 1, velocity: v)
-                    }
-                }
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityAdjustableAction { dir in
-            switch dir {
-            case .increment: bring(center + 1)
-            case .decrement: bring(center - 1)
-            @unknown default: break
-            }
-        }
-    }
-
-    private func visibleRange(around pos: Double) -> [Int] {
-        guard !stickers.isEmpty else { return [] }
-        let lo = max(0, Int((pos - CarouselPose.reach).rounded(.down)))
-        let hi = min(stickers.count - 1, Int((pos + CarouselPose.reach).rounded(.up)))
-        return lo <= hi ? Array(lo...hi) : []
-    }
-
-    /// One card on the ring, projected like the web's `perspective: 1000px` (origin 50% / 45%).
-    private func slot(_ i: Int, pos: Double, stageWidth: CGFloat, stageHeight: CGFloat, cardWidth w: CGFloat) -> some View {
-        let s = stickers[i]
-        let rel = Double(i) - pos
-        let p = CarouselPose.pose(rel, reduced: reduceMotion)
-        let ch = w * 1.48
-        let perspective: CGFloat = 1000
-        let z = p.z * w
-        let scale = perspective / (perspective - z)
-        let originY = stageHeight * 0.45
-        let cardCenterY = 16 + ch / 2
-        let isCenter = i == center
-        // The streak sits off the right edge while the card rests in the middle and sweeps across its face
-        // (right → left) only while it passes the middle — like foil catching the light.
-        let sweep = 45 - min(1.2, abs(rel)) * 75
-        return CarouselCard(sticker: s, width: w, sweep: sweep, mirror: abs(rel) <= 3)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if isCenter { onOpen(s) } else { bring(i) }
-            }
-            .rotation3DEffect(.degrees(p.rotateY), axis: (x: 0, y: 1, z: 0), perspective: ch / perspective)
-            .scaleEffect(scale)
-            .position(x: stageWidth / 2 + p.x * w * scale, y: originY + (cardCenterY - originY) * scale)
-            .opacity(p.opacity)
-            .zIndex(p.zIndex)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(s.word?.headword ?? "") \(s.word?.meaningJa ?? "")")
-            .accessibilityAddTraits(isCenter ? [.isButton, .isSelected] : .isButton)
     }
 
     private func bring(_ i: Int) {
@@ -251,6 +155,137 @@ struct DexCoverFlow: View {
     }
 }
 
+/// The ring itself — the only view that reads the spring's per-frame value, so a swipe redraws the cards'
+/// poses and nothing else. Each card's face is its own view (`CarouselCardFace`) whose inputs don't change
+/// while it moves, so SwiftUI skips rebuilding it and only the transforms update.
+private struct CoverFlowStage: View {
+    let spring: CarouselSpring
+    let stickers: [Sticker]
+    let stageWidth: CGFloat
+    let cardWidth: CGFloat
+    let reduceMotion: Bool
+    let onOpen: (Sticker) -> Void
+    let bring: @MainActor (Int) -> Void
+
+    @State private var dragFrom: Double?
+
+    private var center: Int {
+        guard !stickers.isEmpty else { return 0 }
+        return max(0, min(stickers.count - 1, spring.index))
+    }
+
+    var body: some View {
+        let w = cardWidth
+        let width = stageWidth
+        let ch = w * 1.48
+        let stageH = 16 + ch * 1.18
+        let step = w * CarouselPose.step
+        let pos = spring.value
+        let range = visibleRange(around: pos)
+        return ZStack(alignment: .topLeading) {
+            // The white light pooled at the middle card's feet (no pedestal — R15).
+            EllipticalGradient(colors: [.white.opacity(0.95), .white.opacity(0)], center: .center)
+                .frame(width: w * 2.2, height: w * 0.5)
+                .position(x: width / 2, y: 16 + ch - w * 0.12 + w * 0.25)
+                .allowsHitTesting(false)
+            ForEach(range, id: \.self) { i in
+                // `stickers` can shrink (a delete) between computing the range and drawing it.
+                if stickers.indices.contains(i) {
+                    slot(i, pos: pos, stageHeight: stageH)
+                }
+            }
+        }
+        .frame(width: width, height: stageH, alignment: .topLeading)
+        .contentShape(Rectangle())
+        .clipped()
+        .gesture(
+            DragGesture(minimumDistance: 6)
+                .onChanged { g in
+                    if dragFrom == nil {
+                        spring.stop()
+                        dragFrom = spring.value
+                    }
+                    let maxPos = Double(max(0, stickers.count - 1))
+                    var x = (dragFrom ?? 0) - g.translation.width / step
+                    // Resistance past the ends instead of a hard stop.
+                    if x < 0 { x = -DexCoverFlow.rubberband(-x, 2) } else if x > maxPos { x = maxPos + DexCoverFlow.rubberband(x - maxPos, 2) }
+                    spring.set(x)
+                }
+                .onEnded { g in
+                    dragFrom = nil
+                    guard !stickers.isEmpty else { return }
+                    let maxPos = Double(stickers.count - 1)
+                    // Finger speed in cards per second (dragging left moves the ring forward).
+                    var v = -g.velocity.width / step
+                    let projected = spring.value + DexCoverFlow.projectMomentum(v)
+                    let target = max(0, min(maxPos, projected.rounded()))
+                    if reduceMotion {
+                        spring.set(target)
+                        return
+                    }
+                    // Carry the finger's speed into the snap, but no more than the spring can absorb over the
+                    // distance left — at the ends a hard flick would otherwise sail past the last card.
+                    let limit = CarouselSpring.omega(response: 0.5) * abs(target - spring.value) + 1.5
+                    v = max(-limit, min(limit, v))
+                    spring.to(target, response: 0.5, damping: 1, velocity: v)
+                }
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityAdjustableAction { dir in
+            switch dir {
+            case .increment: bring(center + 1)
+            case .decrement: bring(center - 1)
+            @unknown default: break
+            }
+        }
+    }
+
+    private func visibleRange(around pos: Double) -> [Int] {
+        guard !stickers.isEmpty else { return [] }
+        let lo = max(0, Int((pos - CarouselPose.reach).rounded(.down)))
+        let hi = min(stickers.count - 1, Int((pos + CarouselPose.reach).rounded(.up)))
+        return lo <= hi ? Array(lo...hi) : []
+    }
+
+    /// One card on the ring, projected like the web's `perspective: 1000px` (origin 50% / 45%).
+    private func slot(_ i: Int, pos: Double, stageHeight: CGFloat) -> some View {
+        let w = cardWidth
+        let s = stickers[i]
+        let rel = Double(i) - pos
+        let p = CarouselPose.pose(rel, reduced: reduceMotion)
+        let ch = w * 1.48
+        let perspective: CGFloat = 1000
+        let z = p.z * w
+        let scale = perspective / (perspective - z)
+        let originY = stageHeight * 0.45
+        let cardCenterY = 16 + ch / 2
+        let isCenter = i == center
+        // The streak sits off the right edge while the card rests in the middle and sweeps across its face
+        // (right → left) only while it passes the middle — like foil catching the light.
+        let sweep = 45 - min(1.2, abs(rel)) * 75
+        // Only the middle card is a live holo card (sensor + shader); its foil also slides with the swipe and
+        // fades as it hands over to the next card. The others stay plain and pass constant values, so they
+        // don't redraw for it.
+        let holo = isCenter
+        let holoIntensity = holo ? max(0.15, 1 - abs(rel) * 1.6) : 0
+        let holoTilt = holo ? CGPoint(x: max(-1, min(1, -rel * 1.6)), y: 0) : .zero
+        return CarouselCard(sticker: s, width: w, sweep: sweep, mirror: abs(rel) <= 3,
+                            holo: holo, holoIntensity: holoIntensity, holoTilt: holoTilt)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isCenter { onOpen(s) } else { bring(i) }
+            }
+            .rotation3DEffect(.degrees(p.rotateY), axis: (x: 0, y: 1, z: 0), perspective: ch / perspective)
+            .scaleEffect(scale)
+            .position(x: stageWidth / 2 + p.x * w * scale, y: originY + (cardCenterY - originY) * scale)
+            .opacity(p.opacity)
+            .zIndex(p.zIndex)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(s.word?.headword ?? "") \(s.word?.meaningJa ?? "")")
+            .accessibilityAddTraits(isCenter ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
 /// Web `carouselPose`: the cards stand on an ellipse `RING_R` wide and `RING_DEPTH` deep (in card widths),
 /// `RING_STEP` radians apart; the middle card is at the front (z = 0).
 enum CarouselPose {
@@ -280,22 +315,28 @@ enum CarouselPose {
 }
 
 /// A white card (photo, word with its reading, meaning, date and place), the light streak, and its
-/// reflection on the floor.
+/// reflection on the floor. The middle card (`holo`) also gets the holographic foil and leans with the phone.
 private struct CarouselCard: View {
-    @Environment(DexStore.self) private var dex
     let sticker: Sticker
     let width: CGFloat
     let sweep: Double
     let mirror: Bool
-
-    private static let ink = Color(hex: 0x1D1D1F)
-    private static let muted = Color(hex: 0x5F6B7D)
+    var holo = false
+    var holoIntensity: Double = 0
+    var holoTilt: CGPoint = .zero
 
     var body: some View {
-        face
+        CarouselCardFace(sticker: sticker, width: width)
             .overlay { gloss }
             .clipShape(.rect(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color(red: 40 / 255, green: 80 / 255, blue: 140 / 255).opacity(0.1), lineWidth: 1))
+            // Always applied (same structure for every card, so becoming the middle card never reloads the
+            // photo); only the active one reads the sensor and runs the shader. No drag tilt: the ring owns the drag.
+            .holoCard(isActive: holo, cornerRadius: 14, intensity: holoIntensity, maxAngle: 10,
+                      allowsDragTilt: false, extraTilt: holoTilt)
+            // One flattened layer, so the two shadows are cast once from the card outline rather than from
+            // every text and image inside it on every frame.
+            .compositingGroup()
             .shadow(color: Color(red: 40 / 255, green: 70 / 255, blue: 120 / 255).opacity(0.08), radius: 3, y: 2)
             .shadow(color: Color(red: 40 / 255, green: 70 / 255, blue: 120 / 255).opacity(0.3), radius: 16, y: 18)
             .background(alignment: .top) {
@@ -303,7 +344,47 @@ private struct CarouselCard: View {
             }
     }
 
-    private var face: some View {
+    /// The streak of light (web `.dex-cf__gloss`: 105°, white 55% → 14%, 2.2 card widths wide).
+    private var gloss: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .white.opacity(0), location: 0.38),
+                .init(color: .white.opacity(0.55), location: 0.47),
+                .init(color: .white.opacity(0.14), location: 0.53),
+                .init(color: .white.opacity(0), location: 0.62),
+            ],
+            startPoint: UnitPoint(x: 0, y: 0.37), endPoint: UnitPoint(x: 1, y: 0.63)
+        )
+        .frame(width: width * 2.2, height: width * 1.48 * 1.2)
+        .offset(x: width * 2.2 * sweep / 100)
+        .allowsHitTesting(false)
+    }
+
+    /// The card upside down under itself, faint at its feet and gone within a quarter of its height.
+    private var reflection: some View {
+        CarouselCardFace(sticker: sticker, width: width)
+            .clipShape(.rect(cornerRadius: 14, style: .continuous))
+            .scaleEffect(x: 1, y: -1)
+            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.24)],
+                                 startPoint: .top, endPoint: .bottom))
+            .opacity(0.22)
+            .offset(y: width * 1.48 + 3)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// The card's printed face. Its inputs (the sticker and the width) don't change while the ring turns, so
+/// SwiftUI keeps the built face and the per-frame work is only the transforms around it.
+private struct CarouselCardFace: View {
+    @Environment(DexStore.self) private var dex
+    let sticker: Sticker
+    let width: CGFloat
+
+    private static let ink = Color(hex: 0x1D1D1F)
+    private static let muted = Color(hex: 0x5F6B7D)
+
+    var body: some View {
         let s = sticker
         let path = s.heroPath
         let h = width * 1.48
@@ -350,35 +431,6 @@ private struct CarouselCard: View {
         }
         .frame(width: width, height: h)
         .background(.white)
-    }
-
-    /// The streak of light (web `.dex-cf__gloss`: 105°, white 55% → 14%, 2.2 card widths wide).
-    private var gloss: some View {
-        LinearGradient(
-            stops: [
-                .init(color: .white.opacity(0), location: 0.38),
-                .init(color: .white.opacity(0.55), location: 0.47),
-                .init(color: .white.opacity(0.14), location: 0.53),
-                .init(color: .white.opacity(0), location: 0.62),
-            ],
-            startPoint: UnitPoint(x: 0, y: 0.37), endPoint: UnitPoint(x: 1, y: 0.63)
-        )
-        .frame(width: width * 2.2, height: width * 1.48 * 1.2)
-        .offset(x: width * 2.2 * sweep / 100)
-        .allowsHitTesting(false)
-    }
-
-    /// The card upside down under itself, faint at its feet and gone within a quarter of its height.
-    private var reflection: some View {
-        face
-            .clipShape(.rect(cornerRadius: 14, style: .continuous))
-            .scaleEffect(x: 1, y: -1)
-            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.24)],
-                                 startPoint: .top, endPoint: .bottom))
-            .opacity(0.22)
-            .offset(y: width * 1.48 + 3)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
     }
 }
 
@@ -460,11 +512,18 @@ struct DexGalleryBackdrop: View {
 }
 
 /// A spring driven every frame (web `createSpring`): Apple's response / damping, the speed carried over
-/// from the finger, and retargetable mid-flight without a jump.
+/// from the finger, and retargetable mid-flight without a jump. A CADisplayLink (not SwiftUI's own
+/// animation) because the ring is non-linear in this number — cards must travel along the ellipse, appear
+/// and drop out at the back, and fire the slide sound / haptic as each card passes the middle — none of which
+/// an interpolated `withAnimation` value would report while it runs.
 @MainActor @Observable
 final class CarouselSpring: NSObject {
-    /// Where the ring is, in cards (0 = the first card in the middle).
-    var value: Double = 0
+    /// Where the ring is, in cards (0 = the first card in the middle). Changes every frame while moving;
+    /// read it only in the view that draws the poses.
+    private(set) var value: Double = 0
+    /// The card nearest the middle (`value` rounded, not clamped). Changes only when a card passes the
+    /// middle, so views that just need "which card" don't redraw every frame.
+    private(set) var index: Int = 0
 
     @ObservationIgnored private var velocity: Double = 0
     @ObservationIgnored private var target: Double = 0
@@ -473,10 +532,15 @@ final class CarouselSpring: NSObject {
     @ObservationIgnored private var link: CADisplayLink?
     @ObservationIgnored private var lastTime: CFTimeInterval = 0
 
+    /// Angular frequency for Apple's `response` (seconds per oscillation).
+    nonisolated static func omega(response: Double) -> Double {
+        2 * Double.pi / max(0.05, response)
+    }
+
     /// Put it there at once (following the finger, or with reduced motion).
     func set(_ v: Double) {
         stop()
-        value = v
+        move(to: v)
         velocity = 0
         target = v
     }
@@ -484,7 +548,7 @@ final class CarouselSpring: NSObject {
     func to(_ t: Double, response: Double, damping: Double, velocity v: Double? = nil) {
         target = t
         if let v { velocity = v }
-        let omega = 2 * Double.pi / max(0.05, response)
+        let omega = Self.omega(response: response)
         stiffness = omega * omega
         friction = 2 * damping * omega
         guard link == nil else { return }
@@ -499,6 +563,14 @@ final class CarouselSpring: NSObject {
         link?.invalidate()
         link = nil
         velocity = 0
+    }
+
+    /// The one place `value` changes; `index` is only written when it really changes (an @Observable
+    /// property notifies on every set, equal or not).
+    private func move(to x: Double) {
+        value = x
+        let n = x.isFinite ? Int(x.rounded()) : 0
+        if n != index { index = n }
     }
 
     @objc private func tick(_ l: CADisplayLink) {
@@ -516,11 +588,11 @@ final class CarouselSpring: NSObject {
             dt -= h
         }
         if abs(x - target) < 0.0005, abs(v) < 0.005 {
-            value = target
+            move(to: target)
             stop()
             return
         }
         velocity = v
-        value = x
+        move(to: x)
     }
 }

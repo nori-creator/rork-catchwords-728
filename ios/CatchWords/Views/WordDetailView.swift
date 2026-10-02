@@ -42,6 +42,8 @@ struct WordDetailView: View {
     /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
     @State private var laterPhotos: [StickerPhoto] = []
     @State private var heroPage: Int = 0
+    /// The photo hero is at least partly in view (its holo foil and tilt run only then).
+    @State private var heroOnScreen: Bool = true
     /// ネットの画像 (web WebImagesBody): the search result, the 「別の画像」 round, and the one being applied.
     @State private var webCandidates: [WebImageCandidate] = []
     @State private var webRound: Int = 0
@@ -454,6 +456,10 @@ struct WordDetailView: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 28, style: .continuous))
+            // A gentle holo card on the photo side (Holographic.swift): faint foil and a few degrees of lean
+            // with the phone, only while the hero is on screen. No drag tilt — the hero already pages by swipe.
+            .holoCard(isActive: heroOnScreen && !back, cornerRadius: 28, intensity: 0.5, maxAngle: 6, allowsDragTilt: false)
+            .onScrollVisibilityChange(threshold: 0.2) { heroOnScreen = $0 }
             .scaleEffect(x: back ? -1 : 1)
             .rotation3DEffect(.degrees(flipAngle), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
             .shadow(color: .black.opacity(0.14), radius: 16, y: 8)

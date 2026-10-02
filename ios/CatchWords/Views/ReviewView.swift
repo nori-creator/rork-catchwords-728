@@ -112,6 +112,7 @@ struct ReviewView: View {
         .fullScreenCover(isPresented: $showWordbooks) {
             WordbookView()
         }
+        .reviewLiveActivity(store: store, dex: dex, answered: answer != nil, enabled: !router.tour.isReview)
     }
 
     /// FirstCatchPractice: 撮った1枚（と図鑑にあればもう1枚）で、4択を記録せずに試す。

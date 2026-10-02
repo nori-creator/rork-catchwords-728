@@ -28,6 +28,18 @@ enum Haptics {
         guard isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
+
+    /// The tap under a bubble "pon" (page open / back): one soft, round transient — a little
+    /// rounder and lighter going back. Core Haptics when there is an engine, a soft impact otherwise.
+    static func pon(open: Bool) {
+        guard isEnabled else { return }
+        let patterns = HapticPatterns.shared
+        if patterns.isAvailable {
+            patterns.transient(intensity: open ? 0.6 : 0.45, sharpness: open ? 0.45 : 0.3)
+        } else {
+            impact(.soft, intensity: open ? 0.75 : 0.55)
+        }
+    }
 }
 
 
@@ -57,6 +69,33 @@ final class HapticPatterns {
     }
 
     private static func p(_ id: CHHapticEvent.ParameterID, _ v: Float) -> CHHapticEventParameter { .init(parameterID: id, value: v) }
+
+    /// One short tap with a chosen feel (used by `Haptics.pon`).
+    func transient(intensity: Float, sharpness: Float) {
+        play([CHHapticEvent(eventType: .hapticTransient,
+                            parameters: [Self.p(.hapticIntensity, intensity), Self.p(.hapticSharpness, sharpness)],
+                            relativeTime: 0)])
+    }
+
+    /// A word lands in the dex: a firm round thud, then two smaller bounces (matches el-land-bounce).
+    /// Without an engine it is the old single heavy impact.
+    func land() {
+        guard isAvailable else {
+            Haptics.impact(.heavy)
+            return
+        }
+        play([
+            CHHapticEvent(eventType: .hapticTransient,
+                          parameters: [Self.p(.hapticIntensity, 1), Self.p(.hapticSharpness, 0.4)],
+                          relativeTime: 0),
+            CHHapticEvent(eventType: .hapticTransient,
+                          parameters: [Self.p(.hapticIntensity, 0.55), Self.p(.hapticSharpness, 0.35)],
+                          relativeTime: 0.16),
+            CHHapticEvent(eventType: .hapticTransient,
+                          parameters: [Self.p(.hapticIntensity, 0.3), Self.p(.hapticSharpness, 0.3)],
+                          relativeTime: 0.27),
+        ])
+    }
 
     /// Scissors along the outline: a fine, crisp buzz for `duration` seconds that fades out.
     func trace(duration: TimeInterval) {

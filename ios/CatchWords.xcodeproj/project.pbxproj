@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C0FFEE0000000000000000AD /* CatchWordsWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000A1 /* CatchWordsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +25,45 @@
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
 			remoteInfo = CatchWords;
 		};
+		C0FFEE0000000000000000AE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0FFEE0000000000000000A5;
+			remoteInfo = CatchWordsWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0FFEE0000000000000000AC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0FFEE0000000000000000AD /* CatchWordsWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		105FC57A2E9EAD3100EA8BCF /* CatchWords.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CatchWords.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5892E9EAD3200EA8BCF /* CatchWordsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CatchWordsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5932E9EAD3200EA8BCF /* CatchWordsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CatchWordsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0FFEE0000000000000000A1 /* CatchWordsWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CatchWordsWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C0FFEE0000000000000000A4 /* Exceptions for "CatchWordsWidgets" folder in "CatchWordsWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C0FFEE0000000000000000A5 /* CatchWordsWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		105FC57C2E9EAD3100EA8BCF /* CatchWords */ = {
@@ -43,6 +79,19 @@
 		105FC5962E9EAD3200EA8BCF /* CatchWordsUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = CatchWordsUITests;
+			sourceTree = "<group>";
+		};
+		C0FFEE0000000000000000A2 /* CatchWordsWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C0FFEE0000000000000000A4 /* Exceptions for "CatchWordsWidgets" folder in "CatchWordsWidgets" target */,
+			);
+			path = CatchWordsWidgets;
+			sourceTree = "<group>";
+		};
+		C0FFEE0000000000000000A3 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +118,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0FFEE0000000000000000A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,6 +134,8 @@
 				105FC57C2E9EAD3100EA8BCF /* CatchWords */,
 				105FC58C2E9EAD3200EA8BCF /* CatchWordsTests */,
 				105FC5962E9EAD3200EA8BCF /* CatchWordsUITests */,
+				C0FFEE0000000000000000A2 /* CatchWordsWidgets */,
+				C0FFEE0000000000000000A3 /* Shared */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +146,7 @@
 				105FC57A2E9EAD3100EA8BCF /* CatchWords.app */,
 				105FC5892E9EAD3200EA8BCF /* CatchWordsTests.xctest */,
 				105FC5932E9EAD3200EA8BCF /* CatchWordsUITests.xctest */,
+				C0FFEE0000000000000000A1 /* CatchWordsWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,13 +161,16 @@
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
 				105FC5782E9EAD3100EA8BCF /* Resources */,
+				C0FFEE0000000000000000AC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C0FFEE0000000000000000AF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				105FC57C2E9EAD3100EA8BCF /* CatchWords */,
+				C0FFEE0000000000000000A3 /* Shared */,
 			);
 			name = CatchWords;
 			packageProductDependencies = (
@@ -163,6 +225,29 @@
 			productReference = 105FC5932E9EAD3200EA8BCF /* CatchWordsUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C0FFEE0000000000000000A5 /* CatchWordsWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0FFEE0000000000000000A9 /* Build configuration list for PBXNativeTarget "CatchWordsWidgets" */;
+			buildPhases = (
+				C0FFEE0000000000000000A6 /* Sources */,
+				C0FFEE0000000000000000A7 /* Frameworks */,
+				C0FFEE0000000000000000A8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C0FFEE0000000000000000A2 /* CatchWordsWidgets */,
+				C0FFEE0000000000000000A3 /* Shared */,
+			);
+			name = CatchWordsWidgets;
+			packageProductDependencies = (
+			);
+			productName = CatchWordsWidgets;
+			productReference = C0FFEE0000000000000000A1 /* CatchWordsWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -183,6 +268,9 @@
 					105FC5922E9EAD3200EA8BCF = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 105FC5792E9EAD3100EA8BCF;
+					};
+					C0FFEE0000000000000000A5 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -205,6 +293,7 @@
 				105FC5792E9EAD3100EA8BCF /* CatchWords */,
 				105FC5882E9EAD3200EA8BCF /* CatchWordsTests */,
 				105FC5922E9EAD3200EA8BCF /* CatchWordsUITests */,
+				C0FFEE0000000000000000A5 /* CatchWordsWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -225,6 +314,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		105FC5912E9EAD3200EA8BCF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0FFEE0000000000000000A8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -255,6 +351,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0FFEE0000000000000000A6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -267,6 +370,11 @@
 			isa = PBXTargetDependency;
 			target = 105FC5792E9EAD3100EA8BCF /* CatchWords */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
+		};
+		C0FFEE0000000000000000AF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0FFEE0000000000000000A5 /* CatchWordsWidgets */;
+			targetProxy = C0FFEE0000000000000000AE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -405,6 +513,7 @@
 				CODE_SIGN_ENTITLEMENTS = CatchWords/CatchWords.entitlements;
 				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、学んでいる言語の単語として図鑑に集めるためにカメラを使います。";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "声で単語を調べるためにマイクを使います。";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した言葉を文字にして、単語を調べるために音声認識を使います。";
@@ -446,6 +555,7 @@
 				CODE_SIGN_ENTITLEMENTS = CatchWords/CatchWords.entitlements;
 				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "身の回りの物を撮って、学んでいる言語の単語として図鑑に集めるためにカメラを使います。";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "声で単語を調べるためにマイクを使います。";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "話した言葉を文字にして、単語を調べるために音声認識を使います。";
@@ -558,6 +668,66 @@
 			};
 			name = Release;
 		};
+		C0FFEE0000000000000000AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CatchWordsWidgets/CatchWordsWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CatchWordsWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nori.catchwords.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C0FFEE0000000000000000AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CatchWordsWidgets/CatchWordsWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CatchWordsWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CatchWords;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nori.catchwords.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -593,6 +763,15 @@
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
 				105FC5A52E9EAD3200EA8BCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0FFEE0000000000000000A9 /* Build configuration list for PBXNativeTarget "CatchWordsWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0FFEE0000000000000000AA /* Debug */,
+				C0FFEE0000000000000000AB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -258,6 +258,14 @@ struct CaptureView: View {
             .overlay(alignment: .top) {
                 if vm.step == .selfie { selfiePrompt.padding(.top, 48) }
             }
+            // ── Memory lens (MemoryLensOverlay): past catches near here float where they were shot.
+            // Back camera only, and gone while the capture flow (selfie / analyzing / candidates) runs.
+            .overlay {
+                if vm.step == .camera, camera.position == .back {
+                    MemoryLensOverlay(zoom: camera.zoom) { router.openDetail($0, zoom: false) }
+                }
+            }
+            // ── end Memory lens
             .background(Color.black)
         case .denied:
             CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
@@ -370,7 +378,8 @@ struct CaptureView: View {
             .disabled(vm.step == .selfie)
             Spacer()
             ShutterButton(icon: vm.step == .selfie ? "camera" : vm.mode.shutterIcon,
-                          enabled: vm.mode == .search || camera.state == .running) { shoot() }
+                          enabled: vm.mode == .search || camera.state == .running,
+                          arriving: router.shutterFlying) { shoot() }
                 .tourAnchor(.shutter)
                 .accessibilityIdentifier("camera.shutter")
             Spacer()
@@ -614,32 +623,57 @@ struct ViewfinderBrackets: View {
     }
 }
 
-/// Blue disc with a white ring; the glyph follows the mode (SHUTTER_ICON).
+/// Deep-blue disc (the brand primary) with a white ring and a white glyph; the glyph follows the
+/// mode (SHUTTER_ICON). While the camera tab's icon is flying in (`arriving`) the disc waits hidden,
+/// then pops in with a small bounce while its white ring draws round.
 struct ShutterButton: View {
     var icon: String = "camera"
     var enabled: Bool
+    /// The tab bar's camera icon is still on its way here (MainTabView's shutter flight).
+    var arriving: Bool = false
     let action: () -> Void
     @State private var pressed: Bool = false
+    @State private var ring: CGFloat = 1
+    @State private var pop: CGFloat = 1
+
+    /// Shared with the flight so the flying disc lands as exactly this one.
+    static let discSize: CGFloat = 66
+    static let discFill = LinearGradient(colors: [Theme.primary, Theme.primaryDeep], startPoint: .top, endPoint: .bottom)
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 Circle().fill(Theme.primary.opacity(0.35)).frame(width: 84, height: 84).blur(radius: 10)
-                Circle().stroke(.white, lineWidth: 3).frame(width: 74, height: 74)
                 Circle()
-                    .fill(LinearGradient(colors: [Color(hex: 0x2A9BFF), Color(hex: 0x0070F0)], startPoint: .top, endPoint: .bottom))
-                    .frame(width: 66, height: 66)
+                    .trim(from: 0, to: ring)
+                    .stroke(.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 74, height: 74)
+                Circle()
+                    .fill(Self.discFill)
+                    .frame(width: Self.discSize, height: Self.discSize)
                     .overlay(Image(systemName: icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
                         .contentTransition(.symbolEffect(.replace)))
                     .scaleEffect(pressed ? 0.88 : 1)
             }
             .frame(width: 88, height: 88)
+            .scaleEffect(pop)
+            .opacity(arriving ? 0 : 1)
             .contentShape(Circle())
         }
         .buttonStyle(ShutterStyle(pressed: $pressed))
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.45)
         .accessibilityLabel(L("撮影"))
+        .onAppear { if arriving { ring = 0 } }
+        .onChange(of: arriving) { _, isArriving in
+            guard !isArriving else { ring = 0; return }
+            // Landed: a small overshoot bounce while the ring draws in clockwise from the top.
+            withAnimation(.easeOut(duration: 0.12)) { pop = 1.1 } completion: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { pop = 1 }
+            }
+            withAnimation(.easeOut(duration: 0.38)) { ring = 1 }
+        }
     }
 }
 
