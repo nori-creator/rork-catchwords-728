@@ -116,7 +116,19 @@ final class FullTourTests: XCTestCase {
             }
         }
         let catchButton = app.buttons["card.catch"]
-        guard catchButton.waitForExistence(timeout: 30) else {
+        let again = app.buttons["reencounter.dex"]
+        // A word already in the dex opens the re-encounter card instead of the catch card.
+        let deadline = Date().addingTimeInterval(30)
+        while !catchButton.exists && !again.exists && Date() < deadline { settle(0.5) }
+        if again.exists && !catchButton.exists {
+            settle(1)
+            snap("reencounter")
+            again.tap()
+            settle(3)
+            snap("dex-after-reencounter")
+            return
+        }
+        guard catchButton.exists else {
             XCTFail("[\(display)/\(learning)] the word card did not open after searching")
             snap("search-failed")
             return

@@ -196,7 +196,7 @@ struct DexCoverFlow: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 8) {
                         ForEach(Array(stickers.enumerated()), id: \.element.id) { i, s in
-                            let path = s.objectImageUrl ?? s.cutoutImageUrl
+                            let path = s.heroPath
                             Button { bring(i) } label: {
                                 Color.black.opacity(0.05).frame(width: 48, height: 48)
                                     .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
@@ -305,13 +305,13 @@ private struct CarouselCard: View {
 
     private var face: some View {
         let s = sticker
-        let path = s.objectImageUrl ?? s.cutoutImageUrl
+        let path = s.heroPath
         let h = width * 1.48
         return VStack(alignment: .leading, spacing: 0) {
             Color.black.opacity(0.05)
                 .frame(width: width, height: h * 0.64)
                 .overlay {
-                    StickerImage(path: path, url: dex.url(for: path), contentMode: s.objectImageUrl == nil ? .fit : .fill)
+                    StickerImage(path: path, url: dex.url(for: path), contentMode: path == s.cutoutImageUrl ? .fit : .fill)
                         .allowsHitTesting(false)
                 }
                 .clipped()

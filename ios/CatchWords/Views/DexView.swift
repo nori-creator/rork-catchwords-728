@@ -659,12 +659,12 @@ struct DexCell: View {
     @State private var glow: Bool = false
 
     var body: some View {
-        let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
+        let path = sticker.heroPath
         Theme.secondary
             .aspectRatio(0.92, contentMode: .fit)
             .overlay {
                 StickerImage(path: path, url: dex.url(for: path),
-                             contentMode: sticker.objectImageUrl == nil ? .fit : .fill)
+                             contentMode: path == sticker.cutoutImageUrl ? .fit : .fill)
                     .allowsHitTesting(false)
             }
             .overlay(alignment: .bottom) {
@@ -723,7 +723,7 @@ struct DexListRow: View {
     let onOpen: () -> Void
 
     var body: some View {
-        let path = sticker.objectImageUrl ?? sticker.cutoutImageUrl
+        let path = sticker.heroPath
         HStack(spacing: 12) {
             Button(action: onOpen) {
                 HStack(spacing: 14) {
@@ -887,7 +887,7 @@ struct DexMapView: View {
         let selected = v.items.first { $0.id == selectedId }
         let isOn = selected != nil
         let s = selected ?? v.items[0]
-        let path = s.objectImageUrl ?? s.cutoutImageUrl
+        let path = s.heroPath
         return Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedId = s.id; panelOpen = true }
@@ -971,7 +971,7 @@ struct DexMapView: View {
 
     private func row(_ s: Sticker) -> some View {
         let isOn = s.id == selectedId
-        let path = s.objectImageUrl ?? s.cutoutImageUrl
+        let path = s.heroPath
         return Button {
                                     if isOn { onOpen(s) } else {
                                         Haptics.selection()

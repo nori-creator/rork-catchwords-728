@@ -384,7 +384,7 @@ struct QuizCard: View {
             }
 
             if !isAnswered {
-                let path = card.sticker.objectImageUrl ?? card.sticker.cutoutImageUrl
+                let path = card.sticker.heroPath
                 Theme.secondary
                     .frame(height: 220)
                     .overlay {

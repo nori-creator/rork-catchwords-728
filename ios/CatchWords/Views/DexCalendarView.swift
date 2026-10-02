@@ -77,7 +77,7 @@ struct DexCalendarView: View {
         let isToday = cal.isDateInToday(day)
         let weekday = cal.component(.weekday, from: day)
         let isSelected = selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false
-        let path = first.map { $0.objectImageUrl ?? $0.cutoutImageUrl }
+        let path = first.map { $0.heroPath }
         return Button {
             guard !items.isEmpty else { return }
             Haptics.selection()

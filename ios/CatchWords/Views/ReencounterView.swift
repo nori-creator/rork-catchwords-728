@@ -68,6 +68,7 @@ struct ReencounterView: View {
                 }
             } else if vm.reencCount != nil {
                 PrimaryButton(title: L("図鑑で見る"), icon: "books.vertical") { onSeeInDex(owned.stickerId) }
+                    .accessibilityIdentifier("reencounter.dex")
             }
         }
         .padding(16)

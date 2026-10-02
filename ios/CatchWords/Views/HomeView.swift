@@ -262,7 +262,7 @@ struct Bookshelf: View {
                     Spacer(minLength: 8)
                 }
                 if let latest {
-                    let path = latest.objectImageUrl ?? latest.cutoutImageUrl
+                    let path = latest.heroPath
                     Color.white
                         .frame(width: 54, height: 66)
                         .overlay {
