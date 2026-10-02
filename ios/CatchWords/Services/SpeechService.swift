@@ -45,7 +45,9 @@ final class SpeechService {
         }
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
-        if recognizer.supportsOnDeviceRecognition { req.requiresOnDeviceRecognition = false }
+        // On-device when this language's model is installed (private, offline, no server time limit);
+        // otherwise Apple's server recognizer.
+        req.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
         request = req
         transcript = ""
 

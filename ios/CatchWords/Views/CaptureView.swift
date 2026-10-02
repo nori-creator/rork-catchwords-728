@@ -258,6 +258,14 @@ struct CaptureView: View {
             .overlay(alignment: .top) {
                 if vm.step == .selfie { selfiePrompt.padding(.top, 48) }
             }
+            // ── Memory lens (MemoryLensOverlay): past catches near here float where they were shot.
+            // Back camera only, and gone while the capture flow (selfie / analyzing / candidates) runs.
+            .overlay {
+                if vm.step == .camera, camera.position == .back {
+                    MemoryLensOverlay(zoom: camera.zoom) { router.openDetail($0, zoom: false) }
+                }
+            }
+            // ── end Memory lens
             .background(Color.black)
         case .denied:
             CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),

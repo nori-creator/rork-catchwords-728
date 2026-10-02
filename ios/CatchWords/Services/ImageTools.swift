@@ -71,8 +71,24 @@ nonisolated enum CutoutService {
             let y = min(h - 1, max(0, Int(point.y * CGFloat(h))))
             if let base = CVPixelBufferGetBaseAddress(mask) {
                 let row = CVPixelBufferGetBytesPerRow(mask)
-                let label = base.advanced(by: y * row + x).load(as: UInt8.self)
-                if label != 0, instances.contains(Int(label)) { instances = IndexSet(integer: Int(label)) }
+                func label(_ px: Int, _ py: Int) -> Int { Int(base.advanced(by: py * row + px).load(as: UInt8.self)) }
+                var hit = label(x, y)
+                // The AI's point can land just beside a thin or small subject: take the nearest
+                // instance within ~8% of the image instead of lifting every subject in the photo.
+                if hit == 0 {
+                    let reach = max(4, Int(Double(max(w, h)) * 0.08))
+                    let step = max(1, reach / 16)
+                    var best = Int.max
+                    for py in stride(from: max(0, y - reach), through: min(h - 1, y + reach), by: step) {
+                        for px in stride(from: max(0, x - reach), through: min(w - 1, x + reach), by: step) {
+                            let l = label(px, py)
+                            guard l != 0 else { continue }
+                            let d = (px - x) * (px - x) + (py - y) * (py - y)
+                            if d < best { best = d; hit = l }
+                        }
+                    }
+                }
+                if hit != 0, instances.contains(hit) { instances = IndexSet(integer: hit) }
             }
         }
 
