@@ -148,7 +148,9 @@ struct StickerImage: View {
                 Color.clear
             }
         }
-        .task(id: path) {
+        // Keyed on the URL too: the signed URL usually arrives after the first draw, and a task keyed on the
+        // path alone never ran again, leaving the picture blank.
+        .task(id: "\(path ?? "")|\(url?.absoluteString ?? "")") {
             guard let path else { return }
             if let hit = ImageCache.shared.image(for: path) { image = hit; return }
             guard let url else { return }

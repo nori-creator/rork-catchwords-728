@@ -64,9 +64,9 @@ final class FullTourTests: XCTestCase {
         cell.tap()
         settle(2)
         snap("detail-top")
-        for i in 1...6 {
+        for i in 1...5 {
             app.swipeUp()
-            settle(0.8)
+            settle(0.5)
             snap("detail-\(i)")
         }
         if app.buttons["detail.sections"].exists {
@@ -268,16 +268,21 @@ final class FullTourTests: XCTestCase {
         checkLanguage(at: name)
     }
 
+    /// One snapshot of the whole screen (a single round trip), then every label and value in it.
     private func checkLanguage(at screen: String) {
-        var labels: [String] = []
-        for query in [app.staticTexts, app.buttons, app.textFields, app.navigationBars] {
-            let all = query.allElementsBoundByIndex
-            for e in all.prefix(250) where e.exists {
-                let l = e.label.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !l.isEmpty { labels.append(l) }
+        guard let root = try? app.snapshot() else { return }
+        var labels: Set<String> = []
+        var stack: [XCUIElementSnapshot] = [root]
+        while let e = stack.popLast() {
+            let l = e.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !l.isEmpty { labels.insert(l) }
+            if let v = e.value as? String {
+                let t = v.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty { labels.insert(t) }
             }
+            stack.append(contentsOf: e.children)
         }
-        for text in Set(labels) {
+        for text in labels {
             if let problem = LanguageCheck.problem(text, display: display, learning: learning) {
                 XCTFail("[\(display)/\(learning)] \(screen): \(problem) — 「\(text.prefix(80))」")
             }

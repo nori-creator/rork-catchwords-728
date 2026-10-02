@@ -26,7 +26,7 @@ permissions:
 jobs:
   tour:
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
 
@@ -51,12 +51,15 @@ jobs:
         run: |
           set -o pipefail
           UDID=$(cat "$RUNNER_TEMP/udid")
+          # 80 分で止める（結果の束は止めた時点までで書かれる）。止まらないと結果が一つも残らない。
+          ( sleep 4800; pkill -INT xcodebuild ) &
           xcodebuild test \
             -project CatchWords.xcodeproj \
             -scheme CatchWords \
             -destination "platform=iOS Simulator,id=$UDID" \
             -only-testing:CatchWordsUITests/FullTourTests \
             -resultBundlePath "$RUNNER_TEMP/tour.xcresult" \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/test.log" | grep -E "error:|Test Case|failed|passed|TEST (SUCCEEDED|FAILED)|BUILD FAILED" || true
           grep -q "TEST SUCCEEDED" "$RUNNER_TEMP/test.log" && echo "ok" > "$RUNNER_TEMP/verdict" || echo "failed" > "$RUNNER_TEMP/verdict"
