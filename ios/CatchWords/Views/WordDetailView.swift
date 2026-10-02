@@ -158,8 +158,13 @@ struct WordDetailView: View {
         .confirmationDialog(L("この単語を図鑑から削除しますか？"), isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(L("削除"), role: .destructive) {
                 Task {
-                    try? await dex.delete(current)
-                    dismiss()
+                    do {
+                        try await dex.delete(current)
+                        dismiss()
+                    } catch {
+                        let reason = (error as? LocalizedError)?.errorDescription ?? ""
+                        showToast(reason.isEmpty ? L("削除できませんでした。通信を確かめてください。") : reason)
+                    }
                 }
             }
         }

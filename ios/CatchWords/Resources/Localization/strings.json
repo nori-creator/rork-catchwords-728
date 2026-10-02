@@ -31,14 +31,6 @@
   "en": "Take one photo",
   "zh-TW": "拍一張照片"
  },
- "3D プレビュー": {
-  "en": "3D preview",
-  "zh-TW": "3D 預覽"
- },
- "3Dの演出": {
-  "en": "3D effects",
-  "zh-TW": "3D 效果"
- },
  "4択クイズ": {
   "en": "Multiple choice",
   "zh-TW": "四選一測驗"
@@ -126,10 +118,6 @@
  "Weblio辞書": {
   "en": "Weblio Dictionary",
   "zh-TW": "Weblio 辭典"
- },
- "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
-  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
-  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字和照片都能直接使用。\n用 Google 註冊的人，可以在登入畫面的「忘記密碼」為同一個帳號設定密碼。"
  },
  "Xで見る": {
   "en": "See it on X",
@@ -1719,10 +1707,6 @@
   "en": "Added to your collection!",
   "zh-TW": "已加入圖鑑！"
  },
- "図鑑の本棚を立体で見せます。「視差効果を減らす」がオンの時は出しません": {
-  "en": "Shows the collection bookshelf in 3D. Not shown when “Reduce Motion” is on",
-  "zh-TW": "以立體方式呈現圖鑑書架。開啟「減少動態效果」時不顯示"
- },
  "図鑑を読み込めませんでした。": {
   "en": "Couldn't load your collection.",
   "zh-TW": "無法載入圖鑑。"
@@ -3082,5 +3066,49 @@
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",
   "zh-TW": "（沒有讀到意思）"
+ },
+ "Googleで続ける": {
+  "en": "Continue with Google",
+  "zh-TW": "使用 Google 繼續"
+ },
+ "Appleでサインイン": {
+  "en": "Sign in with Apple",
+  "zh-TW": "使用 Apple 登入"
+ },
+ "Googleでのログインに失敗しました。": {
+  "en": "Google sign-in failed.",
+  "zh-TW": "Google 登入失敗。"
+ },
+ "ログインの応答が正しくありません。もう一度お試しください。": {
+  "en": "The sign-in response was invalid. Please try again.",
+  "zh-TW": "登入回應無效。請再試一次。"
+ },
+ "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。": {
+  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.",
+  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字與照片都能直接使用。"
+ },
+ "このアプリについて": {
+  "en": "About this app",
+  "zh-TW": "關於此 App"
+ },
+ "採点を保存できませんでした。もう一度答えてください。": {
+  "en": "Couldn't save your answer. Please answer again.",
+  "zh-TW": "無法儲存作答。請再作答一次。"
+ },
+ "採点を保存できませんでした。もう一度答えてください。\n{1}": {
+  "en": "Couldn't save your answer. Please answer again.\n{1}",
+  "zh-TW": "無法儲存作答。請再作答一次。\n{1}"
+ },
+ "保存に時間がかかっています。そのままお待ちください。": {
+  "en": "Saving is taking a while. Please wait.",
+  "zh-TW": "儲存需要一些時間，請稍候。"
+ },
+ "この言語の音声認識はこの端末では使えません": {
+  "en": "Speech recognition for this language isn't available on this device",
+  "zh-TW": "此裝置無法使用這個語言的語音辨識"
+ },
+ "削除できませんでした。通信を確かめてください。": {
+  "en": "Couldn't delete. Please check your connection.",
+  "zh-TW": "無法刪除。請確認網路連線。"
  }
 }

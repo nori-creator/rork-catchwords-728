@@ -37,7 +37,6 @@ struct UIPreviewRoot: View {
     var body: some View {
         Group {
             switch name {
-            case "3d": Preview3DView()
             case "cutout": CutoutPreview()
             case "picker": PickerPreview()
             case "japicker": PickerPreview(learning: "ja")
@@ -52,6 +51,7 @@ struct UIPreviewRoot: View {
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
             case "book": BookPreview()
+            case "carousel": CarouselPreview()
             case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
             case "webimg": WebImagesPreview()
@@ -302,6 +302,37 @@ private struct MemorialPreview: View {
         MemorialReveal(n: 30, words: 48, photos: Self.photos) {}
     }
 }
+/// The dex slide view (white cards on a ring in the pale blue room), opened on the second card.
+private struct CarouselPreview: View {
+    private static let stickers: [Sticker] = {
+        let words = [("芒果", "マンゴー"), ("咖啡", "コーヒー"), ("雨傘", "傘"), ("盤子", "お皿"), ("花", "花"), ("麵包", "パン")]
+        return words.enumerated().compactMap { i, w -> Sticker? in
+            let json = #"{"id":"cw\#(i)","headword":"\#(w.0)","meaning_ja":"\#(w.1)"}"#
+            guard let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8)) else { return nil }
+            let path = "preview/carousel-\(i).jpg"
+            let img = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 600)).image { ctx in
+                let hue = CGFloat(i) / 6
+                UIColor(hue: hue, saturation: 0.4, brightness: 0.93, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 600))
+                UIColor(hue: hue, saturation: 0.7, brightness: 0.72, alpha: 1).setFill()
+                ctx.cgContext.fillEllipse(in: CGRect(x: 150, y: 150, width: 300, height: 300))
+            }
+            ImageCache.shared.set(img, for: path)
+            return Sticker(id: "c\(i)", wordId: "w", objectImageUrl: path, cutoutImageUrl: nil, selfieImageUrl: nil,
+                           caption: nil, locationName: i == 1 ? "台北" : nil,
+                           takenAt: Date().addingTimeInterval(Double(-i) * 86400), captureType: "photo", word: word)
+        }
+    }()
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            DexGalleryBackdrop()
+            DexCoverFlow(stickers: Self.stickers, onOpen: { _ in }, initialIndex: 1)
+                .padding(.top, 118)
+        }
+    }
+}
+
 /// The month book: slides to the diary page, then turns the page to the next day (autoplay).
 private struct BookPreview: View {
     var frozenTurn: CGFloat? = nil

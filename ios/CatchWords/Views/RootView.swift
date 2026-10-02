@@ -9,7 +9,7 @@ struct RootView: View {
     @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
 
     private var needsOnboarding: Bool {
-        !onboardingDone && profile.isLoaded && !profile.onboarded && dex.stickers.isEmpty
+        !onboardingDone && profile.isLoaded && !profile.loadFailed && !profile.onboarded && dex.stickers.isEmpty
     }
 
     var body: some View {
@@ -52,6 +52,7 @@ struct RootView: View {
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut { dex.reset() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
         // Meanings and notes follow the display language too (read again in the new one).
         .onChange(of: LanguageState.shared.lang) { _, _ in
             dex.readerLanguageChanged()
@@ -61,6 +62,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             // おまかせ reminders follow yesterday's first open and the cards coming due.
             guard phase == .active, auth.phase == .signedIn else { return }
+            if profile.loadFailed { Task { await profile.load() } }
             ReminderService.recordAppOpen()
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }

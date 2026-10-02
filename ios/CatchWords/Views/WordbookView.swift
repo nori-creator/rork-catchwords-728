@@ -476,7 +476,6 @@ struct PageCameraView: View {
                 Button {
                     isShooting = true
                     Haptics.impact(.medium)
-                    SoundService.shared.play(.snap)
                     Task {
                         let img = await camera.capture()
                         isShooting = false

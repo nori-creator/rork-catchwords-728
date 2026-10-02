@@ -2,7 +2,6 @@ import AVFoundation
 
 /// Recorded cinematic SFX from the web app (`public/sfx/el-*.mp3`) with the same per-file trims.
 enum SFX: String, CaseIterable {
-    case snap = "catch-snap"
     case impact = "el-catch-impact"
     case bookOpen = "el-book-open"
     case slide = "el-gallery-slide"
@@ -12,10 +11,10 @@ enum SFX: String, CaseIterable {
     case jarCork = "el-jar-cork"        // cork lands in the glass jar: soft pop + bright clink
     case cutTrace = "el-cut-trace"      // scissors round the outline (cut-out mode)
     case stickerLift = "el-sticker-lift" // the cut sticker peels up off the page
+    case landBounce = "el-land-bounce"  // a word lands: a light ball-like bounce (pon-pon-pon), no coin clink
 
     var gain: Float {
         switch self {
-        case .snap: 1.0
         case .impact: 1.4
         case .bookOpen: 1.6
         case .slide: 1.2
@@ -24,6 +23,7 @@ enum SFX: String, CaseIterable {
         case .jarCork: 0.9
         case .cutTrace: 0.7
         case .stickerLift: 0.8
+        case .landBounce: 1.0
         }
     }
 

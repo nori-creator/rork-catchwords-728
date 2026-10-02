@@ -56,21 +56,27 @@ enum NativeAPI {
     /// Returns the function's `result` as raw JSON bytes.
     static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40) async throws -> Data {
         let url = AppConfig.webBaseURL.appendingPathComponent("api/native-fn")
-        try? await SupabaseClient.shared.refreshIfNeeded()
-        guard let token = SupabaseClient.shared.session?.accessToken else { throw APIError.unauthorized }
-        var req = URLRequest(url: url, timeoutInterval: timeout)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["fn": fn, "data": data])
-        let body: Data
-        let response: URLResponse
-        do {
-            (body, response) = try await URLSession.shared.data(for: req)
-        } catch let e as URLError {
-            throw e.code == .timedOut ? APIError.timeout : APIError.offline
+        let client = SupabaseClient.shared
+        // An expiring token is refreshed first; a dead login throws `.unauthorized` (the app shows the
+        // login screen), a network hiccup during the refresh is not an error here.
+        try await client.refreshForRequest()
+        let payload = try JSONSerialization.data(withJSONObject: ["fn": fn, "data": data])
+        // A 401 gets one forced refresh and a retry; a second 401 ends the login.
+        let (body, http) = try await client.withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: timeout)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.httpBody = payload
+            do {
+                let (d, r) = try await URLSession.shared.data(for: req)
+                guard let h = r as? HTTPURLResponse else { throw APIError.decoding }
+                return (d, h)
+            } catch let e as URLError {
+                throw e.code == .timedOut ? APIError.timeout : APIError.offline
+            }
         }
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let status = http.statusCode
         let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
         let message = (json?["error"] as? String) ?? ""
         switch status {

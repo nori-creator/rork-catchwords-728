@@ -388,7 +388,7 @@ struct CaptureView: View {
         .frame(minHeight: 30)
         .background(.white.opacity(0.1), in: Capsule())
         .contentShape(Capsule())
-        .onTapGesture { if !plan.isPro { router.showPaywall = true } }
+        .onTapGesture { if PlanStore.paywallEnabled, !plan.isPro { router.showPaywall = true } }
         .accessibilityLabel(plan.isPro ? "Pro" : L("今日あと\(plan.remainingToday)回"))
     }
 
@@ -445,7 +445,6 @@ struct CaptureView: View {
 
     private func flash() {
         Haptics.impact(.rigid)
-        SoundService.shared.play(.snap, volume: 0.7)
         withAnimation(.easeOut(duration: 0.05)) { shutterFlash = true }
         Task {
             try? await Task.sleep(for: .milliseconds(90))
@@ -500,17 +499,35 @@ struct CaptureView: View {
         )
         withAnimation(nil) { reward = payload }
         Task {
+            let result: Result<SaveOutcome, Error>
             do {
                 let outcome = try await dex.save(draft)
                 plan.recordCatch()
                 vm.releasePending()
                 dex.refreshPending()
-                gate.finish(.success(outcome))
+                result = .success(outcome)
             } catch {
                 // The photo is still in "解析待ち" (queued at the shutter), and the card stays on
                 // screen so the chosen word is not lost.
-                gate.finish(.failure(error))
+                result = .failure(error)
             }
+            gate.finish(result)
+            // The overlay gave up waiting (slow save): finish here instead of dropping the result.
+            if reward == nil { settleLateSave(result) }
+        }
+    }
+
+    /// A save that outlived the reward overlay: land the word in the dex, or say that it failed
+    /// (the photo stays queued either way).
+    private func settleLateSave(_ result: Result<SaveOutcome, Error>) {
+        switch result {
+        case .success(let outcome):
+            router.landingStickerId = outcome.sticker.id
+            vm.reset()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
+        case .failure(let error):
+            let reason = (error as? LocalizedError)?.errorDescription ?? ""
+            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
         }
     }
 
@@ -532,8 +549,10 @@ struct CaptureView: View {
             let reason = (error as? LocalizedError)?.errorDescription ?? ""
             vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
         case .none:
+            // Still saving after 20 s: keep the photo and the chosen word; the save finishes on its own
+            // (`settleLateSave`). Resetting here used to throw the queued photo away mid-save.
             reward = nil
-            vm.reset()
+            vm.showToast(L("保存に時間がかかっています。そのままお待ちください。"))
         }
     }
 }
