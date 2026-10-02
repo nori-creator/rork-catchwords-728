@@ -394,7 +394,7 @@ struct DexView: View {
                                           onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key },
                                           onRestore: Category.isBuiltin(key) && Category.custom[key] != nil ? { restoreShelf(key) } : nil,
                                           onDrop: { id in drop(id, on: key, proxy: proxy) }) { s in
-                                router.detailSticker = s
+                                router.openDetail(s, zoom: true)   // the sheet zooms out of the tile
                             }
                         }
                     }
@@ -472,7 +472,7 @@ struct DexView: View {
                         VStack(spacing: 0) {
                             ForEach(Array(items.enumerated()), id: \.element.id) { i, s in
                                 if i > 0 { Divider().padding(.leading, 12) }
-                                DexListRow(sticker: s) { router.detailSticker = s }
+                                DexListRow(sticker: s) { router.openDetail(s, zoom: true) }
                             }
                         }
                         .background(Theme.card, in: .rect(cornerRadius: 22, style: .continuous))
@@ -561,7 +561,7 @@ struct DexView: View {
             landedId = id
             try? await Task.sleep(for: .milliseconds(420))
             SoundService.shared.play(.landBounce)
-            Haptics.impact(.heavy)
+            HapticPatterns.shared.land()   // thud + two smaller bounces under the pon-pon-pon
             impactTick += 1
             try? await Task.sleep(for: .milliseconds(1400))
             landedId = nil
@@ -614,6 +614,7 @@ struct CategoryShelf: View {
                     let distance = landedIndex.map { abs($0 - idx) } ?? 99
                     Button { onTap(s) } label: {
                         DexCell(sticker: s, isLanding: s.id == landedId, neighborDistance: distance, impactTick: impactTick)
+                            .detailZoomSource(s.id)
                     }
                     .buttonStyle(PressableStyle(scale: 0.95))
                     .accessibilityIdentifier("dex.cell")
@@ -730,6 +731,7 @@ struct DexListRow: View {
                     Theme.secondary.frame(width: 60, height: 60)
                         .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                         .clipShape(.rect(cornerRadius: 16, style: .continuous))
+                        .detailZoomSource(sticker.id)
                     VStack(alignment: .leading, spacing: 4) {
                         ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
                         Text(sticker.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)

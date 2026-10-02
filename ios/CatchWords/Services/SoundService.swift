@@ -12,6 +12,9 @@ enum SFX: String, CaseIterable {
     case cutTrace = "el-cut-trace"      // scissors round the outline (cut-out mode)
     case stickerLift = "el-sticker-lift" // the cut sticker peels up off the page
     case landBounce = "el-land-bounce"  // a word lands: a light ball-like bounce (pon-pon-pon), no coin clink
+    // The owner's pick from the web prototype ("bubble pon"): a page opening / going back.
+    case ponOpen = "pon-bubble-open"
+    case ponBack = "pon-bubble-back"
 
     var gain: Float {
         switch self {
@@ -24,6 +27,16 @@ enum SFX: String, CaseIterable {
         case .cutTrace: 0.7
         case .stickerLift: 0.8
         case .landBounce: 1.0
+        case .ponOpen: 0.9
+        case .ponBack: 0.8
+        }
+    }
+
+    /// The pon files are AAC (.m4a); everything else is the web's mp3.
+    var fileExtension: String {
+        switch self {
+        case .ponOpen, .ponBack: "m4a"
+        default: "mp3"
         }
     }
 
@@ -91,6 +104,13 @@ final class SoundService {
         player.numberOfLoops = 0
         player.volume = min(1, sfx.gain * volume * level)
         player.play()
+    }
+
+    /// A page opening (dex, word detail, tab) or going back: the bubble pon plus its matching tap.
+    /// The sound follows the sound level ("off" is silent); the tap follows the vibration switch.
+    func pon(open: Bool) {
+        play(open ? .ponOpen : .ponBack)
+        Haptics.pon(open: open)
     }
 
     func startAnalyzeLoop() {
@@ -218,7 +238,7 @@ final class SoundService {
 
     private func player(for sfx: SFX) -> AVAudioPlayer? {
         if let existing = players[sfx] { return existing }
-        guard let url = Bundle.main.url(forResource: sfx.rawValue, withExtension: "mp3"),
+        guard let url = Bundle.main.url(forResource: sfx.rawValue, withExtension: sfx.fileExtension),
               let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
         player.prepareToPlay()
         players[sfx] = player

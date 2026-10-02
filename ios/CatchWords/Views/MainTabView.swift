@@ -43,6 +43,18 @@ final class AppRouter {
     var tour: TourStep = .off
     /// The word caught during the tour (used by the Dex / word / review steps).
     var tourStickerId: String?
+    /// The word sheet zooms out of the tile it was opened from (iOS 18 zoom transition). Set by MainTabView.
+    var detailZoom: Namespace.ID?
+    /// The open word came from a tile marked with `detailZoomSource` (Dex grid / list), so the sheet zooms.
+    var detailZoomed: Bool = false
+    /// The camera tab's icon is still flying into the shutter: the real shutter waits hidden until it lands.
+    var shutterFlying: Bool = false
+
+    /// Open a word's sheet; `zoom` only when the tapped tile carries `detailZoomSource(_:)`.
+    func openDetail(_ sticker: Sticker, zoom: Bool) {
+        detailZoomed = zoom && detailZoom != nil
+        detailSticker = sticker
+    }
 
     func advanceTour(from step: TourStep, to next: TourStep) {
         guard tour == step else { return }
@@ -54,6 +66,9 @@ struct MainTabView: View {
     @State private var router = AppRouter()
     @Environment(DexStore.self) private var dex
     @AppStorage(TourStep.pendingKey) private var tourPending: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var detailZoom
+    @State private var flightToken = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -69,7 +84,8 @@ struct MainTabView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if !router.tabBarHidden {
-                CapsuleTabBar(selection: $router.tab, onCamera: router.tab == .camera && router.cameraImmersive)
+                CapsuleTabBar(selection: $router.tab, onCamera: router.tab == .camera && router.cameraImmersive,
+                              onSelect: beginShutterFlight)
                     .padding(.bottom, 4)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -81,6 +97,23 @@ struct MainTabView: View {
                     .transition(.opacity)
             }
         }
+        .overlayPreferenceValue(TourAnchorKey.self) { anchors in
+            // The camera tab's icon tossed into the shutter (both places already publish tour anchors).
+            GeometryReader { geo in
+                if router.shutterFlying, router.tab == .camera,
+                   let tab = anchors[.cameraTab], let shutter = anchors[.shutter] {
+                    let from = geo[tab]
+                    let to = geo[shutter]
+                    ShutterFlight(from: CGPoint(x: from.midX, y: from.minY + 20),   // the icon, above the label
+                                  to: CGPoint(x: to.midX, y: to.midY)) {
+                        Haptics.impact(.light, intensity: 0.8)
+                        router.shutterFlying = false
+                    }
+                    .id(flightToken)
+                }
+            }
+            .allowsHitTesting(false)
+        }
         .overlay {
             if router.tour == .complete {
                 TourCompleteView(sticker: router.tourStickerId.flatMap { dex.sticker(id: $0) }) { endTour() }
@@ -90,11 +123,13 @@ struct MainTabView: View {
         }
         .environment(router)
         .sheet(item: $router.detailSticker, onDismiss: {
+            router.detailZoomed = false
             // 「ことば」を見終えたら復習へ（Web: StickerSheet の onClose → review）。
             if router.tour == .word { startTourReview() }
         }) { sticker in
             WordDetailView(sticker: sticker)
                 .environment(router)
+                .modifier(DetailZoomTransition(id: sticker.id, namespace: router.detailZoomed ? router.detailZoom : nil))
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.background)
                 .overlay(alignment: .bottom) {
@@ -106,6 +141,7 @@ struct MainTabView: View {
                 }
         }
         .onAppear {
+            router.detailZoom = detailZoom
             beginTourIfPending()
             openNotification(NotificationRouter.shared.pending)
         }
@@ -114,11 +150,27 @@ struct MainTabView: View {
         .onChange(of: router.tab) { _, tab in
             if tab == .camera { router.advanceTour(from: .tapCamera, to: .shoot) }
         }
-        .onChange(of: router.detailSticker) { _, s in
+        .onChange(of: router.detailSticker) { old, s in
             if s != nil { router.advanceTour(from: .dexOpen, to: .word) }
+            // Every way into a word (dex, home, review, a reminder) pons open; closing it pons back.
+            if old == nil, s != nil { SoundService.shared.pon(open: true) }
+            if old != nil, s == nil { SoundService.shared.pon(open: false) }
         }
         .fullScreenCover(isPresented: $router.showPaywall) {
             PaywallView()
+        }
+    }
+
+    /// A tap on the camera tab: its icon flies into the shutter (skipped with Reduce Motion).
+    private func beginShutterFlight(_ tab: AppTab) {
+        guard tab == .camera, !reduceMotion else { return }
+        flightToken += 1
+        let token = flightToken
+        router.shutterFlying = true
+        // Safety net: the shutter must never stay hidden if the flight could not start.
+        Task {
+            try? await Task.sleep(for: .milliseconds(1200))
+            if flightToken == token { router.shutterFlying = false }
         }
     }
 
@@ -180,12 +232,17 @@ struct MainTabView: View {
 
 /// TabBar.tsx: floating capsule (87.6% width, ~55pt, full-capsule corners), a bubble exactly one
 /// cell wide that slides between cells. The camera sits in the same row, same size (blue icon).
-/// On the camera it becomes dark glass instead of a paper-like white strip.
+/// It stays the same white strip on the camera too (owner request 2026-10-02: no dark glass there),
+/// only fully opaque so the dark machine behind it does not grey it.
 struct CapsuleTabBar: View {
     @Binding var selection: AppTab
     var onCamera: Bool
+    /// Called with the tapped tab just before the selection changes (MainTabView starts the shutter flight).
+    var onSelect: ((AppTab) -> Void)? = nil
 
     @Namespace private var bubble
+    /// Taps per tab: drives each icon's bounce, so only the tab just chosen bounces.
+    @State private var bounces: [AppTab: Int] = [:]
 
     var body: some View {
         GeometryReader { geo in
@@ -201,14 +258,10 @@ struct CapsuleTabBar: View {
             }
             .frame(width: width, height: 58)
             .background {
-                if onCamera {
-                    Capsule().fill(Theme.navyDeep.opacity(0.55)).background(.ultraThinMaterial, in: Capsule())
-                } else {
-                    Capsule().fill(Theme.card.opacity(0.9)).background(.regularMaterial, in: Capsule())
-                }
+                Capsule().fill(Theme.card.opacity(onCamera ? 1 : 0.9)).background(.regularMaterial, in: Capsule())
             }
-            .overlay(Capsule().stroke(onCamera ? .white.opacity(0.12) : Theme.border, lineWidth: 1))
-            .shadow(color: .black.opacity(onCamera ? 0.35 : 0.1), radius: 16, y: 6)
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(onCamera ? 0.3 : 0.1), radius: 16, y: 6)
             .frame(maxWidth: .infinity)
         }
         .frame(height: 58)
@@ -217,13 +270,14 @@ struct CapsuleTabBar: View {
 
     private func cell(_ tab: AppTab, iconColor: Color? = nil) -> some View {
         let isOn = selection == tab
-        let tint = isOn ? Theme.primary : (onCamera ? .white.opacity(0.8) : Theme.foreground.opacity(0.75))
+        let tint = isOn ? Theme.primary : Theme.foreground.opacity(0.75)
         return Button { select(tab) } label: {
             VStack(spacing: 5) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 19, weight: .regular))
                     .frame(height: 21)
                     .foregroundStyle(isOn ? Theme.primary : (iconColor ?? tint))
+                    .symbolEffect(.bounce, value: bounces[tab, default: 0])
                 Text(tab.title).font(.system(size: 10, weight: .medium))
             }
             .foregroundStyle(tint)
@@ -231,7 +285,7 @@ struct CapsuleTabBar: View {
             .background {
                 if isOn {
                     Capsule()
-                        .fill(Theme.primary.opacity(onCamera ? 0.22 : 0.14))
+                        .fill(Theme.primary.opacity(0.14))
                         .matchedGeometryEffect(id: "bubble", in: bubble)
                         .padding(4)
                 }
@@ -252,7 +306,108 @@ struct CapsuleTabBar: View {
 
     private func select(_ tab: AppTab) {
         guard selection != tab else { return }
-        Haptics.selection()
+        SoundService.shared.pon(open: true)   // a tab switch is a page opening: bubble pon + soft tap
+        bounces[tab, default: 0] += 1
+        onSelect?(tab)
         withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) { selection = tab }
+    }
+}
+
+/// The word sheet zooming out of its tile and back into it on close (iOS 18). Without a source
+/// (opened from review, home, a reminder…) the sheet keeps the ordinary slide-up.
+private struct DetailZoomTransition: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.navigationTransition(.zoom(sourceID: id, in: namespace))
+        } else {
+            content
+        }
+    }
+}
+
+/// The tile a word sheet zooms out of (`AppRouter.openDetail(_:zoom: true)`). Harmless without a router.
+struct DetailZoomSource: ViewModifier {
+    @Environment(AppRouter.self) private var router: AppRouter?
+    let id: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let namespace = router?.detailZoom {
+            content.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Marks a word tile as the place its detail sheet zooms out of and back into.
+    func detailZoomSource(_ id: String) -> some View {
+        modifier(DetailZoomSource(id: id))
+    }
+}
+
+/// The camera tab's blue icon tossed along an arc into the shutter's place, growing into the blue
+/// disc with the white glyph on the way (~0.5 s). The real shutter then pops in and draws its ring.
+private struct ShutterFlight: View {
+    let from: CGPoint
+    let to: CGPoint
+    let onLanded: () -> Void
+
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        Color.clear
+            .modifier(ShutterFlightPath(progress: progress, from: from, to: to))
+            .allowsHitTesting(false)
+            .onAppear {
+                withAnimation(.timingCurve(0.3, 0, 0.25, 1, duration: 0.5)) { progress = 1 } completion: {
+                    onLanded()
+                }
+            }
+    }
+}
+
+private struct ShutterFlightPath: ViewModifier, Animatable {
+    var progress: CGFloat
+    let from: CGPoint
+    let to: CGPoint
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let t = min(max(progress, 0), 1)
+        let u = 1 - t
+        // Quadratic Bézier: its midpoint sits ~60pt above the straight line (control lifted 2 × 60),
+        // nudged sideways so a straight-up hop still reads as an arc.
+        let control = CGPoint(x: (from.x + to.x) / 2 + 36, y: (from.y + to.y) / 2 - 120)
+        let x = u * u * from.x + 2 * u * t * control.x + t * t * to.x
+        let y = u * u * from.y + 2 * u * t * control.y + t * t * to.y
+        let size = 24 + (ShutterButton.discSize - 24) * t
+        let fill = min(1, t * 1.6)
+        content
+            .overlay {
+                ZStack {
+                    Circle().fill(ShutterButton.discFill).opacity(fill)
+                    Image(systemName: "camera")
+                        .font(.system(size: 19 + 3 * t, weight: .semibold))
+                        .foregroundStyle(Theme.primary)
+                        .opacity(1 - fill)
+                    Image(systemName: "camera")
+                        .font(.system(size: 19 + 3 * t, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .opacity(fill)
+                }
+                .frame(width: size, height: size)
+                .shadow(color: Theme.primary.opacity(0.35 * fill), radius: 10, y: 4)
+                .position(x: x, y: y)
+            }
     }
 }
