@@ -60,3 +60,61 @@ static float valueNoise(float2 p) {
     // Composite the ring under the subject (premultiplied).
     return half4(rgb, half(alpha)) * (1.0h - here.a) + here;
 }
+
+static float3 hueRGB(float h) {
+    return saturate(abs(fract(h + float3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0);
+}
+
+/// Holographic foil for the trading-card style cards (`Holographic.swift`), drawn on a plain rectangle laid
+/// over the card. Rainbow bands run diagonally and slide with the light; they glow brightest along a soft
+/// "light line" that follows the tilt, with a thin sheen in its middle and fine glitter that winks on and
+/// off as the card turns.
+/// - size: view size in points. - tilt: -1…1 (x = left/right, y = toward/away). - strength: 0…1.
+/// - pass: 0 = colour-dodge layer (rainbow + sheen; brightens the photo, leaves white paper white),
+///         1 = normal layer (faint pastel wash so the white parts shimmer too, plus the glitter).
+/// Output is premultiplied, so an unblended layer still reads as a light tint, never a dark film.
+[[ stitchable ]] half4 holoFoil(float2 position, half4 color, float2 size, float2 tilt, float strength, float pass) {
+    float2 s = max(size, float2(1.0));
+    float2 uv = position / s;
+    // Diagonal coordinate (top-left → bottom-right), corrected for the card's tall shape.
+    float diag = (uv.x * s.x + uv.y * s.y) / (s.x + s.y);
+    float across = (uv.x * s.x - uv.y * s.y) / (s.x + s.y);
+
+    // Where the light hits, moved by the tilt.
+    float light = 0.5 + tilt.x * 0.42 + tilt.y * 0.32;
+    float dl = diag - light;
+    float near = exp(-(dl * 2.6) * (dl * 2.6));
+    float sheen = exp(-(dl * 11.0) * (dl * 11.0));
+
+    // Rainbow bands: hue runs along the diagonal and shifts with the tilt; a little waviness across.
+    float hue = diag * 1.7 + tilt.x * 0.55 - tilt.y * 0.35 + sin(across * 9.0 + tilt.y * 2.0) * 0.04;
+    float3 rainbow = hueRGB(fract(hue));
+    float st = saturate(strength);
+
+    if (pass < 0.5) {
+        // Colour-dodge layer: stronger near the light line, faint elsewhere.
+        float a = st * (0.10 + 0.50 * near) + sheen * 0.35 * st;
+        float3 c = mix(rainbow, float3(1.0), sheen * 0.6);
+        return half4(half3(c * a), half(a)) * color.a;
+    }
+
+    // Normal layer: pastel wash + glitter.
+    float wash = st * (0.04 + 0.10 * near);
+    float3 pastel = mix(float3(1.0), rainbow, 0.55);
+
+    // Glitter: one candidate glint per 6pt cell; about 1 in 14 cells holds one, and each winks as the
+    // tilt sweeps through its own phase.
+    float2 cellSize = float2(6.0);
+    float2 cell = floor(position / cellSize);
+    float h = hash21(cell);
+    float h2 = hash21(cell + 17.0);
+    float2 inCell = fract(position / cellSize) - 0.5 - (float2(h, h2) - 0.5) * 0.5;
+    float spot = exp(-dot(inCell, inCell) * 60.0);
+    float phase = fract(h2 * 7.0 + tilt.x * 1.3 + tilt.y * 1.7);
+    float wink = smoothstep(0.35, 0.5, phase) * (1.0 - smoothstep(0.5, 0.65, phase));
+    float glint = step(0.93, h) * spot * wink * st * (0.35 + 0.65 * near);
+
+    float a = saturate(wash + glint * 0.9 + sheen * 0.10 * st);
+    float3 c = pastel * wash + float3(1.0) * (glint * 0.9 + sheen * 0.10 * st);
+    return half4(half3(c), half(a)) * color.a;
+}
