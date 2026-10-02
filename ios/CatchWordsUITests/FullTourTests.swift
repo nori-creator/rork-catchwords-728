@@ -93,6 +93,9 @@ final class FullTourTests: XCTestCase {
             return
         }
         search.tap()
+        settle(0.5)
+        // In search mode the shutter (a magnifier) opens the text sheet.
+        tap("camera.shutter")
         let field = app.textFields["search.field"]
         guard field.waitForExistence(timeout: 10) else {
             XCTFail("[\(display)/\(learning)] the search sheet did not open")
@@ -188,7 +191,8 @@ final class FullTourTests: XCTestCase {
         let out = app.buttons["settings.signOut"]
         guard out.waitForExistence(timeout: 5) else { return }
         out.tap()
-        let confirm = app.buttons["settings.signOut.confirm"]
+        // The dialog's button is reported twice (button inside button): take the first.
+        let confirm = app.buttons["settings.signOut.confirm"].firstMatch
         if confirm.waitForExistence(timeout: 3) { confirm.tap() }
         let mail = app.buttons["auth.mail"]
         guard mail.waitForExistence(timeout: 10) else {
@@ -297,7 +301,7 @@ enum LanguageCheck {
         "catchwords", "pro", "tocfl", "cefr", "jlpt", "ipa", "toefl", "ielts", "band", "level", "apple", "google",
         "app", "store", "ai", "gre", "cet", "iphone", "ipad", "ok", "lv", "unsplash", "wikimedia", "youtube",
         "youglish", "dcard", "threads", "reddit", "instagram", "merriam", "webster", "weblio", "kotobank", "jisho",
-        "chiebukuro", "moe", "abc", "zhuyin", "pinyin", "demo", "catchwords.test",
+        "chiebukuro", "yahoo", "photographer", "moe", "abc", "zhuyin", "pinyin", "demo", "catchwords.test",
     ]
 
     static func problem(_ text: String, display: String, learning: String) -> String? {

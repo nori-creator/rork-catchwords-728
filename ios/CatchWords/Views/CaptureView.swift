@@ -372,6 +372,7 @@ struct CaptureView: View {
             ShutterButton(icon: vm.step == .selfie ? "camera" : vm.mode.shutterIcon,
                           enabled: vm.mode == .search || camera.state == .running) { shoot() }
                 .tourAnchor(.shutter)
+                .accessibilityIdentifier("camera.shutter")
             Spacer()
             Button { camera.toggle() } label: {
                 sideButton(icon: "arrow.triangle.2.circlepath.camera", label: L("切替"))

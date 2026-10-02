@@ -81,11 +81,16 @@ jobs:
               manifest = json.load(open(os.path.join(raw, "manifest.json")))
           except Exception:
               manifest = []
+          import re
+          # Only the tour's own screenshots (<display>_<learning>_<nn>_<step>): Xcode also attaches screen
+          # recordings (100 MB+, refused by GitHub) and debug descriptions whose names break the artifact upload.
+          shot = re.compile(r"^[a-z]{2}_[a-z]{2}_\d{2}_[A-Za-z0-9.-]+$")
           for test in manifest:
               for a in test.get("attachments", []):
                   name = (a.get("suggestedHumanReadableName") or a.get("exportedFileName") or "").split("_0_")[0]
+                  if name.endswith(".png"): name = name[:-4]
                   src = os.path.join(raw, a.get("exportedFileName", ""))
-                  if os.path.exists(src) and name:
+                  if os.path.exists(src) and shot.match(name):
                       base = name if name.endswith(".png") else name + ".png"
                       shutil.copy(src, os.path.join(out, base.replace("/", "_")))
           PY
