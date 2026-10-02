@@ -44,9 +44,9 @@ final class CardCatchModel {
     @ObservationIgnored private var holdsMotion = false
 
     // Per-frame state (never observed: stepped while drawing).
-    @ObservationIgnored let tilt = CCTilt()
-    @ObservationIgnored let particles = CCParticles()
-    @ObservationIgnored let bokeh = CCBokeh()
+    let tilt = CCTilt()
+    let particles = CCParticles()
+    let bokeh = CCBokeh()
 
     var phase: Phase = .analyze
 
