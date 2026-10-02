@@ -29,6 +29,7 @@ enum SFX: String, CaseIterable {
     case ccFly = "cc-fly-harp"
     case ccReveal = "cc-reveal"
     case ccTwinkle = "cc-twinkle"
+    case ccLand = "cc-land"
 
     var gain: Float {
         switch self {
@@ -44,9 +45,10 @@ enum SFX: String, CaseIterable {
         case .ponOpen: 0.9
         case .ponBack: 0.8
         // Rendered at the prototype's loudness relative to the pon (same 0.9); two files were turned down
-        // in rendering to avoid clipping and get that back here (render report: ×2.803 and ×1.640).
+        // in rendering to avoid clipping and get that back here (render report: ×2.803 and ×1.640; cc-land ×1.590).
         case .ccShutter: 0.9 * 2.803
         case .ccReveal: 0.9 * 1.640
+        case .ccLand: 0.9 * 1.590
         case .ccTick, .ccScanStart, .ccFound, .ccPop, .ccCands1, .ccCands2, .ccCands3,
              .ccCharge, .ccFly, .ccTwinkle: 0.9
         }

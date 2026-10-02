@@ -22,7 +22,8 @@ Loudness: every file is scaled by ONE common factor — the factor that brings t
 sounds keep the prototype's loudness relative to each other and to the pon. A file that would clip at
 that factor is turned down and the difference is reported, to be restored with its SFX gain in Swift.
 
-Usage: python3 scripts/render_cardcatch_sfx.py   (writes ios/CatchWords/Resources/Sounds/cc-*.m4a)
+Usage: python3 scripts/render_cardcatch_sfx.py [name …]   (writes ios/CatchWords/Resources/Sounds/cc-*.m4a;
+       with names, only those files, e.g. `cc-land`)
 """
 import math
 import os
@@ -286,6 +287,13 @@ def twinkle(b):
         osc(b, "sine", mtof(m), i * .05, .2, .025, rel=.4)
 
 
+def land(b):  # SFX.land: a word fills its dex slot
+    osc(b, "sine", 140, 0, .25, .3, slide=60)
+    nz(b, 0, .06, kind="lowpass", f0=1200, peak=.25)
+    for i, m in enumerate([91, 95, 98, 103]):
+        osc(b, "sine", mtof(m), .05 + i * .05, .5, .05, rel=.8)
+
+
 SOUNDS = [
     ("cc-shutter", shutter, 1.6),
     ("cc-tick", tick, 1.4),
@@ -299,6 +307,7 @@ SOUNDS = [
     ("cc-fly-harp", fly, 2.4),
     ("cc-reveal", reveal, 4.0),
     ("cc-twinkle", twinkle, 2.0),
+    ("cc-land", land, 2.4),
 ]
 
 
@@ -333,7 +342,10 @@ def main():
     common = 10 ** (PON_PEAK_DB / 20) / np.max(np.abs(ref))
     print(f"common gain {common:.3f} (page(1) peak {20 * math.log10(np.max(np.abs(ref))):.1f} dBFS before)")
     report = []
+    only = set(sys.argv[1:])
     for name, voices, secs in SOUNDS:
+        if only and name not in only:
+            continue
         y = render(voices, secs) * common
         peak = float(np.max(np.abs(y)))
         extra = 1.0
