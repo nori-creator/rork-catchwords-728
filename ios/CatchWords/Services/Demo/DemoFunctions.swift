@@ -70,11 +70,6 @@ nonisolated extension DemoDatabase {
             let path = DJ.orNull(DJ.str(data["selfie_path"]))
             guard updateSticker(sid, { s in s["selfie_image_url"] = path }) else { return notFound() }
             result = ["saved": true]
-        case "setStickerVoiceVideo":
-            let sid = DJ.str(data["sticker_id"]) ?? ""
-            let path = DJ.orNull(DJ.str(data["voice_video_path"]))
-            guard updateSticker(sid, { s in s["voice_video_url"] = path }) else { return notFound() }
-            result = ["saved": true]
         case "updateStickerCaption":
             let sid = DJ.str(data["sticker_id"]) ?? ""
             let caption = (DJ.str(data["caption"]) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -451,7 +446,6 @@ nonisolated extension DemoDatabase {
         s["hero_role"] = NSNull()
         s["placeholder_image_url"] = NSNull()
         s["placeholder_credit"] = NSNull()
-        s["voice_video_url"] = NSNull()
         insert("stickers", s)
         var review: [String: Any] = [:]
         review["id"] = "demo-review-" + String(DJ.uuid().prefix(8))

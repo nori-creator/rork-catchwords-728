@@ -99,10 +99,6 @@
   "en": "Sign in with Apple",
   "zh-TW": "使用 Apple 登入"
  },
- "CEFR の外の語": {
-  "en": "Outside the CEFR bands",
-  "zh-TW": "CEFR 之外的字"
- },
  "Dcardで見る": {
   "en": "See it on Dcard",
   "zh-TW": "在 Dcard 上看"
@@ -119,21 +115,9 @@
   "en": "See on Google Images",
   "zh-TW": "用 Google 圖片搜尋看看"
  },
- "IPA（アメリカ英語）": {
-  "en": "IPA (American)",
-  "zh-TW": "IPA（美式英語）"
- },
- "IPA（イギリス英語）": {
-  "en": "IPA (British)",
-  "zh-TW": "IPA（英式英語）"
- },
  "Instagram で見る": {
   "en": "See it on Instagram",
   "zh-TW": "在 Instagram 上看"
- },
- "JLPT の外の語": {
-  "en": "Outside the JLPT levels",
-  "zh-TW": "JLPT 之外的字"
  },
  "Pro をご利用中です": {
   "en": "You're on Pro",
@@ -295,10 +279,6 @@
   "en": "{1} photos · {2} days",
   "zh-TW": "{1} 張、{2} 天"
  },
- "{1}級（Band {2}）": {
-  "en": "Level {1} · Band {2}",
-  "zh-TW": "{1}級（Band {2}）"
- },
  "{1}語": {
   "en": "{1} words",
   "zh-TW": "{1} 個單字"
@@ -314,10 +294,6 @@
  "{1}語を集めました": {
   "en": "You've collected {1} words",
   "zh-TW": "收集了 {1} 個單字"
- },
- "{1}（Band {2}）": {
-  "en": "{1} · Band {2}",
-  "zh-TW": "{1}（Band {2}）"
  },
  "{1}／{2} 正解": {
   "en": "{1}/{2} correct",
@@ -602,10 +578,6 @@
  "この画像にする": {
   "en": "Use this image",
   "zh-TW": "就用這張"
- },
- "この端末では録音できません": {
-  "en": "This device can't record audio",
-  "zh-TW": "這個裝置無法錄音"
  },
  "この言葉、{1}に{2}でゲットしています。": {
   "en": "You got this word on {1} at {2}.",
@@ -1147,10 +1119,6 @@
   "en": "Allow the microphone and speech recognition in Settings",
   "zh-TW": "請在設定中允許使用麥克風和語音辨識"
  },
- "マイクを使えませんでした": {
-  "en": "Couldn't use the microphone",
-  "zh-TW": "無法使用麥克風"
- },
  "メニューや説明に使う言語です。": {
   "en": "The language for menus and explanations.",
   "zh-TW": "選擇選單與說明使用的語言。"
@@ -1239,14 +1207,6 @@
   "en": "Open list",
   "zh-TW": "打開列表"
  },
- "一言を止める": {
-  "en": "Pause the voice note",
-  "zh-TW": "暫停一句話"
- },
- "一言を聞く": {
-  "en": "Play the voice note",
-  "zh-TW": "播放一句話"
- },
  "一言メモ（任意）": {
   "en": "A quick note (optional)",
   "zh-TW": "一句話筆記（選填）"
@@ -1274,10 +1234,6 @@
  "並べ替え": {
   "en": "Reorder",
   "zh-TW": "調整順序"
- },
- "中学": {
-  "en": "Junior high",
-  "zh-TW": "國中"
  },
  "中立": {
   "en": "Neutral",
@@ -1907,17 +1863,9 @@
   "en": "Location reminders",
   "zh-TW": "地點提醒"
  },
- "声で一言を残す": {
-  "en": "Say your note out loud",
-  "zh-TW": "用聲音留一句話"
- },
  "声で調べる": {
   "en": "Search by voice",
   "zh-TW": "用語音查詢"
- },
- "声の一言だけ保存できませんでした": {
-  "en": "Only the voice note could not be saved",
-  "zh-TW": "只有語音的一句話沒能儲存"
  },
  "変更": {
   "en": "Change",
@@ -1930,10 +1878,6 @@
  "外観": {
   "en": "Appearance",
   "zh-TW": "外觀"
- },
- "大学院": {
-  "en": "Graduate school",
-  "zh-TW": "研究所"
  },
  "天気": {
   "en": "Weather",
@@ -2543,21 +2487,9 @@
   "en": "Next",
   "zh-TW": "下一步"
  },
- "止める（あと{1}秒）": {
-  "en": "Stop ({1}s left)",
-  "zh-TW": "停止（剩 {1} 秒）"
- },
  "正解！": {
   "en": "Correct!",
   "zh-TW": "答對了！"
- },
- "段階を見る": {
-  "en": "Show the scale",
-  "zh-TW": "看等級表"
- },
- "段階を閉じる": {
-  "en": "Hide the scale",
-  "zh-TW": "收起等級表"
  },
  "母語": {
   "en": "Your language",
@@ -2770,10 +2702,6 @@
  "答えを記録できませんでした。通信を確かめてください（このカードはまた出ます）。": {
   "en": "Your answer couldn't be saved. Check your connection (this card will come up again).",
   "zh-TW": "無法記錄你的答案。請確認網路連線（這張卡片之後會再出現）。"
- },
- "級外の語": {
-  "en": "Not in the lists",
-  "zh-TW": "級外的字"
  },
  "結果を見る": {
   "en": "See results",
@@ -3227,14 +3155,6 @@
   "en": "Fri",
   "zh-TW": "五"
  },
- "録った一言を捨てる": {
-  "en": "Discard the recording",
-  "zh-TW": "捨棄錄音"
- },
- "録れました": {
-  "en": "Recorded",
-  "zh-TW": "已錄好"
- },
  "閉じる": {
   "en": "Close",
   "zh-TW": "關閉"
@@ -3318,10 +3238,6 @@
  "高低アクセント": {
   "en": "Pitch accent",
   "zh-TW": "高低重音"
- },
- "高校": {
-  "en": "High school",
-  "zh-TW": "高中"
  },
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",

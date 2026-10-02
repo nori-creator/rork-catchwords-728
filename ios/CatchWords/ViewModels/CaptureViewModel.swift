@@ -62,8 +62,6 @@ final class CaptureViewModel {
     var searchError: String?
     /// One-line notice (web toast).
     var toast: String?
-    /// The spoken one-line note (uploaded after the sticker is saved).
-    let voiceNote = VoiceNoteRecorder()
     /// The failure was "no connection" (web shows WifiOff; otherwise Sparkles).
     var failedOffline: Bool = false
 
@@ -372,7 +370,6 @@ final class CaptureViewModel {
     /// Starting over throws the queued photo away too (otherwise "解析待ち" piles up).
     func reset() {
         runToken += 1
-        voiceNote.discard()
         SoundService.shared.stopAnalyzeLoop()
         cutoutTask?.cancel()
         if let pid = pendingId { PendingQueue.shared.remove(id: pid) }

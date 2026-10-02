@@ -57,7 +57,7 @@ final class DexStore {
         "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,lat,lng,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
-    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit", "voice_video_url"]
+    nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit"]
     private static var selectColumns: String {
         ([baseColumns] + optionalColumns + ["word:words(*)"]).joined(separator: ",")
     }
@@ -154,7 +154,6 @@ final class DexStore {
                 paths.append(p)
                 paths.append(p + ".thumb.webp")
             }
-            if let v = s.voiceVideoUrl, signed[v] == nil { paths.append(v) }
         }
         guard !paths.isEmpty else { return }
         for chunk in stride(from: 0, to: paths.count, by: 200).map({ Array(paths[$0..<min($0 + 200, paths.count)]) }) {
@@ -487,28 +486,6 @@ final class DexStore {
             var s = old
             s.cutoutImageUrl = path
             return s
-        }
-    }
-
-    /// Uploads the spoken note to `{uid}/{sticker}/voice.m4a` and links it (`setStickerVoiceVideo`).
-    /// Returns false when it could not be saved (the catch itself is already saved).
-    func attachVoiceNote(to sticker: Sticker, audio: Data) async -> Bool {
-        guard let uid = client.userId, !audio.isEmpty, audio.count <= 12 * 1024 * 1024 else { return false }
-        let path = "\(uid)/\(sticker.id)/voice.m4a"
-        do {
-            try await client.upload(audio, path: path, contentType: "audio/mp4", upsert: true)
-            struct Res: Decodable { let saved: Bool }
-            let r = try await NativeAPI.call("setStickerVoiceVideo", ["sticker_id": sticker.id, "voice_video_path": path], as: Res.self)
-            guard r.saved else { return false }
-            replace(sticker.id) { old in
-                var s = old
-                s.voiceVideoUrl = path
-                return s
-            }
-            if let map = try? await client.signedURLs(for: [path]) { signed.merge(map) { _, new in new } }
-            return true
-        } catch {
-            return false
         }
     }
 

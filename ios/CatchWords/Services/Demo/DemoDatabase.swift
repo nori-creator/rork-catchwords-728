@@ -229,7 +229,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
             s["created_at"] = DJ.iso(taken)
             s["shelf_key"] = i == 1 ? ("mine-favorites" as Any) : (NSNull() as Any)
             s["hero_role"] = NSNull()
-            s["voice_video_url"] = NSNull()
             s["placeholder_credit"] = NSNull()
             s["placeholder_image_url"] = NSNull()
             s["selfie_image_url"] = NSNull()
@@ -249,10 +248,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
                     let selfie = "\(uid)/demo-\(key)-selfie.jpg"
                     s["selfie_image_url"] = selfie
                     imageLabels[selfie] = ["emoji": "🤳", "text": head, "kind": "selfie"]
-                }
-                if i == 2 {
-                    // A spoken note (its signed file answers 404; the app tolerates that).
-                    s["voice_video_url"] = "\(uid)/\(stickerId)/voice.m4a"
                 }
             } else {
                 let stand = "\(uid)/demo-\(key)-placeholder.jpg"
