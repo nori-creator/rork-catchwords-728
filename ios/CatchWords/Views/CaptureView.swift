@@ -20,7 +20,7 @@ struct CaptureView: View {
     @State private var baseZoom: CGFloat = 1
     @State private var positionBeforeSelfie: AVCaptureDevice.Position = .back
     @Namespace private var modeBubble
-    @AppStorage("selfie.mode") private var selfieMode: Bool = true
+    @AppStorage("selfie.mode") private var selfieMode: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The card catch's shutter flash (`#flash` 0 → 1 at 12% → 0, 480 ms ease-out), above every screen.
     @State private var shotFlash: Double?

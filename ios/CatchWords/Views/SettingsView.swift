@@ -16,7 +16,7 @@ struct SettingsView: View {
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("reading.ja") private var readingJa: String = "kana"
     @AppStorage("photo.pref") private var photoPref: String = "auto"
-    @AppStorage("selfie.mode") private var selfieMode: Bool = true
+    @AppStorage("selfie.mode") private var selfieMode: Bool = false
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
     @AppStorage("motion.pref") private var motionPref: String = "full"
