@@ -287,6 +287,10 @@
   "en": "{1} photos · {2} days",
   "zh-TW": "{1} 張、{2} 天"
  },
+ "{1}枚・影 {2} / 100": {
+  "en": "{1} cards · shadows {2} / 100",
+  "zh-TW": "{1} 張，影子 {2} / 100"
+ },
  "{1}語": {
   "en": "{1} words",
   "zh-TW": "{1} 個單字"
@@ -755,6 +759,10 @@
   "en": "No wordbooks yet",
   "zh-TW": "還沒有單字本"
  },
+ "まだ見つけていない言葉 {1}": {
+  "en": "Not found yet: {1}",
+  "zh-TW": "還沒找到的詞：{1}"
+ },
  "まだ過去の日記はありません": {
   "en": "No past diary entries yet",
   "zh-TW": "還沒有過去的日記"
@@ -899,6 +907,10 @@
   "en": "Pick from calendar",
   "zh-TW": "從月曆選擇"
  },
+ "カード": {
+  "en": "Cards",
+  "zh-TW": "卡片"
+ },
  "カードが見つかりません": {
   "en": "Card not found.",
   "zh-TW": "找不到卡片。"
@@ -930,6 +942,10 @@
  "キャンセル": {
   "en": "Cancel",
   "zh-TW": "取消"
+ },
+ "ギャラリー": {
+  "en": "Gallery",
+  "zh-TW": "圖鑑牆"
  },
  "グラフを指でなぞると、その日の記憶率が見られます": {
   "en": "Trace the graph with your finger to see your memory on that day",
@@ -1082,6 +1098,10 @@
  "パスワード設定用のメールを送りました。": {
   "en": "We sent you an email to set your password.",
   "zh-TW": "已寄出設定密碼的電子郵件。"
+ },
+ "パン・お菓子": {
+  "en": "Bread & Sweets",
+  "zh-TW": "麵包、點心"
  },
  "ビジネス": {
   "en": "Business",
@@ -1971,6 +1991,10 @@
   "en": "Furniture",
   "zh-TW": "家具"
  },
+ "家具・部屋": {
+  "en": "Furniture & Rooms",
+  "zh-TW": "家具、房間"
+ },
  "家族": {
   "en": "Family",
   "zh-TW": "家人"
@@ -1978,6 +2002,10 @@
  "家電": {
   "en": "Appliances",
   "zh-TW": "家電"
+ },
+ "家電・電子機器": {
+  "en": "Appliances & Electronics",
+  "zh-TW": "家電、電子產品"
  },
  "対象を解析しています": {
   "en": "Reading the object…",
@@ -1998,6 +2026,10 @@
  "建物": {
   "en": "Buildings",
   "zh-TW": "建築"
+ },
+ "建物・お店": {
+  "en": "Buildings & Shops",
+  "zh-TW": "建築、商店"
  },
  "建物・街": {
   "en": "City & architecture",
@@ -2223,6 +2255,14 @@
   "en": "Stationery",
   "zh-TW": "文具"
  },
+ "文房具・本": {
+  "en": "Stationery & Books",
+  "zh-TW": "文具、書"
+ },
+ "料理": {
+  "en": "Dishes",
+  "zh-TW": "料理"
+ },
  "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
   "en": "Catch a new word and its first review comes up 10 minutes later.",
   "zh-TW": "捕捉新單字後，10分鐘後會出現第一次複習。"
@@ -2290,6 +2330,10 @@
  "日本語を学習中": {
   "en": "Learning Japanese",
   "zh-TW": "正在學日文"
+ },
+ "日用品": {
+  "en": "Daily Necessities",
+  "zh-TW": "日用品"
  },
  "日記": {
   "en": "Diary",
@@ -2427,6 +2471,10 @@
   "en": "Fruit",
   "zh-TW": "水果"
  },
+ "果物・野菜": {
+  "en": "Fruit & Vegetables",
+  "zh-TW": "水果、蔬菜"
+ },
  "案内に戻る": {
   "en": "Back to the guide",
   "zh-TW": "回到導覽"
@@ -2474,6 +2522,10 @@
  "植物": {
   "en": "Plants",
   "zh-TW": "植物"
+ },
+ "植物・花": {
+  "en": "Plants & Flowers",
+  "zh-TW": "植物、花"
  },
  "検出に失敗しました": {
   "en": "Detection failed",
@@ -2791,6 +2843,10 @@
   "en": "Nature",
   "zh-TW": "自然"
  },
+ "自然・空": {
+  "en": "Nature & Sky",
+  "zh-TW": "自然、天空"
+ },
  "興味のあるテーマを選んでください（複数選択可）。": {
   "en": "Choose the topics you enjoy. Select as many as you like.",
   "zh-TW": "選擇感興趣的主題，可以複選。"
@@ -2850,6 +2906,10 @@
  "街で見つけた物が、学びたい言葉になる。": {
   "en": "What you find on the street becomes the language you're learning.",
   "zh-TW": "街上看到的東西，變成你想學的語言。"
+ },
+ "街の物": {
+  "en": "Things on the Street",
+  "zh-TW": "街上的東西"
  },
  "街並み": {
   "en": "Streets",
@@ -3079,6 +3139,10 @@
   "en": "Wear",
   "zh-TW": "穿戴"
  },
+ "身につける物": {
+  "en": "Things You Wear",
+  "zh-TW": "穿戴用品"
+ },
  "身の回り": {
   "en": "Everyday things",
   "zh-TW": "生活用品"
@@ -3134,6 +3198,10 @@
  "週": {
   "en": "Week",
   "zh-TW": "週"
+ },
+ "遊び・趣味": {
+  "en": "Play & Hobbies",
+  "zh-TW": "遊戲、興趣"
  },
  "過去の日記": {
   "en": "Past entries",
@@ -3262,6 +3330,10 @@
  "食べ物": {
   "en": "Food & drink",
   "zh-TW": "美食"
+ },
+ "食器・台所": {
+  "en": "Tableware & Kitchen",
+  "zh-TW": "餐具、廚房"
  },
  "飲み物": {
   "en": "Drinks",
