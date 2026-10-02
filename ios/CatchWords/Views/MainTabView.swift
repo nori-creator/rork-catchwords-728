@@ -31,6 +31,10 @@ enum AppTab: Int, CaseIterable, Identifiable {
 final class AppRouter {
     var tab: AppTab = .home
     var landingStickerId: String?
+    /// The card catch's star waiting for the save (CardCatchModel → CatchLanding).
+    var catchStar: CatchStar?
+    /// A card-catch landing in progress: the dex opens in ギャラリー and the star flies into the slot.
+    var landing: CatchLandingController?
     var detailSticker: Sticker?
     var showPaywall: Bool = false
     /// Home's 「解析待ち」 banner: open the camera with its waiting list showing.
@@ -75,8 +79,17 @@ struct MainTabView: View {
             Group {
                 switch router.tab {
                 case .home: HomeView().environment(\.colorScheme, .light)  // the paper album stays paper
-                case .dex: DexView()
-                case .camera: CaptureView()
+                case .dex:
+                    // A card-catch landing: the dex page rises over the camera screen (#dex translateY(102%) → none).
+                    DexView()
+                        .transition(router.landing != nil ? AnyTransition.move(edge: .bottom) : AnyTransition.opacity)
+                        .zIndex(router.landing != nil ? 1 : 0)
+                case .camera:
+                    CaptureView()
+                        .transition(router.landing != nil
+                                    ? AnyTransition.asymmetric(insertion: .opacity,
+                                                               removal: AnyTransition.opacity.animation(.linear(duration: 0.01).delay(0.6)))
+                                    : AnyTransition.opacity)
                 case .review: ReviewView()
                 case .settings: SettingsView()
                 }
@@ -91,6 +104,9 @@ struct MainTabView: View {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.9), value: router.tabBarHidden)
+        .overlay {
+            if let landing = router.landing { CatchLandingOverlay(controller: landing) }
+        }
         .overlayPreferenceValue(TourAnchorKey.self) { anchors in
             // The card catch hides the tab bar for its whole flow; its capture steps still need the guide.
             if router.tour != .off, router.tour != .word, router.tour != .complete,

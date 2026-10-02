@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The prototype's five card categories and their studio colours (docs/prototype/cats.js `CATS`).
+/// The prototype's five card colours (docs/prototype/cats.js `CATS`), used over the 20 dex categories (`forDex`).
 enum CCCategory: String {
     case food, plant, animal, city, thing
 
@@ -24,27 +24,22 @@ enum CCCategory: String {
         }
     }
 
-    /// `CATS[cat].label` (the card's "category · pos" line).
-    var label: String {
-        switch self {
-        case .food: L("飲み物・食べ物")
-        case .plant: L("植物")
-        case .animal: L("動物")
-        case .city: L("街")
-        case .thing: L("身の回り")
+    /// The card's studio colour for one of the 20 dex categories (DexCatalog).
+    /// provisional, owner to choose A/B: (A) the prototype's 5 colours grouped over the 20 categories (this) or
+    /// (B) 20 new colours. A: 1–5 → food, 15 → animal, 16–17 → plant, 12–14 → city, everything else → thing.
+    static func forDex(_ no: Int) -> CCCategory {
+        switch no {
+        case 1...5: .food
+        case 15: .animal
+        case 16, 17: .plant
+        case 12...14: .city
+        default: .thing
         }
     }
 
-    /// PROVISIONAL — pending the owner's confirmation (the prototype's AI chose one of its five categories
-    /// directly; the app's cards carry one of the 54 category keys instead):
-    /// room 食べる → food; "animal" → animal; "plant" / "flower" / "nature" → plant; room 街 → city;
-    /// everything else → thing.
-    static func from(categoryKey key: String?) -> CCCategory {
-        guard let key, !key.isEmpty else { return .thing }
-        if Category.room(for: key) == .eat { return .food }
-        if key == "animal" { return .animal }
-        if key == "plant" || key == "flower" || key == "nature" { return .plant }
-        if Category.room(for: key) == .town { return .city }
-        return .thing
+    /// The colour for a word: its catalog item's category when the headword is in the catalog, else its
+    /// category key's (DexCatalog.keyToCategory).
+    static func from(headword: String?, categoryKey key: String?) -> CCCategory {
+        forDex(DexCatalog.category(headword: headword, key: key, lang: NativeAPI.targetLanguage))
     }
 }

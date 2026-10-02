@@ -543,8 +543,12 @@ struct CaptureView: View {
                 router.tourStickerId = outcome.sticker.id
                 router.tour = .added
             }
-            vm.reset()
-            CatchLanding.land(stickerId: outcome.sticker.id, router: router)
+            // The dex page rises over this screen (the photo stays under it), then the camera is put back.
+            CatchLanding.land(stickerId: outcome.sticker.id, router: router, calm: reduceMotion)
+            Task {
+                try? await Task.sleep(for: .milliseconds(700))
+                vm.reset()
+            }
             return true
         } catch {
             let reason = (error as? LocalizedError)?.errorDescription ?? ""

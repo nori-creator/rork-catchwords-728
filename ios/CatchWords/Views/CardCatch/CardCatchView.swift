@@ -25,14 +25,22 @@ struct CardCatchView: View {
             }
             .onAppear {
                 model.space = CCSpace(size: geo.size)
+                model.globalOrigin = geo.frame(in: .global).origin
                 model.motion = CCMotion(calm: reduceMotion)
                 model.vm = vm
                 model.onSend = onSend
-                model.nextNumber = { [dex] in dex.stickers.count + 1 }
+                model.nextNumber = { [dex] headword in
+                    DexNumbering.preview(headword: headword, stickers: dex.stickers, lang: NativeAPI.targetLanguage,
+                                         uid: SupabaseClient.shared.userId)
+                }
+                model.onHandoff = { [router] star in router.catchStar = star }
                 model.onCardShown = { [router] in router.advanceTour(from: .pick, to: .detail) }
                 model.begin()
             }
-            .onChange(of: geo.size) { _, s in model.space = CCSpace(size: s) }
+            .onChange(of: geo.size) { _, s in
+                model.space = CCSpace(size: s)
+                model.globalOrigin = geo.frame(in: .global).origin
+            }
         }
         .ignoresSafeArea()
         .background(Color.black)

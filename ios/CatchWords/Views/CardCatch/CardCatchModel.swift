@@ -35,8 +35,12 @@ final class CardCatchModel {
     @ObservationIgnored weak var vm: CaptureViewModel?
     @ObservationIgnored var onSend: (() async -> Bool)?
     @ObservationIgnored var onCardShown: (() -> Void)?
-    /// The card's No. (the next number in the dex).
-    @ObservationIgnored var nextNumber: () -> Int = { 1 }
+    /// The card's No. for a headword (DexNumbering: base 001–100, else the next number from 101).
+    @ObservationIgnored var nextNumber: (String) -> Int = { _ in 1 }
+    /// The star is about to leave this screen (the save is starting): where it is, for the dex landing.
+    @ObservationIgnored var onHandoff: ((CatchStar) -> Void)?
+    /// This view's origin in global coordinates (the star's hand-off point is given in global coordinates).
+    @ObservationIgnored var globalOrigin: CGPoint = .zero
     var space = CCSpace(size: .zero)
     var motion = CCMotion(calm: false)
     @ObservationIgnored private var runId = 0
@@ -315,7 +319,10 @@ final class CardCatchModel {
         starsOrigin = CCClock.now
         vm.choose(o.source, word: w)
         // .catbg: the category colour (the candidate's shelf hint; the card's own category once it arrives)
-        if let key = w.categoryKey, !key.isEmpty { showCategory(CCCategory.from(categoryKey: key)) }
+        let lang = NativeAPI.targetLanguage
+        if !(w.categoryKey ?? "").isEmpty || DexCatalog.item(headword: w.headword, lang: lang) != nil {
+            showCategory(CCCategory.from(headword: w.headword, categoryKey: w.categoryKey))
+        }
         Task { await formLight(my, o, w) }
     }
 
@@ -441,7 +448,10 @@ final class CardCatchModel {
             let v = d.raw?[key]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return v.isEmpty ? nil : v
         }
-        let cat = CCCategory.from(categoryKey: raw("category_key") ?? d.categoryKey)
+        let dexNo = DexCatalog.category(headword: w.headword, key: raw("category_key") ?? d.categoryKey,
+                                        lang: NativeAPI.targetLanguage)
+        let cat = CCCategory.forDex(dexNo)
+        let catLabel = DexCatalog.label(dexNo)
         let pos = CCText.posLabel(raw("part_of_speech") ?? w.pos)
         let sep = L10n.lang == "ja" ? "・" : " · "
         let date = Date().formatted(.dateTime.month().day().locale(L10n.locale))
@@ -464,9 +474,9 @@ final class CardCatchModel {
             meaning: ReaderLanguage.shown(raw("meaning_ja"), w.meaningJa),
             example: raw("example_sentence") ?? d.exampleSentence,
             exampleTranslation: ReaderLanguage.shown(raw("example_translation"), d.exampleTranslation),
-            categoryLine: pos.isEmpty ? cat.label : cat.label + sep + pos,
+            categoryLine: pos.isEmpty ? catLabel : catLabel + sep + pos,
             placeDate: place.isEmpty ? date : "\(place) · \(date)",
-            no: nextNumber(),
+            no: nextNumber(w.headword),
             category: cat,
             art: art
         )
@@ -547,10 +557,17 @@ final class CardCatchModel {
             bokehOn.set(0, duration: motion.transition(800))
             bokeh.stop()
             releaseMotion()
-            // Hand-off: the catch is saved by the app's own path while the star waits here; the dex
-            // (and, next phase, CatchLanding) takes it from there.
+            // Hand-off: the catch is saved by the app's own path while the star waits here; then the dex
+            // opens and CatchLanding flies this star into the word's slot.
+            onHandoff?(CatchStar(center: CGPoint(x: globalOrigin.x + space.toReal(CGPoint(x: cx, y: cy)).x,
+                                                 y: globalOrigin.y + space.toReal(CGPoint(x: cx, y: cy)).y),
+                                 size: 52 * space.k, k: space.k))
             let ok = await onSend?() ?? false
-            guard my == runId, !ok else { return }
+            guard my == runId else { return }
+            if ok {
+                star = nil   // CatchLanding drew it at the same place, above every screen
+                return
+            }
             restoreAfterFailedSend()
         }
     }
