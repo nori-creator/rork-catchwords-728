@@ -92,7 +92,9 @@ struct MainTabView: View {
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.9), value: router.tabBarHidden)
         .overlayPreferenceValue(TourAnchorKey.self) { anchors in
-            if router.tour != .off, router.tour != .word, router.tour != .complete, !router.tabBarHidden {
+            // The card catch hides the tab bar for its whole flow; its capture steps still need the guide.
+            if router.tour != .off, router.tour != .word, router.tour != .complete,
+               !router.tabBarHidden || (router.tab == .camera && router.tour.isCapture) {
                 TourLayer(step: router.tour, anchors: anchors, onNext: tourNext, onSkip: endTour)
                     .transition(.opacity)
             }

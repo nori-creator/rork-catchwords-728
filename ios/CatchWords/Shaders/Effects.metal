@@ -118,3 +118,10 @@ static float3 hueRGB(float h) {
     float3 c = pastel * wash + float3(1.0) * (glint * 0.9 + sheen * 0.10 * st);
     return half4(half3(c), half(a)) * color.a;
 }
+
+// Card catch: CSS `filter: brightness(amount)` — multiplies the colour (premultiplied, so it is clamped
+// to the alpha), which SwiftUI's additive `.brightness` cannot do. formLight's piece goes to brightness(3).
+[[ stitchable ]] half4 ccBrightness(float2 position, half4 color, float amount) {
+    half3 rgb = min(color.rgb * half(amount), half3(color.a));
+    return half4(rgb, color.a);
+}

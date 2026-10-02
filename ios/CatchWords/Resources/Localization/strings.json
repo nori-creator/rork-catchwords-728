@@ -215,6 +215,10 @@
   "en": "{1}, {2} words",
   "zh-TW": "{1}，{2} 個單字"
  },
+ "{1}つ見つかりました": {
+  "en": "Found {1}",
+  "zh-TW": "找到 {1} 個"
+ },
  "{1}で「{2}」をキャッチしました。覚えていますか？": {
   "en": "You caught “{2}” at {1}. Do you remember it?",
   "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
@@ -326,6 +330,10 @@
  "「{1}」を{2}に移しました": {
   "en": "Moved “{1}” to {2}",
   "zh-TW": "已將「{1}」移到{2}"
+ },
+ "「{1}」をどの言葉で集める？": {
+  "en": "Which word for “{1}”?",
+  "zh-TW": "「{1}」要用哪個詞收集？"
  },
  "「{1}」を外す": {
   "en": "Remove “{1}”",
@@ -767,6 +775,10 @@
   "en": "Try again",
   "zh-TW": "再試一次"
  },
+ "もう一度発音を聞く": {
+  "en": "Listen again",
+  "zh-TW": "再聽一次發音"
+ },
  "もう一度覚えよう": {
   "en": "Let's learn it again",
   "zh-TW": "再記一次吧"
@@ -899,6 +911,10 @@
   "en": "The card came back incomplete. Please try again.",
   "zh-TW": "卡片內容不完整，請再試一次。"
  },
+ "カードを動かしてみよう・上にはじいて図鑑へ": {
+  "en": "Move the card · flick it up into your collection",
+  "zh-TW": "動動卡片，往上一撥就收進圖鑑"
+ },
  "カード生成に失敗しました": {
   "en": "Couldn't build the card",
   "zh-TW": "字卡產生失敗"
@@ -1006,6 +1022,10 @@
  "ズーム {1}倍": {
   "en": "Zoom {1}×",
   "zh-TW": "縮放 {1} 倍"
+ },
+ "タップして選んでください": {
+  "en": "Tap one to choose it",
+  "zh-TW": "點一下來選擇"
  },
  "タップで切り替え。並べ替えは右の取っ手を使います": {
   "en": "Tap to toggle. Use the handle on the right to reorder",
@@ -1827,6 +1847,10 @@
   "en": "Open in Dex",
   "zh-TW": "在圖鑑查看"
  },
+ "図鑑に入れる": {
+  "en": "Add to collection",
+  "zh-TW": "放進圖鑑"
+ },
  "図鑑に追加": {
   "en": "Add to collection",
   "zh-TW": "加入圖鑑"
@@ -2146,6 +2170,10 @@
  "撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。": {
   "en": "Capture it. Understand it. Recall it.\nBuild your vocabulary from everyday life.",
   "zh-TW": "拍下來、了解意思、再想起來。\n從生活中累積你的單字。"
+ },
+ "撮り直す": {
+  "en": "Retake",
+  "zh-TW": "重拍"
  },
  "撮影": {
   "en": "Take photo",
@@ -2891,6 +2919,10 @@
   "en": "Show",
   "zh-TW": "顯示"
  },
+ "見つかりませんでした": {
+  "en": "Nothing found",
+  "zh-TW": "沒有找到"
+ },
  "見つかりませんでした。": {
   "en": "It couldn't be found.",
   "zh-TW": "找不到。"
@@ -3058,6 +3090,10 @@
  "身につける": {
   "en": "Wear",
   "zh-TW": "穿戴"
+ },
+ "身の回り": {
+  "en": "Everyday things",
+  "zh-TW": "生活用品"
  },
  "辞書と照合しています": {
   "en": "Matching the dictionary…",
@@ -3242,6 +3278,10 @@
  "飲み物": {
   "en": "Drinks",
   "zh-TW": "飲料"
+ },
+ "飲み物・食べ物": {
+  "en": "Food & drink",
+  "zh-TW": "飲料與食物"
  },
  "高低アクセント": {
   "en": "Pitch accent",
