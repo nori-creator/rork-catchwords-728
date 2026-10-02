@@ -703,10 +703,6 @@
   "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
   "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
  },
- "ほかの学習言語の単語が{1}語あります。": {
-  "en": "You have {1} words from another learning language.",
-  "zh-TW": "還有{1}個其他學習語言的單字。"
- },
  "ほかの棚": {
   "en": "Other shelves",
   "zh-TW": "其他書架"
@@ -1922,10 +1918,6 @@
  "学習言語": {
   "en": "Target language",
   "zh-TW": "學習語言"
- },
- "学習言語を変える": {
-  "en": "Change learning language",
-  "zh-TW": "更換學習語言"
  },
  "学習設定": {
   "en": "Study settings",

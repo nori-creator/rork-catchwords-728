@@ -370,9 +370,7 @@ struct DexView: View {
         } else if dex.isLoading && !dex.hasLoaded {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dex.hasLoaded && filtered.isEmpty {
-            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty,
-                         otherLanguageCount: dex.otherLanguageCount,
-                         onSettings: { router.tab = .settings }) { router.tab = .camera }
+            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty) { router.tab = .camera }
                 .padding(.top, 130)
         } else {
             switch mode {
@@ -1085,8 +1083,6 @@ struct MapVisit: Identifiable {
 
 struct EmptyDexView: View {
     let isFiltered: Bool
-    var otherLanguageCount: Int = 0
-    var onSettings: () -> Void = {}
     let onCamera: () -> Void
 
     var body: some View {
@@ -1100,17 +1096,6 @@ struct EmptyDexView: View {
             if !isFiltered {
                 PrimaryButton(title: L("最初の1枚を撮る"), icon: "camera.fill", sheen: true, action: onCamera)
                     .frame(maxWidth: 260)
-                if otherLanguageCount > 0 {
-                    // The words are not gone: they belong to another learning language.
-                    Text(L("ほかの学習言語の単語が\(otherLanguageCount)語あります。"))
-                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 6)
-                    Button(L("学習言語を変える"), action: onSettings)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.primaryInk)
-                        .frame(minHeight: 44)
-                }
             }
         }
         .frame(maxWidth: .infinity)

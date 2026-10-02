@@ -37,8 +37,6 @@ final class DexStore {
     var pending: [PendingCatch] = []
     /// sticker id → review state (memory badges). Stickers without a review get no badge.
     var reviews: [String: ReviewState] = [:]
-    /// Words caught while learning another language (hidden here; web dex 「ほかの言語に n 語あります」).
-    var otherLanguageCount: Int = 0
 
     private let client = SupabaseClient.shared
     private var language: String { NativeAPI.targetLanguage }
@@ -93,7 +91,6 @@ final class DexStore {
             await loadAlbumPlacements()
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
             stickers = present(rows.filter { $0.word?.matches(language) ?? true })
-            otherLanguageCount = rows.count - rows.filter { $0.word?.matches(language) ?? true }.count
             loadError = nil
             hasLoaded = true
             await loadReviews()
