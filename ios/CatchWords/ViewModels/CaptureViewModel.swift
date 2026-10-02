@@ -355,7 +355,11 @@ final class CaptureViewModel {
         analyze(img)
     }
 
+    /// Goes up with every notice, even the same text twice (the card re-enables its button on each one).
+    var toastCount: Int = 0
+
     func showToast(_ text: String) {
+        toastCount += 1
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = text }
         Task {
             try? await Task.sleep(for: .seconds(3))

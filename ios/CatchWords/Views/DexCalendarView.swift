@@ -77,7 +77,7 @@ struct DexCalendarView: View {
         let isToday = cal.isDateInToday(day)
         let weekday = cal.component(.weekday, from: day)
         let isSelected = selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false
-        let path = first.map { $0.objectImageUrl ?? $0.cutoutImageUrl }
+        let path = first.map { $0.heroPath }
         return Button {
             guard !items.isEmpty else { return }
             Haptics.selection()
@@ -133,13 +133,13 @@ struct DexCalendarView: View {
                 .foregroundStyle(Theme.primary)
                 .frame(minHeight: 44)
                 Spacer()
-                Text(day.formatted(.dateTime.month().day().weekday()))
+                Text(JPDate.monthDayWeek(day))
                     .font(AppFont.hand(18)).foregroundStyle(Theme.foreground)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { idx, s in
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 0) {
-                        Text(s.takenAt.formatted(.dateTime.hour().minute()))
+                        Text(JPDate.time(s.takenAt))
                             .font(AppFont.mono(12, weight: .semibold)).foregroundStyle(Theme.muted)
                         Rectangle().fill(Theme.border).frame(width: 1).frame(maxHeight: .infinity)
                     }
@@ -156,8 +156,13 @@ struct DexCalendarView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(s.word?.headword ?? "").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
                                 Text(s.word?.meaningJa ?? "").font(.system(size: 13)).foregroundStyle(Theme.muted)
-                                if let place = s.locationName {
-                                    Label(place, systemImage: "mappin").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                                if s.lat != nil || !(s.locationName ?? "").isEmpty {
+                                    Label {
+                                        LocalizedPlaceText(lat: s.lat, lng: s.lng, saved: s.locationName)
+                                    } icon: {
+                                        Image(systemName: "mappin")
+                                    }
+                                    .font(.system(size: 11)).foregroundStyle(Theme.muted)
                                 }
                                 if let cap = s.caption, !cap.isEmpty {
                                     Text(cap).font(AppFont.hand(14)).foregroundStyle(Theme.foreground.opacity(0.8)).lineLimit(2)

@@ -33,6 +33,10 @@ final class ReviewStore {
     var isRetry: Bool = false
     /// More cards are due than the daily limit let into this round.
     var moreAvailable: Bool = false
+    /// Today's limit is used up while cards are still due (web review-batch.ts "capped").
+    var capped: Bool = false
+    /// Due cards left after this batch (web `dueRemaining`).
+    var dueRemaining: Int = 0
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
 
@@ -90,10 +94,31 @@ final class ReviewStore {
         await load(dex: dex, limit: doneToday + 20)
     }
 
+    /// 「いま復習する」 on a word's curve: that word becomes the next card — moved up when it is still
+    /// waiting in today's queue, added when it is not there (not due yet, or already answered).
+    func bringForward(_ sticker: Sticker, review: ReviewState?, currentAnswered: Bool) {
+        let at = min(queue.count, currentAnswered ? index + 1 : index)
+        if let i = queue.firstIndex(where: { $0.sticker.id == sticker.id }), i >= index {
+            if i == index && !currentAnswered { return }
+            if i > at { queue.move(fromOffsets: IndexSet(integer: i), toOffset: at) }
+            return
+        }
+        // Without a review row there is nothing to grade (the answer would not be saved).
+        guard sticker.word != nil, let r = review, r.id != nil else { return }
+        queue.insert(ReviewCard(review: r, sticker: sticker), at: at)
+    }
+
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
 
     func load(dex: DexStore, limit: Int) async {
-        guard client.session != nil else { return }
+        // Local guest (no account): nothing to review, but the screen must leave its spinner.
+        guard client.session != nil else {
+            queue = []
+            moreAvailable = false
+            loadError = nil
+            hasLoaded = true
+            return
+        }
         choiceCache = [:]
         isLoading = true
         defer { isLoading = false }
@@ -114,9 +139,12 @@ final class ReviewStore {
                 return ReviewCard(review: r, sticker: s)
             }
             await historyTask  // doneToday is now this language's count
-            let room = max(1, limit - doneToday)
+            // The daily limit reached: nothing more today (web getDueReviews returns [] then), but say so.
+            let room = max(0, limit - doneToday)
             queue = Array(cards.prefix(room))
-            moreAvailable = cards.count > room
+            capped = room == 0 && !cards.isEmpty
+            dueRemaining = cards.count - queue.count
+            moreAvailable = dueRemaining > 0
             missed = []
             isRetry = false
             loadedTarget = NativeAPI.targetLanguage

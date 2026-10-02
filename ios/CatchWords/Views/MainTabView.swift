@@ -33,6 +33,8 @@ final class AppRouter {
     var landingStickerId: String?
     var detailSticker: Sticker?
     var showPaywall: Bool = false
+    /// Home's 「解析待ち」 banner: open the camera with its waiting list showing.
+    var openPending: Bool = false
     /// True while the camera "machine" (live preview / selfie / analyzing) fills the screen.
     var cameraImmersive: Bool = true
     /// Analyzing and the reward stage take the whole screen (no tab bar).
@@ -103,7 +105,11 @@ struct MainTabView: View {
                     }
                 }
         }
-        .onAppear { beginTourIfPending() }
+        .onAppear {
+            beginTourIfPending()
+            openNotification(NotificationRouter.shared.pending)
+        }
+        .onChange(of: NotificationRouter.shared.pending) { _, route in openNotification(route) }
         .onChange(of: tourPending) { _, _ in beginTourIfPending() }
         .onChange(of: router.tab) { _, tab in
             if tab == .camera { router.advanceTour(from: .tapCamera, to: .shoot) }
@@ -113,6 +119,27 @@ struct MainTabView: View {
         }
         .fullScreenCover(isPresented: $router.showPaywall) {
             PaywallView()
+        }
+    }
+
+    /// A tapped reminder: the review tab, or the word a place reminder was about.
+    private func openNotification(_ route: NotificationRoute?) {
+        guard let route else { return }
+        NotificationRouter.shared.pending = nil
+        switch route {
+        case .review:
+            router.detailSticker = nil
+            router.tab = .review
+        case .home:
+            router.detailSticker = nil
+            router.tab = .home
+        case .sticker(let id):
+            if let s = dex.sticker(id: id) {
+                router.tab = .dex
+                router.detailSticker = s
+            } else {
+                router.tab = .review
+            }
         }
     }
 
@@ -213,6 +240,7 @@ struct CapsuleTabBar: View {
         }
         .buttonStyle(PressableStyle(scale: 0.92))
         .accessibilityLabel(tab.title)
+        .accessibilityIdentifier("tab.\(String(describing: tab))")
     }
 
     /// The camera cell: the same size and height as every other tab, in one row

@@ -51,8 +51,8 @@ struct MemoryOverviewPanel: View {
             HStack(spacing: 10) {
                 Text(s.word?.headword ?? "")
                     .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
-                    .lineLimit(1).truncationMode(.tail)
-                    .frame(width: 58, alignment: .leading)
+                    .lineLimit(1).minimumScaleFactor(0.7).truncationMode(.tail)
+                    .frame(minWidth: 58, maxWidth: 110, alignment: .leading)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.secondary)

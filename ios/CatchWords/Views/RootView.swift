@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AuthStore.self) private var auth
     @Environment(DexStore.self) private var dex
+    @Environment(DiaryStore.self) private var diary
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
     @Environment(\.scenePhase) private var scenePhase
@@ -34,9 +35,13 @@ struct RootView: View {
                 }
                     .transition(.opacity)
                     .task {
+                        let guessed = NativeAPI.targetLanguage
                         async let p: Void = profile.load()
                         await dex.load()
                         await p
+                        // The album was read for the language remembered on this device; another account
+                        // (or a change made on the web) can have a different one.
+                        if NativeAPI.targetLanguage != guessed { await dex.load() }
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
@@ -50,7 +55,10 @@ struct RootView: View {
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: auth.phase)
         .task { await auth.bootstrap() }
         .onChange(of: auth.phase) { _, phase in
-            if phase == .signedOut { dex.reset() }
+            if phase == .signedOut {
+                dex.reset()
+                diary.reset()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
         // Meanings and notes follow the display language too (read again in the new one).

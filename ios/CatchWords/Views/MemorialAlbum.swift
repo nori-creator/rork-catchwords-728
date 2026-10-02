@@ -10,7 +10,7 @@ enum Milestone {
     static let hour = 19
     static let minute = 30
     private static let seenKey = "memorial-seen-v1"
-    private static let notificationId = "milestone-album"
+    static let notificationId = "milestone-album"
 
     /// Day 1 is the day the account was made (local calendar days, no clock time).
     static func dayNumber(start: Date, now: Date = Date()) -> Int {

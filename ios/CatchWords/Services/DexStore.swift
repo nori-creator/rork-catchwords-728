@@ -52,7 +52,7 @@ final class DexStore {
     private var readerKey = ""
 
     private static let baseColumns =
-        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,taken_at,capture_type,shelf_key"
+        "id,word_id,object_image_url,cutout_image_url,selfie_image_url,caption,location_name,lat,lng,taken_at,capture_type,shelf_key"
     /// Columns that came with later migrations (the web reads them the same way, in stages). If the
     /// server doesn't have one yet the dex still loads without it.
     nonisolated(unsafe) private static var optionalColumns = ["hero_role", "placeholder_image_url", "placeholder_credit"]
@@ -75,7 +75,12 @@ final class DexStore {
 
     func load() async {
         pending = PendingQueue.shared.all()
-        guard client.session != nil else { return }
+        // Local guest (no account): an empty dex, not a skeleton that never ends.
+        guard client.session != nil else {
+            loadError = nil
+            hasLoaded = true
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -373,6 +378,7 @@ final class DexStore {
             "cutout_path": orNull(cut),
         ], as: Recorded.self, timeout: 30)
         cacheLocal(path: image, image: photo)
+        StickerPhoto.invalidate(owned.stickerId)
         if let fresh = try? await fetchSticker(id: owned.stickerId) {
             replace(owned.stickerId) { _ in fresh }
         }
@@ -426,6 +432,7 @@ final class DexStore {
         }
         _ = try await NativeAPI.call("replaceStickerPhoto", ["sticker_id": sticker.id, "object_path": path])
         ImageCache.shared.set(image, for: path)
+        StickerPhoto.invalidate(sticker.id)
         await reload(stickerId: sticker.id)
         if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
     }
@@ -481,6 +488,22 @@ final class DexStore {
         }
     }
 
+    /// A selfie taken later for a word that has none (web PhotoAddButtons → `attachStickerSelfie`).
+    func addSelfie(to sticker: Sticker, image: UIImage) async throws {
+        guard let uid = client.userId else { throw APIError.unauthorized }
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        guard let path = try await uploadJPEG(image, uid: uid, ts: ts, kind: "selfie") else {
+            throw APIError.message(L("写真の保存に失敗しました。"))
+        }
+        _ = try await NativeAPI.call("attachStickerSelfie", ["sticker_id": sticker.id, "selfie_path": path])
+        ImageCache.shared.set(image, for: path)
+        replace(sticker.id) { old in
+            var s = old
+            s.selfieImageUrl = path
+            return s
+        }
+    }
+
     /// Saves the sticker's one-line note (ひと言). Empty clears it.
     func updateCaption(_ sticker: Sticker, caption: String) async throws {
         // The server keeps 500 characters (stickers.functions.ts CAPTION_MAX).
@@ -523,7 +546,8 @@ final class DexStore {
         albumHidden = Set(r.ids)
     }
 
-    func setAlbumHidden(_ id: String, hidden: Bool) async {
+    @discardableResult
+    func setAlbumHidden(_ id: String, hidden: Bool) async -> Bool {
         // Update the page at once; roll back if the server refused.
         if hidden { albumHidden.insert(id) } else { albumHidden.remove(id) }
         struct Res: Decodable { let saved: Bool }
@@ -531,6 +555,7 @@ final class DexStore {
         if !ok {
             if hidden { albumHidden.remove(id) } else { albumHidden.insert(id) }
         }
+        return ok
     }
 
     /// Where the learner placed each photo on the album page (web album_x / album_y / album_scale /
@@ -674,9 +699,9 @@ final class DexStore {
         let by: String?
     }
 
-    func reportAndFix(wordId: String, candidates: [String], note: String) async throws -> ReportFix {
+    func reportAndFix(wordId: String, item: String = "auto", candidates: [String], note: String) async throws -> ReportFix {
         try await NativeAPI.call("reportAndFixSection", [
-            "word_id": wordId, "item": "auto", "candidates": Array(candidates.prefix(24)), "note": String(note.prefix(500)),
+            "word_id": wordId, "item": item, "candidates": Array(candidates.prefix(24)), "note": String(note.prefix(500)),
         ], as: ReportFix.self, timeout: 90)
     }
 

@@ -49,6 +49,29 @@ struct HomeView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
+                // Photos kept at the shutter whose analysis has not finished (web Home pending banner).
+                if !dex.pending.isEmpty {
+                    Button {
+                        router.openPending = true
+                        router.tab = .camera
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "hourglass").font(.system(size: 15, weight: .semibold))
+                            Text(L("解析待ちの写真が\(dex.pending.count)枚あります"))
+                                .font(.system(size: 14, weight: .semibold))
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color(hex: 0x33291F))
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 48)
+                        .background(Color(hex: 0xF3D98A, opacity: 0.45), in: .rect(cornerRadius: 14))
+                    }
+                    .buttonStyle(PressableStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 14)
+                }
+
                 HStack(alignment: .firstTextBaseline) {
                     Text(L("\(JPDate.month(today))のアルバム"))
                         .font(.system(size: 20, weight: .heavy))
@@ -239,7 +262,7 @@ struct Bookshelf: View {
                     Spacer(minLength: 8)
                 }
                 if let latest {
-                    let path = latest.objectImageUrl ?? latest.cutoutImageUrl
+                    let path = latest.heroPath
                     Color.white
                         .frame(width: 54, height: 66)
                         .overlay {
@@ -282,12 +305,7 @@ struct BookSpine: View {
         VStack(spacing: 6) {
             Rectangle().fill(Color(hex: 0xE8C66A).opacity(0.8)).frame(height: 1.5)
             Text(String(year)).font(.system(size: 7, weight: .bold, design: .serif)).foregroundStyle(Color(hex: 0xF3D98A))
-            Text(JPDate.monthName(month))
-                .font(.system(size: 9, weight: .bold, design: .serif))
-                .foregroundStyle(Color(hex: 0xF3D98A))
-                .fixedSize()
-                .rotationEffect(.degrees(90))
-                .frame(width: 14, height: 56)
+            spineMonth
             Spacer(minLength: 0)
             Text("\(count)")
                 .font(.system(size: 7, weight: .bold))
@@ -304,7 +322,29 @@ struct BookSpine: View {
             in: .rect(cornerRadius: 3)
         )
         .shadow(color: .black.opacity(0.35), radius: 2, x: 2)
-        .accessibilityLabel(L("\(JPDate.monthName(month)) \(count)語"))
+        .accessibilityLabel(L("\(JPDate.month(month)) \(count)語"))
+    }
+
+    /// The month on the spine in the display language: English runs along the spine, Japanese and
+    /// Chinese stand upright one character under another (縦書き).
+    @ViewBuilder private var spineMonth: some View {
+        if L10n.lang == "en" {
+            Text(JPDate.monthName(month))
+                .font(.system(size: 9, weight: .bold, design: .serif))
+                .foregroundStyle(Color(hex: 0xF3D98A))
+                .fixedSize()
+                .rotationEffect(.degrees(90))
+                .frame(width: 14, height: 56)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(JPDate.month(month).enumerated()), id: \.offset) { _, ch in
+                    Text(String(ch))
+                }
+            }
+            .font(.system(size: 10, weight: .bold, design: .serif))
+            .foregroundStyle(Color(hex: 0xF3D98A))
+            .frame(width: 14, height: 56)
+        }
     }
 }
 
@@ -341,6 +381,7 @@ private struct Globe: View {
 struct AlbumHiddenTray: View {
     @Environment(DexStore.self) private var dex
     @State private var open = false
+    @State private var failed = false
 
     private var hidden: [Sticker] { dex.stickers.filter { dex.albumHidden.contains($0.id) } }
 
@@ -374,8 +415,9 @@ struct AlbumHiddenTray: View {
                                     Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
                                     Button(L("戻す")) {
                                         Haptics.selection()
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                                            Task { await dex.setAlbumHidden(s.id, hidden: false) }
+                                        Task {
+                                            let ok = await dex.setAlbumHidden(s.id, hidden: false)
+                                            withAnimation(.easeOut(duration: 0.2)) { failed = !ok }
                                         }
                                     }
                                     .font(.system(size: 13, weight: .semibold))
@@ -387,6 +429,10 @@ struct AlbumHiddenTray: View {
                     }
                     .scrollIndicators(.hidden)
                     .transition(.opacity.combined(with: .move(edge: .top)))
+                    if failed {
+                        Text(L("保存できませんでした。通信を確かめてください。"))
+                            .font(.system(size: 12)).foregroundStyle(Color(hex: 0xB91C1C))
+                    }
                 }
             }
             .padding(.horizontal, 14)

@@ -67,12 +67,15 @@ struct SettingsView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
                     await profile.uploadAvatar(img)
+                } else {
+                    profile.message = L("写真を読み込めませんでした。")
                 }
                 avatarItem = nil
             }
         }
         .confirmationDialog(L("サインアウトしますか？"), isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button(L("サインアウト"), role: .destructive) { auth.signOut() }
+                .accessibilityIdentifier("settings.signOut.confirm")
         }
     }
 
@@ -89,7 +92,7 @@ struct SettingsView: View {
                         Text(profile.avatarURL == nil ? L("選ぶ") : L("変更"))
                             .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
                             .padding(.horizontal, 18).frame(minHeight: 46)
-                            .background(Color(hex: 0xF3F7FC), in: Capsule())
+                            .background(Theme.secondary, in: Capsule())
                             .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(PressableStyle())
@@ -121,13 +124,16 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 label(L("母語"))
                 wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? L("日本語")) { openWheel(.native) }
+                    .accessibilityIdentifier("settings.wheel.native")
                 label(L("学習言語")).padding(.top, 6)
                 wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? L("繁體字（台灣）")) { openWheel(.target) }
+                    .accessibilityIdentifier("settings.wheel.target")
                 label(L("今のレベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
+                    .accessibilityIdentifier("settings.wheel.current")
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
-                // English shows its IPA as the dictionary gives it; there is nothing to choose.
+                    .accessibilityIdentifier("settings.wheel.goal")
                 if !isEnglish { label(L("発音表記")).padding(.top, 6) }
                 if profile.targetLanguage == "ja" {
                     ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
@@ -283,6 +289,7 @@ struct SettingsView: View {
                     .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
             }
             .buttonStyle(PressableStyle())
+            .accessibilityIdentifier("settings.signOut")
 
             deleteZone
 
@@ -380,9 +387,9 @@ struct SettingsView: View {
     }
 
     private func notice(_ t: String) -> some View {
-        Text(t).font(.system(size: 12)).foregroundStyle(Color(hex: 0x7A4B00))
+        Text(t).font(.system(size: 12)).foregroundStyle(Color(light: 0x7A4B00, dark: 0xFCD34D))
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: 0xFFF5DB), in: .rect(cornerRadius: 12))
+            .background(Color(light: 0xFFF5DB, dark: 0x2A2210), in: .rect(cornerRadius: 12))
     }
 
     private func wheelRow(_ value: String, action: @escaping () -> Void) -> some View {
@@ -582,10 +589,11 @@ struct WheelCard: View {
     @State private var value: String = ""
     @State private var appeared: Bool = false
 
+    /// The native (display) language and the learning language are never the same (as in onboarding).
     private var options: [(value: String, label: String)] {
         switch field {
-        case .native: ProfileStore.nativeOptions
-        case .target: ProfileStore.targetOptions
+        case .native: ProfileStore.nativeOptions.filter { $0.value != profile.targetLanguage }
+        case .target: ProfileStore.targetOptions.filter { $0.value != L10n.lang }
         case .current, .goal: ProfileStore.levels(for: profile.targetLanguage)
         }
     }
@@ -602,12 +610,12 @@ struct WheelCard: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).ignoresSafeArea()
-                .onTapGesture(perform: onClose)
+                .onTapGesture(perform: close)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(field.title).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
                     Spacer()
-                    Button(action: onClose) {
+                    Button(action: close) {
                         Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
                             .frame(width: 44, height: 44)
                     }
@@ -618,13 +626,14 @@ struct WheelCard: View {
                 }
                 .pickerStyle(.wheel)
                 .frame(height: 150)
-                .onChange(of: value) { _, v in commit(v) }
-                Button(action: onClose) {
+                .onChange(of: value) { _, _ in Haptics.selection() }
+                Button(action: close) {
                     Text(L("閉じる")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(Theme.primary, in: Capsule())
                 }
                 .buttonStyle(PressableStyle())
+                .accessibilityIdentifier("wheel.close")
             }
             .padding(.horizontal, 20).padding(.vertical, 16)
             .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
@@ -638,23 +647,33 @@ struct WheelCard: View {
         }
     }
 
+    /// The choice is saved once, when the card closes — not on every tick of the wheel (each save
+    /// switches the app's language and reloads the dex).
+    private func close() {
+        commit(value)
+        onClose()
+    }
+
     private func commit(_ v: String) {
-        guard !v.isEmpty, v != initial else { return }
-        Haptics.selection()
+        guard !v.isEmpty, v != initial, options.contains(where: { $0.value == v }) else { return }
         switch field {
         case .native:
             profile.nativeLanguage = v
-            ReaderLanguage.native = v
             withAnimation(.easeInOut(duration: 0.25)) { L10n.set(v) }   // the whole app switches now
-            // The web derives native_language from ui_language and saves both (settings.tsx).
-            Task { await profile.update(["native_language": v, "ui_language": v]) }
+            // The web derives native_language from ui_language (readerL1: never the learning language)
+            // and saves both (settings.tsx).
+            let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: profile.targetLanguage)
+            ReaderLanguage.native = l1
+            Task { await profile.update(["native_language": l1, "ui_language": v]) }
         case .target:
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
             profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
             Task {
                 // Language first, on its own (web: a rejected level column must not undo the language).
-                await profile.update(["target_language": v])
+                let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: v)
+                ReaderLanguage.native = l1
+                await profile.update(["native_language": l1, "target_language": v])
                 await profile.update(["current_level": profile.currentLevel, "level_goal": profile.levelGoal])
                 // The dex, album and review show only the words of the language being learned.
                 await dex.load()

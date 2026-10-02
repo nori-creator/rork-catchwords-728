@@ -574,9 +574,6 @@ struct ScanCatchSheet: View {
                 Spacer()
                 PronounceCircle(text: item.headword, size: 48)
             }
-            if !item.pinyin.isEmpty {
-                Text(item.pinyin).font(.system(size: 14)).foregroundStyle(Theme.muted)
-            }
             Text(item.meaning).font(.system(size: 20, weight: .semibold))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
                     .foregroundStyle(Theme.foreground)
             HStack(spacing: 6) {

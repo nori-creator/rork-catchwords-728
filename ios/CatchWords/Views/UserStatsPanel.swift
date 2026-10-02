@@ -125,7 +125,7 @@ struct UserStatsPanel: View {
                 .stroke(Theme.brandGradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: -2) {
-                Text("Lv").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.muted)
+                Text(L("レベル")).font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.7)
                 Text(stats.map { "\($0.level)" } ?? "–")
                     .font(.system(size: 20, weight: .heavy).monospacedDigit())
                     .foregroundStyle(Theme.foreground)

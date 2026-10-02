@@ -73,7 +73,36 @@ final class DiaryStore {
     private var scaffoldDay: String?
 
     private let client = SupabaseClient.shared
-    private static let draftPrefix = "diary-draft-"
+    /// Drafts written before they were kept per account (device-wide keys).
+    private static let legacyDraftPrefix = "diary-draft-"
+    /// Device drafts belong to the account that wrote them: another account on this device never sees them.
+    private var draftPrefix: String { "diary-draft-\(client.userId ?? "guest")-" }
+
+    /// Signing out: nothing of this account's diary stays on screen for the next one.
+    func reset() {
+        entries = [:]
+        loadedMonths = []
+        journal = []
+        journalLoaded = false
+        journalFailed = false
+        scaffold = nil
+        scaffoldDay = nil
+        message = nil
+    }
+
+    /// Moves drafts saved under the old device-wide keys to the signed-in account (once).
+    private func adoptLegacyDrafts() {
+        guard client.userId != nil else { return }
+        let defaults = UserDefaults.standard
+        for (key, value) in defaults.dictionaryRepresentation() {
+            guard key.hasPrefix(Self.legacyDraftPrefix), let text = value as? String else { continue }
+            let rest = String(key.dropFirst(Self.legacyDraftPrefix.count))
+            // Only bare dates (YYYY-MM-DD); keys that already carry an account are left alone.
+            guard rest.count == 10, Self.date(from: rest) != nil else { continue }
+            if defaults.string(forKey: draftPrefix + rest) == nil { defaults.set(text, forKey: draftPrefix + rest) }
+            defaults.removeObject(forKey: key)
+        }
+    }
 
     static func key(_ d: Date) -> String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: d)
@@ -89,6 +118,7 @@ final class DiaryStore {
         let dayKey = Self.key(day)
         let month = String(dayKey.prefix(7))
         guard !loadedMonths.contains(month), client.userId != nil else { return }
+        adoptLegacyDrafts()
         let parts = month.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 2 else { return }
         let next = parts[1] == 12 ? String(format: "%04d-01", parts[0] + 1) : String(format: "%04d-%02d", parts[0], parts[1] + 1)
@@ -119,7 +149,8 @@ final class DiaryStore {
 
     /// Questions and sentence patterns from today's catches — only once a day (it uses the AI).
     func loadScaffold() async {
-        let today = Self.key(Date())
+        // Once a day per learning language (the prompts are written in it).
+        let today = Self.key(Date()) + "|" + NativeAPI.targetLanguage
         guard scaffoldDay != today else { return }
         scaffoldDay = today
         scaffold = try? await NativeAPI.call("getJournalPrompts", [:], as: JournalScaffold?.self, timeout: 45)
@@ -143,7 +174,7 @@ final class DiaryStore {
             message = nil
             return true
         } catch let APIError.limit(m) {
-            message = m
+            message = L10n.readerSafe(m, fallback: APIError.dailyCapMessage)
             return false
         } catch {
             message = (error as? LocalizedError)?.errorDescription.map { L("添削失敗: \($0)") } ?? L("添削失敗")
@@ -153,10 +184,10 @@ final class DiaryStore {
 
     // MARK: - Device drafts
 
-    func draft(for day: Date) -> String? { UserDefaults.standard.string(forKey: Self.draftPrefix + Self.key(day)) }
+    func draft(for day: Date) -> String? { UserDefaults.standard.string(forKey: draftPrefix + Self.key(day)) }
 
     func keepDraft(_ text: String, for day: Date) {
-        let k = Self.draftPrefix + Self.key(day)
+        let k = draftPrefix + Self.key(day)
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             UserDefaults.standard.removeObject(forKey: k)
         } else {
@@ -167,9 +198,10 @@ final class DiaryStore {
     /// Unsent drafts from days before today (today's key is the one being written — left alone).
     var strandedDrafts: [(date: Date, text: String)] {
         let today = Self.key(Date())
+        let prefix = draftPrefix
         return UserDefaults.standard.dictionaryRepresentation().compactMap { key, value in
-            guard key.hasPrefix(Self.draftPrefix), let text = value as? String else { return nil }
-            let dayKey = String(key.dropFirst(Self.draftPrefix.count))
+            guard key.hasPrefix(prefix), let text = value as? String else { return nil }
+            let dayKey = String(key.dropFirst(prefix.count))
             guard dayKey < today, let d = Self.date(from: dayKey) else { return nil }
             return (d, text)
         }

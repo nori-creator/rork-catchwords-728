@@ -40,6 +40,7 @@ struct AuthView: View {
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(auth.isBusy)
+                    .accessibilityIdentifier("auth.google")
 
                     if AppConfig.nativeAppleSignIn {
                         SignInWithAppleButton(.signIn) { req in
@@ -64,6 +65,7 @@ struct AuthView: View {
                         }
                         .buttonStyle(PressableStyle())
                         .disabled(auth.isBusy)
+                        .accessibilityIdentifier("auth.apple")
                     }
 
                     Button {
@@ -81,6 +83,7 @@ struct AuthView: View {
                         .glassCard(16)
                     }
                     .buttonStyle(PressableStyle())
+                    .accessibilityIdentifier("auth.mail")
 
                     if showMail { mailForm.offset(x: shake).transition(.opacity.combined(with: .move(edge: .top))) }
 
@@ -170,13 +173,16 @@ struct AuthView: View {
                 .submitLabel(.next)
                 .onSubmit { focused = .password }
                 .fieldStyle()
+                .accessibilityIdentifier("auth.email")
             SecureField("", text: $password, prompt: Text(L("パスワード")).foregroundStyle(Theme.muted))
                 .textContentType(isSignUp ? .newPassword : .password)
                 .focused($focused, equals: .password)
                 .submitLabel(.go)
                 .onSubmit(submit)
                 .fieldStyle()
+                .accessibilityIdentifier("auth.password")
             PrimaryButton(title: isSignUp ? L("新規登録") : L("ログイン"), isLoading: auth.isBusy, action: submit)
+                .accessibilityIdentifier("auth.submit")
             HStack {
                 Button(isSignUp ? L("ログインに切り替え") : L("新規登録はこちら")) {
                     Haptics.selection()

@@ -9,6 +9,9 @@ enum ReminderService {
     static let placeKey = "place.remind"
     private static let reviewPrefix = "review-"
     private static let placePrefix = "place-"
+    /// Read by NotificationRouter to know where a tapped notification leads.
+    static var reviewIdentifierPrefix: String { reviewPrefix }
+    static var placeIdentifierPrefix: String { placePrefix }
 
     static func requestPermission() async -> Bool {
         let center = UNUserNotificationCenter.current()

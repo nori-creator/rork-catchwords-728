@@ -113,7 +113,7 @@ struct CollageBoard: View {
             if let path = s.heroPath {
                 Theme.secondary
                     .frame(width: size.w, height: size.h)
-                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: s.objectImageUrl == nil ? .fit : .fill).allowsHitTesting(false) }
+                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: path == s.cutoutImageUrl ? .fit : .fill).allowsHitTesting(false) }
                     .clipShape(.rect(cornerRadius: 3))
                     .padding(5)
                     .background(Color(hex: 0xFFFEFB))

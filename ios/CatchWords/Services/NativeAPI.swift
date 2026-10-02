@@ -9,7 +9,11 @@ import Foundation
 enum NativeAPI {
     /// The learning language (`profiles.target_language`: "zh-TW" or "en"). `ProfileStore` keeps it
     /// in step; the web profile decides the rest (level, explanation language).
-    nonisolated(unsafe) static var targetLanguage = "zh-TW"
+    /// Starts from the last one this device saw, so the first album read after launch (before the
+    /// profile arrives) already filters by the right language.
+    nonisolated(unsafe) static var targetLanguage = UserDefaults.standard.string(forKey: "last.targetLanguage") ?? "zh-TW" {
+        didSet { UserDefaults.standard.set(targetLanguage, forKey: "last.targetLanguage") }
+    }
     /// The learning language's name in the display language (台湾華語 / English / 日本語 …).
     static var targetName: String {
         switch targetLanguage {

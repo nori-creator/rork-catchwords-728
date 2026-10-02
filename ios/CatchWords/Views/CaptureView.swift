@@ -121,6 +121,8 @@ struct CaptureView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
                     beginAnalyze(img.normalizedOrientation(), askSelfie: false)
+                } else {
+                    vm.showToast(L("写真を読み込めませんでした。"))
                 }
                 pickerItem = nil
             }
@@ -129,6 +131,8 @@ struct CaptureView: View {
             ScanView()
         }
         .sheet(isPresented: $showTextSearch) { textSearchSheet }
+        .onAppear { takePendingRequest() }
+        .onChange(of: router.openPending) { _, _ in takePendingRequest() }
         .sheet(isPresented: $showPending) {
             PendingListView { item in
                 showPending = false
@@ -137,6 +141,13 @@ struct CaptureView: View {
             }
             .presentationDetents([.medium, .large])
         }
+    }
+
+    private func takePendingRequest() {
+        guard router.openPending else { return }
+        router.openPending = false
+        dex.refreshPending()
+        if !dex.pending.isEmpty { showPending = true }
     }
 
     private func syncChrome() {
@@ -331,6 +342,7 @@ struct CaptureView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
+                .accessibilityIdentifier("camera.mode.\(String(describing: m))")
             }
         }
         .padding(.horizontal, 24)
@@ -360,6 +372,7 @@ struct CaptureView: View {
             ShutterButton(icon: vm.step == .selfie ? "camera" : vm.mode.shutterIcon,
                           enabled: vm.mode == .search || camera.state == .running) { shoot() }
                 .tourAnchor(.shutter)
+                .accessibilityIdentifier("camera.shutter")
             Spacer()
             Button { camera.toggle() } label: {
                 sideButton(icon: "arrow.triangle.2.circlepath.camera", label: L("切替"))
@@ -415,8 +428,10 @@ struct CaptureView: View {
                     .background(Theme.secondary, in: .rect(cornerRadius: 14))
                     .submitLabel(.search)
                     .onSubmit(runSearch)
+                    .accessibilityIdentifier("search.field")
                 PrimaryButton(title: L("\(NativeAPI.targetName)で調べる"), icon: "magnifyingglass", action: runSearch)
                     .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .accessibilityIdentifier("search.submit")
                 Spacer()
             }
             .padding(20)

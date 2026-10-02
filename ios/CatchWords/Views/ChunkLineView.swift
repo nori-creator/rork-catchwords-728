@@ -8,6 +8,7 @@ import SwiftUI
 ///   reads that word, swaps it into the chunk and its translation; the right button reads the new chunk.
 /// - Any other block reads its own word.
 struct ChunkLineView: View {
+    @Environment(\.colorScheme) private var colorScheme
     enum Size { case large, compact }
 
     let chunk: UsageChunk
@@ -94,7 +95,8 @@ struct ChunkLineView: View {
                         .rotationEffect(.degrees(isOpen ? 180 : 0))
                 }
             }
-            .foregroundStyle(kind.ink.mix(with: .black, by: big ? 0.3 : 0.25))
+            // Darker ink on the light page, lighter on the dark one (mixing with black vanished in dark mode).
+            .foregroundStyle(kind.ink.mix(with: colorScheme == .dark ? .white : .black, by: big ? 0.3 : 0.25))
             .padding(.horizontal, big ? 12 : 10)
             .frame(minHeight: big ? 48 : 34)
             .background(kind.ink.opacity(isHead ? 0.15 : swappable ? 0.04 : 0.08), in: .rect(cornerRadius: big ? 12 : 10, style: .continuous))

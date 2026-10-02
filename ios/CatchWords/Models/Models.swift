@@ -329,7 +329,7 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     let wordId: String
     let objectImageUrl: String?
     var cutoutImageUrl: String?
-    let selfieImageUrl: String?
+    var selfieImageUrl: String?
     var caption: String?
     let locationName: String?
     let takenAt: Date

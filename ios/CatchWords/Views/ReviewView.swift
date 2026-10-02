@@ -82,9 +82,10 @@ struct ReviewView: View {
                     Color.black.opacity(0.32).ignoresSafeArea()
                         .onTapGesture { closeCurve() }
                     ForgettingCurveSheet(sticker: s, store: store, onReviewNow: {
-                        if let i = store.queue.firstIndex(where: { $0.sticker.id == s.id }), i > store.index, answer == nil {
-                            store.queue.move(fromOffsets: IndexSet(integer: i), toOffset: store.index)
-                        }
+                        guard !router.tour.isReview else { return }
+                        let answered = answer != nil
+                        store.bringForward(s, review: dex.reviews[s.id], currentAnswered: answered)
+                        if answered { goNext() }
                     }, onClose: { closeCurve() })
                     .frame(maxHeight: 640)
                     .background(Theme.card, in: .rect(cornerRadius: 32, style: .continuous))
@@ -173,6 +174,7 @@ struct ReviewView: View {
                 .background(Theme.primary.opacity(0.08), in: .rect(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(PressableStyle(scale: 0.98))
+            .accessibilityIdentifier("review.wordbooks")
             GeometryReader { geo in
                 let p = store.queue.isEmpty ? 0 : CGFloat(store.index) / CGFloat(store.queue.count)
                 ZStack(alignment: .leading) {
@@ -235,6 +237,9 @@ struct ReviewView: View {
         } else {
             ReviewDone(total: store.queue.count, correct: store.correctCount, doneToday: store.doneToday,
                        missed: store.missed.count, isRetry: store.isRetry, canLoadMore: store.moreAvailable && !store.isRetry,
+                       capped: store.capped || (store.moreAvailable && store.doneToday >= profile.effectiveReviewLimit),
+                       dueRemaining: store.dueRemaining,
+                       onSettings: { router.tab = .settings },
                        onRetry: {
                            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { store.startRetry() }
                        },
@@ -379,7 +384,7 @@ struct QuizCard: View {
             }
 
             if !isAnswered {
-                let path = card.sticker.objectImageUrl ?? card.sticker.cutoutImageUrl
+                let path = card.sticker.heroPath
                 Theme.secondary
                     .frame(height: 220)
                     .overlay {
@@ -405,6 +410,13 @@ struct QuizCard: View {
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
         .onAppear { started = Date() }
+        // A grade that could not be saved hands the card back (isAnswered → false): answer it again.
+        .onChange(of: isAnswered) { _, answered in
+            if !answered {
+                picked = nil
+                started = Date()
+            }
+        }
     }
 
     private func choiceRow(_ c: QuizChoice) -> some View {
@@ -412,7 +424,7 @@ struct QuizCard: View {
         let isPicked = picked == c.headword
         let revealed = picked != nil
         let stroke: Color = revealed && isCorrect ? Theme.ok : (isPicked ? Theme.destructive : Theme.primary.opacity(0.25))
-        let fill: Color = revealed && isCorrect ? Theme.ok.opacity(0.08) : (isPicked ? Theme.destructive.opacity(0.07) : Color(hex: 0xF7FAFF))
+        let fill: Color = revealed && isCorrect ? Theme.ok.opacity(0.08) : (isPicked ? Theme.destructive.opacity(0.07) : Color(light: 0xF7FAFF, dark: 0x132032))
         return ZStack {
             Button { answer(c) } label: {
                 ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 34, weight: .bold)
@@ -421,6 +433,7 @@ struct QuizCard: View {
             }
             .buttonStyle(PressableStyle(scale: 0.97))
             .disabled(revealed)
+            .accessibilityIdentifier(isCorrect ? "quiz.choice.correct" : "quiz.choice")
             HStack {
                 if revealed && (isCorrect || isPicked) {
                     Image(systemName: isCorrect ? "checkmark" : "xmark")
@@ -468,6 +481,9 @@ struct ReviewDone: View {
     var missed: Int = 0
     var isRetry: Bool = false
     var canLoadMore: Bool = false
+    var capped: Bool = false
+    var dueRemaining: Int = 0
+    var onSettings: () -> Void = {}
     var onRetry: () -> Void = {}
     var onMore: () -> Void = {}
     let onCamera: () -> Void
@@ -532,9 +548,18 @@ struct ReviewDone: View {
                     Text(L("練習なので、記憶の記録は変わりません。"))
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 }
+                if capped {
+                    Button(action: onSettings) {
+                        Label(L("設定で枚数を変える"), systemImage: "slider.horizontal.3")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Theme.primary.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                }
                 if canLoadMore {
                     Button(action: onMore) {
-                        Label(L("もっと復習する"), systemImage: "plus.circle")
+                        Label(capped ? L("もっと復習する") : L("続ける"), systemImage: "plus.circle")
                             .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.card, in: Capsule())
@@ -562,14 +587,18 @@ struct ReviewDone: View {
     }
 
     private var title: String {
-        if total == 0 { return L("今日の復習はおしまいです") }
+        if total == 0 { return capped ? L("今日の分は終わりです") : L("今日復習する単語はありません。") }
         if isRetry { return missed == 0 ? L("ぜんぶ覚え直せました") : L("あと\(missed)語、もう少し") }
         return L("\(total)問中 \(correct)問 正解")
     }
 
+    /// web DoneState / EmptyState: more due → keep going; limit used up; or all done until tomorrow.
     private var subtitle: String {
-        if total == 0 { return L("新しい単語を撮ると、ここに出てきます。") }
-        return L("今日は\(doneToday)回復習しました。")
+        if total == 0 && !capped { return L("新しい単語をキャッチすると、10分後に最初の復習が出ます。") }
+        if isRetry || total == 0 { return L("今日は\(doneToday)回復習しました。") }
+        if capped { return L("今日の分は終わりです（\(doneToday)回復習しました）。") }
+        if dueRemaining > 0 { return L("あと \(dueRemaining) 語、期限が来ています。続けられます。") }
+        return L("また明日の復習で会いましょう。")
     }
 
     private func play() async {

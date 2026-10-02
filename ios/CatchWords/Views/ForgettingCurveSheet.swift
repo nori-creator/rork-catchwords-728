@@ -245,6 +245,6 @@ struct ForgettingCurveSheet: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: isTime ? 0xFFEBDD : 0xE6F4EA), in: .rect(cornerRadius: 24))
+        .background(isTime ? Color(light: 0xFFEBDD, dark: 0x3A2414) : Color(light: 0xE6F4EA, dark: 0x13291A), in: .rect(cornerRadius: 24))
     }
 }

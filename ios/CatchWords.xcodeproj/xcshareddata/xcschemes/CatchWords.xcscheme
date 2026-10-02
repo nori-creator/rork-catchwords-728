@@ -38,6 +38,16 @@
                ReferencedContainer = "container:CatchWords.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "105FC5922E9EAD3200EA8BCF"
+               BuildableName = "CatchWordsUITests.xctest"
+               BlueprintName = "CatchWordsUITests"
+               ReferencedContainer = "container:CatchWords.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

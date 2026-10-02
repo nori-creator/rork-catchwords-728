@@ -69,6 +69,7 @@ struct AnswerPanel: View {
                             .background(Theme.primary, in: .rect(cornerRadius: 16, style: .continuous))
                     }
                     .buttonStyle(PressableStyle(scale: 0.98))
+                    .accessibilityIdentifier("answer.next")
                 }
                 .padding(.top, 2)
             }
@@ -114,9 +115,11 @@ struct AnswerPanel: View {
     private var measures: [MeasureWord] {
         Array((word?.extras?.measureWords ?? []).filter { !$0.word.trimmingCharacters(in: .whitespaces).isEmpty }.prefix(2))
     }
+    /// The Taiwan note is a Mandarin-only section (the detail shows it for zh-TW only); either note is shown
+    /// only when it is written in the display language.
     private var note: String {
-        let t = (word?.extras?.taiwanNote ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? (word?.extras?.usageContext ?? "").trimmingCharacters(in: .whitespacesAndNewlines) : t
+        let taiwan = learningLang == "zh-TW" ? word?.extras?.taiwanNote : nil
+        return ReaderLanguage.shown(taiwan, word?.extras?.usageContext, source: headword)
     }
 
     @ViewBuilder
@@ -129,7 +132,7 @@ struct AnswerPanel: View {
                     if !related.isEmpty { relatedSection }
                     if !measures.isEmpty { measureSection }
                     if !note.isEmpty {
-                        section(L("知っておくと得"), tone: Color(hex: 0x134E4A), bg: Color(hex: 0xF0FDFA)) {
+                        section(L("知っておくと得"), tone: Color(light: 0x134E4A, dark: 0x5EEAD4), bg: Color(light: 0xF0FDFA, dark: 0x0F2A2A)) {
                             Text(note).font(.system(size: 14)).foregroundStyle(Theme.foreground).lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -152,11 +155,14 @@ struct AnswerPanel: View {
                 Text(m).font(.system(size: 15)).foregroundStyle(Theme.foreground)
             }
         }
-        if let ex = word?.exampleSentence, !ex.isEmpty {
-            section(L("例文"), tone: Color(hex: 0x312E81), bg: Theme.secondary.opacity(0.6)) {
+        // An example is shown only when it is in the learning language (as on the detail), its translation
+        // only when it is in the display language.
+        if let ex = word?.exampleSentence, !ex.isEmpty, LanguageRules.isIn(ex, target: learningLang) {
+            section(L("例文"), tone: Color(light: 0x312E81, dark: 0xA5B4FC), bg: Theme.secondary.opacity(0.6)) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ex).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
-                    if let tr = word?.exampleTranslation, !tr.isEmpty {
+                    let tr = ReaderLanguage.shown(word?.exampleTranslation, source: ex)
+                    if !tr.isEmpty {
                         Text(tr).font(.system(size: 13)).foregroundStyle(Theme.muted)
                     }
                 }
@@ -184,7 +190,7 @@ struct AnswerPanel: View {
     }
 
     private var relatedSection: some View {
-        section(L("一緒に覚える語"), tone: Color(hex: 0x312E81), bg: Color(hex: 0xEEF2FF)) {
+        section(L("一緒に覚える語"), tone: Color(light: 0x312E81, dark: 0xA5B4FC), bg: Color(light: 0xEEF2FF, dark: 0x1B1F3B)) {
             VStack(alignment: .leading, spacing: 7) {
                 ForEach(related, id: \.word) { r in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -213,7 +219,7 @@ struct AnswerPanel: View {
     }
 
     private var measureSection: some View {
-        section(L("量詞"), tone: Color(hex: 0x78350F), bg: Color(hex: 0xFFFBEB)) {
+        section(L("量詞"), tone: Color(light: 0x78350F, dark: 0xFCD34D), bg: Color(light: 0xFFFBEB, dark: 0x2A2210)) {
             FlowRow(spacing: 12) {
                 ForEach(measures, id: \.word) { m in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
