@@ -65,6 +65,7 @@ struct CatchWordsApp: App {
                 .environment(diary)
                 .preferredColorScheme(scheme)
                 .tint(Theme.primary)
+                .widgetBridge(dex: dex)  // home/lock-screen widgets: snapshot upkeep + catchwords:// links
                 .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
     }
 }

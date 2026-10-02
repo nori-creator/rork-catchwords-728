@@ -114,6 +114,9 @@ jobs:
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" || true
           fi
+          if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log"; then
+            echo "::warning::ウィジェット（com.nori.catchwords.widgets）か App Group（group.com.nori.catchwords）の署名で止まった可能性があります。Apple Developer → Identifiers で App Group を作り、2 つの App ID で App Groups を有効にしてから、もう一度実行してください"
+          fi
           test -d "$RUNNER_TEMP/CatchWords.xcarchive" || { echo "::error::アーカイブに失敗しました（archive.log を見てください）"; exit 1; }
 
       - name: App Store Connect へ送る
@@ -154,6 +157,26 @@ jobs:
           APP=$(ls -d "$RUNNER_TEMP"/ipa/Payload/*.app | head -1)
           codesign -dvv "$APP" 2>&1 | grep -E "Authority|TeamIdentifier" || true
           codesign -d --entitlements :- "$APP" 2>/dev/null | tee "$RUNNER_TEMP/entitlements.plist" | grep -A3 "applesignin" || echo "::warning::Apple でサインインの権限が入っていません（この版では「Appleでサインイン」が使えません。メールでのログインは使えます）"
+          # ウィジェット（CatchWordsWidgets.appex）も配布用で署名され、App Group が入っているか。
+          # App Group（group.com.nori.catchwords）を自動で登録できなかった場合は、アプリは動くが
+          # ウィジェットが空のまま（「写真を撮って単語を集めよう」）になる。直し方: Apple Developer →
+          # Identifiers → App Groups に group.com.nori.catchwords を作り、com.nori.catchwords と
+          # com.nori.catchwords.widgets の両方で App Groups を有効にしてその group を選ぶ。
+          grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/entitlements.plist" || echo "::warning::アプリに App Group（group.com.nori.catchwords）が入っていません。ウィジェットに単語・復習の数が出ません（Apple Developer で App Group を登録して有効にしてください）"
+          APPEX="$APP/PlugIns/CatchWordsWidgets.appex"
+          if [ -d "$APPEX" ]; then
+            codesign -dvv "$APPEX" 2>&1 | grep -E "Identifier=|Authority=Apple Distribution|TeamIdentifier" || true
+            codesign -d --entitlements :- "$APPEX" 2>/dev/null > "$RUNNER_TEMP/widget-entitlements.plist" || true
+            grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/widget-entitlements.plist" || echo "::warning::ウィジェットに App Group（group.com.nori.catchwords）が入っていません。ウィジェットが空のまま表示されます（Apple Developer で com.nori.catchwords.widgets にも App Group を有効にしてください）"
+            APP_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Info.plist" 2>/dev/null)
+            APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP/Info.plist" 2>/dev/null)
+            EXT_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APPEX/Info.plist" 2>/dev/null)
+            EXT_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APPEX/Info.plist" 2>/dev/null)
+            echo "app $APP_VER ($APP_BUILD) / widgets $EXT_VER ($EXT_BUILD)"
+            [ "$APP_VER" = "$EXT_VER" ] && [ "$APP_BUILD" = "$EXT_BUILD" ] || echo "::warning::アプリとウィジェットの版・ビルド番号が違います（project.pbxproj の MARKETING_VERSION を両方のターゲットでそろえてください）"
+          else
+            echo "::warning::IPA にウィジェット（CatchWordsWidgets.appex）が入っていません"
+          fi
           # App Store Connect へ送る（API キーは altool が決まった場所から読む）
           mkdir -p "$HOME/.appstoreconnect/private_keys"
           cp "$RUNNER_TEMP/AuthKey.p8" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
@@ -176,5 +199,6 @@ jobs:
             ${{ runner.temp }}/export.log
             ${{ runner.temp }}/upload.log
             ${{ runner.temp }}/entitlements.plist
+            ${{ runner.temp }}/widget-entitlements.plist
           if-no-files-found: ignore
           retention-days: 14
