@@ -19,6 +19,9 @@ struct StickerPhoto: Decodable, Identifiable, Equatable {
         cache[stickerId] = res.photos
         return res.photos
     }
+
+    /// A new or replaced photo: the next look asks the server again instead of showing the old list.
+    static func invalidate(_ stickerId: String) { cache[stickerId] = nil }
 }
 
 /// Web `StickerPhotoHistory`: every photo of this word — the first catch and each re-encounter —

@@ -394,7 +394,11 @@ struct OnboardingView: View {
         await ReminderService.applyReview(mode: reminderMode, times: times)
 
         let level = ProfileStore.remap(profile.levelGoal, to: targetLanguage)
-        await profile.update(["target_language": targetLanguage, "ui_language": uiLanguage, "level_goal": level, "onboarded": true])
+        // native_language as the web writes it (readerL1 from the display and learning languages).
+        let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: targetLanguage)
+        ReaderLanguage.native = l1
+        await profile.update(["native_language": l1, "target_language": targetLanguage, "ui_language": uiLanguage,
+                              "level_goal": level, "onboarded": true])
         profile.targetLanguage = targetLanguage
         profile.levelGoal = level
         profile.onboarded = true

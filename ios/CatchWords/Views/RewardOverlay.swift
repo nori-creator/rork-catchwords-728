@@ -12,22 +12,28 @@ final class SaveGate {
         waiters.removeAll()
     }
 
+    /// Waits for the save, at most `timeout` (a task group would wait for the save anyway, since a
+    /// continuation does not answer cancellation — the overlay then stayed up for the whole upload).
     func wait(timeout: Duration = .seconds(20)) async {
         if result != nil { return }
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { @MainActor in
-                await withCheckedContinuation { cont in
-                    if self.result != nil { cont.resume() } else { self.waiters.append(cont) }
-                }
-            }
-            group.addTask { try? await Task.sleep(for: timeout) }
-            await group.next()
-            group.cancelAll()
+        Task { [weak self] in
+            try? await Task.sleep(for: timeout)
+            self?.releaseWaiters()
         }
-        if result == nil {
-            waiters.forEach { $0.resume() }
-            waiters.removeAll()
+        await withCheckedContinuation { cont in
+            if result != nil { cont.resume() } else { waiters.append(cont) }
         }
+    }
+
+    private func releaseWaiters() {
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+    }
+
+    /// The catch was saved (a failed save must not show 「図鑑に追加」).
+    var succeeded: Bool {
+        if case .success = result { return true }
+        return false
     }
 
     var isReencounter: Bool {
@@ -263,10 +269,10 @@ struct RewardOverlay: View {
         withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) { breathe = true }
         try? await Task.sleep(for: .milliseconds(420))
         withAnimation(.easeOut(duration: 0.5)) { readingGlow = true }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { addedVisible = payload.gate.result != nil }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { addedVisible = payload.gate.succeeded }
         try? await Task.sleep(for: .milliseconds(580))
         await payload.gate.wait()
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { addedVisible = true }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { addedVisible = payload.gate.succeeded }
         if payload.gate.isReencounter { Haptics.success() }
         try? await Task.sleep(for: .milliseconds(250))
 

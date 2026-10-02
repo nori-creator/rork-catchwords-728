@@ -67,6 +67,8 @@ struct SettingsView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
                     await profile.uploadAvatar(img)
+                } else {
+                    profile.message = L("写真を読み込めませんでした。")
                 }
                 avatarItem = nil
             }
@@ -90,7 +92,7 @@ struct SettingsView: View {
                         Text(profile.avatarURL == nil ? L("選ぶ") : L("変更"))
                             .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
                             .padding(.horizontal, 18).frame(minHeight: 46)
-                            .background(Color(hex: 0xF3F7FC), in: Capsule())
+                            .background(Theme.secondary, in: Capsule())
                             .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(PressableStyle())
@@ -385,9 +387,9 @@ struct SettingsView: View {
     }
 
     private func notice(_ t: String) -> some View {
-        Text(t).font(.system(size: 12)).foregroundStyle(Color(hex: 0x7A4B00))
+        Text(t).font(.system(size: 12)).foregroundStyle(Color(light: 0x7A4B00, dark: 0xFCD34D))
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: 0xFFF5DB), in: .rect(cornerRadius: 12))
+            .background(Color(light: 0xFFF5DB, dark: 0x2A2210), in: .rect(cornerRadius: 12))
     }
 
     private func wheelRow(_ value: String, action: @escaping () -> Void) -> some View {
@@ -657,17 +659,21 @@ struct WheelCard: View {
         switch field {
         case .native:
             profile.nativeLanguage = v
-            ReaderLanguage.native = v
             withAnimation(.easeInOut(duration: 0.25)) { L10n.set(v) }   // the whole app switches now
-            // The web derives native_language from ui_language and saves both (settings.tsx).
-            Task { await profile.update(["native_language": v, "ui_language": v]) }
+            // The web derives native_language from ui_language (readerL1: never the learning language)
+            // and saves both (settings.tsx).
+            let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: profile.targetLanguage)
+            ReaderLanguage.native = l1
+            Task { await profile.update(["native_language": l1, "ui_language": v]) }
         case .target:
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
             profile.levelGoal = ProfileStore.remap(profile.levelGoal, to: v)
             Task {
                 // Language first, on its own (web: a rejected level column must not undo the language).
-                await profile.update(["target_language": v])
+                let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: v)
+                ReaderLanguage.native = l1
+                await profile.update(["native_language": l1, "target_language": v])
                 await profile.update(["current_level": profile.currentLevel, "level_goal": profile.levelGoal])
                 // The dex, album and review show only the words of the language being learned.
                 await dex.load()

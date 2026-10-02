@@ -94,6 +94,20 @@ final class ReviewStore {
         await load(dex: dex, limit: doneToday + 20)
     }
 
+    /// 「いま復習する」 on a word's curve: that word becomes the next card — moved up when it is still
+    /// waiting in today's queue, added when it is not there (not due yet, or already answered).
+    func bringForward(_ sticker: Sticker, review: ReviewState?, currentAnswered: Bool) {
+        let at = min(queue.count, currentAnswered ? index + 1 : index)
+        if let i = queue.firstIndex(where: { $0.sticker.id == sticker.id }), i >= index {
+            if i == index && !currentAnswered { return }
+            if i > at { queue.move(fromOffsets: IndexSet(integer: i), toOffset: at) }
+            return
+        }
+        // Without a review row there is nothing to grade (the answer would not be saved).
+        guard sticker.word != nil, let r = review, r.id != nil else { return }
+        queue.insert(ReviewCard(review: r, sticker: sticker), at: at)
+    }
+
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
 
     func load(dex: DexStore, limit: Int) async {

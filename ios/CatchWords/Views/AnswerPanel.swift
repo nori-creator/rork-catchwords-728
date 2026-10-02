@@ -132,7 +132,7 @@ struct AnswerPanel: View {
                     if !related.isEmpty { relatedSection }
                     if !measures.isEmpty { measureSection }
                     if !note.isEmpty {
-                        section(L("知っておくと得"), tone: Color(hex: 0x134E4A), bg: Color(hex: 0xF0FDFA)) {
+                        section(L("知っておくと得"), tone: Color(light: 0x134E4A, dark: 0x5EEAD4), bg: Color(light: 0xF0FDFA, dark: 0x0F2A2A)) {
                             Text(note).font(.system(size: 14)).foregroundStyle(Theme.foreground).lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -158,7 +158,7 @@ struct AnswerPanel: View {
         // An example is shown only when it is in the learning language (as on the detail), its translation
         // only when it is in the display language.
         if let ex = word?.exampleSentence, !ex.isEmpty, LanguageRules.isIn(ex, target: learningLang) {
-            section(L("例文"), tone: Color(hex: 0x312E81), bg: Theme.secondary.opacity(0.6)) {
+            section(L("例文"), tone: Color(light: 0x312E81, dark: 0xA5B4FC), bg: Theme.secondary.opacity(0.6)) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ex).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
                     let tr = ReaderLanguage.shown(word?.exampleTranslation, source: ex)
@@ -190,7 +190,7 @@ struct AnswerPanel: View {
     }
 
     private var relatedSection: some View {
-        section(L("一緒に覚える語"), tone: Color(hex: 0x312E81), bg: Color(hex: 0xEEF2FF)) {
+        section(L("一緒に覚える語"), tone: Color(light: 0x312E81, dark: 0xA5B4FC), bg: Color(light: 0xEEF2FF, dark: 0x1B1F3B)) {
             VStack(alignment: .leading, spacing: 7) {
                 ForEach(related, id: \.word) { r in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -219,7 +219,7 @@ struct AnswerPanel: View {
     }
 
     private var measureSection: some View {
-        section(L("量詞"), tone: Color(hex: 0x78350F), bg: Color(hex: 0xFFFBEB)) {
+        section(L("量詞"), tone: Color(light: 0x78350F, dark: 0xFCD34D), bg: Color(light: 0xFFFBEB, dark: 0x2A2210)) {
             FlowRow(spacing: 12) {
                 ForEach(measures, id: \.word) { m in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {

@@ -378,6 +378,7 @@ final class DexStore {
             "cutout_path": orNull(cut),
         ], as: Recorded.self, timeout: 30)
         cacheLocal(path: image, image: photo)
+        StickerPhoto.invalidate(owned.stickerId)
         if let fresh = try? await fetchSticker(id: owned.stickerId) {
             replace(owned.stickerId) { _ in fresh }
         }
@@ -431,6 +432,7 @@ final class DexStore {
         }
         _ = try await NativeAPI.call("replaceStickerPhoto", ["sticker_id": sticker.id, "object_path": path])
         ImageCache.shared.set(image, for: path)
+        StickerPhoto.invalidate(sticker.id)
         await reload(stickerId: sticker.id)
         if let fresh = self.sticker(id: sticker.id) { await signPaths(for: [fresh]) }
     }
@@ -544,7 +546,8 @@ final class DexStore {
         albumHidden = Set(r.ids)
     }
 
-    func setAlbumHidden(_ id: String, hidden: Bool) async {
+    @discardableResult
+    func setAlbumHidden(_ id: String, hidden: Bool) async -> Bool {
         // Update the page at once; roll back if the server refused.
         if hidden { albumHidden.insert(id) } else { albumHidden.remove(id) }
         struct Res: Decodable { let saved: Bool }
@@ -552,6 +555,7 @@ final class DexStore {
         if !ok {
             if hidden { albumHidden.remove(id) } else { albumHidden.insert(id) }
         }
+        return ok
     }
 
     /// Where the learner placed each photo on the album page (web album_x / album_y / album_scale /

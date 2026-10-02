@@ -133,13 +133,13 @@ struct DexCalendarView: View {
                 .foregroundStyle(Theme.primary)
                 .frame(minHeight: 44)
                 Spacer()
-                Text(day.formatted(.dateTime.month().day().weekday()))
+                Text(JPDate.monthDayWeek(day))
                     .font(AppFont.hand(18)).foregroundStyle(Theme.foreground)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { idx, s in
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 0) {
-                        Text(s.takenAt.formatted(.dateTime.hour().minute()))
+                        Text(JPDate.time(s.takenAt))
                             .font(AppFont.mono(12, weight: .semibold)).foregroundStyle(Theme.muted)
                         Rectangle().fill(Theme.border).frame(width: 1).frame(maxHeight: .infinity)
                     }

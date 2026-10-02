@@ -381,6 +381,7 @@ private struct Globe: View {
 struct AlbumHiddenTray: View {
     @Environment(DexStore.self) private var dex
     @State private var open = false
+    @State private var failed = false
 
     private var hidden: [Sticker] { dex.stickers.filter { dex.albumHidden.contains($0.id) } }
 
@@ -414,8 +415,9 @@ struct AlbumHiddenTray: View {
                                     Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
                                     Button(L("戻す")) {
                                         Haptics.selection()
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                                            Task { await dex.setAlbumHidden(s.id, hidden: false) }
+                                        Task {
+                                            let ok = await dex.setAlbumHidden(s.id, hidden: false)
+                                            withAnimation(.easeOut(duration: 0.2)) { failed = !ok }
                                         }
                                     }
                                     .font(.system(size: 13, weight: .semibold))
@@ -427,6 +429,10 @@ struct AlbumHiddenTray: View {
                     }
                     .scrollIndicators(.hidden)
                     .transition(.opacity.combined(with: .move(edge: .top)))
+                    if failed {
+                        Text(L("保存できませんでした。通信を確かめてください。"))
+                            .font(.system(size: 12)).foregroundStyle(Color(hex: 0xB91C1C))
+                    }
                 }
             }
             .padding(.horizontal, 14)

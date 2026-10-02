@@ -82,9 +82,10 @@ struct ReviewView: View {
                     Color.black.opacity(0.32).ignoresSafeArea()
                         .onTapGesture { closeCurve() }
                     ForgettingCurveSheet(sticker: s, store: store, onReviewNow: {
-                        if let i = store.queue.firstIndex(where: { $0.sticker.id == s.id }), i > store.index, answer == nil {
-                            store.queue.move(fromOffsets: IndexSet(integer: i), toOffset: store.index)
-                        }
+                        guard !router.tour.isReview else { return }
+                        let answered = answer != nil
+                        store.bringForward(s, review: dex.reviews[s.id], currentAnswered: answered)
+                        if answered { goNext() }
                     }, onClose: { closeCurve() })
                     .frame(maxHeight: 640)
                     .background(Theme.card, in: .rect(cornerRadius: 32, style: .continuous))
@@ -409,6 +410,13 @@ struct QuizCard: View {
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
         .onAppear { started = Date() }
+        // A grade that could not be saved hands the card back (isAnswered → false): answer it again.
+        .onChange(of: isAnswered) { _, answered in
+            if !answered {
+                picked = nil
+                started = Date()
+            }
+        }
     }
 
     private func choiceRow(_ c: QuizChoice) -> some View {
@@ -416,7 +424,7 @@ struct QuizCard: View {
         let isPicked = picked == c.headword
         let revealed = picked != nil
         let stroke: Color = revealed && isCorrect ? Theme.ok : (isPicked ? Theme.destructive : Theme.primary.opacity(0.25))
-        let fill: Color = revealed && isCorrect ? Theme.ok.opacity(0.08) : (isPicked ? Theme.destructive.opacity(0.07) : Color(hex: 0xF7FAFF))
+        let fill: Color = revealed && isCorrect ? Theme.ok.opacity(0.08) : (isPicked ? Theme.destructive.opacity(0.07) : Color(light: 0xF7FAFF, dark: 0x132032))
         return ZStack {
             Button { answer(c) } label: {
                 ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 34, weight: .bold)

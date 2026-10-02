@@ -104,7 +104,7 @@ struct ReencounterView: View {
 
     /// cap.reencBefore + reencAt/reencOn + reencAfter: 「この言葉、{date}に{place}でゲットしています。」
     private func metLine(_ owned: OwnedWord) -> String {
-        let date = owned.takenDate.map { $0.formatted(.dateTime.year().month().day()) } ?? ""
+        let date = owned.takenDate.map { $0.formatted(Date.FormatStyle(date: .long, time: .omitted).locale(L10n.locale)) } ?? ""
         if let place = owned.locationName, !place.isEmpty {
             return L("この言葉、\(date)に\(place)でゲットしています。")
         }

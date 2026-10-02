@@ -82,11 +82,14 @@ struct ZhuyinWordView: View {
         }
     }
 
+    /// Long English words and phrases ("traffic light") shrink or wrap instead of running off the row.
     private var plainWord: some View {
         Text(headword)
             .font(.system(size: size, weight: weight))
             .foregroundStyle(color)
-            .fixedSize()
+            .lineLimit(2)
+            .minimumScaleFactor(0.5)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Furigana (or romaji) centred above the word, the way Japanese readers expect it.
@@ -107,8 +110,10 @@ struct ZhuyinWordView: View {
                 Text(headword)
                     .font(.system(size: size, weight: weight))
                     .foregroundStyle(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
-            .fixedSize()
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(headword)
         }

@@ -363,7 +363,8 @@ struct WordDetailView: View {
                 @unknown default: break
                 }
             }
-            .task(id: current.id) {
+            // Keyed on the photo too: a replaced photo reloads the list while the page is open.
+            .task(id: "\(current.id)|\(current.objectImageUrl ?? "")") {
                 let all = await StickerPhoto.load(stickerId: current.id)
                 laterPhotos = all.filter { !$0.first }
                 heroPage = 0
@@ -1595,7 +1596,10 @@ struct WordDetailView: View {
 
     /// 写真を替える: upload + web replaceStickerPhoto; in cut-out mode the new photo is cut out too.
     private func replacePhoto(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data)?.normalizedOrientation() else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data)?.normalizedOrientation() else {
+            showToast(L("写真を読み込めませんでした。"))
+            return
+        }
         isReplacing = true
         defer { isReplacing = false }
         do {

@@ -135,7 +135,8 @@ struct CandidatePickerView: View {
                         }
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.muted)
-                        .fixedSize()
+                        .lineLimit(1)
+                        .layoutPriority(-1)
                     }
                 }
                 .contentShape(Rectangle())
