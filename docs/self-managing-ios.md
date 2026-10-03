@@ -287,3 +287,22 @@ App Store Connect で「審査へ提出」
 - 7-2 が入ったら `PlanStore.serverVerifiesAppStore` と `paywallEnabled`、必要なら `catchLimitEnabled` をオンにする。
 - Pro の中身（課金画面に並べる特典）はオーナーが決める。今の時点で本当に Pro だけなのは「作り直す」（サーバ側）と、オンにした時の撮影回数の上限解除だけ。切り抜きは全員無料。
 
+
+---
+
+## 8. 検定のレベルの使い方（2026-10-03 オーナー決定）
+
+> 「単語の検定のレベルのデータは削除して。設定の検定のレベルは表示する例文やチャンクの難易度を徹底するだけに使う。」
+
+### 8-1. iOS でやったこと
+
+- **単語ごとの級は使わない。** `words.level` も `generateCard` の戻りの `level` も読まない（`Word` / `CardDetails` に持たない）。スキャンの辞書引きも `tocfl_level` を読まない。復習4択の補充語（`Models/QuizPool.swift`）は級を持たず、図鑑の語（同じカテゴリ優先）→ 池の語（同じカテゴリ → 同じ部屋）の順。デモのデータからも単語の級を消した。
+- ただし保存（`saveSticker`）では、`generateCard` が返した `level` をそのまま返す（iOS は中身を見ない）。送らないとサーバが既定の `"TOCFL-2"` を書くため（`SaveStickerInput`）。`updateWordExtras` の `patch` からは外した。
+- **設定の「今のレベル」「目標レベル」**は `profiles.current_level` / `level_goal` に書くだけ。iOS で他に使う所はない。例文とチャンクを作る関数（`generateCard`・`regenerateCardSection`）はサーバが `getUserLevels` → `levelInstruction` で profile から読む。iOS から級を送る項目はサーバの入力にない（作らない）。設定画面に「例文とチャンクを、今のレベルから目標レベルのあいだの難しさで作ります。」と書いた。
+
+### 8-2. 「徹底」にサーバで要ること（このリポジトリからは入れられない）
+
+1. **作った時の級が残っていない。** 例文（`words.example_sentence`）は全員で共有の1行、チャンクや追加の例文は `word_explanations`（表示言語 × 母語 ごとの1行）に入り、どちらも**最初に作った人の級**で書かれたまま。級が違う人や、設定で級を変えた人にも同じ物が出る。級ごとに持つなら、`word_explanations` の鍵に級の段（`parseLevelStep` の 1〜6）を足し、`getWordExplanation` は呼んだ人の段の行を選ぶ（無ければ `ReaderLanguage.needsGeneration` と同じく「作る必要あり」を返す）。共有の `example_sentence` は、その人の段の行に例文があればそちらを出す。
+2. それが入るまでの小さい手: 生成のたびに `extras` に作った時の段（例 `level_step`）を書くだけでも、iOS / Web は「今の設定と違う」と分かり、`regenerateCardSection`（`only_if_empty: false`）で作り直しを勧められる。今は Pro 限定の関数なので、級の違いによる作り直しは無料で通す扱いが要る。
+3. 級を例文・チャンク以外に使っている所: `suggestWords` / `suggestWordCandidates` / `detectScan`（候補語の難しさ）、`getDueReviews`（4択の補充語を `tocfl_level` / `level_step` で選ぶ。iOS は呼ばない）、`correctMyJournal` / `getJournalPrompts`（日記）。オーナー決定に合わせるなら、ここから級を外す。
+4. `words.level` の列や Web 側で単語の級を出す所（`WordCard.tsx` など）は Web とデータベースの話で、iOS からは触らない。

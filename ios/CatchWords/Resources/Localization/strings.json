@@ -1463,6 +1463,10 @@
   "en": "Example",
   "zh-TW": "例句"
  },
+ "例文とチャンクを、今のレベルから目標レベルのあいだの難しさで作ります。": {
+  "en": "Example sentences and chunks are written between your current level and your target level.",
+  "zh-TW": "例句和用法組塊會依照你目前等級到目標等級之間的難度來產生。"
+ },
  "保存": {
   "en": "Save",
   "zh-TW": "儲存"

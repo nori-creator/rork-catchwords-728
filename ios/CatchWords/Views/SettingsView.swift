@@ -136,6 +136,10 @@ struct SettingsView: View {
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
                     .accessibilityIdentifier("settings.wheel.goal")
+                // The learner's level has one use (owner 2026-10-03): the difficulty of the example sentences and
+                // chunks. The server reads both values from the profile when it writes them.
+                Text(L("例文とチャンクを、今のレベルから目標レベルのあいだの難しさで作ります。"))
+                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
                 if !isEnglish { label(L("発音表記")).padding(.top, 6) }
                 if profile.targetLanguage == "ja" {
                     ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)

@@ -60,8 +60,9 @@ final class AIService {
         return first
     }
 
-    /// The web's card (`generateCard`): level resolved against the dictionary (級外 when unsure),
-    /// the learner's level and explanation language, retries on bad shape, every extras section.
+    /// The web's card (`generateCard`): the example sentence and chunks are written at the learner's level
+    /// (the server reads `profiles.current_level` / `level_goal`, set in 設定), in the explanation language,
+    /// with retries on bad shape and every extras section. The card's own `level` field is not used on iOS.
     func cardDetails(for candidate: Candidate) async throws -> CardDetails {
         var data: [String: Any] = ["headword": candidate.headword, "targetLanguage": NativeAPI.targetLanguage]
         if let hint = candidate.categoryKey, !hint.isEmpty { data["hintCategory"] = hint }
