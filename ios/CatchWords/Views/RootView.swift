@@ -46,6 +46,9 @@ struct RootView: View {
                         // The album was read for the language remembered on this device; another account
                         // (or a change made on the web) can have a different one.
                         if NativeAPI.targetLanguage != guessed { await dex.load() }
+                        // Photos left in 「解析待ち」 are analyzed again on their own (in this account's
+                        // learning language, now known); also when the connection comes back.
+                        PendingRetry.shared.start()
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
@@ -77,6 +80,7 @@ struct RootView: View {
                 diary.reset()
                 profile.reset()
                 plan.reset()
+                PendingRetry.shared.stop()
                 ImageCache.shared.removeAll()
                 StickerPhoto.invalidateAll()
                 ReviewActivityController.end()
@@ -101,6 +105,7 @@ struct RootView: View {
             guard phase == .active, auth.phase == .signedIn else { return }
             if profile.loadFailed { Task { await profile.load() } }
             ReminderService.recordAppOpen()
+            PendingRetry.shared.kick()   // waiting photos that are due (a no-op until sign-in has finished)
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
     }

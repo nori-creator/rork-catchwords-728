@@ -2951,6 +2951,18 @@
   "en": "Memory hook",
   "zh-TW": "記憶方法"
  },
+ "解析が終わりました。タップして単語を選べます": {
+  "en": "Analysis finished. Tap to choose the word.",
+  "zh-TW": "分析完成，點一下就能選擇單字。"
+ },
+ "解析が終わりました。写真から単語を選べます": {
+  "en": "Analysis finished. Choose the word from your photo.",
+  "zh-TW": "分析完成，可以從照片選擇單字。"
+ },
+ "解析が終わりました：{1}": {
+  "en": "Analysis finished: {1}",
+  "zh-TW": "分析完成：{1}"
+ },
  "解析できなかったので写真を預かりました": {
   "en": "Couldn't analyze it — we kept your photo",
   "zh-TW": "沒能分析，先幫你把照片收著了"

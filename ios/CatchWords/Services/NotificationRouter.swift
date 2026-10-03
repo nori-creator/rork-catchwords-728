@@ -7,6 +7,8 @@ enum NotificationRoute: Equatable {
     /// The milestone album (web /home?memorial=N): home, where its entry sits on the page.
     case home
     case sticker(String)
+    /// 「解析が終わりました」 (PendingRetry): the 「解析待ち」 list on the camera, to pick the word.
+    case pendingPhotos
 }
 
 /// Receives taps on the app's notifications and hands the destination to the tab shell.
@@ -29,6 +31,8 @@ final class NotificationRouter: NSObject, UNUserNotificationCenterDelegate {
                 pending = .home
             } else if id.hasPrefix(ReminderService.reviewIdentifierPrefix) {
                 pending = .review
+            } else if id.hasPrefix(PendingRetry.notificationPrefix) {
+                pending = .pendingPhotos
             }
         }
     }
