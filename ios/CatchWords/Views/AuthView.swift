@@ -53,19 +53,14 @@ struct AuthView: View {
                         .frame(height: 54)
                         .clipShape(.rect(cornerRadius: 16))
                     } else {
-                        Button {
+                        // Apple's own button (HIG: the system draws the logo, title and proportions), but the tap
+                        // runs the web sign-in so the account is the same as on the web.
+                        AppleIDWebButton(style: colorScheme == .dark ? .white : .black, isEnabled: !auth.isBusy) {
                             Task { await auth.signInWithWeb(provider: "apple") }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "apple.logo").font(.system(size: 20, weight: .medium))
-                                Text(L("Appleでサインイン")).font(.system(size: 19, weight: .medium))
-                            }
-                            .foregroundStyle(colorScheme == .dark ? .black : .white)
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(colorScheme == .dark ? Color.white : Color.black, in: .rect(cornerRadius: 16))
                         }
-                        .buttonStyle(PressableStyle())
-                        .disabled(auth.isBusy)
+                        .id(colorScheme)  // the button's style is fixed at creation; rebuild it when the scheme flips
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
                         .accessibilityIdentifier("auth.apple")
                     }
 
@@ -243,6 +238,37 @@ struct AuthView: View {
                 await auth.signIn(email: mail, password: password)
             }
         }
+    }
+}
+
+/// The system "Sign in with Apple" button (`ASAuthorizationAppleIDButton`, so the look follows the HIG) with our
+/// own tap action. `SignInWithAppleButton` always starts the native ASAuthorization flow, so it can't be used
+/// while Apple sign-in goes through the web app (`AppConfig.nativeAppleSignIn == false`).
+private struct AppleIDWebButton: UIViewRepresentable {
+    var style: ASAuthorizationAppleIDButton.Style
+    var isEnabled: Bool
+    var action: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+
+    func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
+        let button = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: style)
+        button.cornerRadius = 16
+        button.accessibilityIdentifier = "auth.apple"
+        button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        return button
+    }
+
+    func updateUIView(_ button: ASAuthorizationAppleIDButton, context: Context) {
+        context.coordinator.action = action
+        button.isEnabled = isEnabled
+        button.alpha = isEnabled ? 1 : 0.5
+    }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+        init(action: @escaping () -> Void) { self.action = action }
+        @objc func tapped() { action() }
     }
 }
 
