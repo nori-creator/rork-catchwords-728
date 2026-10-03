@@ -1,5 +1,7 @@
 # 単語帳の背表紙: 文字の読みやすさの案
 
+> 単語帳は 2026-10-01 のオーナー判断で削除済み（`WordbookView.swift` はもう無い）。この案は不要。
+
 対象: `ios/CatchWords/Views/WordbookView.swift` の `WordbookShelf.spine(_:)`（514〜611行）。
 画像: `spine-options.png`（390pt 幅・2x）。元の HTML: `spine-options.html`。
 

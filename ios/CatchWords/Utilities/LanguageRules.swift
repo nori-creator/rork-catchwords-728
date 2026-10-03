@@ -99,7 +99,7 @@ nonisolated enum LanguageRules {
 
     // MARK: R8 — learning-language content
 
-    /// Whether text is written in the learning language at all (an example sentence, a wordbook row):
+    /// Whether text is written in the learning language at all (an example sentence):
     /// Han for Taiwan Mandarin, kana or kanji for Japanese, Latin letters for English.
     static func isIn(_ text: String, target: String) -> Bool {
         let c = counts(text)

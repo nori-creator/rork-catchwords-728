@@ -12,7 +12,7 @@ import Foundation
 ///   language, explain { <reader>: { meaning, example_translation, extras } }
 ///   (index 0-5 are seeded with photos, 6 without a photo, 7-8 are new words offered by the AI functions)
 /// - variants: other names of a word (CandidatePickerView "other ways to say it")
-/// - distinctions, wordbook, journal, prompts, patterns, synth (templates for unknown headwords),
+/// - distinctions, journal, prompts, patterns, synth (templates for unknown headwords),
 ///   places (lat / lng / name per reader), common (caption, generic feedback, display name)
 nonisolated enum DemoFixtures {
     /// The parsed pack for a learning language ("zh-TW", "en", "ja"); empty when it cannot be read.
@@ -1756,68 +1756,6 @@ nonisolated enum DemoFixtures {
        "ja": "ふだんの言い方",
        "en": "the everyday word"
       }
-     },
-     "wordbook": {
-      "title": {
-       "ja": "果物の単語",
-       "en": "Fruit words"
-      },
-      "entries": [
-       {
-        "headword": "蘋果",
-        "reading_zhuyin": "ㄆㄧㄥˊ ㄍㄨㄛˇ",
-        "pinyin": "píngguǒ",
-        "meaning": {
-         "ja": "りんご",
-         "en": "apple"
-        }
-       },
-       {
-        "headword": "香蕉",
-        "reading_zhuyin": "ㄒㄧㄤ ㄐㄧㄠ",
-        "pinyin": "xiāngjiāo",
-        "meaning": {
-         "ja": "バナナ",
-         "en": "banana"
-        }
-       },
-       {
-        "headword": "西瓜",
-        "reading_zhuyin": "ㄒㄧ ㄍㄨㄚ",
-        "pinyin": "xīguā",
-        "meaning": {
-         "ja": "すいか",
-         "en": "watermelon"
-        }
-       },
-       {
-        "headword": "葡萄",
-        "reading_zhuyin": "ㄆㄨˊ ㄊㄠˊ",
-        "pinyin": "pútáo",
-        "meaning": {
-         "ja": "ぶどう",
-         "en": "grape"
-        }
-       },
-       {
-        "headword": "草莓",
-        "reading_zhuyin": "ㄘㄠˇ ㄇㄟˊ",
-        "pinyin": "cǎoméi",
-        "meaning": {
-         "ja": "いちご",
-         "en": "strawberry"
-        }
-       },
-       {
-        "headword": "荔枝",
-        "reading_zhuyin": "ㄌㄧˋ ㄓ",
-        "pinyin": "lìzhī",
-        "meaning": {
-         "ja": "ライチ",
-         "en": "lychee"
-        }
-       }
-      ]
      },
      "journal": {
       "draft": "今天我去夜市和吃了芒果冰，很好吃。",
@@ -4048,68 +3986,6 @@ nonisolated enum DemoFixtures {
        "ja": "ふだんの言い方",
        "zh-TW": "最常用的說法"
       }
-     },
-     "wordbook": {
-      "title": {
-       "ja": "果物の単語",
-       "zh-TW": "水果單字"
-      },
-      "entries": [
-       {
-        "headword": "apple",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "りんご",
-         "zh-TW": "蘋果"
-        }
-       },
-       {
-        "headword": "banana",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "バナナ",
-         "zh-TW": "香蕉"
-        }
-       },
-       {
-        "headword": "watermelon",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "すいか",
-         "zh-TW": "西瓜"
-        }
-       },
-       {
-        "headword": "grape",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "ぶどう",
-         "zh-TW": "葡萄"
-        }
-       },
-       {
-        "headword": "strawberry",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "いちご",
-         "zh-TW": "草莓"
-        }
-       },
-       {
-        "headword": "lychee",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "ライチ",
-         "zh-TW": "荔枝"
-        }
-       }
-      ]
      },
      "journal": {
       "draft": "Today I go to a cafe and drink a coffee. It was very delicious.",
@@ -6500,68 +6376,6 @@ nonisolated enum DemoFixtures {
        "en": "the everyday word",
        "zh-TW": "最常用的說法"
       }
-     },
-     "wordbook": {
-      "title": {
-       "en": "Fruit words",
-       "zh-TW": "水果單字"
-      },
-      "entries": [
-       {
-        "headword": "りんご",
-        "reading_zhuyin": "りんご",
-        "pinyin": "ringo",
-        "meaning": {
-         "en": "apple",
-         "zh-TW": "蘋果"
-        }
-       },
-       {
-        "headword": "バナナ",
-        "reading_zhuyin": "バナナ",
-        "pinyin": "banana",
-        "meaning": {
-         "en": "banana",
-         "zh-TW": "香蕉"
-        }
-       },
-       {
-        "headword": "すいか",
-        "reading_zhuyin": "すいか",
-        "pinyin": "suika",
-        "meaning": {
-         "en": "watermelon",
-         "zh-TW": "西瓜"
-        }
-       },
-       {
-        "headword": "ぶどう",
-        "reading_zhuyin": "ぶどう",
-        "pinyin": "budō",
-        "meaning": {
-         "en": "grape",
-         "zh-TW": "葡萄"
-        }
-       },
-       {
-        "headword": "いちご",
-        "reading_zhuyin": "いちご",
-        "pinyin": "ichigo",
-        "meaning": {
-         "en": "strawberry",
-         "zh-TW": "草莓"
-        }
-       },
-       {
-        "headword": "もも",
-        "reading_zhuyin": "もも",
-        "pinyin": "momo",
-        "meaning": {
-         "en": "peach",
-         "zh-TW": "桃子"
-        }
-       }
-      ]
      },
      "journal": {
       "draft": "今日は駅の前で猫を見ました。とてもかわいいでした。",

@@ -67,15 +67,4 @@ final class AIService {
         if let hint = candidate.categoryKey, !hint.isEmpty { data["hintCategory"] = hint }
         return try await NativeAPI.call("generateCard", data, as: CardDetails.self, timeout: 60)
     }
-
-    /// Read the words printed on a vocabulary page, not saved yet (web `extractWordbook`; meanings
-    /// in the reader's language).
-    func extractWordbook(image: UIImage) async throws -> WordbookDraft {
-        guard let jpeg = await ImageTools.jpegForUploadInBackground(image, maxSide: 2000, quality: 0.85) else { throw APIError.message(L("写真を読み込めませんでした。")) }
-        let draft = try await NativeAPI.call("extractWordbook", ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"],
-                                             as: WordbookDraft.self, timeout: 60)
-        let cleaned = Wordbook.clean(draft.entries)
-        guard !cleaned.isEmpty else { throw APIError.message(L("このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。")) }
-        return WordbookDraft(title: draft.title, entries: cleaned)
-    }
 }

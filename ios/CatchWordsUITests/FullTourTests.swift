@@ -47,7 +47,6 @@ final class FullTourTests: XCTestCase {
         dexAndDetail()
         searchAndCatch()
         review()
-        wordbooks()
         settings()
         signOutAndBackIn()
     }
@@ -161,18 +160,6 @@ final class FullTourTests: XCTestCase {
             settle(1)
         }
         snap("review-end")
-    }
-
-    private func wordbooks() {
-        let open = app.buttons["review.wordbooks"]
-        guard open.waitForExistence(timeout: 5) else { return }
-        open.tap()
-        settle(2)
-        snap("wordbooks")
-        // Close it (a full-screen cover with its own close button in the top bar).
-        let close = app.buttons.matching(NSPredicate(format: "identifier == 'wordbook.close' OR label IN %@", closeLabels)).firstMatch
-        if close.exists { close.tap() } else { app.swipeDown(velocity: .fast) }
-        settle(1)
     }
 
     private func settings() {

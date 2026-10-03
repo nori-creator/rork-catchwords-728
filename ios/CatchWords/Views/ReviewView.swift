@@ -10,7 +10,6 @@ struct ReviewView: View {
     @State private var curveSticker: Sticker?
     /// Verdict for the current card (nil until a choice is picked).
     @State private var answer: Bool?
-    @State private var showWordbooks: Bool = false
     @State private var practiceIndex: Int = 0
     /// How far the answer sheet has been dragged sideways (swipe left = next card, like the web's SwipeCard).
     @State private var swipeX: CGFloat = 0
@@ -124,9 +123,6 @@ struct ReviewView: View {
                 await store.load(dex: dex, limit: profile.effectiveReviewLimit)
             }
         }
-        .fullScreenCover(isPresented: $showWordbooks) {
-            WordbookView()
-        }
         .reviewLiveActivity(store: store, dex: dex, answered: answer != nil, enabled: !router.tour.isReview)
     }
 
@@ -173,24 +169,6 @@ struct ReviewView: View {
                         .font(.system(size: 15)).monospacedDigit().foregroundStyle(Theme.muted)
                 }
             }
-            Button {
-                Haptics.selection()
-                showWordbooks = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "books.vertical")
-                    Text(L("単語帳で復習する"))
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.primaryInk)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Theme.primary.opacity(0.08), in: .rect(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(PressableStyle(scale: 0.98))
-            .accessibilityIdentifier("review.wordbooks")
             GeometryReader { geo in
                 let p = store.queue.isEmpty ? 0 : CGFloat(store.index) / CGFloat(store.queue.count)
                 ZStack(alignment: .leading) {
