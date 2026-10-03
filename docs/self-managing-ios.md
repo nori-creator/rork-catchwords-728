@@ -181,7 +181,7 @@ App Store Connect で「審査へ提出」
 | 撮影 → 単語を選ぶ → 保存 | 図鑑に着地する。機内モードなら「保存に失敗しました」と出て写真は「解析待ち」に残る |
 | 復習で答える（機内モード） | 「採点を保存できませんでした」と出て、もう一度答えられる |
 | 設定 | 「Pro にアップグレード」「購入を復元」が出ない。末尾に `1.0.0 (ビルド番号)` が出る |
-| 設定 → アカウント削除 | 削除後にログイン画面に戻り、同じメールで再ログインできない |
+| 設定 → アカウント削除 | 削除後にログイン画面に戻り、同じメールで再ログインできない。ウィジェットの単語・予約した通知・解析待ちの写真も消える |
 | 図鑑（棚） | 上に本棚が出ない。スライド表示でカードが輪になって回り、音が鳴る |
 
 ### 6-2. App Store Connect に入れる情報
@@ -225,7 +225,9 @@ App Store Connect で「審査へ提出」
 | ユーザーコンテンツ → 写真またはビデオ | はい | 単語の写真・ステッカー |
 | ユーザーコンテンツ → 音声データ | はい | 声で調べる（端末の音声認識。保存しない） |
 | ユーザーコンテンツ → その他 | はい | メモ・日記・学習記録 |
-| 購入、診断、使用状況データ | いいえ | 集めていない |
+| 連絡先情報 → 名前 | はい | 表示名（プロフィール） |
+| 使用状況データ → 製品の操作 | はい | アプリの機能・分析（サーバが AI の利用回数を `usage_events` に記録し、1日の上限と開発者の利用者画面に使う） |
+| 購入、診断 | いいえ | 集めていない（アプリ内課金を始めたら「購入」を はい にする） |
 
 アプリ内の `PrivacyInfo.xcprivacy` も同じ内容。変えるときは両方そろえる。
 
@@ -249,3 +251,38 @@ App Store Connect で「審査へ提出」
 | Guideline 5.1.1（権限の説明が足りない） | カメラ・マイク・位置・写真の説明文（pbxproj の `INFOPLIST_KEY_*UsageDescription`）を直す |
 | Guideline 4.8（Sign in with Apple） | Google と並べて Apple も出している。指摘があれば Claude に見せる |
 | Guideline 5.1.1(v)（アカウント削除） | 設定 → アカウント削除 の場所を審査メモに書く |
+
+---
+
+## 7. アプリ内課金（Pro）を始めるとき（2026-10-03 の確認）
+
+初版は無料のみ（`PlanStore.paywallEnabled = false`）。課金を始める前に、次がそろっている必要があります。
+
+### 7-1. いまの仕組みと「iPhone で買った Pro がサーバに伝わらない」理由
+
+- アプリは StoreKit 2 の購入記録（`Transaction.currentEntitlements`）を端末で確かめ、撮影回数などの**端末で決める制限**はそれで外す（`PlanStore.isPro`）。払った人が締め出されることはない。
+- **サーバが決める Pro の機能**（項目の「作り直す」、Pro 用の AI モデル、報告からの AI 修正）は、サーバの `isProUser` が `profiles.plan = 'pro'`（または管理者）かで決める。`profiles.plan` を書くのは **Stripe の webhook だけ**で、Apple の購入を確かめる処理は**サーバにない**。だから iPhone で買っても、サーバは無料のまま扱う。
+- アプリは「作り直す」を、サーバが Pro と認める時（`PlanStore.serverGrantsPro`）だけ出す（Web と同じ）。課金画面はサーバがまだ認めない機能を約束しない（`PlanStore.serverVerifiesAppStore = false`）。
+- 購入時にユーザー ID を `appAccountToken` として付けるようにした。Apple の署名つき購入記録とサーバ通知に入るので、サーバが持ち主を確かめられる。
+
+### 7-2. Web 版（サーバ）に要る変更（このリポジトリからは入れられない）
+
+1. **App Store Server Notifications V2 の受け口** `/api/appstore-notifications`（POST）
+   - 本文 `{ signedPayload }`（JWS）。**Apple のルート証明書（Apple Root CA - G3）までの証明書の鎖と署名を確かめる**（`@apple/app-store-server-library` の `SignedDataVerifier` が使える）。bundleId `com.nori.catchwords`・environment を確かめる。
+   - `data.signedTransactionInfo` から `appAccountToken`（＝ユーザー ID）、`originalTransactionId`、`productId`、`expiresDate`、`revocationDate` を取り出す。
+   - 種類 `SUBSCRIBED / DID_RENEW / DID_CHANGE_RENEWAL_STATUS / EXPIRED / GRACE_PERIOD_EXPIRED / REFUND / REVOKE` で、有効かどうかを決める。
+2. **アプリからすぐ知らせる関数** `syncAppStorePurchase`（`native-fn.ts` の一覧に足す。`requireSupabaseAuth`）
+   - 入力 `{ signedTransaction: string }`（StoreKit 2 の `VerificationResult.jwsRepresentation`）。上と同じく署名を確かめ、`appAccountToken` が呼んだ本人の ID と一致する時だけ反映。戻り値 `{ isPro: boolean }`。
+   - 足したら iOS 側で、購入・復元・`Transaction.updates` の後にこれを呼ぶ（`ios-contract.test.ts` / `check_native_contract.py` の一覧にも足す）。
+3. **持ち主ごとの購入の表** `entitlements(user_id, source 'stripe'|'app_store', original_transaction_id, product_id, expires_at, revoked_at)`。`profiles.plan` は「どれか1つでも有効なら pro」として計算し直す。**今のように Stripe の webhook が `plan` を直接 free に書くと、Apple で払っている人まで無料に戻る**ので、Stripe 側もこの表を通す。
+4. App Store Connect → アプリ → App 情報 → **App Store サーバ通知** に 1 の URL（本番・Sandbox）を入れる。
+
+### 7-3. App Store Connect とアプリでやること
+
+- サブスクリプショングループと商品 `catchwords.pro.yearly` / `catchwords.pro.monthly` を作る（名前・説明・価格・審査用スクリーンショット）。
+- 有料アプリ契約（Paid Apps Agreement）・税・口座を入れる。
+- 利用規約: アプリ説明文の最後に利用規約（EULA）の URL を書くか、App Store Connect の「使用許諾契約」を設定する（課金画面の「利用規約」リンクは https://catchwords.lovable.app/terms）。
+- プライバシーポリシーに Apple のアプリ内課金（Apple が決済し、当社はカード情報を受け取らない）を書き足す。
+- 7-2 が入ったら `PlanStore.serverVerifiesAppStore` と `paywallEnabled`、必要なら `catchLimitEnabled` をオンにする。
+- Pro の中身（課金画面に並べる特典）はオーナーが決める。今の時点で本当に Pro だけなのは「作り直す」（サーバ側）と、オンにした時の撮影回数の上限解除だけ。切り抜きは全員無料。
+
