@@ -118,6 +118,21 @@ final class DexStore {
     private static let pageSize = 500
     private static let maxPages = 40
 
+    /// Every row of a read, a page at a time. The server returns at most 1000 rows per request whatever
+    /// `limit` says, so a single `limit=3000` read silently dropped the rest (memory badges, due counts
+    /// and album placements of a big dex). `path` must have a stable `order`.
+    private func readAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
+                                       pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
+        var out: [T] = []
+        for page in 0..<maxPages {
+            let data = try await client.rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
+            let chunk = try decoder.decode([T].self, from: data)
+            out += chunk
+            if chunk.count < pageSize { break }
+        }
+        return out
+    }
+
     func reloadReviews() async { await loadReviews() }
 
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
@@ -146,8 +161,8 @@ final class DexStore {
 
     private func loadReviews() async {
         let uid = client.userId
-        guard let data = try? await client.rest("GET", "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&limit=3000"),
-              let rows = try? SupabaseDate.decoder.decode([ReviewState].self, from: data),
+        guard let rows = try? await readAll("reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&order=id.asc",
+                                            as: ReviewState.self, decoder: SupabaseDate.decoder),
               client.userId == uid else { return }
         reviews = Dictionary(rows.map { ($0.stickerId, $0) }, uniquingKeysWith: { a, _ in a })
     }
@@ -617,8 +632,9 @@ final class DexStore {
             let album_rot: Double?
         }
         let uid = client.userId
-        guard let data = try? await client.rest("GET", "stickers?select=id,album_order,album_size,album_x,album_y,album_scale,album_rot&limit=3000"),
-              let rows = try? JSONDecoder().decode([Row].self, from: data), client.userId == uid else { return }
+        guard let rows = try? await readAll("stickers?select=id,album_order,album_size,album_x,album_y,album_scale,album_rot&order=id.asc",
+                                            as: Row.self, decoder: JSONDecoder()),
+              client.userId == uid else { return }
         var out: [String: DayLayoutSticker] = [:]
         for r in rows {
             out[r.id] = DayLayoutSticker(id: r.id, albumOrder: r.album_order, albumSize: r.album_size.flatMap(AlbumSize.init(rawValue:)),
