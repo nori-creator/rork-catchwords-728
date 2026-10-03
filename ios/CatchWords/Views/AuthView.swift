@@ -32,7 +32,7 @@ struct AuthView: View {
                     } label: {
                         HStack(spacing: 10) {
                             GoogleMark(size: 20)
-                            Text(L("Googleで続ける")).font(.system(size: 17, weight: .semibold))
+                            Text(L("Googleで続ける")).scaledFont(size: 17, weight: .semibold)
                         }
                         .foregroundStyle(Color(hex: 0x1F1F1F))
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -72,7 +72,7 @@ struct AuthView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
-                            Text(L("メールアドレスで続ける")).font(.system(size: 17, weight: .semibold))
+                            Text(L("メールアドレスで続ける")).scaledFont(size: 17, weight: .semibold)
                         }
                         .foregroundStyle(Theme.foreground)
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -85,14 +85,14 @@ struct AuthView: View {
 
                     if let msg = auth.errorMessage {
                         Label(msg, systemImage: "exclamationmark.circle.fill")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13)
                             .foregroundStyle(Theme.destructive)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     if let msg = auth.infoMessage {
                         Label(msg, systemImage: "checkmark.circle.fill")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13)
                             .foregroundStyle(Theme.ok)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -124,13 +124,13 @@ struct AuthView: View {
                 }
 
                 Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。"))
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
 
                 // Consent to the terms and the privacy policy is given by continuing (both pages are links).
                 Text(LegalLinks.signInAgreement())
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12)
                     .foregroundStyle(Theme.muted)
                     .tint(Theme.primaryInk)
                     .multilineTextAlignment(.center)
@@ -140,7 +140,7 @@ struct AuthView: View {
                     Link(L("利用規約"), destination: AppConfig.termsURL)
                     Link(L("プライバシー"), destination: AppConfig.privacyURL)
                 }
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium)
                 .foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 24)
@@ -158,7 +158,7 @@ struct AuthView: View {
             LogoMark(size: 96)
             VStack(spacing: 6) {
                 Text("CatchWords")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .scaledFont(size: 34, weight: .bold, design: .rounded)
                     .foregroundStyle(Theme.foreground)
                 Text(L("街で見つけた物が、学びたい言葉になる。"))
                     .font(AppFont.hand(18))
@@ -206,7 +206,7 @@ struct AuthView: View {
                     .transition(.opacity)
                 }
             }
-            .font(.system(size: 13, weight: .medium))
+            .scaledFont(size: 13, weight: .medium)
             .foregroundStyle(Theme.primary)
             .frame(minHeight: 44)
             if AuthStore.devSkipLogin {
@@ -214,7 +214,7 @@ struct AuthView: View {
                     Task { await auth.enterAsGuest() }
                 } label: {
                     Label(L("ログインせずに入る（開発用）"), systemImage: "arrow.right.circle")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold)
                         .foregroundStyle(Theme.muted)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
@@ -302,7 +302,7 @@ private struct GoogleMark: View {
 private extension View {
     func fieldStyle() -> some View {
         self
-            .font(.system(size: 16))
+            .scaledFont(size: 16)
             .foregroundStyle(Theme.foreground)
             .padding(.horizontal, 16)
             .frame(minHeight: 52)

@@ -50,7 +50,7 @@ struct CaptureView: View {
             if let toast = vm.toast {
                 VStack {
                     Text(toast)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
@@ -74,6 +74,7 @@ struct CaptureView: View {
             }
             CCShutterFlash(start: shotFlash, calm: reduceMotion).zIndex(30)
         }
+        .denseTypeSizeCap()  // the camera chrome is laid out around the viewfinder and the shutter
         // The camera machine, the card catch and the reward are dark full-screen views.
         .statusBarTone(isMachine || showsCardCatch || reward != nil ? .light : .automatic)
         .task { await camera.start() }
@@ -215,7 +216,7 @@ struct CaptureView: View {
     private var topBar: some View {
         ZStack {
             Text("CatchWords")
-                .font(.system(size: 17, weight: .semibold))
+                .scaledFont(size: 17, weight: .semibold)
                 .foregroundStyle(.white)
             HStack {
                 if plan.isPro || PlanStore.catchLimitEnabled { usagePill }
@@ -226,7 +227,7 @@ struct CaptureView: View {
                     showScan = true
                 } label: {
                     Label(L("かざす"), systemImage: "dot.viewfinder")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(Theme.cyan)
                         .padding(.horizontal, 10)
                         .frame(minHeight: 30)
@@ -239,7 +240,7 @@ struct CaptureView: View {
                 if !dex.pending.isEmpty {
                     Button { showPending = true } label: {
                         Label("\(dex.pending.count)", systemImage: "tray.and.arrow.up.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold)
                             .foregroundStyle(Theme.gold)
                             .padding(.horizontal, 10)
                             .frame(minHeight: 30)
@@ -251,7 +252,7 @@ struct CaptureView: View {
             }
             .padding(.horizontal, 16)
         }
-        .frame(height: 36)
+        .frame(minHeight: 36)
         .padding(.top, 4)
     }
 
@@ -307,12 +308,12 @@ struct CaptureView: View {
     private var selfiePrompt: some View {
         VStack(spacing: 18) {
             Text(L("ものと一緒に、もう一枚"))
-                .font(.system(size: 20, weight: .bold))
+                .scaledFont(size: 20, weight: .bold)
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
             Button { vm.finishSelfie(nil) } label: {
                 Text(L("スキップ"))
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 26)
                     .frame(minHeight: 44)
@@ -358,7 +359,7 @@ struct CaptureView: View {
                 let isOn = vm.mode == m
                 Button { setMode(m) } label: {
                     Text(m.label)
-                        .font(.system(size: 15, weight: isOn ? .semibold : .regular))
+                        .scaledFont(size: 15, weight: isOn ? .semibold : .regular)
                         .foregroundStyle(.white.opacity(isOn ? 1 : 0.7))
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background {
@@ -429,7 +430,7 @@ struct CaptureView: View {
                 }
             }
         }
-        .font(.system(size: 11, weight: .bold))
+        .scaledFont(size: 11, weight: .bold)
         .padding(.horizontal, 10)
         .frame(minHeight: 30)
         .background(.white.opacity(0.1), in: Capsule())
@@ -445,7 +446,7 @@ struct CaptureView: View {
                 .frame(width: 44, height: 44)
                 .background(.white.opacity(0.1), in: .rect(cornerRadius: 13, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(.white.opacity(0.18), lineWidth: 1))
-            Text(label).font(.system(size: 11, weight: .medium))
+            Text(label).scaledFont(size: 11, weight: .medium)
         }
         .foregroundStyle(.white)
         .frame(minWidth: 56)
@@ -455,7 +456,7 @@ struct CaptureView: View {
         NavigationStack {
             VStack(spacing: 16) {
                 TextField("", text: $searchText, prompt: Text(L("例: \(NativeAPI.sample(.search))")).foregroundStyle(Theme.muted))
-                    .font(.system(size: 18))
+                    .scaledFont(size: 18)
                     .padding(.horizontal, 16)
                     .frame(minHeight: 54)
                     .background(Theme.secondary, in: .rect(cornerRadius: 14))
@@ -776,8 +777,8 @@ struct CameraMessageView: View {
             Theme.navyCard
             VStack(spacing: 14) {
                 Image(systemName: icon).font(.system(size: 42)).foregroundStyle(Theme.primaryBright)
-                Text(title).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
-                Text(message).font(.system(size: 14)).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+                Text(title).scaledFont(size: 20, weight: .bold).foregroundStyle(.white)
+                Text(message).scaledFont(size: 14).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
                 if let buttonTitle {
                     PrimaryButton(title: buttonTitle, action: action).frame(maxWidth: 240).padding(.top, 8)
                 }
@@ -804,15 +805,15 @@ struct FailedView: View {
                 .font(.system(size: 40, weight: .semibold))
                 .foregroundStyle(Theme.gold)
             Text(L("解析できなかったので写真を預かりました"))
-                .font(.system(size: 20, weight: .bold))
+                .scaledFont(size: 20, weight: .bold)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             Text(L("あとでホームの「解析待ち」から続きができます。撮った瞬間は逃していません。"))
-                .font(.system(size: 14))
+                .scaledFont(size: 14)
                 .foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
             Text(L("理由: \(reason)"))
-                .font(.system(size: 12))
+                .scaledFont(size: 12)
                 .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
             VStack(spacing: 10) {
@@ -829,7 +830,7 @@ struct FailedView: View {
 
     private func secondary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
-            .font(.system(size: 15, weight: .semibold))
+            .scaledFont(size: 15, weight: .semibold)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(.white.opacity(0.1), in: .rect(cornerRadius: 16))
@@ -854,9 +855,9 @@ struct PendingListView: View {
                             }
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.createdAt, format: .dateTime.month().day().hour().minute())
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold)
                                     .foregroundStyle(Theme.foreground)
-                                Text(L10n.readerSafe(item.reason, fallback: L("解析待ちの写真"))).font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(2)
+                                Text(L10n.readerSafe(item.reason, fallback: L("解析待ちの写真"))).scaledFont(size: 12).foregroundStyle(Theme.muted).lineLimit(2)
                             }
                             Spacer()
                             Image(systemName: "arrow.clockwise.circle.fill").font(.title2).foregroundStyle(Theme.primary)

@@ -951,6 +951,10 @@
   "en": "The card came back incomplete. Please try again.",
   "zh-TW": "卡片內容不完整，請再試一次。"
  },
+ "カードを上にはじくか、「図鑑に入れる」を押します。": {
+  "en": "Flick the card up, or tap “Add to collection”.",
+  "zh-TW": "把卡片往上滑，或按「放進圖鑑」。"
+ },
  "カードを動かしてみよう・上にはじいて図鑑へ": {
   "en": "Move the card · flick it up into your collection",
   "zh-TW": "動動卡片，往上一撥就收進圖鑑"
@@ -1914,6 +1918,10 @@
  "図鑑で見る": {
   "en": "Open in Dex",
   "zh-TW": "在圖鑑查看"
+ },
+ "図鑑に入れよう": {
+  "en": "Add it to your collection",
+  "zh-TW": "放進圖鑑吧"
  },
  "図鑑に入れる": {
   "en": "Add to collection",

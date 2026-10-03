@@ -4,6 +4,7 @@
 #   1. GitHub が用意する Mac の上で、iOS アプリを組み立てる（=コンパイルが通るかの確認）。
 #   2. iPhone のシミュレーター（画面上で動く仮想の iPhone）で起動する。
 #   3. 起動直後の画面の写真と、20 秒の動画を撮る。
+#      主な画面は、大きな文字（AX2）と小さな iPhone（SE 第3世代）でも撮る（axl-* / small-*）。
 #   4. 結果を「ios-check-report」という成果物（Artifacts）として保存する。
 #
 # 見方: GitHub のリポジトリ → Actions → 「iOS check（iOS 版の確認）」→ 最新の実行 →
@@ -162,6 +163,81 @@ jobs:
           done
           ls -la "$OUT"
 
+      # 監査 D-04: 主な画面だけを (1) 大きな文字（アクセシビリティの「大」= AX2、アプリの上限）と
+      # (2) 小さな iPhone（iPhone SE 第3世代。無ければ入っている中で一番小さい iPhone）で撮る。
+      # ファイル名: axl-<画面>.png / small-<画面>.png / small-axl-<画面>.png（端末名は small-device.txt）。
+      # 失敗してもこの確認全体は赤にしない（撮れなかった画面は警告だけ）。
+      - name: 大きな文字と小さな iPhone で主な画面を撮る
+        continue-on-error: true
+        run: |
+          set +e -uo pipefail
+          OUT="$RUNNER_TEMP/report/previews"
+          mkdir -p "$OUT"
+          UDID=$(cat "$RUNNER_TEMP/udid"); BUNDLE_ID=$(cat "$RUNNER_TEMP/bundle")
+          APP="$RUNNER_TEMP/build/Debug-iphonesimulator/CatchWords.app"
+          AXL="-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL"
+          # 名前 / 待つ秒: ホーム・図鑑・単語の詳細・復習の4択・設定・カメラ不許可・AI の同意
+          SCENES="home:3 dex:2 detail:3 quiz:2 settings:2 camblocked:2 aiconsent:2"
+          shoot() {  # shoot <udid> <ファイル名の頭> [追加の起動引数...]
+            local dev=$1 prefix=$2; shift 2
+            for spec in $SCENES; do
+              local name=${spec%%:*} wait_s=${spec##*:}
+              xcrun simctl terminate "$dev" "$BUNDLE_ID" 2>/dev/null || true
+              xcrun simctl launch "$dev" "$BUNDLE_ID" -uiPreview "$name" -uiDemo zh-TW ${1+"$@"} >/dev/null || { echo "::warning::$prefix$name を開けませんでした"; continue; }
+              sleep "$wait_s"
+              xcrun simctl io "$dev" screenshot "$OUT/${prefix}${name}.png" >/dev/null 2>&1 || echo "::warning::$prefix$name を撮れませんでした"
+            done
+            xcrun simctl terminate "$dev" "$BUNDLE_ID" 2>/dev/null || true
+          }
+          # (1) いつものシミュレーターで、大きな文字
+          shoot "$UDID" "axl-" $AXL
+          # (2) 小さな iPhone: 無ければ作る。メモリを空けるため、いつものシミュレーターは止める。
+          SMALL=$(python3 - <<'PY'
+          import json, re, subprocess
+          def sim(*a):
+              return json.loads(subprocess.check_output(["xcrun", "simctl", "list", *a, "-j"]))
+          runtimes = [r for r in sim("runtimes")["runtimes"] if r.get("platform") == "iOS" and r.get("isAvailable")]
+          runtimes.sort(key=lambda r: [int(x) for x in re.findall(r"\d+", r.get("version", "0"))], reverse=True)
+          def rank(name):
+              if name == "iPhone SE (3rd generation)": return 0
+              if "SE" in name: return 1
+              if "mini" in name: return 2
+              if re.search(r"\d+e\b", name): return 3            # iPhone 16e
+              if not re.search(r"Pro|Plus|Max|Air", name): return 4
+              return 9
+          devices = sim("devices", "available")["devices"]
+          for rt in runtimes:
+              phones = [t for t in rt.get("supportedDeviceTypes", []) if t.get("name", "").startswith("iPhone")]
+              if not phones:
+                  continue
+              best = min(phones, key=lambda t: rank(t["name"]))
+              have = [d for d in devices.get(rt["identifier"], []) if d.get("deviceTypeIdentifier") == best["identifier"]]
+              if have:
+                  print(have[0]["udid"], best["name"], sep="\t"); break
+              try:
+                  udid = subprocess.check_output(["xcrun", "simctl", "create", "CW Small", best["identifier"], rt["identifier"]]).decode().strip()
+                  print(udid, best["name"], sep="\t"); break
+              except subprocess.CalledProcessError:
+                  continue
+          PY
+          ) || SMALL=""
+          SMALL_UDID=$(printf '%s' "$SMALL" | cut -f1); SMALL_NAME=$(printf '%s' "$SMALL" | cut -f2)
+          if [ -z "$SMALL_UDID" ]; then
+            echo "::warning::小さな iPhone のシミュレーターが見つかりませんでした（小さな画面の写真は無し）"
+            exit 0
+          fi
+          echo "small simulator: $SMALL_NAME ($SMALL_UDID)"
+          echo "$SMALL_NAME" > "$OUT/small-device.txt"
+          if [ "$SMALL_UDID" != "$UDID" ]; then
+            xcrun simctl shutdown "$UDID" 2>/dev/null || true
+            xcrun simctl boot "$SMALL_UDID" 2>/dev/null || true
+            xcrun simctl bootstatus "$SMALL_UDID" -b >/dev/null || { echo "::warning::小さな iPhone が起動しませんでした"; exit 0; }
+            xcrun simctl install "$SMALL_UDID" "$APP" || { echo "::warning::小さな iPhone に入れられませんでした"; exit 0; }
+          fi
+          shoot "$SMALL_UDID" "small-"
+          shoot "$SMALL_UDID" "small-axl-" $AXL
+          ls -la "$OUT" | grep -E "axl-|small-" || true
+
       - name: 見本の画面を ci-previews ブランチに置く（Claude が読める場所）
         if: always()
         env:
@@ -180,6 +256,7 @@ jobs:
           rm -rf "$DIR" && mkdir -p "$DIR"
           cp "$SRC"/*.png "$DIR"/ 2>/dev/null || true
           [ -d "$SRC/previews" ] && cp "$SRC"/previews/*.png "$DIR"/ 2>/dev/null || true
+          [ -d "$SRC/previews" ] && cp "$SRC"/previews/*.txt "$DIR"/ 2>/dev/null || true
           echo "${{ github.sha }}" > "$DIR/COMMIT"
           git add -A
           git -c user.name="ios-check" -c user.email="ios-check@users.noreply.github.com" commit --quiet -m "previews for $HEAD_REF @ ${{ github.sha }}" || exit 0

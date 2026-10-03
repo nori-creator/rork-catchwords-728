@@ -44,10 +44,10 @@ struct HeroPhotoPickerSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("表示する写真"))
-                    .font(.system(size: 22, weight: .bold))
+                    .scaledFont(size: 22, weight: .bold)
                     .foregroundStyle(Theme.foreground)
                 Text(L("単語の詳細で、この写真を表紙にします。"))
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundStyle(Theme.muted)
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
@@ -57,7 +57,7 @@ struct HeroPhotoPickerSheet: View {
             }
             if let failure {
                 Label(failure, systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(Theme.primary)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -109,7 +109,7 @@ struct HeroPhotoPickerSheet: View {
                 .scaleEffect(on ? 1 : 0.97)
                 .shadow(color: .black.opacity(on ? 0.14 : 0.05), radius: on ? 14 : 4, y: on ? 8 : 2)
                 Text(option.label)
-                    .font(.system(size: 14, weight: on ? .bold : .medium))
+                    .scaledFont(size: 14, weight: on ? .bold : .medium)
                     .foregroundStyle(on ? Theme.foreground : Theme.muted)
                     .padding(.leading, 4)
             }

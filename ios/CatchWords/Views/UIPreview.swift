@@ -104,6 +104,8 @@ struct UIPreviewRoot: View {
             case "paywall": PaywallView()
             case "dex": DexView()
             case "done": DonePreview()
+            case "home": HomePreview()
+            case "camblocked": CameraBlockedPreview()
             case "homeload": VStack(spacing: 20) {
                 AlbumSkeleton().frame(height: 440)
                 AlbumLoadFailed(message: L("通信できませんでした。電波のよい場所でもう一度お試しください。")) {}.frame(height: 300)
@@ -170,7 +172,7 @@ private struct CutoutPreview: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("切り抜きアニメーション").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
+            Text("切り抜きアニメーション").scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
             ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
@@ -634,6 +636,28 @@ private struct DonePreview: View {
             ReviewDone(total: 12, correct: 9, doneToday: 12, missed: 3, isRetry: false, canLoadMore: true) {}
                 .padding(16)
         }
+    }
+}
+
+/// Home (album and bookshelf) as a guest sees it: the empty album, read once so the skeleton ends.
+private struct HomePreview: View {
+    @Environment(DexStore.self) private var dex
+
+    var body: some View {
+        HomeView()
+            .environment(\.colorScheme, .light)  // as in MainTabView: the paper album stays paper
+            .task { await dex.load() }
+    }
+}
+
+/// The camera screen when camera access was refused (CaptureView `.denied`).
+private struct CameraBlockedPreview: View {
+    var body: some View {
+        CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
+                          message: L("1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る"),
+                          buttonTitle: L("設定を開く")) {}
+            .ignoresSafeArea()
+            .denseTypeSizeCap()  // as inside CaptureView
     }
 }
 

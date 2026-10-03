@@ -162,7 +162,7 @@ struct WordDetailView: View {
         .overlay(alignment: .bottom) {
             if let toast {
                 Text(toast)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
@@ -192,7 +192,7 @@ struct WordDetailView: View {
     private var topBar: some View {
         HStack {
             Text(headword)
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Theme.muted)
             Spacer()
             Button {
@@ -259,7 +259,7 @@ struct WordDetailView: View {
             }
             // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
             if (word?.readingZhuyin ?? "").isEmpty, let p = word?.pinyin, !p.isEmpty {
-                Text(p).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                Text(p).scaledFont(size: 14).foregroundStyle(Theme.muted)
             }
             HStack {
                 Spacer()
@@ -280,7 +280,7 @@ struct WordDetailView: View {
                         if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
                         Text(isFixing ? L("直しています…") : L("報告"))
                     }
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundStyle(Theme.muted)
                     .frame(minWidth: 44, minHeight: 44)
                 }
@@ -391,12 +391,12 @@ struct WordDetailView: View {
             .overlay(alignment: .topLeading) {
                 HStack(spacing: 6) {
                     Text(L("\(number)回目"))
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold)
                     if let d = SupabaseDate.parse(p.takenAt) {
-                        Text(JPDate.monthDay(d)).font(.system(size: 12)).monospacedDigit()
+                        Text(JPDate.monthDay(d)).scaledFont(size: 12, monospacedDigit: true)
                     }
                     if let place = p.place, !place.isEmpty {
-                        Text(place).font(.system(size: 12)).lineLimit(1)
+                        Text(place).scaledFont(size: 12).lineLimit(1)
                     }
                 }
                 .foregroundStyle(.white)
@@ -436,7 +436,7 @@ struct WordDetailView: View {
             .overlay(alignment: .bottomTrailing) {
                 if hasSelfie {
                     Text(back ? L("タップで戻る") : L("タップで自撮りへ"))
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -449,7 +449,7 @@ struct WordDetailView: View {
                 // An internet picture says whose it is (Unsplash asks for the photographer's name).
                 if !back, path != nil, path == current.placeholderImageUrl, let name = current.placeholderCredit?.name, !name.isEmpty {
                     Label(name, systemImage: "camera")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                         .lineLimit(1)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
@@ -537,8 +537,8 @@ struct WordDetailView: View {
     private var metaCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "clock").font(.system(size: 14))
-                Text(JPDate.full(current.takenAt)).font(.system(size: 14)).monospacedDigit()
+                Image(systemName: "clock").scaledFont(size: 14)
+                Text(JPDate.full(current.takenAt)).scaledFont(size: 14, monospacedDigit: true)
                 Spacer(minLength: 8)
                 placeChip
             }
@@ -552,7 +552,7 @@ struct WordDetailView: View {
                         Text(cap).font(AppFont.hand(18)).foregroundStyle(Theme.foreground.opacity(0.9))
                             .multilineTextAlignment(.leading)
                     } else {
-                        Text(L("ひと言")).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        Text(L("ひと言")).scaledFont(size: 14).foregroundStyle(Theme.muted)
                     }
                     Spacer()
                     Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.muted)
@@ -583,18 +583,18 @@ struct WordDetailView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "chart.line.downtrend.xyaxis")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Theme.memoryLevels[lv])
                 Text(L("記憶の曲線"))
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium)
                     .foregroundStyle(Theme.foreground.opacity(0.85))
                 Spacer()
                 Text("\(MemoryBadge.labels[lv]) · \(pct)%")
-                    .font(.system(size: 13, weight: .bold).monospacedDigit())
+                    .scaledFont(size: 13, weight: .bold, monospacedDigit: true)
                     .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
                     .padding(.horizontal, 10).padding(.vertical, 4)
                     .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                Image(systemName: "chevron.right").scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
             }
             .frame(minHeight: 40)
             .contentShape(.rect)
@@ -624,7 +624,7 @@ struct WordDetailView: View {
             } icon: {
                 Image(systemName: "mappin.and.ellipse")
             }
-                .font(.system(size: 14, weight: .semibold))
+                .scaledFont(size: 14, weight: .semibold)
                 .lineLimit(1)
                 .foregroundStyle(Theme.primaryInk)
                 .padding(.horizontal, 14)
@@ -648,7 +648,7 @@ struct WordDetailView: View {
                     if isCutting { ProgressView().tint(Theme.primaryInk) } else { Image(systemName: "scissors") }
                     Text(isCutting ? L("切り抜いています") : L("被写体を切り抜く"))
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .scaledFont(size: 14, weight: .semibold)
                 .foregroundStyle(Theme.primaryInk)
                 .padding(.horizontal, 18)
                 .frame(minHeight: 44)
@@ -657,7 +657,7 @@ struct WordDetailView: View {
             .buttonStyle(PressableStyle())
             .disabled(isCutting)
             if let cutoutMessage {
-                Text(cutoutMessage).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                Text(cutoutMessage).scaledFont(size: 12).foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity)
@@ -665,7 +665,7 @@ struct WordDetailView: View {
 
     private func chip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 13, weight: .semibold))
+            .scaledFont(size: 13, weight: .semibold)
             .foregroundStyle(Theme.foreground.opacity(0.8))
             .padding(.horizontal, 12)
             .frame(minHeight: 30)
@@ -688,7 +688,7 @@ struct WordDetailView: View {
     private var meaningCard: some View {
         SectionCard(title: CardSection.meaning.title, icon: CardSection.meaning.icon) {
             Text(word?.meaningJa ?? "")
-                .font(.system(size: 26, weight: .medium))
+                .scaledFont(size: 26, weight: .medium)
                 .foregroundStyle(Theme.foreground)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -858,15 +858,15 @@ struct WordDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             if !ex.scene.isEmpty {
                                 Text(ex.scene)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .scaledFont(size: 12, weight: .semibold)
                                     .foregroundStyle(Theme.primaryInk)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Theme.primary.opacity(0.1), in: Capsule())
                             }
-                            Text(highlighted(ex.zh)).font(.system(size: 18)).lineSpacing(7)
+                            Text(highlighted(ex.zh)).scaledFont(size: 18).lineSpacing(7)
                             if !ex.ja.isEmpty {
-                                Text(ex.ja).font(.system(size: 14)).foregroundStyle(Theme.muted).lineSpacing(5)
+                                Text(ex.ja).scaledFont(size: 14).foregroundStyle(Theme.muted).lineSpacing(5)
                             }
                         }
                         Spacer(minLength: 0)
@@ -995,11 +995,11 @@ struct WordDetailView: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(highlighted(sentence))
-                        .font(.system(size: 19))
+                        .scaledFont(size: 19)
                         .foregroundStyle(Theme.foreground)
                         .lineSpacing(8)
                     if let t = translation, !t.isEmpty {
-                        Text(t).font(.system(size: 14)).foregroundStyle(Theme.muted).lineSpacing(6)
+                        Text(t).scaledFont(size: 14).foregroundStyle(Theme.muted).lineSpacing(6)
                     }
                 }
                 Spacer(minLength: 0)
@@ -1037,14 +1037,14 @@ struct WordDetailView: View {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 5) {
                             Circle().fill(k.ink).frame(width: 8, height: 8)
-                            Text(k.label(for: learningLang)).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: learningLang)).scaledFont(size: 13).foregroundStyle(Theme.muted)
                         }
                     }
                 }
                 .padding(.top, 12)
                 if shown.contains(where: { $0.parts.contains { ChunkRules.isSwappable($0, headword: headword, target: learningLang) } }) {
                     Text(L("点線の語を押すと、ネイティブがよく入れるほかの語に入れ替えられます。"))
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13)
                         .foregroundStyle(Theme.muted)
                         .padding(.top, 8)
                 }
@@ -1063,7 +1063,7 @@ struct WordDetailView: View {
                             let reading = m.word.hasPrefix("一") ? m.zhuyin : m.zhuyin.map { "ㄧ " + $0 }  // l10n-ignore (target word)
                             ZhuyinWordView(headword: said, zhuyin: reading, size: 32, weight: .heavy, language: "zh-TW")
                             if let n = m.note, !n.isEmpty {
-                                Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                                Text(n).scaledFont(size: 15).foregroundStyle(Theme.muted).lineSpacing(4)
                             }
                         }
                         Spacer(minLength: 0)
@@ -1085,13 +1085,13 @@ struct WordDetailView: View {
                     let rows = items.filter { $0.kind == kind }
                     if !rows.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(label).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                            Text(label).scaledFont(size: 14).foregroundStyle(Theme.muted)
                             ForEach(rows, id: \.word) { r in
                                 HStack(alignment: .center, spacing: 10) {
                                     VStack(alignment: .leading, spacing: 8) {
                                         relatedPill(r, kind: kind)
                                         if !r.note.isEmpty {
-                                            Text(r.note).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                                            Text(r.note).scaledFont(size: 15).foregroundStyle(Theme.muted).lineSpacing(4)
                                         }
                                     }
                                     Spacer(minLength: 0)
@@ -1133,9 +1133,9 @@ struct WordDetailView: View {
             VStack(spacing: 0) {
                 ForEach(Array(forms.enumerated()), id: \.offset) { i, row in
                     HStack(spacing: 12) {
-                        Text(row.0).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        Text(row.0).scaledFont(size: 14).foregroundStyle(Theme.muted)
                             .frame(width: 118, alignment: .leading)
-                        Text(row.1).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(row.1).scaledFont(size: 20, weight: .semibold).foregroundStyle(Theme.foreground)
                         Spacer(minLength: 0)
                         PronounceCircle(text: row.1, size: 36)
                     }
@@ -1157,17 +1157,17 @@ struct WordDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Text(kind)
-                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                        .scaledFont(size: 15, weight: .semibold).foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(Theme.primary.opacity(0.1), in: Capsule())
                     if let a = c?.article.trimmingCharacters(in: .whitespaces), !a.isEmpty {
                         // The server sends either the bare article ("an") or the whole phrase ("a coffee").
                         let phrase = a.localizedCaseInsensitiveContains(headword) ? a : "\(a) \(headword)"
-                        Text(phrase).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(phrase).scaledFont(size: 20, weight: .semibold).foregroundStyle(Theme.foreground)
                     }
                 }
                 if let n = c?.note, !n.isEmpty {
-                    Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                    Text(n).scaledFont(size: 15).foregroundStyle(Theme.muted).lineSpacing(4)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1180,10 +1180,10 @@ struct WordDetailView: View {
                 ForEach(phrasals, id: \.phrase) { p in
                     HStack(alignment: .top, spacing: 12) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(p.phrase).font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
-                            if !p.meaning.isEmpty { Text(p.meaning).font(.system(size: 15)).foregroundStyle(Theme.muted) }
+                            Text(p.phrase).scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
+                            if !p.meaning.isEmpty { Text(p.meaning).scaledFont(size: 15).foregroundStyle(Theme.muted) }
                             if !p.example.isEmpty, p.example.isIn(target: "en") {
-                                Text(p.example).font(.system(size: 15)).italic().foregroundStyle(Theme.foreground.opacity(0.85))
+                                Text(p.example).scaledFont(size: 15).italic().foregroundStyle(Theme.foreground.opacity(0.85))
                             }
                         }
                         Spacer(minLength: 0)
@@ -1208,15 +1208,15 @@ struct WordDetailView: View {
                         let primary = i == st?.primary
                         let secondary = i == st?.secondary
                         Text(primary ? part.uppercased() : part)
-                            .font(.system(size: primary ? 30 : 22, weight: primary ? .heavy : (secondary ? .semibold : .regular)))
+                            .scaledFont(size: primary ? 30 : 22, weight: primary ? .heavy : (secondary ? .semibold : .regular))
                             .foregroundStyle(primary ? Theme.primaryInk : Theme.foreground.opacity(secondary ? 0.85 : 0.6))
-                        if i < sy.count - 1 { Text("·").font(.system(size: 20)).foregroundStyle(Theme.muted) }
+                        if i < sy.count - 1 { Text("·").scaledFont(size: 20).foregroundStyle(Theme.muted) }
                     }
                     Spacer(minLength: 0)
                     PronounceCircle(text: headword, size: 40)
                 }
                 if let n = st?.note, !n.isEmpty {
-                    Text(n).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                    Text(n).scaledFont(size: 15).foregroundStyle(Theme.muted).lineSpacing(4)
                 }
             }
         }
@@ -1238,7 +1238,7 @@ struct WordDetailView: View {
                             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border))
                         VStack(alignment: .leading, spacing: 5) {
                             if !k.meaning.isEmpty {
-                                Text(k.meaning).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                                Text(k.meaning).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
                             }
                             if !k.on.isEmpty { readingRow(L("音読み"), k.on) }
                             if !k.kun.isEmpty { readingRow(L("訓読み"), k.kun) }
@@ -1254,10 +1254,10 @@ struct WordDetailView: View {
 
     private func readingRow(_ label: String, _ value: String) -> some View {
         HStack(spacing: 8) {
-            Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+            Text(label).scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 7).padding(.vertical, 2)
                 .background(Theme.card, in: Capsule())
-            Text(value).font(.system(size: 15)).foregroundStyle(Theme.foreground.opacity(0.85))
+            Text(value).scaledFont(size: 15).foregroundStyle(Theme.foreground.opacity(0.85))
         }
     }
 
@@ -1266,9 +1266,9 @@ struct WordDetailView: View {
             VStack(spacing: 0) {
                 ForEach(Array(conjugations.enumerated()), id: \.offset) { i, row in
                     HStack(spacing: 12) {
-                        Text(row.form).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        Text(row.form).scaledFont(size: 14).foregroundStyle(Theme.muted)
                             .frame(width: 118, alignment: .leading)
-                        Text(row.text).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(row.text).scaledFont(size: 20, weight: .semibold).foregroundStyle(Theme.foreground)
                         Spacer(minLength: 0)
                         PronounceCircle(text: row.text, size: 36)
                     }
@@ -1287,7 +1287,7 @@ struct WordDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             ZhuyinWordView(headword: c.word, zhuyin: c.reading, size: 32, weight: .heavy, language: "ja")
                             if !c.note.isEmpty {
-                                Text(c.note).font(.system(size: 15)).foregroundStyle(Theme.muted).lineSpacing(4)
+                                Text(c.note).scaledFont(size: 15).foregroundStyle(Theme.muted).lineSpacing(4)
                             }
                         }
                         Spacer(minLength: 0)
@@ -1304,7 +1304,7 @@ struct WordDetailView: View {
     private func textCard(_ title: String, icon: String, _ body: String) -> some View {
         SectionCard(title: title, icon: icon) {
             Text(body)
-                .font(.system(size: 15))
+                .scaledFont(size: 15)
                 .foregroundStyle(Theme.foreground.opacity(0.9))
                 .lineSpacing(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1401,7 +1401,7 @@ struct WordDetailView: View {
                             if webLoading { ProgressView().controlSize(.mini) } else { Image(systemName: "arrow.clockwise") }
                             Text(L("別の画像"))
                         }
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold)
                         .foregroundStyle(Theme.foreground)
                         .padding(.horizontal, 12)
                         .frame(minHeight: 36)
@@ -1413,14 +1413,14 @@ struct WordDetailView: View {
                     if let url = URL(string: "https://www.google.com/search?tbm=isch&q=\(headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
                         Button { openURL(url) } label: {
                             Label(L("Google画像検索で見る"), systemImage: "arrow.up.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .scaledFont(size: 14, weight: .semibold)
                                 .foregroundStyle(Theme.primaryInk)
                                 .frame(minHeight: 36)
                         }
                     }
                 }
                 Text(L("画像をタップすると、この単語の写真にできます。"))
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundStyle(Theme.muted)
             }
         }
@@ -1442,7 +1442,7 @@ struct WordDetailView: View {
                 .overlay(alignment: .bottom) {
                     if let name = c.credit?.name, !name.isEmpty {
                         Text(name)
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium)
                             .lineLimit(1)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 4)
@@ -1505,10 +1505,10 @@ struct WordDetailView: View {
                         if let url = URL(string: link.url) { openURL(url) }
                     } label: {
                         HStack(spacing: 14) {
-                            Text(link.emoji).font(.system(size: 20))
-                            Text(link.label).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Text(link.emoji).scaledFont(size: 20)
+                            Text(link.label).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
                             Spacer()
-                            Image(systemName: "arrow.up.right.square").font(.system(size: 16)).foregroundStyle(Theme.muted)
+                            Image(systemName: "arrow.up.right.square").scaledFont(size: 16).foregroundStyle(Theme.muted)
                         }
                         .padding(.horizontal, 16)
                         .frame(minHeight: 50)
@@ -1531,7 +1531,7 @@ struct WordDetailView: View {
             if current.selfieImageUrl == nil && current.hasOwnPhoto {
                 Button { takingSelfie = true } label: {
                     Label(isAddingSelfie ? L("保存しています…") : L("いま自撮りを撮る"), systemImage: "camera")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold)
                         .foregroundStyle(Theme.primaryInk)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(Theme.primary.opacity(0.12), in: .rect(cornerRadius: 16))
@@ -1548,7 +1548,7 @@ struct WordDetailView: View {
             HStack {
             PhotosPicker(selection: $newPhoto, matching: .images) {
                 Label(isReplacing ? L("替えています…") : L("写真を替える"), systemImage: "photo.badge.arrow.down")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(Theme.primaryInk)
                     .padding(.horizontal, 16)
                     .frame(minHeight: 48)
@@ -1563,7 +1563,7 @@ struct WordDetailView: View {
             Spacer()
             Button { confirmDelete = true } label: {
                 Label(L("削除"), systemImage: "trash")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold)
                     .foregroundStyle(Theme.destructive)
                     .padding(.horizontal, 20)
                     .frame(minHeight: 48)
@@ -1647,7 +1647,7 @@ struct SectionCard<Content: View>: View {
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
                     .background(Theme.primary, in: Circle())
-                Text(title).font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
+                Text(title).scaledFont(size: 19, weight: .bold).foregroundStyle(Theme.foreground)
                 Spacer()
                 if let refresh {
                     Button(action: refresh.action) {

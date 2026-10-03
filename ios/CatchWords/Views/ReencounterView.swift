@@ -18,7 +18,7 @@ struct ReencounterView: View {
                     if let owned = vm.owned { card(owned) }
                     Button { vm.reset() } label: {
                         Label(L("別のものを撮る"), systemImage: "camera")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(Theme.foreground)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.card, in: Capsule())
@@ -43,7 +43,7 @@ struct ReencounterView: View {
                         .clipShape(.rect(cornerRadius: 24, style: .continuous))
                 }
                 Text(L("再会！"))
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .foregroundStyle(Theme.primaryInk)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -56,10 +56,10 @@ struct ReencounterView: View {
                 PronounceCircle(text: owned.headword, size: 44)
             }
             Text(ReaderLanguage.shown(owned.meaningJa))
-                .font(.system(size: 20, weight: .medium))
+                .scaledFont(size: 20, weight: .medium)
                 .foregroundStyle(Theme.foreground)
             Text(metLine(owned))
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
                 .foregroundStyle(Theme.muted)
             status
             if vm.reencFailed {
@@ -88,7 +88,7 @@ struct ReencounterView: View {
             }
             Text(statusText)
         }
-        .font(.system(size: 13, weight: .medium))
+        .scaledFont(size: 13, weight: .medium)
         .foregroundStyle(Theme.primaryInk)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)

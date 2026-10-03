@@ -31,7 +31,7 @@ enum TourStep: String, Equatable {
         case .tapCamera, .shoot: L("1枚撮ってみましょう")
         case .pick: L("覚えたいことばを選ぶ")
         case .detail, .word: L("発音と意味")
-        case .peel: L("はがして図鑑へ")
+        case .peel: L("図鑑に入れよう")
         case .added: L("図鑑に追加しました！")
         case .dexTypes, .dexOpen: L("図鑑")
         case .review: L("復習")
@@ -46,7 +46,7 @@ enum TourStep: String, Equatable {
         case .shoot: L("知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。")
         case .pick: L("写真から見つけた候補です。残したいことばを選んでください。")
         case .detail: L("スピーカーを押すと、発音を聞けます。")
-        case .peel: L("写真を指で好きな方向にめくります。")
+        case .peel: L("カードを上にはじくか、「図鑑に入れる」を押します。")
         case .added: L("集めたことばが、撮った写真と一緒に並びます。")
         case .dexTypes: L("上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。")
         case .dexOpen: L("追加した単語を開いて、意味や使い方を見てみましょう。")
@@ -127,13 +127,17 @@ struct TourLayer: View {
             let dim = holePath(full: full, hole: hole)
             // 押す所が画面に無い（表示を切り替えた等）ときは暗くせず、札だけ出して操作を妨げない。
             let shouldDim = hole != nil || !step.isInteractive
-            let showsCard = shouldDim || step.nextLabel != nil
+            // The peel step needs the whole card (flick it anywhere) and the button under it: the dim is
+            // only a picture there and the card sits above, never over the button.
+            let passThrough = step == .peel
+            let showsCard = shouldDim || step.nextLabel != nil || passThrough
             ZStack {
                 if shouldDim {
                     dim
                         .fill(Color(hex: 0x0B1020, opacity: 0.58), style: FillStyle(eoFill: true))
                         .contentShape(step.isInteractive && hole != nil ? dim : Path(full), eoFill: true)
                         .onTapGesture {}
+                        .allowsHitTesting(!passThrough)
                         .transition(.opacity)
                 }
                 if let hole {
@@ -145,7 +149,7 @@ struct TourLayer: View {
                         .position(x: hole.midX, y: hole.midY)
                         .allowsHitTesting(false)
                 }
-                let cardOnTop = (hole?.midY ?? geo.size.height) > geo.size.height * 0.5
+                let cardOnTop = passThrough || (hole?.midY ?? geo.size.height) > geo.size.height * 0.5
                 if showsCard {
                     VStack {
                         if !cardOnTop { Spacer(minLength: 0) }
@@ -181,7 +185,7 @@ struct TourCoachCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 if let title = step.title {
-                    Text(title).font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(title).scaledFont(size: 18, weight: .heavy).foregroundStyle(Theme.foreground)
                 }
                 Spacer()
                 if let label = step.stepLabel {
@@ -191,12 +195,12 @@ struct TourCoachCard: View {
                 }
             }
             Text(step.text)
-                .font(.system(size: 15))
+                .scaledFont(size: 15)
                 .foregroundStyle(Theme.foreground.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(L("案内を終える"), action: onSkip)
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(Theme.muted)
                     .frame(minHeight: 44)
                 Spacer()
@@ -207,9 +211,9 @@ struct TourCoachCard: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(next)
-                            Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold))
+                            Image(systemName: "arrow.right").scaledFont(size: 13, weight: .bold)
                         }
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
                         .frame(minHeight: 44)
@@ -247,10 +251,10 @@ struct TourCompleteView: View {
             VStack(spacing: 18) {
                 Spacer(minLength: 20)
                 Text(L("最初のキャッチ、完了！"))
-                    .font(.system(size: 28, weight: .heavy))
+                    .scaledFont(size: 28, weight: .heavy)
                     .foregroundStyle(Theme.foreground)
                 Text(L("撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。"))
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.muted)
                 ZStack {
@@ -278,7 +282,7 @@ struct TourCompleteView: View {
                 }
                 .frame(height: 320)
                 if let head = sticker?.word?.headword {
-                    Text(head).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(head).scaledFont(size: 30, weight: .bold).foregroundStyle(Theme.foreground)
                 }
                 Spacer()
                 PrimaryButton(title: L("はじめる"), icon: "arrow.right", sheen: true, action: onDone)
