@@ -323,6 +323,21 @@ final class SupabaseClient {
         return data
     }
 
+    /// Every row of a GET, a page at a time. The server returns at most 1000 rows per request whatever
+    /// `limit` says, so a single big `limit` silently dropped the rest. `path` must have a stable,
+    /// unique `order` (end it with the primary key) and no `limit` / `offset` of its own.
+    func restAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
+                               pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
+        var out: [T] = []
+        for page in 0..<maxPages {
+            let data = try await rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
+            let chunk = try decoder.decode([T].self, from: data)
+            out += chunk
+            if chunk.count < pageSize { break }
+        }
+        return out
+    }
+
     /// Before a request: refresh an expiring token, but never fail the request for a network hiccup
     /// during the refresh — the current token may still work (or the request reports offline itself).
     /// A dead refresh token (`.unauthorized`) does fail it: the user has to log in again.

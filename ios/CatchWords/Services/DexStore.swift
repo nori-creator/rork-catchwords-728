@@ -123,14 +123,7 @@ final class DexStore {
     /// and album placements of a big dex). `path` must have a stable `order`.
     private func readAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
                                        pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
-        var out: [T] = []
-        for page in 0..<maxPages {
-            let data = try await client.rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
-            let chunk = try decoder.decode([T].self, from: data)
-            out += chunk
-            if chunk.count < pageSize { break }
-        }
-        return out
+        try await client.restAll(path, as: T.self, decoder: decoder, pageSize: pageSize, maxPages: maxPages)
     }
 
     func reloadReviews() async { await loadReviews() }

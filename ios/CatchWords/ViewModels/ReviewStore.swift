@@ -126,11 +126,11 @@ final class ReviewStore {
         do {
             let now = SupabaseDate.string(Date())
             let enc = DexStore.enc(now)
-            let data = try await client.rest(
-                "GET",
-                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=5000"
+            // Paged: the server answers at most 1000 rows per request (a big account's due count was cut).
+            let rows = try await client.restAll(
+                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc,id.asc",
+                as: ReviewState.self, decoder: SupabaseDate.decoder
             )
-            let rows = try SupabaseDate.decoder.decode([ReviewState].self, from: data)
             if !dex.hasLoaded { await dex.load() }
             // Only this learning language's cards (the dex is already filtered), and the daily limit is
             // counted after that filter — not before (R1 「復習の記憶の状態が他の学習言語と混ざってる」).
@@ -161,8 +161,11 @@ final class ReviewStore {
     }
 
     private func loadHistory(dex: DexStore) async {
-        guard let data = try? await client.rest("GET", "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc&limit=5000"),
-              var rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+        // Paged (1000 rows per request at most): the streak and today's count need every row.
+        guard var rows = try? await client.restAll(
+            "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc,id.desc",
+            as: ReviewHistoryRow.self, decoder: SupabaseDate.decoder, maxPages: 50
+        ) else { return }
         // Streak, today's count and the retention line: this learning language's words only.
         if !dex.hasLoaded { await dex.load() }
         let mine = Set(dex.stickers.map(\.id))
