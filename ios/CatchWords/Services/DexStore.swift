@@ -436,7 +436,8 @@ final class DexStore {
     }
 
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
-        guard let image, let jpeg = ImageTools.jpegForUpload(image) else { return nil }
+        // Encoded off the main thread: this runs while the reward animation plays.
+        guard let image, let jpeg = await ImageTools.jpegForUploadInBackground(image) else { return nil }
         let path = "\(uid)/\(ts)-\(kind).jpg"
         try await client.upload(jpeg, path: path)
         return path
@@ -444,7 +445,9 @@ final class DexStore {
 
     /// Cutout failures never block the catch.
     private func uploadPNG(_ image: UIImage?, uid: String, ts: Int, kind: String) async -> String? {
-        guard let image, let png = ImageTools.resized(image, maxSide: 1200).pngData() else { return nil }
+        guard let image,
+              let png = await Task.detached(priority: .userInitiated, operation: { ImageTools.resized(image, maxSide: 1200).pngData() }).value
+        else { return nil }
         let path = "\(uid)/\(ts)-\(kind).png"
         do {
             try await client.upload(png, path: path, contentType: "image/png")
