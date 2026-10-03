@@ -1,0 +1,2003 @@
+From bf64930d6eea841d4f9cf7e9f8e5f5cacd11f509 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sat, 3 Oct 2026 13:29:49 +0000
+Subject: [PATCH 3/5] =?UTF-8?q?=E5=A4=96=E9=83=A8AI=E3=81=B8=E3=81=AE?=
+ =?UTF-8?q?=E3=83=87=E3=83=BC=E3=82=BF=E9=80=81=E4=BF=A1=E3=81=AE=E5=90=8C?=
+ =?UTF-8?q?=E6=84=8F=EF=BC=88App=20Store=205.1.2(i)=20=E3=81=A8=E5=90=8C?=
+ =?UTF-8?q?=E3=81=98=E6=89=B1=E3=81=84=E3=83=BB=E5=80=8B=E4=BA=BA=E6=83=85?=
+ =?UTF-8?q?=E5=A0=B1=E4=BF=9D=E8=AD=B7=E6=B3=9528=E6=9D=A1=EF=BC=89?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 新しい表 ai_consents（移行 20261003140000、本人は読むだけ・書くのはサーバ）
+- AI を呼ぶサーバ関数（generateCard・suggestWords・detectScan・rankScanCandidates・suggestWordCandidates・regenerateCardSection・reportAndFixSection・日記の添削と質問・generatePhraseCard・detectParts・extractWordbook・チュートリアル）で、送る前に同意を確かめる
+- iOS（/api/native-fn）は AI-Consent-Version 見出しか AI_CONSENT_ENFORCE_NATIVE がある時だけ確かめる（古い iOS を壊さない）
+- recordAiConsent / getAiConsent を追加し native-fn に載せる（docs/ios-spec/23-ai-consent.md）
+- 確認の画面（iOS と同じ中身・3言語）。登録した人はアプリに入った所で1回、ゲストはチュートリアルで最初に送る前に聞き、登録後にもう一度聞いて記録
+- 設定に「AIへのデータ送信」（状態の表示・確認・取り消し）
+- プライバシーポリシー第4条に見出しの印（#external-services）
+---
+ ARCHITECTURE.md                               |   4 +
+ docs/ios-spec/23-ai-consent.md                |  97 +++++++
+ src/components/AiConsentDialog.tsx            | 146 ++++++++++
+ src/components/AiConsentHost.tsx              |  93 +++++++
+ src/components/legal/privacy-en.tsx           |   2 +-
+ src/components/legal/privacy-ja.tsx           |   2 +-
+ src/components/legal/privacy-zh-tw.tsx        |   2 +-
+ src/components/onboarding/FirstCatchFlow.tsx  |  37 ++-
+ .../onboarding/PersonalWordLesson.tsx         |   8 +-
+ src/components/screens/SettingsScreen.tsx     |  92 ++++++-
+ src/lib/ai-consent-client.ts                  | 111 ++++++++
+ src/lib/ai-consent.functions.ts               |  45 +++
+ src/lib/ai-consent.server.ts                  | 189 +++++++++++++
+ src/lib/ai-consent.test.ts                    | 259 ++++++++++++++++++
+ src/lib/ai-consent.ts                         | 140 ++++++++++
+ src/lib/ai.functions.ts                       |  12 +
+ src/lib/errors.ts                             |   6 +
+ src/lib/first-catch-ai-schema.ts              |   5 +
+ src/lib/first-catch-ai.functions.ts           |   7 +
+ src/lib/first-catch-guest-gate.test.ts        |  15 +
+ src/lib/first-catch-guest.server.ts           |   3 +
+ src/lib/i18n.test.ts                          |   2 +-
+ src/lib/i18n.tsx                              | 103 +++++++
+ src/lib/jev.functions.ts                      |   9 +
+ src/lib/journal.functions.ts                  |  11 +
+ src/lib/native-fn.ts                          |   7 +
+ src/lib/scan.functions.ts                     |   4 +
+ src/lib/wordbook.functions.ts                 |   2 +
+ src/routes/__root.tsx                         |   3 +
+ src/routes/_authenticated/route.tsx           |  11 +-
+ .../migrations/20261003140000_ai_consents.sql |  50 ++++
+ 31 files changed, 1468 insertions(+), 9 deletions(-)
+ create mode 100644 docs/ios-spec/23-ai-consent.md
+ create mode 100644 src/components/AiConsentDialog.tsx
+ create mode 100644 src/components/AiConsentHost.tsx
+ create mode 100644 src/lib/ai-consent-client.ts
+ create mode 100644 src/lib/ai-consent.functions.ts
+ create mode 100644 src/lib/ai-consent.server.ts
+ create mode 100644 src/lib/ai-consent.test.ts
+ create mode 100644 src/lib/ai-consent.ts
+ create mode 100644 supabase/migrations/20261003140000_ai_consents.sql
+
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+index c762fd2..8652cc8 100644
+--- a/ARCHITECTURE.md
++++ b/ARCHITECTURE.md
+@@ -249,3 +249,7 @@ Kept on purpose:
+ - The DexShelf bookshelf view (hidden behind `DEX_SHELF_ENABLED`).
+ 
+ Small merges: image resize/thumb helpers now live in `image-resize.ts`; the optional IndexedDB opener shared by the photo and audio caches is `idb-store.ts`; the Taipei calendar day is `taipei-day.ts`. Similar-looking helpers that differ on purpose were left alone (photo downscalers differ in EXIF stripping / orientation handling; the CJK script regexes differ in which marks they accept).
++
++## External AI consent (2026-10-03)
++
++Guideline 5.1.2(i) / APPI §28. Every server function that sends photos, words or typed text to an AI provider calls `assertAiConsent` (`src/lib/ai-consent.server.ts`) before anything is sent; the list is `AI_CONSENT_FUNCTIONS` in `src/lib/ai-consent.ts` (kept in step with iOS `AIConsent.aiFunctions`, checked by `ai-consent.test.ts`). Consent is stored in `ai_consents` (migration `20261003140000`, written by the service role only, users can read their own rows). The web asks in `AiConsentDialog` (signed-in users once after entering the app via `AiConsentAccountGate`, and whenever an AI call is refused with `AI_CONSENT_REQUIRED`; guests in the tutorial before the first AI call, stored on the device and asked again after sign-up). Settings has a card to review/withdraw. `/api/native-fn` (iOS) is enforced only when the request carries `AI-Consent-Version` or `AI_CONSENT_ENFORCE_NATIVE` is set, so older iOS builds keep working; see `docs/ios-spec/23-ai-consent.md` for `recordAiConsent` / `getAiConsent`. Until the migration is applied, the check passes (logged) so AI does not stop.
+diff --git a/docs/ios-spec/23-ai-consent.md b/docs/ios-spec/23-ai-consent.md
+new file mode 100644
+index 0000000..984d4f1
+--- /dev/null
++++ b/docs/ios-spec/23-ai-consent.md
+@@ -0,0 +1,97 @@
++# 23. 外部 AI への送信の同意（サーバ記録・iOS 連携）
++
++2026-10-03。App Store Review Guideline 5.1.2(i) と個人情報保護法 28 条（外国にある第三者への提供）
++のため、写真・語・文を外部の AI へ送る関数は、**サーバに記録された同意**が無ければ断る。
++決まりの本体は `src/lib/ai-consent.ts`（版・関数の一覧）と `src/lib/ai-consent.server.ts`（DB）。
++
++## 版
++
++- 今の版: `1`（Web `AI_CONSENT_VERSION` = iOS `AIConsent.currentVersion`）。送る物・送り先を
++  変えたら両方を同時に上げる。古い版の同意は「同意なし」として扱われる。
++
++## iOS から呼ぶ関数（`POST /api/native-fn`、いつもの `Authorization: Bearer <access token>`）
++
++### 同意を記録する / 取り消す — `recordAiConsent`
++
++```http
++POST /api/native-fn
++Authorization: Bearer <Supabase access token>
++Content-Type: application/json
++AI-Consent-Version: 1
++
++{"fn":"recordAiConsent","data":{"version":1,"agreed":true}}
++```
++
++- `version`（整数 1〜1000、必須）: 画面で見せた同意の版。
++- `agreed`（真偽、必須）: `true` = 「同意して始める」、`false` = 「同意しない」/ 設定で取り消し。
++- `source` は省略可（native-fn から来た物はサーバが `"ios"` として記録する）。
++
++成功（200）:
++
++```json
++{"result":{"agreed":true,"version":1,"agreedAt":"2026-10-03T09:12:34.567Z","revokedAt":null,"currentVersion":1}}
++```
++
++取り消し（`agreed:false`）の成功:
++
++```json
++{"result":{"agreed":false,"version":1,"agreedAt":"2026-10-03T09:12:34.567Z","revokedAt":"2026-10-05T01:00:00.000Z","currentVersion":1}}
++```
++
++（一度も同意していない人の `agreed:false` は何も書かず、`version`・`agreedAt`・`revokedAt` が `null`。）
++
++失敗:
++
++| 状態 | 本文 | 意味 |
++|---|---|---|
++| 400 | `{"error":"送った内容の形が違います。アプリを最新にしてください。"}` | `version` / `agreed` が無い・型違い |
++| 401 | `{"error":"Unauthorized: ..."}` | トークン切れ（いつもどおり更新してやり直す） |
++| 403 | `{"error":"AI_CONSENT_REQUIRED: 同意の内容が新しくなりました。…"}` | `agreed:true` で `version` が今の版より古い（画面を新しい版で見せ直す） |
++| 503 | `{"error":"AI_CONSENT_CHECK_FAILED: ..."}` | DB に書けなかった（少し待ってやり直す。端末の同意は保ったまま、次の起動で送り直す） |
++
++### 今の状態を読む — `getAiConsent`
++
++```http
++POST /api/native-fn
++{"fn":"getAiConsent","data":{}}
++```
++
++```json
++{"result":{"agreed":true,"version":1,"agreedAt":"2026-10-03T09:12:34.567Z","revokedAt":null,"currentVersion":1,"recorded":true}}
++```
++
++`recorded:false` はサーバに表がまだ無い（移行待ち）。その間サーバは同意を確かめない。
++
++## サーバが断る時（AI の関数）
++
++同意が無いと、AI の関数（`suggestWords` `detectScan` `suggestWordCandidates` `generateCard`
++`generatePhraseCard` `regenerateCardSection` `reportAndFixSection` `correctMyJournal` `detectParts`
++`extractWordbook`）は **403** と `{"error":"AI_CONSENT_REQUIRED: AI を使う機能は、AI へのデータ送信に同意すると使えます。"}`
++を返す。何も外へ送っていない。iOS は `APIError.aiConsentRequired` と同じ扱い（同意の画面を出す）にする。
++`rankScanCandidates` は断らずに並べ替えなし（`order:null`）、`getJournalPrompts` は `null` を返す（どちらもおまけ）。
++
++## 古い iOS を壊さない決まり（移行期間）
++
++`/api/native-fn` から来た呼び出しは、次のどちらかの時だけサーバで同意を確かめる:
++
++1. 見出し **`AI-Consent-Version: <版>`** が付いている（`ai_consent_version` の綴りも受けるが、
++   下線入りの見出しは途中の機械に落とされることがあるので `AI-Consent-Version` を使う）。
++2. サーバの環境変数 **`AI_CONSENT_ENFORCE_NATIVE=true`** が立っている（締め切り後にオーナーが立てる）。
++
++どちらも無い（＝同意をサーバに送らない古い iOS）なら、今までどおり通す。古い iOS も端末の中で
++同意を確かめてから送っている（`NativeAPI.call` の `AIConsent.aiFunctions`）。
++Web の画面からの呼び出しはいつも確かめる。
++
++## iOS 側でやること
++
++1. `NativeAPI.call` で、**すべての呼び出しに** `AI-Consent-Version: \(AIConsent.currentVersion)` を付ける。
++2. `AIConsent.grant()` / `decline()` の後に `recordAiConsent`（`agreed: true/false`）を送る。
++   送れなかったら端末に「未送信」を覚え、次の起動・ログインで送り直す。
++3. ログインした後に `getAiConsent` を読み、
++   - サーバ `agreed:true` → 端末も同意済みにする（別の端末・Web で同意した人に聞き直さない）。
++   - サーバ `agreed:false` で端末が同意済み（この変更より前に iPhone で同意した人）→ その同意を
++     `recordAiConsent(agreed:true, version: 端末の版)` で送る（本人が前に明示的に同意した記録の写し）。
++     端末の版が古ければ送らず、同意の画面を出し直す。
++   - サーバに `revokedAt` があり端末が同意済み → Web 等で取り消した。端末も取り消す。
++4. AI の関数が 403 `AI_CONSENT_REQUIRED` を返したら、同意の画面を出す。
++5. 全員がこの版に上がったら、オーナーが `AI_CONSENT_ENFORCE_NATIVE=true` を立てる。
+diff --git a/src/components/AiConsentDialog.tsx b/src/components/AiConsentDialog.tsx
+new file mode 100644
+index 0000000..c68dee7
+--- /dev/null
++++ b/src/components/AiConsentDialog.tsx
+@@ -0,0 +1,146 @@
++import * as DialogPrimitive from "@radix-ui/react-dialog";
++import { useQueryClient } from "@tanstack/react-query";
++import { useServerFn } from "@tanstack/react-start";
++import { Check, Hand, ImageIcon, Lightbulb, Loader2, Network, Sparkles } from "lucide-react";
++import { useState, type ReactNode } from "react";
++import { toast } from "sonner";
++import { supabase } from "@/integrations/supabase/client";
++import { AI_CONSENT_VERSION, PRIVACY_AI_SECTION_URL } from "@/lib/ai-consent";
++import { writeLocalConsent, type ConsentAsk } from "@/lib/ai-consent-client";
++import { recordAiConsent } from "@/lib/ai-consent.functions";
++import { useT } from "@/lib/i18n";
++
++/**
++ * **外部の AI へ送る前の確認の画面**（iOS の `AIConsentView` と同じ中身）。
++ * 何を・どこへ・何のために送るか、同意しないとどうなるかを見せて、
++ * 「同意して始める」/「同意しない」を選んでもらう。どちらかを選ぶまで閉じない
++ * （外を押しても Esc でも閉じない — はっきりした同意だけを同意にする）。
++ *
++ * 登録した人はサーバに記録する（`recordAiConsent`）。登録前は端末に覚えるだけで、
++ * 登録した後にもう一度聞く。
++ */
++export function AiConsentDialog({ ask, onClose }: { ask: ConsentAsk; onClose: () => void }) {
++  const t = useT();
++  const qc = useQueryClient();
++  const record = useServerFn(recordAiConsent);
++  const [saving, setSaving] = useState(false);
++
++  async function decide(agreed: boolean) {
++    if (saving) return;
++    if (ask.mode === "guest") {
++      writeLocalConsent("guest", agreed ? "granted" : "declined");
++      onClose();
++      ask.resolve(agreed);
++      return;
++    }
++    setSaving(true);
++    try {
++      const { data } = await supabase.auth.getSession();
++      const uid = data.session?.user.id;
++      if (agreed) {
++        await record({ data: { version: AI_CONSENT_VERSION, agreed: true, source: "web" } });
++        toast.success(t("aiConsent.agreedToast"));
++      }
++      if (uid) writeLocalConsent(`user:${uid}`, agreed ? "granted" : "declined");
++      void qc.invalidateQueries({ queryKey: ["ai-consent"] });
++      onClose();
++      ask.resolve(agreed);
++    } catch {
++      toast.error(t("aiConsent.saveFailed"));
++      setSaving(false);
++    }
++  }
++
++  return (
++    <DialogPrimitive.Root open onOpenChange={() => undefined}>
++      <DialogPrimitive.Portal>
++        <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/60" />
++        <DialogPrimitive.Content
++          data-testid="ai-consent"
++          onEscapeKeyDown={(e) => e.preventDefault()}
++          onPointerDownOutside={(e) => e.preventDefault()}
++          onInteractOutside={(e) => e.preventDefault()}
++          className="fixed inset-x-0 bottom-0 z-[91] mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-background shadow-xl sm:inset-y-0 sm:my-auto sm:h-fit sm:rounded-3xl"
++        >
++          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3 pt-6">
++            <div className="mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground">
++              <Sparkles size={26} aria-hidden />
++            </div>
++            <DialogPrimitive.Title className="text-title font-extrabold leading-tight">
++              {t("aiConsent.title")}
++            </DialogPrimitive.Title>
++            <DialogPrimitive.Description className="mt-2 text-body text-muted-foreground">
++              {t("aiConsent.lead")}
++            </DialogPrimitive.Description>
++            <div className="mt-4 space-y-3">
++              <Point icon={<ImageIcon size={18} />} title={t("aiConsent.whatTitle")}>
++                {t("aiConsent.whatBody")}
++              </Point>
++              <Point icon={<Network size={18} />} title={t("aiConsent.whoTitle")}>
++                {t("aiConsent.whoBody")}
++              </Point>
++              <Point icon={<Lightbulb size={18} />} title={t("aiConsent.whyTitle")}>
++                {t("aiConsent.whyBody")}
++              </Point>
++              <Point icon={<Hand size={18} />} title={t("aiConsent.declineTitle")}>
++                {t("aiConsent.declineBody")}
++              </Point>
++            </div>
++            <p className="mt-3 px-1 text-footnote text-muted-foreground">
++              <a
++                href={PRIVACY_AI_SECTION_URL}
++                target="_blank"
++                rel="noopener noreferrer"
++                className="font-semibold text-primary underline underline-offset-2"
++              >
++                {t("aiConsent.detailsLink")}
++              </a>
++            </p>
++          </div>
++          <div className="space-y-1.5 border-t border-border px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
++            <button
++              type="button"
++              data-testid="ai-consent-accept"
++              disabled={saving}
++              onClick={() => void decide(true)}
++              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-body font-bold text-primary-foreground disabled:opacity-60"
++            >
++              {saving ? (
++                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
++              ) : (
++                <Check className="h-4 w-4" aria-hidden />
++              )}
++              {t("aiConsent.accept")}
++            </button>
++            <button
++              type="button"
++              data-testid="ai-consent-decline"
++              disabled={saving}
++              onClick={() => void decide(false)}
++              className="flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-body font-semibold text-primary disabled:opacity-60"
++            >
++              {t("aiConsent.decline")}
++            </button>
++          </div>
++        </DialogPrimitive.Content>
++      </DialogPrimitive.Portal>
++    </DialogPrimitive.Root>
++  );
++}
++
++function Point({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
++  return (
++    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5">
++      <div
++        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent text-primary"
++        aria-hidden
++      >
++        {icon}
++      </div>
++      <div className="min-w-0">
++        <div className="text-body font-bold">{title}</div>
++        <p className="mt-0.5 text-footnote leading-relaxed">{children}</p>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/AiConsentHost.tsx b/src/components/AiConsentHost.tsx
+new file mode 100644
+index 0000000..2ecab77
+--- /dev/null
++++ b/src/components/AiConsentHost.tsx
+@@ -0,0 +1,93 @@
++import { useQuery } from "@tanstack/react-query";
++import { useServerFn } from "@tanstack/react-start";
++import { lazy, Suspense, useEffect, useRef, useState } from "react";
++import { supabase } from "@/integrations/supabase/client";
++import { getAiConsent } from "@/lib/ai-consent.functions";
++import {
++  AI_CONSENT_EVENT,
++  askAiConsent,
++  localConsentDeclined,
++  setAiConsentHost,
++  writeLocalConsent,
++  type ConsentAsk,
++} from "@/lib/ai-consent-client";
++
++/** 確認の画面の中身は、開く時に初めて読む（最初に読む塊を太らせない）。 */
++const AiConsentDialog = lazy(() =>
++  import("./AiConsentDialog").then((m) => ({ default: m.AiConsentDialog })),
++);
++
++/** 登録した（匿名でない）人か。 */
++async function signedInMode(): Promise<ConsentAsk["mode"]> {
++  try {
++    const { data } = await supabase.auth.getSession();
++    const user = data.session?.user;
++    return user && !user.is_anonymous ? "account" : "guest";
++  } catch {
++    return "guest";
++  }
++}
++
++/**
++ * **外部の AI へ送る前の確認の画面を出す所**（アプリに1つ、`__root.tsx`）。
++ * `askAiConsent` で開かれるほか、AI の関数が「同意が無い」で断った時（`errors.ts` の合図）
++ * にも開く — iOS が止まった AI の機能を開いた時に同意の画面を出すのと同じ。
++ */
++export function AiConsentHost() {
++  const [ask, setAsk] = useState<ConsentAsk | null>(null);
++  useEffect(() => {
++    setAiConsentHost((a) => setAsk(a));
++    const onRequired = () => {
++      void signedInMode().then((mode) => askAiConsent(mode));
++    };
++    window.addEventListener(AI_CONSENT_EVENT, onRequired);
++    return () => {
++      setAiConsentHost(null);
++      window.removeEventListener(AI_CONSENT_EVENT, onRequired);
++    };
++  }, []);
++  if (!ask) return null;
++  return (
++    <Suspense fallback={null}>
++      <AiConsentDialog ask={ask} onClose={() => setAsk(null)} />
++    </Suspense>
++  );
++}
++
++/** 今の人の同意の状態（設定の画面と同じ問い合わせ）。 */
++export function useAiConsentStatus(enabled = true) {
++  const fetchConsent = useServerFn(getAiConsent);
++  return useQuery({
++    queryKey: ["ai-consent"],
++    queryFn: () => fetchConsent(),
++    staleTime: 5 * 60_000,
++    enabled,
++  });
++}
++
++/**
++ * **登録した人に、アプリに入った所で1回だけ聞く**（iOS の RootView と同じ: ログインと初回の
++ * 案内の後、カメラや AI の機能より前）。登録前（チュートリアル）に端末で同意していても、
++ * ここでもう一度聞いてサーバに記録する。
++ *
++ * - サーバに今の版の同意があれば聞かない（端末にも写す）。
++ * - この端末で「同意しない」を選んでいれば、開くたびには聞かない（AI の機能を使おうと
++ *   した時と、設定から開ける）。
++ * - 表がまだ無い（移行待ち）時は記録できないので聞かない。
++ */
++export function AiConsentAccountGate({ userId }: { userId: string }) {
++  const { data } = useAiConsentStatus();
++  const asked = useRef(false);
++  useEffect(() => {
++    if (!data || asked.current) return;
++    if (data.agreed) {
++      writeLocalConsent(`user:${userId}`, "granted");
++      return;
++    }
++    if (!data.recorded) return;
++    if (localConsentDeclined(`user:${userId}`)) return;
++    asked.current = true;
++    void askAiConsent("account");
++  }, [data, userId]);
++  return null;
++}
+diff --git a/src/components/legal/privacy-en.tsx b/src/components/legal/privacy-en.tsx
+index 46616c3..9314901 100644
+--- a/src/components/legal/privacy-en.tsx
++++ b/src/components/legal/privacy-en.tsx
+@@ -113,7 +113,7 @@ export function PrivacyEn({ info }: { info: LegalPublicInfo }) {
+           work needed to run the Service. The operator does not sell your information.
+         </p>
+ 
+-        <h2>4. Service providers, by purpose</h2>
++        <h2 id="external-services">4. Service providers, by purpose</h2>
+         <p>
+           Which providers are used depends on the feature and on the operator's settings. This list
+           also includes providers that are not in use now but would be used if the settings were
+diff --git a/src/components/legal/privacy-ja.tsx b/src/components/legal/privacy-ja.tsx
+index c330f76..90b9384 100644
+--- a/src/components/legal/privacy-ja.tsx
++++ b/src/components/legal/privacy-ja.tsx
+@@ -102,7 +102,7 @@ export function PrivacyJa({ info }: { info: LegalPublicInfo }) {
+           運営者は、法令に基づく場合を除き、本人の同意なく個人情報を第三者に提供しません。法令に基づく場合とは、人の生命・身体・財産の保護のために必要で本人の同意を得ることが難しい場合、国の機関等の法令に定める事務に協力する場合などです。合併や事業の譲渡で本サービスを引き継ぐ場合は、本ポリシーと同じ水準で取り扱われるようにします。次条の事業者への提供は、本サービスを提供するための業務の委託として行います。運営者は、利用者の情報を販売しません。
+         </p>
+ 
+-        <h2>4. 外部の事業者（目的ごと）</h2>
++        <h2 id="external-services">4. 外部の事業者（目的ごと）</h2>
+         <p>
+           どの事業者を使うかは、機能と運営者の設定によって変わります。この一覧には、現在使っていなくても、設定を切り替えたときに使う事業者を含めています。
+         </p>
+diff --git a/src/components/legal/privacy-zh-tw.tsx b/src/components/legal/privacy-zh-tw.tsx
+index 5f70262..0cf6f51 100644
+--- a/src/components/legal/privacy-zh-tw.tsx
++++ b/src/components/legal/privacy-zh-tw.tsx
+@@ -87,7 +87,7 @@ export function PrivacyZhTw({ info }: { info: LegalPublicInfo }) {
+           4 條所列業者，是為了提供本服務而委託其處理業務。經營者不會販售你的資料。
+         </p>
+ 
+-        <h2>4. 外部業者（依用途）</h2>
++        <h2 id="external-services">4. 外部業者（依用途）</h2>
+         <p>
+           使用哪些業者，會依功能與經營者的設定而不同。此清單也包含目前未使用、但切換設定時會使用的業者。
+         </p>
+diff --git a/src/components/onboarding/FirstCatchFlow.tsx b/src/components/onboarding/FirstCatchFlow.tsx
+index e481680..7817541 100644
+--- a/src/components/onboarding/FirstCatchFlow.tsx
++++ b/src/components/onboarding/FirstCatchFlow.tsx
+@@ -15,6 +15,9 @@ import { FirstCatchIntro, FirstCatchNotifications, FirstCatchReady } from "./Fir
+ import { getTargetLang } from "@/lib/target-lang-pref";
+ import type { suggestWords } from "@/lib/ai.functions";
+ import { firstCatchAI, firstCatchMemberAI } from "@/lib/first-catch-ai.functions";
++import { getAiConsent } from "@/lib/ai-consent.functions";
++import { AI_CONSENT_REQUIRED, AI_CONSENT_VERSION } from "@/lib/ai-consent";
++import { askAiConsent, localConsentGranted, writeLocalConsent } from "@/lib/ai-consent-client";
+ import { createFirstCatchServices } from "@/lib/first-catch-ai-client";
+ import { reportBackgroundFailure } from "@/lib/background-failure";
+ import type { TutorialStep } from "@/lib/funnel-events";
+@@ -74,12 +77,37 @@ export type FirstCatchServices = {
+ export function FirstCatchEntry() {
+   const guestAI = useServerFn(firstCatchAI);
+   const memberAI = useServerFn(firstCatchMemberAI);
++  const consentFn = useServerFn(getAiConsent);
+   const navigate = useNavigate();
++  /**
++   * **写真・語を外部の AI へ送る前に、はっきり同意をもらう**（`ai-consent.ts`）。
++   * 登録前（ゲスト・端末だけの匿名アカウント）は端末に覚え、登録した後にもう一度聞いて
++   * サーバに記録する。登録した人はサーバの記録を見て、無ければ聞いて記録する。
++   * 同意しなければ何も送らない（画面は「もう一度」で確認をまた開ける）。
++   */
++  async function ensureConsent(user: { id: string; is_anonymous?: boolean } | null) {
++    if (user && !user.is_anonymous) {
++      if (localConsentGranted(`user:${user.id}`)) return;
++      const status = await consentFn().catch(() => null);
++      if (status?.agreed) {
++        writeLocalConsent(`user:${user.id}`, "granted");
++        return;
++      }
++      if (await askAiConsent("account")) return;
++    } else {
++      if (localConsentGranted("guest")) return;
++      if (await askAiConsent("guest")) return;
++    }
++    throw new Error(AI_CONSENT_REQUIRED);
++  }
+   return (
+     <FirstCatchFlow
+       services={createFirstCatchServices(
+-        async (data) => {
++        async (request) => {
+           const started = Date.now();
++          const data = { ...request, aiConsentVersion: AI_CONSENT_VERSION };
++          // 送る前の同意（同意済みなら端末の記録で即座に通る）。断られたら何も送らない。
++          await ensureConsent((await supabase.auth.getUser()).data.user);
+           try {
+             // 端末に残るログインを読むだけ（`getUser` は毎回 Auth に問い合わせ、AI の前に
+             // 1往復を足していた。本人かどうかはサーバが確かめる）。
+@@ -108,7 +136,10 @@ export function FirstCatchEntry() {
+             throw failed;
+           }
+         },
+-        async () => {},
++        // 写真を解析する前（解析の待ち時間を数え始める前）に同意を聞く。
++        async () => {
++          await ensureConsent((await supabase.auth.getUser()).data.user);
++        },
+         // AI に送る写真は本物の撮影と同じ大きさ（長い辺 768px）。端末に残す写真はそのまま。
+         // 1024px の約半分の大きさで、送る時間と AI が読む量（タイル数）が減る。
+         (photo) => downscaleDataUrl(photo, 768, 0.8),
+@@ -486,6 +517,8 @@ function FirstCatchFlowInner({
+       FIRST_CATCH_STORAGE: "first.storage",
+       FIRST_CATCH_NETWORK: "first.network",
+     };
++    // 外部の AI へ送る同意が無い（確認の画面で「同意しない」）。「もう一度」で確認の画面がまた開く。
++    if (code.startsWith("AI_CONSENT_REQUIRED")) return t("err.aiConsent");
+     const key = known[code];
+     if (key) return t(key);
+     return /^FIRST_CATCH_[A-Z_]+$/.test(code)
+diff --git a/src/components/onboarding/PersonalWordLesson.tsx b/src/components/onboarding/PersonalWordLesson.tsx
+index bb1afd5..fb8a68a 100644
+--- a/src/components/onboarding/PersonalWordLesson.tsx
++++ b/src/components/onboarding/PersonalWordLesson.tsx
+@@ -1,4 +1,6 @@
+ import { useEffect, useRef, useState } from "react";
++import { AI_CONSENT_VERSION } from "@/lib/ai-consent";
++import { localConsentGranted } from "@/lib/ai-consent-client";
+ import { useQuery } from "@tanstack/react-query";
+ import { useServerFn } from "@tanstack/react-start";
+ import { Loader2, Sparkles } from "lucide-react";
+@@ -96,13 +98,17 @@ export function PersonalWordLesson({
+         targetLanguage: normalizeTargetLanguage(language),
+         uiLanguage,
+         preferences: source!.preferences,
++        // 外部の AI へ送る同意（登録した人は、この端末に写したサーバの同意。`ai-consent.ts`）。
++        ...(context ? {} : { aiConsentVersion: AI_CONSENT_VERSION }),
+       };
+       const response = context?.request ? await context.request(data) : await call({ data });
+       return PersonalLessonSchema.parse(response);
+     },
+     enabled:
+       !!source &&
+-      !!(context || source.preferences.goals.length || source.preferences.interests.length),
++      !!(context || source.preferences.goals.length || source.preferences.interests.length) &&
++      // 同意していない人の分は頼まない（何も送らない）。チュートリアルは渡された口が聞く。
++      (!!context || localConsentGranted(`user:${source.id}`)),
+     initialData: context?.initial,
+     staleTime: 24 * 60 * 60 * 1000,
+     retry: false,
+diff --git a/src/components/screens/SettingsScreen.tsx b/src/components/screens/SettingsScreen.tsx
+index 09c2e24..ff9040c 100644
+--- a/src/components/screens/SettingsScreen.tsx
++++ b/src/components/screens/SettingsScreen.tsx
+@@ -53,7 +53,11 @@ import { useReadingPref, setReadingPref, readingChoices } from "@/lib/phonetic";
+ import { targetProfile } from "@/lib/target-profile";
+ import { levelOptions, restoreLevel } from "@/lib/level-scale";
+ import { UI_LANGS, UI_LANG_LABEL_KEYS, TARGET_LANG_LABEL_KEYS, normalizeUiLang } from "@/lib/i18n";
+-import { useT, setUiLang, storedUiLang } from "@/lib/i18n";
++import { useT, setUiLang, storedUiLang, useUiLang, localeOf } from "@/lib/i18n";
++import { AI_CONSENT_VERSION, PRIVACY_AI_SECTION_URL } from "@/lib/ai-consent";
++import { askAiConsent, writeLocalConsent } from "@/lib/ai-consent-client";
++import { recordAiConsent } from "@/lib/ai-consent.functions";
++import { useAiConsentStatus } from "@/components/AiConsentHost";
+ import { useFunnelEvent } from "@/lib/use-funnel-event";
+ import { reconcileLanguage } from "@/lib/language-sync";
+ import { storedLevels, setStoredLevels } from "@/lib/level-pref";
+@@ -1009,6 +1013,10 @@ export function SettingsPage() {
+           <ProPlanCard />
+         </SafeSection>
+ 
++        <SafeSection name="ai-consent">
++          <AiConsentSettingsCard />
++        </SafeSection>
++
+         <SafeSection name="legal">
+           <LegalLinksCard />
+         </SafeSection>
+@@ -1985,6 +1993,88 @@ function ProPlanCard() {
+   );
+ }
+ 
++/**
++ * **外部の AI へ送る同意を見る・取り消す**（iOS の 設定 > プライバシー と同じ。`ai-consent.ts`）。
++ * 同意していなければ確認の画面を開ける。取り消すと、AI を使う機能はサーバで止まる。
++ */
++export function AiConsentSettingsCard() {
++  const t = useT();
++  const lang = useUiLang();
++  const qc = useQueryClient();
++  const record = useServerFn(recordAiConsent);
++  const { data: status, isLoading } = useAiConsentStatus();
++  const [confirming, setConfirming] = useState(false);
++  const [busy, setBusy] = useState(false);
++  const agreed = !!status?.agreed;
++  const withdraw = async () => {
++    setBusy(true);
++    try {
++      await record({ data: { version: AI_CONSENT_VERSION, agreed: false } });
++      const { data } = await supabase.auth.getSession();
++      const uid = data.session?.user.id;
++      if (uid) writeLocalConsent(`user:${uid}`, "declined");
++      await qc.invalidateQueries({ queryKey: ["ai-consent"] });
++      toast.success(t("aiConsent.withdrawn"));
++      setConfirming(false);
++    } catch {
++      toast.error(t("aiConsent.saveFailed"));
++    } finally {
++      setBusy(false);
++    }
++  };
++  return (
++    <SettingsCard title={t("aiConsent.settingsTitle")}>
++      <div className="space-y-3" data-testid="ai-consent-settings">
++        <p className="text-body">
++          {isLoading
++            ? t("common.loading")
++            : agreed && status?.agreedAt
++              ? t("aiConsent.statusAgreed", {
++                  date: new Date(status.agreedAt).toLocaleDateString(localeOf(lang)),
++                })
++              : t("aiConsent.statusNone")}
++        </p>
++        <p className="text-caption text-muted-foreground">{t("aiConsent.settingsHint")}</p>
++        {!agreed && !isLoading && (
++          <Button className="w-full" onClick={() => void askAiConsent("account")}>
++            {t("aiConsent.review")}
++          </Button>
++        )}
++        {agreed && !confirming && (
++          <Button variant="outline" className="w-full" onClick={() => setConfirming(true)}>
++            {t("aiConsent.withdraw")}
++          </Button>
++        )}
++        {agreed && confirming && (
++          <div className="space-y-2 rounded-xl border border-destructive/30 p-3">
++            <p className="text-footnote">{t("aiConsent.withdrawConfirm")}</p>
++            <div className="flex gap-2">
++              <Button
++                variant="destructive"
++                className="flex-1"
++                disabled={busy}
++                onClick={() => void withdraw()}
++              >
++                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
++                {t("aiConsent.withdrawYes")}
++              </Button>
++              <Button variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
++                {t("common.cancel")}
++              </Button>
++            </div>
++          </div>
++        )}
++        <a
++          href={PRIVACY_AI_SECTION_URL}
++          className="block text-footnote font-semibold text-primary underline underline-offset-2"
++        >
++          {t("aiConsent.detailsLink")}
++        </a>
++      </div>
++    </SettingsCard>
++  );
++}
++
+ /**
+  * **規約・プライバシー・特商法の表記へのリンク**（ログインの画面と同じ3つ）。
+  * アプリの中からも、いつでも条件を読み返せるようにする。
+diff --git a/src/lib/ai-consent-client.ts b/src/lib/ai-consent-client.ts
+new file mode 100644
+index 0000000..0f4482b
+--- /dev/null
++++ b/src/lib/ai-consent-client.ts
+@@ -0,0 +1,111 @@
++/**
++ * 画面側の「外部の AI へ送る同意」（決まりは `ai-consent.ts`、確認の画面は
++ * `components/AiConsentDialog.tsx`）。
++ *
++ * - **端末に覚える**（`cw:aiConsent:<だれ>`）。だれ = 登録した人はその id、登録前は `guest`。
++ *   登録した人の正はサーバの記録（`ai_consents`）。端末の物は「同意しない」を選んだことを
++ *   覚えて、開くたびに聞き直さないためと、画面を速く出すため。
++ * - 登録前の同意（`guest`）は登録した人の同意にしない — 登録した後にもう一度聞いて、
++ *   そこでサーバに記録する（`AiConsentAccountGate`）。
++ * - 確認の画面は1つだけ（`AiConsentHost`、`__root.tsx`）。どこからでも `askAiConsent` で開き、
++ *   選んだ答えを待てる。
++ */
++import { AI_CONSENT_VERSION, isAiConsentError } from "./ai-consent";
++
++export type ConsentWho = "guest" | `user:${string}`;
++export type LocalConsent = { status: "granted" | "declined"; version: number; at: number };
++
++const key = (who: ConsentWho) => `cw:aiConsent:${who}`;
++
++export function readLocalConsent(who: ConsentWho): LocalConsent | null {
++  try {
++    const raw = localStorage.getItem(key(who));
++    if (!raw) return null;
++    const v = JSON.parse(raw) as Partial<LocalConsent>;
++    if ((v.status !== "granted" && v.status !== "declined") || typeof v.version !== "number")
++      return null;
++    return { status: v.status, version: v.version, at: Number(v.at) || 0 };
++  } catch {
++    return null;
++  }
++}
++
++export function writeLocalConsent(who: ConsentWho, status: LocalConsent["status"]) {
++  try {
++    localStorage.setItem(
++      key(who),
++      JSON.stringify({ status, version: AI_CONSENT_VERSION, at: Date.now() }),
++    );
++  } catch {
++    // 覚えられない端末では、次に AI を使う時にまた聞くだけ。
++  }
++}
++
++export function clearLocalConsent(who: ConsentWho) {
++  try {
++    localStorage.removeItem(key(who));
++  } catch {
++    // 同上
++  }
++}
++
++/** 端末で今の版に同意しているか。 */
++export function localConsentGranted(who: ConsentWho): boolean {
++  const v = readLocalConsent(who);
++  return v?.status === "granted" && v.version >= AI_CONSENT_VERSION;
++}
++
++/** 端末で今の版について「同意しない」を選んだか（開くたびに聞き直さない）。 */
++export function localConsentDeclined(who: ConsentWho): boolean {
++  const v = readLocalConsent(who);
++  return v?.status === "declined" && v.version >= AI_CONSENT_VERSION;
++}
++
++// ---- 確認の画面を開く口 ----------------------------------------------------------
++
++export type ConsentAsk = {
++  /** account = 登録した人（サーバに記録する） / guest = 登録前（端末だけ）。 */
++  mode: "account" | "guest";
++  resolve: (agreed: boolean) => void;
++};
++
++let host: ((ask: ConsentAsk) => void) | null = null;
++let pending: Promise<boolean> | null = null;
++
++/** `AiConsentHost` が自分を登録する。 */
++export function setAiConsentHost(fn: ((ask: ConsentAsk) => void) | null) {
++  host = fn;
++}
++
++/**
++ * 確認の画面を開いて、答えを待つ（true = 同意した）。開いている間に別の所から呼ばれても、
++ * 同じ答えを返す（画面を2枚重ねない）。画面が無い所（確認用ページ）では false。
++ */
++export function askAiConsent(mode: ConsentAsk["mode"]): Promise<boolean> {
++  if (pending) return pending;
++  const h = host;
++  if (!h) return Promise.resolve(false);
++  pending = new Promise<boolean>((resolve) => {
++    h({
++      mode,
++      resolve: (agreed) => {
++        pending = null;
++        resolve(agreed);
++      },
++    });
++  });
++  return pending;
++}
++
++/** AI の関数が「同意が無い」で断った時に出る合図（`errors.ts` が出す）。 */
++export const AI_CONSENT_EVENT = "cw:ai-consent-required";
++
++/** 失敗が同意の無さなら、確認の画面を開く合図を出す。 */
++export function noticeAiConsentError(e: unknown) {
++  if (!isAiConsentError(e) || typeof window === "undefined") return;
++  try {
++    window.dispatchEvent(new Event(AI_CONSENT_EVENT));
++  } catch {
++    // 古いブラウザ: 文だけ出る（設定から同意できる）。
++  }
++}
+diff --git a/src/lib/ai-consent.functions.ts b/src/lib/ai-consent.functions.ts
+new file mode 100644
+index 0000000..4d19aed
+--- /dev/null
++++ b/src/lib/ai-consent.functions.ts
+@@ -0,0 +1,45 @@
++import { createServerFn } from "@tanstack/react-start";
++import { z } from "zod";
++import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
++
++/**
++ * 外部の AI へ送る前の同意を読む・記録する（Web の確認の画面・設定・iOS）。
++ * 仕組みは `ai-consent.server.ts`。iOS からは `/api/native-fn` で
++ * `{"fn":"recordAiConsent","data":{"version":1,"agreed":true}}` のように呼ぶ
++ * （`docs/ios-spec/23-ai-consent.md`）。
++ */
++export const getAiConsent = createServerFn({ method: "POST" })
++  .middleware([requireSupabaseAuth])
++  .handler(async ({ context }) => {
++    const { getAiConsentStatus } = await import("./ai-consent.server");
++    return getAiConsentStatus(context.userId);
++  });
++
++export const recordAiConsent = createServerFn({ method: "POST" })
++  .middleware([requireSupabaseAuth])
++  .inputValidator((input: unknown) =>
++    z
++      .object({
++        version: z.number().int().min(1).max(1000),
++        agreed: z.boolean(),
++        // 誰が記録したか（記録のため。省けば Web）。
++        source: z.enum(["web", "ios", "guest"]).optional(),
++      })
++      .parse(input),
++  )
++  .handler(async ({ context, data }) => {
++    const { recordAiConsentFor } = await import("./ai-consent.server");
++    const { getRequest } = await import("@tanstack/react-start/server");
++    // `/api/native-fn` から来たら iOS（画面が何と言っても）。
++    let source = data.source ?? "web";
++    try {
++      if (/\/api\/native-fn\/?$/.test(new URL(getRequest().url).pathname)) source = "ios";
++    } catch {
++      // 読めなければ送られた物のまま。
++    }
++    return recordAiConsentFor(context.userId, {
++      agreed: data.agreed,
++      version: data.version,
++      source,
++    });
++  });
+diff --git a/src/lib/ai-consent.server.ts b/src/lib/ai-consent.server.ts
+new file mode 100644
+index 0000000..a2e6dde
+--- /dev/null
++++ b/src/lib/ai-consent.server.ts
+@@ -0,0 +1,189 @@
++/**
++ * 外部の AI へ送る前の同意を、サーバで確かめ・記録する（表と理由は `ai-consent.ts`）。
++ *
++ * - 記録は `ai_consents`（移行 `20261003140000_ai_consents.sql`）。書くのはサーバの鍵だけ。
++ *   本人は自分の行を読めるだけ（同意の日時を勝手に書き換えられない）。
++ * - 確かめた「同意あり」は 60 秒だけ覚える（AI を呼ぶたびに DB へ行かない）。取り消しは
++ *   覚えを消すので、同じサーバではすぐ効く（他のサーバでも 60 秒以内に効く）。
++ * - **表がまだ無い環境（移行待ち）では通す**（ログに残す）。移行を当てる前に出しても AI が
++ *   全部止まらないように。移行を当てた後は、DB が読めない時は閉じる側に倒す
++ *   （`AI_CONSENT_CHECK_FAILED`）。
++ */
++import {
++  AI_CONSENT_CHECK_FAILED,
++  AI_CONSENT_REQUIRED,
++  AI_CONSENT_VERSION,
++  consentModeFor,
++  consentStatusFrom,
++  hasCurrentConsent,
++  type AiConsentRow,
++  type AiConsentStatus,
++} from "./ai-consent";
++
++const TABLE = "ai_consents";
++const CACHE_MS = 60_000;
++
++type LooseError = { message?: string; code?: string } | null;
++type Result<T> = PromiseLike<{ data: T | null; error: LooseError }>;
++
++/** 使う所だけの形（試験で差し替える）。 */
++export type ConsentDb = {
++  from: (t: string) => {
++    select: (c: string) => {
++      eq: (
++        k: string,
++        v: string,
++      ) => {
++        order: (
++          k: string,
++          o: { ascending: boolean },
++        ) => {
++          limit: (n: number) => Result<AiConsentRow[]>;
++        };
++      };
++    };
++    insert: (row: Record<string, unknown>) => Result<unknown>;
++    update: (patch: Record<string, unknown>) => {
++      eq: (
++        k: string,
++        v: string,
++      ) => {
++        is: (k: string, v: null) => Result<unknown>;
++      };
++    };
++  };
++};
++
++/** 表がまだ無い（移行待ち）か。 */
++export function isMissingConsentTable(error: LooseError): boolean {
++  if (!error) return false;
++  if (error.code === "PGRST205" || error.code === "42P01") return true;
++  return (
++    new RegExp(TABLE).test(error.message ?? "") && /exist|schema cache/i.test(error.message ?? "")
++  );
++}
++
++const agreedUntil = new Map<string, number>();
++
++/** 覚えた同意を消す（取り消した時・試験）。 */
++export function forgetConsent(userId?: string) {
++  if (userId) agreedUntil.delete(userId);
++  else agreedUntil.clear();
++}
++
++async function adminDb(): Promise<ConsentDb> {
++  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
++  return supabaseAdmin as unknown as ConsentDb;
++}
++
++async function readRows(
++  db: ConsentDb,
++  userId: string,
++): Promise<{ rows: AiConsentRow[]; missing: boolean }> {
++  const { data, error } = await db
++    .from(TABLE)
++    .select("version, agreed_at, revoked_at")
++    .eq("user_id", userId)
++    .order("agreed_at", { ascending: false })
++    .limit(20);
++  if (error) {
++    if (isMissingConsentTable(error)) return { rows: [], missing: true };
++    throw new Error(`${AI_CONSENT_CHECK_FAILED}: ${error.message ?? "read failed"}`);
++  }
++  return { rows: data ?? [], missing: false };
++}
++
++/** その人の今の状態（設定の画面・iOS に返す）。表が無ければ「同意なし」。 */
++export async function getAiConsentStatus(
++  userId: string,
++  db?: ConsentDb,
++): Promise<AiConsentStatus & { recorded: boolean }> {
++  const { rows, missing } = await readRows(db ?? (await adminDb()), userId);
++  return { ...consentStatusFrom(rows), recorded: !missing };
++}
++
++/**
++ * 今の版に同意しているか。表が無い（移行待ち）時は true（通す）を返し、ログに残す。
++ */
++export async function hasAiConsent(userId: string, db?: ConsentDb, now = Date.now()) {
++  const until = agreedUntil.get(userId);
++  if (until && until > now) return true;
++  const { rows, missing } = await readRows(db ?? (await adminDb()), userId);
++  if (missing) {
++    console.warn(
++      "[ai-consent] ai_consents が無い（移行 20261003140000_ai_consents.sql が未適用）。同意を確かめずに通す",
++    );
++    return true;
++  }
++  const ok = hasCurrentConsent(rows);
++  if (ok) agreedUntil.set(userId, now + CACHE_MS);
++  return ok;
++}
++
++/**
++ * **AI を呼ぶ前の関所。** 同意が無ければ `AI_CONSENT_REQUIRED` で断る（何も送らない）。
++ * iOS（`/api/native-fn`）は `consentModeFor` の決まりで、見出しか環境変数がある時だけ。
++ */
++export async function assertAiConsent(
++  userId: string,
++  deps: {
++    db?: ConsentDb;
++    request?: { url: string; headers: { get(name: string): string | null } } | null;
++    env?: Record<string, string | undefined>;
++  } = {},
++): Promise<void> {
++  let request = deps.request;
++  if (request === undefined) {
++    try {
++      const { getRequest } = await import("@tanstack/react-start/server");
++      request = getRequest() ?? null;
++    } catch {
++      request = null;
++    }
++  }
++  if (consentModeFor(request, deps.env ?? process.env) === "skip") return;
++  if (await hasAiConsent(userId, deps.db)) return;
++  throw new Error(
++    `${AI_CONSENT_REQUIRED}: AI を使う機能は、AI へのデータ送信に同意すると使えます。`,
++  );
++}
++
++/**
++ * 同意する・取り消す（Web の確認の画面・設定・iOS の `recordAiConsent`）。
++ * 同意は1回ごとに行を足す（いつ・どの版に同意したかの記録）。取り消しは、取り消して
++ * いない行すべてに今の時刻を入れる。
++ */
++export async function recordAiConsentFor(
++  userId: string,
++  input: { agreed: boolean; version: number; source: "web" | "ios" | "guest" },
++  db?: ConsentDb,
++): Promise<AiConsentStatus> {
++  const d = db ?? (await adminDb());
++  const now = new Date().toISOString();
++  forgetConsent(userId);
++  if (input.agreed) {
++    if (input.version < AI_CONSENT_VERSION) {
++      // 古い版の画面で同意した物は、今の版の同意にしない（聞き直す）。
++      throw new Error(
++        `${AI_CONSENT_REQUIRED}: 同意の内容が新しくなりました。もう一度ご確認ください。`,
++      );
++    }
++    const { error } = await d.from(TABLE).insert({
++      user_id: userId,
++      version: input.version,
++      agreed_at: now,
++      source: input.source,
++    });
++    if (error) throw new Error(`${AI_CONSENT_CHECK_FAILED}: ${error.message ?? "insert failed"}`);
++  } else {
++    const { error } = await d
++      .from(TABLE)
++      .update({ revoked_at: now })
++      .eq("user_id", userId)
++      .is("revoked_at", null);
++    if (error && !isMissingConsentTable(error))
++      throw new Error(`${AI_CONSENT_CHECK_FAILED}: ${error.message ?? "update failed"}`);
++  }
++  const { rows } = await readRows(d, userId);
++  return consentStatusFrom(rows);
++}
+diff --git a/src/lib/ai-consent.test.ts b/src/lib/ai-consent.test.ts
+new file mode 100644
+index 0000000..4387b0f
+--- /dev/null
++++ b/src/lib/ai-consent.test.ts
+@@ -0,0 +1,259 @@
++import fs from "node:fs";
++import path from "node:path";
++import { beforeEach, describe, expect, it, vi } from "vitest";
++
++vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
++
++import {
++  AI_CONSENT_FUNCTIONS,
++  AI_CONSENT_VERSION,
++  assertAttestedConsent,
++  consentModeFor,
++  consentStatusFrom,
++  hasCurrentConsent,
++  isAiConsentError,
++  type AiConsentRow,
++} from "./ai-consent";
++import {
++  assertAiConsent,
++  forgetConsent,
++  recordAiConsentFor,
++  type ConsentDb,
++} from "./ai-consent.server";
++import { NATIVE_FNS, statusForError } from "./native-fn";
++import { readableError } from "./errors";
++
++/** `ai_consents` の偽物（読む・足す・取り消すだけ）。 */
++function fakeDb(opts: { rows?: AiConsentRow[]; error?: { code?: string; message?: string } } = {}) {
++  const rows: (AiConsentRow & { user_id: string })[] = (opts.rows ?? []).map((r) => ({
++    ...r,
++    user_id: "u1",
++  }));
++  const calls = { select: 0, insert: [] as Record<string, unknown>[], revoked: 0 };
++  const db: ConsentDb = {
++    from: () => ({
++      select: () => ({
++        eq: (_k, uid) => ({
++          order: () => ({
++            limit: async () => {
++              calls.select++;
++              if (opts.error) return { data: null, error: opts.error };
++              return { data: rows.filter((r) => r.user_id === uid), error: null };
++            },
++          }),
++        }),
++      }),
++      insert: async (row) => {
++        calls.insert.push(row);
++        rows.push({
++          user_id: String(row.user_id),
++          version: Number(row.version),
++          agreed_at: String(row.agreed_at),
++          revoked_at: null,
++        });
++        return { data: null, error: null };
++      },
++      update: (patch) => ({
++        eq: (_k, uid) => ({
++          is: async () => {
++            for (const r of rows)
++              if (r.user_id === uid && r.revoked_at === null) {
++                r.revoked_at = String(patch.revoked_at);
++                calls.revoked++;
++              }
++            return { data: null, error: null };
++          },
++        }),
++      }),
++    }),
++  };
++  return { db, calls, rows };
++}
++
++const req = (url: string, headers: Record<string, string> = {}) =>
++  new Request(url, { method: "POST", headers });
++const WEB = req("https://app.example/_serverFn/abc");
++const NATIVE = req("https://app.example/api/native-fn");
++const agreed: AiConsentRow = {
++  version: AI_CONSENT_VERSION,
++  agreed_at: "2026-10-03T00:00:00Z",
++  revoked_at: null,
++};
++
++beforeEach(() => forgetConsent());
++
++describe("consentModeFor（どの呼び出しで確かめるか）", () => {
++  it("Web の画面からはいつも確かめる", () => {
++    expect(consentModeFor(WEB, {})).toBe("enforce");
++    expect(consentModeFor(null, {})).toBe("enforce");
++  });
++  it("iOS（native-fn）は、見出しも環境変数も無ければ確かめない（古い iOS を壊さない）", () => {
++    expect(consentModeFor(NATIVE, {})).toBe("skip");
++  });
++  it("iOS が同意の見出しを付けたら確かめる（どちらの綴りでも）", () => {
++    const h1 = req("https://app.example/api/native-fn", { "AI-Consent-Version": "1" });
++    const h2 = req("https://app.example/api/native-fn", { ai_consent_version: "1" });
++    expect(consentModeFor(h1, {})).toBe("enforce");
++    expect(consentModeFor(h2, {})).toBe("enforce");
++  });
++  it("AI_CONSENT_ENFORCE_NATIVE を立てたら iOS も必ず確かめる", () => {
++    expect(consentModeFor(NATIVE, { AI_CONSENT_ENFORCE_NATIVE: "true" })).toBe("enforce");
++    expect(consentModeFor(NATIVE, { AI_CONSENT_ENFORCE_NATIVE: "0" })).toBe("skip");
++  });
++});
++
++describe("同意の行の読み方", () => {
++  it("今の版に同意して取り消していない行があれば同意あり", () => {
++    expect(hasCurrentConsent([agreed])).toBe(true);
++    expect(hasCurrentConsent([{ ...agreed, revoked_at: "2026-10-04T00:00:00Z" }])).toBe(false);
++    expect(hasCurrentConsent([{ ...agreed, version: AI_CONSENT_VERSION - 1 }])).toBe(false);
++    expect(hasCurrentConsent([])).toBe(false);
++  });
++  it("状態は新しい行から作る", () => {
++    const s = consentStatusFrom([
++      { ...agreed, agreed_at: "2026-10-01T00:00:00Z", revoked_at: "2026-10-02T00:00:00Z" },
++      agreed,
++    ]);
++    expect(s).toMatchObject({ agreed: true, agreedAt: agreed.agreed_at, revokedAt: null });
++    expect(consentStatusFrom([]).agreed).toBe(false);
++  });
++});
++
++describe("assertAiConsent（AI を呼ぶ前の関所）", () => {
++  it("同意が無ければ AI_CONSENT_REQUIRED で断る", async () => {
++    const { db } = fakeDb();
++    const err = await assertAiConsent("u1", { db, request: WEB, env: {} }).catch((e) => e);
++    expect(isAiConsentError(err)).toBe(true);
++    expect(statusForError(err)).toBe(403);
++  });
++  it("同意があれば通し、60 秒は DB に聞き直さない", async () => {
++    const { db, calls } = fakeDb({ rows: [agreed] });
++    await assertAiConsent("u1", { db, request: WEB, env: {} });
++    await assertAiConsent("u1", { db, request: WEB, env: {} });
++    expect(calls.select).toBe(1);
++  });
++  it("古い iOS（見出しなし）は DB を見ずに通す。見出しがあれば断る", async () => {
++    const { db, calls } = fakeDb();
++    await assertAiConsent("u1", { db, request: NATIVE, env: {} });
++    expect(calls.select).toBe(0);
++    const withHeader = req("https://app.example/api/native-fn", { "AI-Consent-Version": "1" });
++    await expect(assertAiConsent("u1", { db, request: withHeader, env: {} })).rejects.toThrow(
++      "AI_CONSENT_REQUIRED",
++    );
++  });
++  it("表がまだ無い（移行待ち）時は通す", async () => {
++    const { db } = fakeDb({ error: { code: "PGRST205", message: "ai_consents not found" } });
++    await expect(assertAiConsent("u1", { db, request: WEB, env: {} })).resolves.toBeUndefined();
++  });
++  it("DB が読めない時は閉じる側に倒す（503）", async () => {
++    const { db } = fakeDb({ error: { code: "08006", message: "connection failure" } });
++    const err = await assertAiConsent("u1", { db, request: WEB, env: {} }).catch((e) => e);
++    expect(String(err.message)).toContain("AI_CONSENT_CHECK_FAILED");
++    expect(statusForError(err)).toBe(503);
++  });
++});
++
++describe("recordAiConsentFor（同意する・取り消す）", () => {
++  it("同意で行を足し、取り消しで revoked_at を入れる。取り消した後は断る", async () => {
++    const { db, calls } = fakeDb();
++    const on = await recordAiConsentFor(
++      "u1",
++      { agreed: true, version: AI_CONSENT_VERSION, source: "ios" },
++      db,
++    );
++    expect(on.agreed).toBe(true);
++    expect(calls.insert[0]).toMatchObject({ user_id: "u1", version: 1, source: "ios" });
++    await assertAiConsent("u1", { db, request: WEB, env: {} });
++    const off = await recordAiConsentFor(
++      "u1",
++      { agreed: false, version: AI_CONSENT_VERSION, source: "web" },
++      db,
++    );
++    expect(off.agreed).toBe(false);
++    expect(off.revokedAt).not.toBeNull();
++    // 覚えていた同意も消えている（同じサーバではすぐ効く）。
++    await expect(assertAiConsent("u1", { db, request: WEB, env: {} })).rejects.toThrow(
++      "AI_CONSENT_REQUIRED",
++    );
++  });
++  it("古い版の同意は今の同意にしない", async () => {
++    const { db, calls } = fakeDb();
++    await expect(
++      recordAiConsentFor("u1", { agreed: true, version: 0, source: "web" }, db),
++    ).rejects.toThrow("AI_CONSENT_REQUIRED");
++    expect(calls.insert).toEqual([]);
++  });
++});
++
++describe("登録前（ゲスト）の同意", () => {
++  it("今の版の同意が付いていなければ断る", () => {
++    expect(() => assertAttestedConsent(undefined)).toThrow("AI_CONSENT_REQUIRED");
++    expect(() => assertAttestedConsent(0)).toThrow("AI_CONSENT_REQUIRED");
++    expect(() => assertAttestedConsent(AI_CONSENT_VERSION)).not.toThrow();
++  });
++});
++
++describe("AI を呼ぶ関数は、どれも送る前に同意を確かめる", () => {
++  const files = [
++    "ai.functions.ts",
++    "scan.functions.ts",
++    "jev.functions.ts",
++    "wordbook.functions.ts",
++    "journal.functions.ts",
++    "first-catch-ai.functions.ts",
++  ].map((f) => fs.readFileSync(path.join(__dirname, f), "utf8"));
++  const bodyOf = (name: string) => {
++    for (const src of files) {
++      const at = src.indexOf(`export const ${name} = createServerFn`);
++      if (at < 0) continue;
++      const next = src.indexOf("\nexport ", at + 1);
++      return src.slice(at, next < 0 ? undefined : next);
++    }
++    return "";
++  };
++  for (const name of AI_CONSENT_FUNCTIONS) {
++    it(name, () => {
++      const body = bodyOf(name);
++      expect(body, name).not.toBe("");
++      expect(body).toMatch(/assertAiConsent\(|assertAttestedConsent\(/);
++    });
++  }
++  it("登録前のチュートリアルの道も確かめる", () => {
++    const guest = fs.readFileSync(path.join(__dirname, "first-catch-guest.server.ts"), "utf8");
++    expect(guest).toMatch(/assertAttestedConsent\(data\.aiConsentVersion\)/);
++  });
++});
++
++describe("iOS（native-fn）", () => {
++  it("同意を読む・記録する関数を呼べる", () => {
++    expect(Object.keys(NATIVE_FNS)).toEqual(
++      expect.arrayContaining(["getAiConsent", "recordAiConsent"]),
++    );
++  });
++  it("iOS の AI の関数は全部 native-fn に在る（一覧がずれていない）", () => {
++    for (const name of AI_CONSENT_FUNCTIONS.slice(0, 9))
++      expect([name, name in NATIVE_FNS]).toEqual([name, true]);
++  });
++});
++
++describe("画面の文", () => {
++  it("同意が無い失敗は、どの言語でも辞書の文に直す", () => {
++    const t = (k: string) => `[${k}]`;
++    const e = new Error("AI_CONSENT_REQUIRED: AI を使う機能は…");
++    expect(readableError(e, "fallback", "en", t)).toBe("[err.aiConsent]");
++    expect(readableError(e, "fallback", "ja", t)).toBe("[err.aiConsent]");
++  });
++});
++
++describe("移行（ai_consents）", () => {
++  const sql = fs.readFileSync(
++    path.join(__dirname, "../../supabase/migrations/20261003140000_ai_consents.sql"),
++    "utf8",
++  );
++  it("RLS を入れ、本人は読むだけ（書く決まりを置かない）", () => {
++    expect(sql).toMatch(/enable row level security/);
++    expect(sql).toMatch(/for select to authenticated using \(auth\.uid\(\) = user_id\)/);
++    expect(sql).not.toMatch(/for (insert|update|delete|all)/);
++    expect(sql).toMatch(/on delete cascade/);
++  });
++});
+diff --git a/src/lib/ai-consent.ts b/src/lib/ai-consent.ts
+new file mode 100644
+index 0000000..5eaf48d
+--- /dev/null
++++ b/src/lib/ai-consent.ts
+@@ -0,0 +1,140 @@
++/**
++ * **外部の AI へ送る前の同意**（App Store Review Guideline 5.1.2(i) と同じ扱い・
++ * 個人情報保護法 28 条の外国にある第三者への提供。2026-10-03）。
++ *
++ * 写真・調べた語・入力した文（日記・報告のメモ）を外部の AI（Google など）へ送る関数は、
++ * その人が**はっきり同意した後**でしか動かない。iOS 版の `AIConsent.swift` と同じ版・同じ
++ * 関数の一覧を持つ（どちらかを変えたら両方を直す）。
++ *
++ * ここは**表と純粋な関数だけ**（画面とサーバの両方から読む）。DB を読むのは
++ * `ai-consent.server.ts`、画面の確認は `components/AiConsentDialog.tsx`。
++ */
++
++/**
++ * 同意の版。**送る物・送り先を変えたら上げる**（古い版の同意は聞き直す）。
++ * iOS の `AIConsent.currentVersion` と同じ数にする。
++ */
++export const AI_CONSENT_VERSION = 1;
++
++/** プライバシーポリシーの「外部の事業者」の節（第4条。第5条が続く）。 */
++export const PRIVACY_AI_SECTION_URL = "/privacy#external-services";
++
++/** 同意が無くて断った時の印（`errors.ts` が画面の言語の文に直し、確認の画面を開く）。 */
++export const AI_CONSENT_REQUIRED = "AI_CONSENT_REQUIRED";
++/** 同意を確かめられなかった時の印（DB が読めない。少し待てば通る）。 */
++export const AI_CONSENT_CHECK_FAILED = "AI_CONSENT_CHECK_FAILED";
++
++/**
++ * 同意が要るサーバ関数（写真・語・文を外部の AI に渡す物）。
++ * 先頭の9つは iOS の `AIConsent.aiFunctions` と同じ。残りは Web だけで使う同じ種類の物。
++ * 書いた物を読むだけの関数（意味・解説の読み出し）・保存・復習の採点・発音は入れない。
++ */
++export const AI_CONSENT_FUNCTIONS = [
++  "suggestWords",
++  "detectScan",
++  "rankScanCandidates",
++  "suggestWordCandidates",
++  "generateCard",
++  "regenerateCardSection",
++  "reportAndFixSection",
++  "getJournalPrompts",
++  "correctMyJournal",
++  // Web（と iOS の native-fn）で同じ種類の物
++  "generatePhraseCard",
++  "detectParts",
++  "extractWordbook",
++  "firstCatchAI",
++  "firstCatchMemberAI",
++] as const;
++
++/**
++ * iOS が「同意の仕組みを持つ版」であることを示す見出し（`/api/native-fn`）。
++ * 値は iOS が持つ同意の版（数字）。`AI-Consent-Version` を正とし、頼まれた綴りの
++ * `ai_consent_version` も受ける（下線の見出しは途中の機械に落とされることがあるので非推奨）。
++ */
++export const AI_CONSENT_HEADERS = ["ai-consent-version", "ai_consent_version"] as const;
++
++/** iOS（`/api/native-fn`）でも必ず確かめるようにする環境変数（締め切り後に立てる）。 */
++export const AI_CONSENT_ENFORCE_NATIVE_ENV = "AI_CONSENT_ENFORCE_NATIVE";
++
++export function isTruthyEnv(v: string | undefined | null): boolean {
++  return !!v && /^(1|true|yes|on)$/i.test(v.trim());
++}
++
++/**
++ * この呼び出しで同意を確かめるか。
++ *
++ * - Web の画面から（`/_serverFn/...`）… いつも確かめる。
++ * - iOS（`/api/native-fn`）… **同意の見出しが付いている**か、**`AI_CONSENT_ENFORCE_NATIVE`
++ *   が立っている**時だけ。同意をサーバに送らない古い iOS を壊さないため（古い iOS も
++ *   端末の中で同意を確かめてから送っている — `NativeAPI.call`）。
++ */
++export function consentModeFor(
++  request: { url: string; headers: { get(name: string): string | null } } | null | undefined,
++  env: Record<string, string | undefined>,
++): "enforce" | "skip" {
++  if (!request) return "enforce";
++  let path = "";
++  try {
++    path = new URL(request.url).pathname;
++  } catch {
++    return "enforce";
++  }
++  if (!/\/api\/native-fn\/?$/.test(path)) return "enforce";
++  if (AI_CONSENT_HEADERS.some((h) => request.headers.get(h) !== null)) return "enforce";
++  return isTruthyEnv(env[AI_CONSENT_ENFORCE_NATIVE_ENV]) ? "enforce" : "skip";
++}
++
++/** `ai_consents` の1行（読む所だけ）。 */
++export type AiConsentRow = {
++  version: number;
++  agreed_at: string;
++  revoked_at: string | null;
++};
++
++/** 今の版に同意していて、取り消していない行があるか。 */
++export function hasCurrentConsent(rows: AiConsentRow[] | null | undefined): boolean {
++  return (rows ?? []).some((r) => r.revoked_at === null && r.version >= AI_CONSENT_VERSION);
++}
++
++/** 画面・iOS に返す今の状態。 */
++export type AiConsentStatus = {
++  /** 今の版に同意していて、取り消していない。 */
++  agreed: boolean;
++  /** 最後に同意した版（無ければ null）。 */
++  version: number | null;
++  agreedAt: string | null;
++  /** 最後に取り消した時刻（同意中なら null）。 */
++  revokedAt: string | null;
++  /** サーバが求める版（`AI_CONSENT_VERSION`）。 */
++  currentVersion: number;
++};
++
++export function consentStatusFrom(rows: AiConsentRow[] | null | undefined): AiConsentStatus {
++  const sorted = [...(rows ?? [])].sort((a, b) => b.agreed_at.localeCompare(a.agreed_at));
++  const latest = sorted[0];
++  return {
++    agreed: hasCurrentConsent(sorted),
++    version: latest?.version ?? null,
++    agreedAt: latest?.agreed_at ?? null,
++    revokedAt: latest?.revoked_at ?? null,
++    currentVersion: AI_CONSENT_VERSION,
++  };
++}
++
++/** 失敗が「同意が無い」か（画面で確認を開くため）。 */
++export function isAiConsentError(e: unknown): boolean {
++  return e instanceof Error && e.message.includes(AI_CONSENT_REQUIRED);
++}
++
++/**
++ * **登録前（ゲスト・端末だけの匿名アカウント）の同意。** サーバに記録する相手が居ないので、
++ * 画面が「この端末で今の版に同意した」と送ってきた版（`aiConsentVersion`）を確かめる。
++ * 登録した後は、アカウントの確認（`AiConsentAccountGate`）でもう一度聞いて記録する。
++ */
++export function assertAttestedConsent(version: number | null | undefined): void {
++  if (typeof version === "number" && version >= AI_CONSENT_VERSION) return;
++  throw new Error(
++    `${AI_CONSENT_REQUIRED}: AI を使う機能は、AI へのデータ送信に同意すると使えます。`,
++  );
++}
+diff --git a/src/lib/ai.functions.ts b/src/lib/ai.functions.ts
+index 558b367..dd0aaa9 100644
+--- a/src/lib/ai.functions.ts
++++ b/src/lib/ai.functions.ts
+@@ -231,6 +231,8 @@ export const suggestWords = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => SuggestInput.parse(input))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const startedAt = Date.now();
+     // AI の前の読み出し（使う AI・枠の確保・級・解説の言語）は**並べて**待つ（実物確認
+     // 2026-10-03: シャッターから候補まで 4.5〜42 秒。前はここで4〜5往復を1つずつ待っていた）。
+@@ -488,6 +490,8 @@ export const suggestWordCandidates = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => WordCandidatesInput.parse(input))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const ai = await getAiFor("scan");
+     await assertWithinDailyCap(context.userId, "suggest");
+     const levelRule = await levelInstruction(context.userId);
+@@ -584,6 +588,8 @@ export const generateCard = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => CardInput.parse(input))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const ai = await getAiFor("card");
+     await assertWithinDailyCap(context.userId, "card");
+     const levelGoal = await getUserLevelGoal(context.userId);
+@@ -1067,6 +1073,8 @@ export const generatePhraseCard = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => PhraseInput.parse(input))
+   .handler(async ({ data, context }): Promise<GeneratedPhraseCard> => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const ai = await getAiFor("card");
+     await assertWithinDailyCap(context.userId, "phrase_card");
+     // Plain text + tolerant parse (see generateCard) — avoid json_schema output
+@@ -1773,6 +1781,8 @@ export const regenerateCardSection = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => RegenInput.parse(input))
+   .handler(async ({ context, data }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const r = await runSectionRegen(context, data, "write");
+     // 作り直しの回数（開発者の利用者ごとの画面。新しく作った解説と分けて数える）。
+     if (!data.only_if_empty) await logUsage(context.supabase, context.userId, "card_regen");
+@@ -1830,6 +1840,8 @@ export const reportAndFixSection = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => ReportFixInput.parse(input))
+   .handler(async ({ context, data }): Promise<ReportFixResult> => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const { supabase, userId } = context;
+     // 所有チェック: この語のステッカーを持つ人だけが直せる。
+     const { data: owned } = await supabase
+diff --git a/src/lib/errors.ts b/src/lib/errors.ts
+index 9642d47..3957abb 100644
+--- a/src/lib/errors.ts
++++ b/src/lib/errors.ts
+@@ -19,6 +19,7 @@
+  */
+ import { useCallback } from "react";
+ import { useT, useUiLang, type UiLang } from "./i18n";
++import { noticeAiConsentError } from "./ai-consent-client";
+ 
+ /** サーバーの日本語の文 → 辞書の鍵。上から順に見る。 */
+ const KNOWN: Array<[RegExp, string]> = [
+@@ -47,6 +48,9 @@ const KNOWN_CODES: Array<[string, string]> = [
+   ["AI_DAILY_CAP", "err.dailyCap"],
+   ["AI_GLOBAL_CAP", "err.aiBusy"],
+   ["AI_USAGE_CHECK_FAILED", "err.usageCheck"],
++  // 外部の AI へ送る同意が無い（`ai-consent.ts`）。文を出し、確認の画面も開く。
++  ["AI_CONSENT_REQUIRED", "err.aiConsent"],
++  ["AI_CONSENT_CHECK_FAILED", "err.usageCheck"],
+   // 購入口・定期購入の管理（`stripe-catalog.ts` の `BILLING_ERRORS`）。
+   ["BILLING_PORTAL_NOT_CONFIGURED", "pro.err.portalNotConfigured"],
+   ["BILLING_NO_CUSTOMER", "pro.err.noCustomer"],
+@@ -63,6 +67,8 @@ export function readableError(
+ ): string {
+   const msg = e instanceof Error ? e.message : "";
+   if (!msg) return fallback;
++  // 同意が無くて断られた時は、確認の画面を開く（設定から探させない）。
++  noticeAiConsentError(e);
+   // **サーバが印で投げた理由**（文ではない）。どの表示言語でもその言語の文に直す。
+   if (t) {
+     for (const [code, key] of KNOWN_CODES) if (msg.includes(code)) return t(key);
+diff --git a/src/lib/first-catch-ai-schema.ts b/src/lib/first-catch-ai-schema.ts
+index 9ad5ded..e7dbde8 100644
+--- a/src/lib/first-catch-ai-schema.ts
++++ b/src/lib/first-catch-ai-schema.ts
+@@ -47,6 +47,11 @@ const common = {
+   uiLanguage: z.enum(UI_LANGS),
+   targetLanguage: z.enum(TARGET_LANGUAGES),
+   preferences: LearningPreferencesSchema,
++  /**
++   * この端末で同意した「外部の AI へ送る」同意の版（`ai-consent.ts`）。登録前は記録する
++   * 相手が居ないので、画面がこれを付ける。無い・古い版ならサーバは何も送らずに断る。
++   */
++  aiConsentVersion: z.number().int().min(0).max(1000).optional(),
+ };
+ export const FirstCatchAIInput = z.discriminatedUnion("action", [
+   z.object({
+diff --git a/src/lib/first-catch-ai.functions.ts b/src/lib/first-catch-ai.functions.ts
+index 01e400e..dbc11fe 100644
+--- a/src/lib/first-catch-ai.functions.ts
++++ b/src/lib/first-catch-ai.functions.ts
+@@ -5,6 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+ export const firstCatchAI = createServerFn({ method: "POST" })
+   .inputValidator((raw: unknown) => FirstCatchAIInput.parse(raw))
+   .handler(async ({ data }) => {
++    // 外部の AI へ送る前の同意（登録前なので、この端末で同意した版を確かめる）。
++    (await import("./ai-consent")).assertAttestedConsent(data.aiConsentVersion);
+     const { getRequest } = await import("@tanstack/react-start/server");
+     const { executeGuestFirstCatch } = await import("./first-catch-guest.server");
+     return executeGuestFirstCatch(data, getRequest());
+@@ -15,6 +17,11 @@ export const firstCatchMemberAI = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((raw: unknown) => FirstCatchAIInput.parse(raw))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意。端末だけの匿名アカウント（登録前）はこの端末での同意の版、
++    // 登録した人はサーバの記録（`ai_consents`）で確かめる。
++    const anonymous = (context.claims as { is_anonymous?: boolean } | undefined)?.is_anonymous;
++    if (anonymous) (await import("./ai-consent")).assertAttestedConsent(data.aiConsentVersion);
++    else await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const { executeFirstCatchAI } = await import("./first-catch-ai.server");
+     return executeFirstCatchAI(data, context);
+   });
+diff --git a/src/lib/first-catch-guest-gate.test.ts b/src/lib/first-catch-guest-gate.test.ts
+index a64363f..cbda00b 100644
+--- a/src/lib/first-catch-guest-gate.test.ts
++++ b/src/lib/first-catch-guest-gate.test.ts
+@@ -70,6 +70,8 @@ const input = {
+   targetLanguage: "zh-TW",
+   uiLanguage: "ja",
+   preferences: { dailyMinutes: 5, goals: [], interests: [] },
++  // この端末で「外部の AI へ送る」同意をした版（`ai-consent.ts`）。
++  aiConsentVersion: 1,
+ };
+ const request = (headers: Record<string, string>) =>
+   new Request("https://app.example/_serverFn/x", { method: "POST", headers });
+@@ -88,6 +90,19 @@ afterEach(() => {
+ });
+ 
+ describe("executeGuestFirstCatch", () => {
++  it("この端末で同意していなければ、枠も AI も使わずに断る", async () => {
++    const { aiConsentVersion: _omit, ...noConsent } = input;
++    void _omit;
++    await expect(
++      executeGuestFirstCatch(
++        noConsent,
++        request({ origin: "https://app.example", "x-forwarded-for": "1.2.3.4" }),
++      ),
++    ).rejects.toThrow("AI_CONSENT_REQUIRED");
++    expect(state.rows).toEqual([]);
++    expect(generateFirstCatchAI).not.toHaveBeenCalled();
++  });
++
+   it("refuses a call without Origin before spending anything", async () => {
+     await expect(
+       executeGuestFirstCatch(input, request({ "x-forwarded-for": "1.2.3.4" })),
+diff --git a/src/lib/first-catch-guest.server.ts b/src/lib/first-catch-guest.server.ts
+index ffec2ec..a9b897c 100644
+--- a/src/lib/first-catch-guest.server.ts
++++ b/src/lib/first-catch-guest.server.ts
+@@ -120,6 +120,9 @@ export function isSameOriginRequest(request: Request): boolean {
+ 
+ export async function executeGuestFirstCatch(raw: unknown, request: Request) {
+   const data = FirstCatchAIInput.parse(raw);
++  // 外部の AI へ送る前の同意（登録前なので、この端末での同意の版を確かめる）。
++  const { assertAttestedConsent } = await import("./ai-consent");
++  assertAttestedConsent(data.aiConsentVersion);
+   const reserved: string[] = [];
+   let db: SupabaseClient<Database> | null = null;
+   let chain: Promise<AiTarget[]> | undefined;
+diff --git a/src/lib/i18n.test.ts b/src/lib/i18n.test.ts
+index a0ed7a7..557dabe 100644
+--- a/src/lib/i18n.test.ts
++++ b/src/lib/i18n.test.ts
+@@ -114,7 +114,7 @@ describe("辞書が3言語ぶんそろっている", () => {
+   const keys = Object.keys(DICT);
+ 
+   it("表示文言の登録数を把握する", () => {
+-    expect(keys.length).toBe(1271);
++    expect(keys.length).toBe(1296);
+   });
+ 
+   /**
+diff --git a/src/lib/i18n.tsx b/src/lib/i18n.tsx
+index 7628b87..14f6bd3 100644
+--- a/src/lib/i18n.tsx
++++ b/src/lib/i18n.tsx
+@@ -1743,6 +1743,109 @@ export const DICT: Record<string, Record<UiLang, string>> = {
+     en: "We couldn't check your usage just now. Please try again in a moment.",
+     "zh-TW": "目前無法確認使用次數，請稍候再試一次。",
+   },
++  "err.aiConsent": {
++    ja: "AIを使う機能は、AIへのデータ送信に同意すると使えます。",
++    en: "AI features work once you agree to send data to AI services.",
++    "zh-TW": "同意將資料傳送給 AI 服務後，才能使用 AI 功能。",
++  },
++  // 外部の AI へ送る前の確認（iOS の AIConsentView と同じ中身。2026-10-03）。
++  "aiConsent.title": {
++    ja: "AIへのデータ送信について",
++    en: "About sending data to AI",
++    "zh-TW": "關於將資料傳送給 AI",
++  },
++  "aiConsent.lead": {
++    ja: "CatchWords は、写真から単語を見つけたり、単語カードを作ったり、日記を添削したりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。",
++    en: "CatchWords uses external AI services to find words in your photos, make word cards and correct your diary. Before you start, please check what is sent and choose whether you agree.",
++    "zh-TW":
++      "CatchWords 會使用外部 AI 服務，從照片中找出單字、製作單字卡、批改日記。開始使用前，請確認傳送的內容，並選擇是否同意。",
++  },
++  "aiConsent.whatTitle": { ja: "送るもの", en: "What is sent", "zh-TW": "傳送的內容" },
++  "aiConsent.whatBody": {
++    ja: "撮った写真、端末から選んだ画像、スキャンの画面、調べた単語、入力した文章（日記・報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。",
++    en: "Photos you take, images you choose from your device, scan frames, words you look up, text you type (diary entries, notes in reports), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
++    "zh-TW":
++      "你拍的照片、從裝置選擇的圖片、掃描畫面、查詢的單字、輸入的文字（日記、回報的備註）、用語音查詢的詞語（轉成的文字，不會傳送語音本身），以及學習語言、程度等設定。不會傳送電子郵件地址與姓名。",
++  },
++  "aiConsent.whoTitle": { ja: "送り先", en: "Who receives it", "zh-TW": "傳送對象" },
++  "aiConsent.whoBody": {
++    ja: "当社のサーバを通して、外部のAIサービス（Google など）に送ります。送り先の会社と国は、プライバシーポリシーに書いてあります。",
++    en: "It is sent through our server to external AI services (such as Google). The companies and countries that receive it are listed in the Privacy Policy.",
++    "zh-TW":
++      "經由本公司的伺服器傳送給外部 AI 服務（例如 Google）。接收的公司與所在國家記載於隱私權政策。",
++  },
++  "aiConsent.whyTitle": { ja: "使い道", en: "Why", "zh-TW": "用途" },
++  "aiConsent.whyBody": {
++    ja: "写っている物の判定、単語カード・解説・例文の作成、日記の添削のためだけに使います。当社が写真や日記を AI の学習に使うことはありません。",
++    en: "Only to recognize what is in the photo, to make word cards, explanations and example sentences, and to correct your diary. We never use your photos or diary to train AI.",
++    "zh-TW":
++      "僅用於辨識照片中的物品、製作單字卡、解說與例句，以及批改日記。本公司不會將你的照片或日記用於訓練 AI。",
++  },
++  "aiConsent.declineTitle": {
++    ja: "同意しない場合",
++    en: "If you don't agree",
++    "zh-TW": "不同意的話",
++  },
++  "aiConsent.declineBody": {
++    ja: "カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。",
++    en: "Features that use AI, such as the camera, scanning, making word cards and diary correction, will not work (nothing is sent). You can still view the words you collected and review them. You can agree or withdraw later in Settings.",
++    "zh-TW":
++      "相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽已收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回。",
++  },
++  "aiConsent.detailsLink": {
++    ja: "詳しくはプライバシーポリシー（第4条・第5条）をご覧ください",
++    en: "See the Privacy Policy (sections 4 and 5) for details",
++    "zh-TW": "詳情請參閱隱私權政策（第 4 條、第 5 條）",
++  },
++  "aiConsent.accept": { ja: "同意して始める", en: "Agree and start", "zh-TW": "同意並開始" },
++  "aiConsent.decline": { ja: "同意しない", en: "Don't agree", "zh-TW": "不同意" },
++  "aiConsent.agreedToast": {
++    ja: "AIへのデータ送信に同意しました",
++    en: "You agreed to send data to AI",
++    "zh-TW": "已同意將資料傳送給 AI",
++  },
++  "aiConsent.saveFailed": {
++    ja: "保存できませんでした。もう一度お試しください。",
++    en: "Couldn't save. Please try again.",
++    "zh-TW": "無法儲存，請再試一次。",
++  },
++  "aiConsent.settingsTitle": {
++    ja: "AIへのデータ送信",
++    en: "Sending data to AI",
++    "zh-TW": "將資料傳送給 AI",
++  },
++  "aiConsent.statusAgreed": {
++    ja: "同意しています（{date}）",
++    en: "You agreed ({date})",
++    "zh-TW": "已同意（{date}）",
++  },
++  "aiConsent.statusNone": {
++    ja: "同意していません。AI を使う機能は止まっています。",
++    en: "You haven't agreed. Features that use AI are turned off.",
++    "zh-TW": "尚未同意。使用 AI 的功能目前已停用。",
++  },
++  "aiConsent.settingsHint": {
++    ja: "写真・調べた単語・入力した文章を、外部のAIサービス（Google など）に送ってよいかの設定です。",
++    en: "Whether your photos, the words you look up and the text you type may be sent to external AI services (such as Google).",
++    "zh-TW": "是否允許將照片、查詢的單字與輸入的文字傳送給外部 AI 服務（例如 Google）。",
++  },
++  "aiConsent.review": {
++    ja: "内容を確認して同意する",
++    en: "Review and agree",
++    "zh-TW": "確認內容並同意",
++  },
++  "aiConsent.withdraw": { ja: "同意を取り消す", en: "Withdraw consent", "zh-TW": "撤回同意" },
++  "aiConsent.withdrawConfirm": {
++    ja: "取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能が使えなくなります。取り消しますか？",
++    en: "If you withdraw, features that use AI, such as the camera, scanning, making word cards and diary correction, will stop working. Withdraw?",
++    "zh-TW": "撤回後，相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用。確定要撤回嗎？",
++  },
++  "aiConsent.withdrawYes": { ja: "取り消す", en: "Withdraw", "zh-TW": "撤回" },
++  "aiConsent.withdrawn": {
++    ja: "同意を取り消しました",
++    en: "Consent withdrawn",
++    "zh-TW": "已撤回同意",
++  },
+   "err.proOnly": {
+     ja: "Pro 限定の機能です",
+     en: "This is a Pro feature",
+diff --git a/src/lib/jev.functions.ts b/src/lib/jev.functions.ts
+index 7d26112..6d9f09e 100644
+--- a/src/lib/jev.functions.ts
++++ b/src/lib/jev.functions.ts
+@@ -36,6 +36,15 @@ export const rankScanCandidates = createServerFn({ method: "POST" })
+   )
+   .handler(async ({ data, context }) => {
+     if (!jevAvailable()) return { order: null, probs: null, doubtful: [] as number[] };
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。並べ替えはおまけなので、同意が無ければ
++    // 送らずに**並べ替えないまま**返す（スキャンの画面は止めない）。
++    try {
++      await (await import("./ai-consent.server")).assertAiConsent(context.userId);
++    } catch (e) {
++      const { isAiConsentError } = await import("./ai-consent");
++      if (!isAiConsentError(e)) throw e;
++      return { order: null, probs: null, doubtful: [] as number[] };
++    }
+     /**
+      * **上限を掛ける**（監査 2026-10-03 M7）。前は外の AI（Jev）を何回でも呼べた。
+      * その人の 24 時間の上限（`jev_rank`、`ai-cap.ts`）に数える。並べ替えはおまけなので、
+diff --git a/src/lib/journal.functions.ts b/src/lib/journal.functions.ts
+index 7128265..7c34ed4 100644
+--- a/src/lib/journal.functions.ts
++++ b/src/lib/journal.functions.ts
+@@ -126,6 +126,8 @@ export const correctMyJournal = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => CorrectInput.parse(input))
+   .handler(async ({ context, data }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const { supabase, userId } = context;
+     await assertWithinDailyCap(userId, "correction");
+     const { today, stickers } = await getTodaysCaptures(supabase, userId);
+@@ -326,6 +328,15 @@ export type JournalScaffold = {
+ export const getJournalPrompts = createServerFn({ method: "GET" })
+   .middleware([requireSupabaseAuth])
+   .handler(async ({ context }): Promise<JournalScaffold | null> => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。書き出しの質問はおまけなので、同意が
++    // 無ければ何も送らずに「質問なし」で返す（日記の画面は止めない）。
++    try {
++      await (await import("./ai-consent.server")).assertAiConsent(context.userId);
++    } catch (e) {
++      const { isAiConsentError } = await import("./ai-consent");
++      if (isAiConsentError(e)) return null;
++      throw e;
++    }
+     const { supabase, userId } = context;
+     const { stickers } = await getTodaysCaptures(supabase, userId);
+     // **今日の材料が無ければ何も出さない。** 上限も使わない(AIを呼ばない)。
+diff --git a/src/lib/native-fn.ts b/src/lib/native-fn.ts
+index 540b39a..0d712b5 100644
+--- a/src/lib/native-fn.ts
++++ b/src/lib/native-fn.ts
+@@ -31,6 +31,7 @@ const stats = () => import("./stats.functions");
+ const jev = () => import("./jev.functions");
+ const wordbook = () => import("./wordbook.functions");
+ const images = () => import("./images.functions");
++const consent = () => import("./ai-consent.functions");
+ 
+ function from<M>(mod: () => Promise<M>, name: keyof M & string): Loader {
+   return async () => (await mod())[name] as unknown as ServerFn;
+@@ -106,6 +107,9 @@ export const NATIVE_FNS: Record<string, Loader> = {
+   deleteMyAccount: from(profile, "deleteMyAccount"),
+   getWordExplanation: from(explanation, "getWordExplanation"),
+   getReaderMeanings: from(explanation, "getReaderMeanings"),
++  // 外部の AI へ送る同意（`docs/ios-spec/23-ai-consent.md`）
++  getAiConsent: from(consent, "getAiConsent"),
++  recordAiConsent: from(consent, "recordAiConsent"),
+ };
+ 
+ /** 失敗の中身から、iOS に返す状態コードを決める。 */
+@@ -113,6 +117,9 @@ export function statusForError(e: unknown): number {
+   const name = (e as { name?: string })?.name ?? "";
+   const msg = e instanceof Error ? e.message : String(e ?? "");
+   if (msg.startsWith("Unauthorized")) return 401;
++  // 外部の AI へ送る同意が無い（`ai-consent.ts`）。iOS は同意の画面を出す。
++  if (msg.includes("AI_CONSENT_REQUIRED")) return 403;
++  if (msg.includes("AI_CONSENT_CHECK_FAILED")) return 503;
+   if (
+     msg.includes("1日の利用上限") ||
+     msg.includes("AI_DAILY_CAP") ||
+diff --git a/src/lib/scan.functions.ts b/src/lib/scan.functions.ts
+index 9a07549..1fb771e 100644
+--- a/src/lib/scan.functions.ts
++++ b/src/lib/scan.functions.ts
+@@ -140,6 +140,8 @@ export const detectScan = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => DetectInput.parse(input))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const ai = await getAiFor("scan");
+     const { supabase, userId } = context;
+     await assertWithinDailyCap(userId, "scan_detect");
+@@ -309,6 +311,8 @@ export const detectParts = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => DetectPartsInput.parse(input))
+   .handler(async ({ data, context }) => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const ai = await getAiFor("scan");
+     await assertWithinDailyCap(context.userId, "scan_parts");
+     const imageInput = data.imageBase64.startsWith("data:")
+diff --git a/src/lib/wordbook.functions.ts b/src/lib/wordbook.functions.ts
+index 2b0de34..cb87f70 100644
+--- a/src/lib/wordbook.functions.ts
++++ b/src/lib/wordbook.functions.ts
+@@ -93,6 +93,8 @@ export const extractWordbook = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) => ExtractInput.parse(input))
+   .handler(async ({ context, data }): Promise<WordbookDraft> => {
++    // 外部の AI へ送る前の同意（`ai-consent.ts`）。無ければ何も送らずに断る。
++    await (await import("./ai-consent.server")).assertAiConsent(context.userId);
+     const { supabase, userId } = context;
+     await assertWithinDailyCap(userId, "wordbook");
+     const ai = await getAiFor("scan");
+diff --git a/src/routes/__root.tsx b/src/routes/__root.tsx
+index 5a320b2..097808f 100644
+--- a/src/routes/__root.tsx
++++ b/src/routes/__root.tsx
+@@ -16,6 +16,7 @@ import appCss from "../styles.css?url";
+ import { reportLovableError } from "../lib/lovable-error-reporting";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Toaster } from "@/components/ui/sonner";
++import { AiConsentHost } from "@/components/AiConsentHost";
+ import { ThemeProvider, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/components/theme-provider";
+ import { DEFAULT_MOTION, MOTION_ATTR, MOTION_STORAGE_KEY } from "@/lib/motion-pref";
+ import { MotionProvider } from "@/components/motion-provider";
+@@ -336,6 +337,8 @@ function RootComponent() {
+         <MotionProvider>
+           <Outlet />
+           <Toaster position="top-center" richColors />
++          {/* 外部の AI へ送る前の確認の画面（どの画面からでも開く。`ai-consent-client.ts`）。 */}
++          <AiConsentHost />
+         </MotionProvider>
+       </ThemeProvider>
+     </QueryClientProvider>
+diff --git a/src/routes/_authenticated/route.tsx b/src/routes/_authenticated/route.tsx
+index fd24c3f..e221217 100644
+--- a/src/routes/_authenticated/route.tsx
++++ b/src/routes/_authenticated/route.tsx
+@@ -14,6 +14,7 @@ import { getDueReviews } from "@/lib/reviews.functions";
+ import { packBatch, readBatch, REVIEW_CACHE_KEY, REVIEW_CACHE_USER_KEY } from "@/lib/review-cache";
+ import { warmCachedImages } from "@/lib/image-cache";
+ import { stickerPhotoUrl } from "@/lib/sticker-photo";
++import { AiConsentAccountGate } from "@/components/AiConsentHost";
+ 
+ /**
+  * 登録前に捕まえた1枚を預け直す画面。**登録した直後の1回しか出ない**ので後から読む
+@@ -76,6 +77,8 @@ function AuthenticatedLayout() {
+   const [state, setState] = useState<"checking" | "ready" | "failed">("checking");
+   const [attempt, setAttempt] = useState(0);
+   const [pending, setPending] = useState<{ draft: FirstCatch; userId: string } | null>(null);
++  /** 入っている人（外部の AI へ送る同意を聞くため。`AiConsentAccountGate`）。 */
++  const [userId, setUserId] = useState<string | null>(null);
+ 
+   const retry = useCallback(() => {
+     setState("checking");
+@@ -104,6 +107,7 @@ function AuthenticatedLayout() {
+             navigate({ to: "/auth", replace: true, search: { next: "" } });
+           else navigate({ to: "/welcome", replace: true });
+         } else {
++          setUserId(session.user.id);
+           // Complete the photographed word's transfer before entering the app.
+           const draft = await readFirstCatch().catch(() => null);
+           if (!active) return;
+@@ -227,5 +231,10 @@ function AuthenticatedLayout() {
+         <FirstCatchTransfer {...pending} onDone={() => setPending(null)} />
+       </Suspense>
+     );
+-  return <Outlet />;
++  return (
++    <>
++      {userId && <AiConsentAccountGate userId={userId} />}
++      <Outlet />
++    </>
++  );
+ }
+diff --git a/supabase/migrations/20261003140000_ai_consents.sql b/supabase/migrations/20261003140000_ai_consents.sql
+new file mode 100644
+index 0000000..b962a8f
+--- /dev/null
++++ b/supabase/migrations/20261003140000_ai_consents.sql
+@@ -0,0 +1,50 @@
++-- 外部の AI へ送る前の同意の記録（2026-10-03）。
++--
++-- App Store Review Guideline 5.1.2(i)（第三者の AI へ個人データを送る前にはっきり同意を
++-- もらう）と、個人情報保護法 28 条（外国にある第三者への提供の同意）のため。
++-- Web 版は確認の画面（components/AiConsentDialog.tsx）、iOS 版は AIConsentView で聞き、
++-- サーバの関数（recordAiConsent）がここに書く。AI を呼ぶ関数は、今の版に同意した行が
++-- 無ければ断る（src/lib/ai-consent.server.ts の assertAiConsent）。
++--
++-- - 同意するたびに1行足す（いつ・どの版に同意したか）。取り消しは revoked_at を入れる。
++-- - 書くのはサーバの鍵（service_role）だけ。本人は自分の行を読めるだけ（日時を書き換えない）。
++-- - 退会（auth.users の削除）で一緒に消える。
++-- 何度流しても同じ結果になる。
++
++create table if not exists public.ai_consents (
++  id uuid primary key default gen_random_uuid(),
++  user_id uuid not null references auth.users(id) on delete cascade,
++  -- 同意した内容の版（src/lib/ai-consent.ts の AI_CONSENT_VERSION / iOS の AIConsent.currentVersion）。
++  version integer not null,
++  agreed_at timestamptz not null default now(),
++  -- 取り消した時刻（同意中は null）。
++  revoked_at timestamptz,
++  -- どこで同意したか（web / ios / guest = 登録前に端末で同意し、登録後に聞き直して記録）。
++  source text not null default 'web',
++  created_at timestamptz not null default now()
++);
++
++alter table public.ai_consents drop constraint if exists ai_consents_version_check;
++alter table public.ai_consents add constraint ai_consents_version_check check (version >= 1);
++alter table public.ai_consents drop constraint if exists ai_consents_source_check;
++alter table public.ai_consents
++  add constraint ai_consents_source_check check (source in ('web', 'ios', 'guest'));
++
++create index if not exists ai_consents_user_idx
++  on public.ai_consents (user_id, agreed_at desc);
++
++alter table public.ai_consents enable row level security;
++
++revoke all on public.ai_consents from public, anon, authenticated;
++grant select on public.ai_consents to authenticated;
++grant all on public.ai_consents to service_role;
++
++-- 本人は自分の行を読めるだけ。足す・直す・消す決まり（policy）は置かない
++-- = ブラウザからは書けない。サーバの鍵は RLS を通らない。
++drop policy if exists ai_consents_select_own on public.ai_consents;
++create policy ai_consents_select_own on public.ai_consents
++  for select to authenticated using (auth.uid() = user_id);
++
++comment on table public.ai_consents is
++  '外部の AI へ送る前の同意の記録（版・同意した時刻・取り消した時刻）。'
++  'サーバの鍵だけが書く。src/lib/ai-consent.server.ts。';
+-- 
+2.43.0
+
