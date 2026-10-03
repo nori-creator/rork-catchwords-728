@@ -148,11 +148,7 @@ enum DexBook {
         }).count
     }
 
-    /// The shadow's label (owner decision): the headword's first character, then ？ for each further one
-    /// (咖？, 珍？？？). English keeps its spaces and uses "?" (a full-width ？ after Latin letters reads as broken).
-    static func shadowLabel(_ headword: String, lang: String) -> String {
-        guard let first = headword.first else { return "" }
-        let mark: Character = lang == "en" ? "?" : "？"
-        return String(first) + String(headword.dropFirst().map { $0 == " " ? " " : mark })
-    }
+    /// The shadow's label. Owner decision 2026-10-03: show the whole headword (咖啡), not 咖？ — the grey
+    /// silhouette and the grey text already say "not caught yet".
+    static func shadowLabel(_ headword: String, lang: String) -> String { headword }
 }
