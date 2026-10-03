@@ -211,6 +211,11 @@ struct MainTabView: View {
             } else {
                 router.tab = .review
             }
+        case .pendingPhotos:
+            // Like the home banner: the camera opens its 「解析待ち」 list.
+            router.detailSticker = nil
+            router.openPending = true
+            router.tab = .camera
         }
     }
 

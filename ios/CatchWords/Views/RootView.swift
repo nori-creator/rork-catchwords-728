@@ -7,7 +7,8 @@ struct RootView: View {
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
+    /// This account's onboarding flag on this device (`OnboardingState`), read again on every sign-in.
+    @State private var onboardingDone: Bool = false
 
     private var needsOnboarding: Bool {
         !onboardingDone && profile.isLoaded && !profile.loadFailed && !profile.onboarded && dex.stickers.isEmpty
@@ -36,6 +37,9 @@ struct RootView: View {
                 }
                     .transition(.opacity)
                     .task {
+                        // Before the profile arrives (`needsOnboarding` waits for it): the account that just
+                        // signed in, not the previous one.
+                        onboardingDone = OnboardingState.isDone(userId: SupabaseClient.shared.userId)
                         let guessed = NativeAPI.targetLanguage
                         async let p: Void = profile.load()
                         await dex.load()
@@ -43,6 +47,9 @@ struct RootView: View {
                         // The album was read for the language remembered on this device; another account
                         // (or a change made on the web) can have a different one.
                         if NativeAPI.targetLanguage != guessed { await dex.load() }
+                        // Photos left in 「解析待ち」 are analyzed again on their own (in this account's
+                        // learning language, now known); also when the connection comes back.
+                        PendingRetry.shared.start()
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
@@ -74,6 +81,7 @@ struct RootView: View {
                 diary.reset()
                 profile.reset()
                 plan.reset()
+                PendingRetry.shared.stop()
                 ImageCache.shared.removeAll()
                 StickerPhoto.invalidateAll()
                 ReviewActivityController.end()
@@ -88,7 +96,9 @@ struct RootView: View {
         // Meanings and notes follow the display language too (read again in the new one).
         .onChange(of: LanguageState.shared.lang) { _, _ in
             dex.readerLanguageChanged()
-            // Scheduled reminders were written in the old language: write them again (N1).
+            // Scheduled reminders were written in the old language: write them again (N1). Not after a
+            // sign-out (the language goes back to the iPhone's): that account's reminders were just cleared.
+            guard auth.phase == .signedIn else { return }
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -96,6 +106,7 @@ struct RootView: View {
             guard phase == .active, auth.phase == .signedIn else { return }
             if profile.loadFailed { Task { await profile.load() } }
             ReminderService.recordAppOpen()
+            PendingRetry.shared.kick()   // waiting photos that are due (a no-op until sign-in has finished)
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
     }

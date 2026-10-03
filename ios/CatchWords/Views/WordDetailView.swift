@@ -760,7 +760,8 @@ struct WordDetailView: View {
         sectionBody(s)
             // 「作り直す」 is Pro on the server (`runSectionRegen` refuses free accounts with 「項目の再生成は Pro 限定です」),
             // so like the web (`WordCard` canRegen = isPro) the button is only offered when the SERVER counts this
-            // account as Pro. A StoreKit-only Pro is not enough until the server checks Apple purchases.
+            // account as Pro. A StoreKit-only Pro is not enough until the server checks Apple purchases, and
+            // while in-app purchase is unavailable web Pro does not unlock it either (`PlanStore.inAppPurchaseAvailable`).
             .environment(\.sectionRefresh, s.isExternal || !plan.serverGrantsPro ? nil : SectionRefresh(running: refreshing.contains(s)) {
                 regenerate(s)
             })

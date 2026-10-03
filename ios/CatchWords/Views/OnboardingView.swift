@@ -379,10 +379,13 @@ struct OnboardingView: View {
 
     /// 「ログイン」: leave the session this guide was running in and open the sign-in screen, so the
     /// learner can enter the account they already have.
+    /// The account signing in next is one the learner already has, so it skips the guide too (it adopts the
+    /// device-wide flag once, see `OnboardingState.isDone`).
     private func finishToLogin() {
+        OnboardingState.markDone(userId: SupabaseClient.shared.userId)
         UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
         onFinish()
-        auth.signOut()
+        auth.signOut(keepLanguage: true)
     }
 
     private func finish() async {
@@ -407,7 +410,7 @@ struct OnboardingView: View {
             "notification_preferences": ["mode": reminderMode, "times": times],
         ]
         try? await SupabaseClient.shared.updateUserMetadata(prefs)
-        UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
+        OnboardingState.markDone(userId: SupabaseClient.shared.userId)
         // 質問の後は、本物の画面で「撮る → 図鑑 → 復習」を体験する（FirstCatchFlow の home 段から）。
         UserDefaults.standard.set(true, forKey: TourStep.pendingKey)
         Haptics.success()
@@ -416,8 +419,33 @@ struct OnboardingView: View {
     }
 }
 
+/// Onboarding is done per account on this device (`doneKey.<userId>`): a second account on the same
+/// iPhone gets its own guide. The server's `profiles.onboarded` (and a non-empty dex) still skips it too.
 enum OnboardingState {
+    /// The old device-wide flag. Now only a hand-over: the next account that signs in adopts it once, so
+    /// people who finished onboarding before it was kept per account never see it again.
     static let doneKey = "onboarding.done"
+
+    private static func key(for userId: String?) -> String {
+        guard let userId else { return doneKey }   // a local guest (no account) keeps the device-wide flag
+        return doneKey + "." + userId
+    }
+
+    /// Whether this account has finished (or left) onboarding on this device. Adopts the device-wide flag
+    /// the first time an account asks, and clears it so the next account is asked on its own.
+    static func isDone(userId: String?) -> Bool {
+        let defaults = UserDefaults.standard
+        guard let userId else { return defaults.bool(forKey: doneKey) }
+        if defaults.bool(forKey: key(for: userId)) { return true }
+        guard defaults.bool(forKey: doneKey) else { return false }
+        defaults.set(true, forKey: key(for: userId))
+        defaults.removeObject(forKey: doneKey)
+        return true
+    }
+
+    static func markDone(userId: String?) {
+        UserDefaults.standard.set(true, forKey: key(for: userId))
+    }
 }
 
 // MARK: - Pieces

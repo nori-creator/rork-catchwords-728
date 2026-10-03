@@ -170,9 +170,12 @@ final class AuthStore {
         phase = .signedIn
     }
 
-    func signOut() {
+    /// The display language goes back to the iPhone's (fresh-install default) unless `keepLanguage`
+    /// (onboarding's 「ログイン」, where the learner has just picked it on screen).
+    func signOut(keepLanguage: Bool = false) {
         client.signOutRevokingSession()
         isGuest = false
+        if !keepLanguage { L10n.resetToDevice() }
         phase = .signedOut
     }
 

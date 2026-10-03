@@ -367,6 +367,7 @@ struct WordbookReviewView: View {
             Text(ReaderLanguage.shown(card.meaningJa).isEmpty ? L("（意味が読み取れていません）") : ReaderLanguage.shown(card.meaningJa))
                 .font(.system(size: 26, weight: .bold))
                 .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.5)   // a long English meaning shrinks instead of being cut off with "…"
                 .frame(maxWidth: .infinity, minHeight: 160)
                 .padding(20)
                 .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))

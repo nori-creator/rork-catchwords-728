@@ -14,29 +14,42 @@ struct ReviewView: View {
     @State private var practiceIndex: Int = 0
     /// How far the answer sheet has been dragged sideways (swipe left = next card, like the web's SwipeCard).
     @State private var swipeX: CGFloat = 0
+    /// The answer sheet's real height (it grows with the explanation): the question scrolls clear of it.
+    @State private var panelHeight: CGFloat = 420
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             AppBackground()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    header
-                    MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
-                    if legendOpen {
-                        MemoryOverviewPanel(store: store) { s in
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        header
+                        MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
+                        if legendOpen {
+                            MemoryOverviewPanel(store: store) { s in
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        content
                     }
-                    content
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    // Room under the last choice for the whole sheet, however tall its explanation is.
+                    .padding(.bottom, answer == nil ? 120 : panelHeight + 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, answer == nil ? 120 : 420)
+                .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+                .statusBarScrim()
+                // A long question (English meanings especially) sat under the sheet that slides up: once
+                // answered, bring the question to the top so all of it stays readable above the sheet.
+                .onChange(of: answer != nil) { _, answered in
+                    guard answered else { return }
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.9)) {
+                        proxy.scrollTo(QuizCard.questionID, anchor: .top)
+                    }
+                }
             }
-            .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
-            .statusBarScrim()
         }
         .overlay(alignment: .bottom) {
             if let answer, let card = router.tour.isReview ? practiceCards[safe: practiceIndex] : store.current {
@@ -71,6 +84,7 @@ struct ReviewView: View {
                 .accessibilityAction(named: L("次へ")) { goNext() }
                 .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { panelHeight = $0 }
                 .background(alignment: .bottom) { Theme.card.frame(height: 80) }
                 .ignoresSafeArea(edges: .bottom)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -350,6 +364,9 @@ struct QuizCard: View {
     @State private var started: Date = Date()
     @State private var shake: CGFloat = 0
 
+    /// The question line, scrolled to the top after an answer (ReviewView) so the sheet never hides it.
+    static let questionID = "quiz.question"
+
     private var correctHead: String { card.sticker.word?.headword ?? "" }
     /// The meaning as it is now (read in the reader's language after the card was made).
     private var liveMeaning: String { (dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "" }
@@ -401,6 +418,8 @@ struct QuizCard: View {
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
+                .id(Self.questionID)
 
             VStack(spacing: 10) {
                 ForEach(choices) { c in choiceRow(c) }

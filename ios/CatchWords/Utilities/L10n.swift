@@ -46,6 +46,14 @@ nonisolated enum L10n {
         UserDefaults.standard.set(c, forKey: storageKey)
     }
 
+    /// Signing out / account deleted: forget the chosen language, exactly like a fresh install, so the
+    /// next person on this phone gets the iPhone's own language (an account's `ui_language` comes back
+    /// with its profile on sign-in).
+    static func resetToDevice() {
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        lang = deviceDefault
+    }
+
     static func normalize(_ code: String?) -> String {
         let c = (code ?? "").trimmingCharacters(in: .whitespaces)
         if supported.contains(c) { return c }
