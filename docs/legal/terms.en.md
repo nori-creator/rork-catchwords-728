@@ -1,159 +1,119 @@
 <!--
-  Owner note (remove before publishing; not included in the web TSX).
-  - Based on the current web terms (src/routes/terms.tsx, 22 June 2026, sections 1-9), with missing clauses added.
-  - Fill every 【 】. Keep ja / en / zh-TW in step.
+  オーナー向けメモ（Web 版の頁には出ない）
+  - 本文は、Web 版 main（11ff3f0）の src/components/legal/terms-{ja,en,zh-tw}.tsx に
+    docs/legal/web/legal.patch を当てた後の文言と同じです（TSX から機械的に書き出した）。
+    公開されるのは Web 版の頁（https://catchwords.lovable.app/terms）。直すときは TSX と同じ日に、3言語とも直す。
+  - 〔 〕の所は、Web 版が表示するときに設定（LEGAL_* と STRIPE_TRIAL_DAYS。src/lib/legal-config.ts）から
+    差し込む値・出し分けです。本文に手で書き込まないでください。
+  - 第12条（App Store の条項）は、Apple が独自の使用許諾契約に求める最低限の条項。App Store Connect では
+    Apple の標準 EULA のままでよい（その場合も残して害はない）。
+  - 末尾の「付録」は、iPhone アプリでアプリ内課金を始めるときに足す文案。今は公開しない。
 -->
 
-# Terms of Use
+# Terms of Service
 
-Established: 22 June 2026
-Last revised: 【Revision date】
+Last updated: 3 October 2026
 
-These Terms of Use (the "Terms") set out the conditions for using the language-learning service "CatchWords" (including the iPhone app, the web app at https://catchwords.lovable.app and related services; the "Service") provided by 【Operator name】 ("we", "us").
+## 1. Scope
 
-## 1. Scope and agreement
-
-1. These Terms apply between us and everyone who uses the Service ("you").
-2. You must agree to these Terms and the Privacy Policy (https://catchwords.lovable.app/privacy) to use the Service. You are deemed to have agreed to these Terms when you create an account or use the Service.
-3. Specific rules and notices we show in the Service (including descriptions of paid plans and the notice under Japan's Act on Specified Commercial Transactions) form part of these Terms.
+These terms set out the conditions for using CatchWords (the iPhone app and the web version; “the Service”), provided by 〔Operator name = LEGAL_SELLER_NAME〕(“the operator”). By using the Service you are deemed to have agreed to these terms. This is a translation; if it differs from the Japanese version, the Japanese version prevails.
 
 ## 2. Accounts
 
-1. You must create your account with accurate information and keep your sign-in details secure at your own responsibility.
-2. Children under 13 may not use the Service. If you are under 18, you must have your parent's or guardian's consent to use the Service and to buy a paid plan.
-3. Your account is for you only. You may not transfer or lend it to anyone else.
-4. We are not responsible for damage caused by a third party using your sign-in details, unless we acted intentionally or negligently.
+You are responsible for creating your account with accurate information and for keeping your credentials secure. The Service is not available to anyone under 13 years of age. If you are under 18, get your parent's or guardian's consent before using the Service or buying the paid plan. You can delete your account and leave at any time from “Delete account” in Settings.
 
-## 3. The Service and use of AI
+## 3. Your content
 
-1. The Service supports language learning by using AI (including large language models provided by outside companies) to create word suggestions, word cards, explanations, example sentences, corrections and so on from photos you take and other input.
-2. When you use AI features, photos and text are sent to the outside companies listed in the Privacy Policy. You agree to this before you first use an AI feature.
+You retain copyright in the photos, text and other content you add. You grant the operator the right to use that content to the extent necessary to provide and improve the Service.
 
-## 4. Notes on AI-generated content
+## 4. Prohibited conduct
 
-1. AI-generated content (identification of objects, meanings, readings, pronunciation, example sentences, grammar explanations, corrections, place names and so on) may contain errors, inaccurate information or unnatural expressions. We do not warrant its accuracy, completeness or currency.
-2. Use the Service as a reference for language learning, and check with a dictionary or a qualified person in situations that matter (exams, work, contracts, translations you submit and so on).
-3. Do not use the Service for decisions that affect safety or health, such as:
-   - whether a food, plant, mushroom, medicine or chemical is edible or safe;
-   - medical, health or allergy decisions; or
-   - dangerous work that relies on understanding signs, warnings or instructions.
-4. If you notice AI-generated content that infringes someone's rights or is offensive, please tell us through "Report a mistake in this word" in the app or the contact point in section 21.
+- Infringing others' rights (portrait rights, copyright and so on), including photographing or adding people without their permission
+- Adding obscene, violent or discriminatory content, or content sexualising children
+- Misusing location data, including stalking
+- Interfering with the operation of the Service, including unauthorised access and automated mass use
+- Getting around usage limits, instructing the AI to behave in unintended ways, or selling, redistributing or using the Service or its AI-generated content to develop other AI services without permission
+- Impersonating others
+- Fraudulent use of payments
+- Anything illegal or contrary to public order and morals
 
-## 5. Your content
+If you break these terms, the operator may remove your content, suspend your use of the Service or delete your account. Except in an emergency, the operator will tell you in advance where possible.
 
-1. Copyright and other rights in the photos, selfies, journal entries, notes, captions and other content you add to the Service ("User Content") remain with you (or their owner).
-2. You grant us a free licence to use User Content (including the right to let our service providers use it) to the extent necessary to provide, maintain and improve the Service, including AI processing, storage, display, syncing between devices, backups and investigating bugs. This licence ends when you delete the User Content or your account (except for the time needed to erase it from backups and any retention required by law).
-3. We will ask for your consent before using User Content to promote the Service.
-4. You warrant that you have the necessary rights to your User Content and that it does not infringe anyone's rights (copyright, portrait rights, privacy and so on). If you add a photo of a person, get that person's consent.
-5. Dictionary data you add, such as headwords, may be used in other learners' study. It may remain after you delete your account, after its link to you is removed.
+## 5. AI-generated content
 
-## 6. Prohibited conduct
+The Service uses AI to create meanings, readings, example sentences, explanations, quizzes, pronunciation audio, images and similar content. AI-generated content may contain errors, and the operator does not warrant its accuracy or completeness. Use it as a study aid, and check anything important against a dictionary or a qualified person. If you find an error, you can report it with “Report an error in this entry” on that word.
 
-You must not:
+Do not rely on the Service to decide whether food, plants, mushrooms, medicines and the like are safe, or for medical, health or allergy decisions.
 
-1. act against the law or public order and morals, or in connection with a crime;
-2. infringe anyone's copyright, trademark, portrait rights, privacy or other rights (including photographing and adding other people without permission);
-3. bother, disadvantage or harm others, including stalking by misusing location data;
-4. add obscene, violent or discriminatory content, or content that sexualises children;
-5. place an excessive load on the Service's servers or network, use the Service in bulk by automated means, or circumvent usage limits;
-6. access the Service without authorisation, reverse engineer, analyse or tamper with it, or instruct its AI to make it behave in unintended ways;
-7. sell or redistribute the Service or AI-generated content without our permission, or use it to develop another AI service;
-8. impersonate others or register false information; or
-9. do anything else we reasonably judge inappropriate for operating the Service.
+When you use AI features, photos and text are sent to the external providers listed in the Privacy Policy. The iPhone app asks for your consent to this before you first use an AI feature. If you do not consent, AI features are unavailable, but the rest of the Service still works.
+
+## 6. Paid plan (subscription)
+
+1. The Service offers a paid subscription plan (“the paid plan”). The features included in the paid plan are shown on the purchase screen.
+2. The price, currency and billing period (monthly or yearly) are shown on the purchase screen and the checkout page before you subscribe. Payments are processed by Stripe.
+3. The paid plan renews automatically for the same period unless you cancel, and the payment method you registered is charged on each renewal date.
+4. You can cancel at any time from “CatchWords Pro” → “Manage subscription” in [Settings](https://catchwords.lovable.app/settings). After you cancel you will not be charged from the next renewal date, and you can use the paid plan until the end of the period you have already paid for. Deleting your account does not cancel the paid plan automatically.
+5. Except where required by law, fees already paid are not refunded (including pro-rata refunds when you cancel part-way through a period).
+6. If a payment cannot be confirmed at renewal, the paid plan's features may be suspended.
+7. The operator may change the price or contents of the paid plan. Before changing the price, the operator will give reasonable advance notice in the Service or by email to your registered address, and the new price applies from the first renewal after the notice. If you do not agree, you can cancel before the next renewal date.
+8. 〔shown only when STRIPE_TRIAL_DAYS is 1 or more〕 A free trial of 〔STRIPE_TRIAL_DAYS (7 if not set)〕 days is included when you subscribe. If you do not cancel before the trial ends, the paid plan starts automatically when it ends and you are charged.
+9. The paid plan cannot be purchased inside the iPhone or Android app. Before purchases in the iPhone app (Apple in-app purchase) start, this section and the Legal notice will be revised and announced in the Service.
+10. For the full conditions of sale, see the [Legal notice (Specified Commercial Transactions Act)](https://catchwords.lovable.app/legal/tokushoho).
 
 ## 7. Intellectual property
 
-Intellectual property in the Service — including its software, logo, design, screen layout and the format of AI-generated cards — belongs to us or the rightful owners. Except for the permission to use the Service, these Terms do not transfer or license those rights to you. Sources and terms of use of dictionary data and similar used in the Service are listed at the end of the Terms page.
+Intellectual property in the Service — including its logo, design and the format of AI-generated cards — belongs to the operator or the rightful owners.
 
-## 8. Paid plans
+## 8. Changes and suspension
 
-1. We may offer some features of the Service as a paid plan (such as "CatchWords Pro"; a "Paid Plan"). Its content, price and period are shown on the purchase screen and in the notice under the Act on Specified Commercial Transactions (https://catchwords.lovable.app/tokushoho).
-2. A Paid Plan is an auto-renewing subscription that renews for the same period at the same price unless you cancel.
-3. If there is a free trial, its length and the price charged after it ends are shown on the purchase screen. Unless you cancel before the trial ends, it automatically becomes a Paid Plan and you will be charged.
-4. We will give notice before changing prices. For Apple in-app purchases, Apple's procedures apply.
+The operator may change or stop providing the Service. If the Service is to be discontinued while the paid plan is offered, the operator will give reasonable advance notice.
 
-## 9. Purchases in the iPhone app (Apple in-app purchase)
+## 9. Disclaimer and limitation of liability
 
-1. Paid Plans in the iPhone app are bought through Apple's in-app purchase. Payment is charged to your Apple ID account when you confirm the purchase.
-2. The subscription renews automatically unless auto-renew is turned off at least 24 hours before the end of the current period, and your account is charged for the next period within the 24 hours before the current period ends.
-3. You can cancel (turn off auto-renew) at any time in iPhone Settings → your name → Subscriptions, or in your App Store account settings. Deleting the app or your Service account does not cancel the subscription.
-4. Refunds are subject to Apple's conditions and procedures (such as https://reportaproblem.apple.com). We cannot directly issue refunds for Apple in-app purchases.
-5. A Paid Plan bought on the web may not be active in the iPhone app.
+1. The operator does not warrant that the Service (including AI-generated content) is free of factual or legal defects.
+2. The operator is not liable for damage you suffer from using the Service, except where caused by the operator's intent or gross negligence.
+3. Notwithstanding the previous paragraph, if the contract between the operator and you is a consumer contract under Japan's Consumer Contract Act, the previous paragraph does not apply. In that case, for damage caused to you by the operator's negligence (other than gross negligence) through breach of contract or tort, the operator is liable only for damage that would ordinarily arise, up to the amount you paid the operator for the Service in the month in which the damage occurred.
 
-## 10. Purchases on the web (Stripe)
+## 10. Changes to these terms
 
-1. Paid Plans on the web are paid by credit card or other methods through the payment provider Stripe. The first charge is made when you subscribe, and subsequent charges on each renewal date.
-2. You can cancel at any time 【from Settings → "CatchWords Pro" → "Manage plan" on the web / or by email to the contact point in section 21】. After you cancel, you can use the Paid Plan until the end of the current period and will not be charged for the next period.
-3. Because of the nature of digital services, we do not give refunds, including pro-rata refunds, for changes of mind after you subscribe. This does not apply where you could not use the Paid Plan for reasons attributable to us, or where the law (including consumer protection law in your country) requires a refund.
+The operator may change these terms in accordance with the Civil Code of Japan. The operator will announce the changes and the date they take effect in the Service in advance.
 
-## 11. Changes, interruption and termination of the Service
+## 11. Governing law and jurisdiction
 
-1. We may change the Service or add or remove features. We will give notice in advance before changing the main content of a Paid Plan to your disadvantage.
-2. We may interrupt all or part of the Service for system maintenance, failures, suspension of outside services (AI, cloud and so on), natural disasters or other unavoidable reasons.
-3. If we end the Service, we will give at least 【30 days'】 notice, together with how any remaining Paid Plan period will be handled (such as pro-rata refunds for Stripe).
+These terms are governed by the laws of Japan. 〔if LEGAL_JURISDICTION_COURT is set〕 Any dispute relating to the Service shall be subject to the exclusive jurisdiction of the 〔LEGAL_JURISDICTION_COURT〕 as the court of first instance. 〔if not set〕 Any dispute relating to the Service shall be brought before the court that has jurisdiction under Japan's Code of Civil Procedure. This does not take away the protection that mandatory consumer protection laws of your country of residence give you as a consumer.
 
-## 12. Suspension and account deletion
+## 12. The iPhone app obtained from the App Store
 
-1. If you breach these Terms, we may delete User Content, suspend your use of the Service or delete your account without prior notice. Except in emergencies, we will give notice in advance where possible.
-2. You may delete your account and leave at any time from Settings → "Delete account" in the app or on the web. Deleted data cannot be restored.
-3. Even then, Apple in-app purchase subscriptions are not cancelled automatically. Cancel them as described in section 9(3).
+For the iPhone app obtained from the App Store (“the App”), the following applies in addition to the rest of these terms. If they conflict, this section prevails for the App.
 
-## 13. Disclaimer of warranties
+1. These terms are an agreement between you and the operator, not with Apple Inc. (“Apple”). The operator, not Apple, is responsible for the App and its content.
+2. The operator grants you a non-transferable right to use the App on Apple-branded products that you own or control, as permitted by the Usage Rules in the Apple Media Services Terms and Conditions.
+3. The operator alone is responsible for maintenance and support of the App; Apple has no obligation to provide any.
+4. If the App fails to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price of the App (if any). To the maximum extent permitted by law, Apple has no other warranty obligation with respect to the App.
+5. The operator, not Apple, is responsible for addressing any claims relating to the App (including product liability, failure to conform to legal or regulatory requirements, and claims under consumer protection, privacy or similar laws) and any claim that the App infringes a third party's intellectual property rights.
+6. You represent and warrant that you are not located in a country subject to a U.S. Government embargo or designated as a “terrorist supporting” country, and that you are not listed on any U.S. Government list of prohibited or restricted parties.
+7. You must comply with applicable third-party terms (such as your mobile carrier's) when using the App.
+8. Apple and its subsidiaries are third-party beneficiaries of these terms, and upon your acceptance Apple has the right to enforce them against you.
+9. Send questions, complaints or claims about the App to the contact in section 13.
 
-We do not warrant that the Service will fit your particular purpose, have the functions, accuracy or usefulness you expect, or be provided without bugs or interruption. This does not apply where we acted intentionally or with gross negligence, or where the law does not allow warranties to be disclaimed.
+## 13. Contact
 
-## 14. Limitation of liability
+- **Operator**: 〔LEGAL_SELLER_NAME〕
+- **Representative**: 〔LEGAL_REPRESENTATIVE, shown only if set〕
+- **Address**: 〔LEGAL_ADDRESS; with ON_REQUEST: “Disclosed without delay upon request (please request it at the email address below)”〕
+- **Phone**: 〔LEGAL_PHONE; with ON_REQUEST: as above〕
+- **Email**: 〔LEGAL_EMAIL〕
 
-1. We are liable for damage you suffer in connection with the Service only where it is caused by our intent or negligence.
-2. Our liability for damage caused by our negligence (other than gross negligence) is limited to direct damage that would normally arise, up to the total Paid Plan fees you paid us in the 12 months before the month in which the damage occurred (or 【JPY 10,000】 if you paid nothing).
-3. Paragraphs 1 and 2 do not apply to damage caused by our intent or gross negligence, to death or personal injury, or where the law (including Japan's Consumer Contract Act) does not allow liability to be limited.
+(While LEGAL_EMAIL is not set, the page shows “The operator's contact details are being prepared. …” instead of the table.)
 
-## 15. Outside services
+---
 
-The Service uses services of outside companies such as Apple, Google, Stripe and AI companies. When you use those services (signing in with an Apple ID or Google account, the App Store, Stripe's checkout and so on), you must also follow their terms.
+## Appendix (not in force): items to add to section 6 when in-app purchases start in the iPhone app
 
-## 16. Personal information
+<!-- オーナー: iOS の PlanStore.paywallEnabled を true にする前に、第6条第9項をこれに置き換え、特商法の表記と同じ日に公開する。 -->
 
-We handle your personal information in accordance with the Privacy Policy.
-
-## 17. Export control
-
-You must use the Service in compliance with the export control laws of Japan, the United States and other countries, and must not use it in, or as, a country, region or person prohibited by those laws, or for a prohibited purpose.
-
-## 18. Terms for the iPhone app obtained from the App Store
-
-In addition to the other sections of these Terms, the following applies to your use of the iPhone app obtained from the App Store (the "App"). If this section conflicts with other sections, this section prevails for the App.
-
-1. Acknowledgement: these Terms are concluded between you and us only, and not with Apple Inc. ("Apple"). We, not Apple, are solely responsible for the App and its content.
-2. Scope of licence: we grant you a non-transferable licence to use the App on any Apple-branded products that you own or control, as permitted by the Usage Rules set out in the Apple Media Services Terms and Conditions, except that the App may be accessed and used by other accounts associated with the purchaser via Family Sharing or volume purchasing.
-3. Maintenance and support: we are solely responsible for providing maintenance and support for the App, as specified in these Terms or as required by law. Apple has no obligation whatsoever to furnish any maintenance and support services for the App.
-4. Warranty: if the App fails to conform to any applicable warranty not disclaimed in these Terms, you may notify Apple, and Apple will refund the purchase price (if any) of the App to you. To the maximum extent permitted by law, Apple has no other warranty obligation whatsoever with respect to the App, and any other claims, losses, liabilities, damages, costs or expenses attributable to any failure to conform to any warranty are our responsibility.
-5. Product claims: we, not Apple, are responsible for addressing any claims by you or any third party relating to the App or your possession and/or use of it, including product liability claims, claims that the App fails to conform to any applicable legal or regulatory requirement, and claims arising under consumer protection, privacy or similar legislation.
-6. Intellectual property rights: in the event of any third-party claim that the App or your possession and use of it infringes that third party's intellectual property rights, we, not Apple, are solely responsible for the investigation, defence, settlement and discharge of that claim.
-7. Legal compliance: you represent and warrant that (a) you are not located in a country that is subject to a U.S. Government embargo or that has been designated by the U.S. Government as a "terrorist supporting" country, and (b) you are not listed on any U.S. Government list of prohibited or restricted parties.
-8. Developer name and address: please direct any questions, complaints or claims about the App to our contact point in section 21.
-9. Third-party terms: you must comply with applicable third-party terms of agreement (such as your wireless data service agreement) when using the App.
-10. Third-party beneficiary: Apple and Apple's subsidiaries are third-party beneficiaries of these Terms, and upon your acceptance of these Terms, Apple will have the right (and will be deemed to have accepted the right) to enforce these Terms against you as a third-party beneficiary.
-
-Apple's Licensed Application End User License Agreement (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) also applies to the App. If these Terms conflict with it, Apple's standard agreement prevails as to the licence of the App.
-
-## 19. Changes to these Terms
-
-1. We may change these Terms in accordance with the provisions of Japan's Civil Code on changes to standard terms.
-2. We will announce the changed content and its effective date in the app and on the web at least 【14 days】 before it takes effect. For important changes to your disadvantage, we may ask for your consent again.
-3. If you use the Service on or after the effective date, you are deemed to have agreed to the changes.
-
-## 20. Governing law, jurisdiction and language
-
-1. These Terms are governed by the laws of Japan. This does not deprive you of the protection given by mandatory consumer protection laws of the country where you live.
-2. The 【________ District Court】 has exclusive jurisdiction as the court of first instance over any dispute relating to these Terms or the Service. This does not affect any right you have as a consumer under the laws of your country to bring or defend proceedings in the courts of that country.
-3. These Terms are provided in Japanese, English and Traditional Chinese. If there is any inconsistency, the Japanese version prevails to the extent permitted by law.
-
-## 21. Contact
-
-For questions, complaints or claims about these Terms or the Service, please contact:
-
-- Operator: 【Operator name】
-- Address: 【Address】
-- Email: 【Contact email】
-- Support page: 【Support page URL】
+1. The paid plan in the iPhone app is purchased with Apple in-app purchase. Payment is charged to your Apple ID account when you confirm the purchase.
+2. The subscription renews automatically unless auto-renew is turned off at least 24 hours before the end of the current period, and the next period is charged within the 24 hours before the current period ends.
+3. You can cancel (turn off auto-renew) at any time in the iPhone Settings app → your name → Subscriptions. Deleting the app or your account does not cancel the subscription.
+4. Refunds follow Apple's conditions and procedures (https://reportaproblem.apple.com). The operator cannot refund in-app purchases directly.
+5. A paid plan bought on the web and one bought in the iPhone app are each managed where they were bought.
