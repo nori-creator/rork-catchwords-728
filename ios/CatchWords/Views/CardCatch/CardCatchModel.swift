@@ -428,8 +428,8 @@ final class CardCatchModel {
         await wait(motion.sleep(200))
         guard my == runId else { return }
 
-        // chooseWord, after formLight
-        SoundService.shared.speak(w.headword)
+        // chooseWord, after formLight: say(w.zh) — silent when the sound is off (`if (S.sfx !== "on") return`)
+        if !SoundService.shared.isMuted { SoundService.shared.speak(w.headword) }
         sweepStart = CCClock.now
         particles.burst(195, 346, n: 90, speed: 8, up: 3)
         particles.glints(Self.cardRect, n: 18)

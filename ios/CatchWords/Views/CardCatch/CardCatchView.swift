@@ -45,7 +45,10 @@ struct CardCatchView: View {
         .ignoresSafeArea()
         .background(Color.black)
         .environment(\.colorScheme, .light)
-        .onChange(of: reduceMotion) { _, r in model.motion = CCMotion(calm: r) }
+        .onChange(of: reduceMotion) { _, r in
+            model.motion = CCMotion(calm: r)
+            model.particles.calm = r
+        }
         .onDisappear { model.end() }
     }
 
