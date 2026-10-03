@@ -19,7 +19,6 @@ nonisolated extension DemoDatabase {
         case "suggestWordCandidates": result = ["candidates": wordCandidates(query: DJ.str(data["query"]) ?? "", reader: r)]
         case "detectScan": result = ["items": scanItems(r)]
         case "generateCard": result = generateCard(headword: DJ.str(data["headword"]) ?? "", hint: DJ.str(data["hintCategory"]), reader: r)
-        case "extractWordbook": result = wordbookDraft(r)
         case "rankScanCandidates": result = rankScan(DJ.list(data["items"]))
         case "markScanTap":
             if let h = DJ.str(data["headword"]), !scanTapped.contains(h) { scanTapped.append(h) }
@@ -332,19 +331,6 @@ nonisolated extension DemoDatabase {
         card["extras"] = extras
         card["explain_lang"] = r
         return card
-    }
-
-    private func wordbookDraft(_ r: String) -> [String: Any] {
-        let wordbook = DJ.dict(pack["wordbook"])
-        let entries: [[String: Any]] = DJ.list(wordbook["entries"]).map { (e: [String: Any]) -> [String: Any] in
-            [
-                "headword": DJ.str(e["headword"]) ?? "",
-                "reading_zhuyin": DJ.orNull(DJ.str(e["reading_zhuyin"])),
-                "pinyin": DJ.orNull(DJ.str(e["pinyin"])),
-                "meaning_ja": text(e["meaning"], r),
-            ]
-        }
-        return ["title": text(wordbook["title"], r), "entries": entries]
     }
 
     private func imageCandidates(query: String) -> [[String: Any]] {

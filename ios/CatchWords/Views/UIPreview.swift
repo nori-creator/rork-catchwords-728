@@ -67,7 +67,6 @@ struct UIPreviewRoot: View {
             case "onboarding": OnboardingView {}
             case "paywall": PaywallView()
             case "dex": DexView()
-            case "wordbook": WordbookView()
             case "done": DonePreview()
             case "homeload": VStack(spacing: 20) {
                 AlbumSkeleton().frame(height: 440)
