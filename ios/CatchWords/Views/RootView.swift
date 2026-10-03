@@ -7,7 +7,8 @@ struct RootView: View {
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage(OnboardingState.doneKey) private var onboardingDone: Bool = false
+    /// This account's onboarding flag on this device (`OnboardingState`), read again on every sign-in.
+    @State private var onboardingDone: Bool = false
 
     private var needsOnboarding: Bool {
         !onboardingDone && profile.isLoaded && !profile.loadFailed && !profile.onboarded && dex.stickers.isEmpty
@@ -35,6 +36,9 @@ struct RootView: View {
                 }
                     .transition(.opacity)
                     .task {
+                        // Before the profile arrives (`needsOnboarding` waits for it): the account that just
+                        // signed in, not the previous one.
+                        onboardingDone = OnboardingState.isDone(userId: SupabaseClient.shared.userId)
                         let guessed = NativeAPI.targetLanguage
                         async let p: Void = profile.load()
                         await dex.load()
