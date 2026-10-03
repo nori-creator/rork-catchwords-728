@@ -132,13 +132,13 @@ struct ZhuyinWordView: View {
     /// in size instead of pushing its row — and the whole word page — wider than the screen.
     @ViewBuilder private var mandarinWord: some View {
         ViewThatFits(in: .horizontal) {
-            mandarinWord(size: size)
-            mandarinWord(size: size * 0.82)
-            mandarinWord(size: size * 0.68)
+            mandarinRuby(size: size)
+            mandarinRuby(size: size * 0.82)
+            mandarinRuby(size: size * 0.68)
         }
     }
 
-    @ViewBuilder private func mandarinWord(size: CGFloat) -> some View {
+    @ViewBuilder private func mandarinRuby(size: CGFloat) -> some View {
         if readingPref == "pinyin", let p = pinyin?.trimmingCharacters(in: .whitespaces), !p.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(p)
