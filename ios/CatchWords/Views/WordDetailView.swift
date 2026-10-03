@@ -1311,11 +1311,24 @@ struct WordDetailView: View {
         }
     }
 
+    /// The language whose sites the links open. Old rows have no `language`: then the headword's script
+    /// decides (kana → ja, Han → zh-TW, Latin → en), so a Mandarin word never opens English dictionaries
+    /// just because the learner now studies English. A Han-only headword is Japanese only for a Japanese
+    /// learner (kanji words fit both); a headword with no telling script falls back to the learning language.
+    private var linkLanguage: String {
+        if let stored = word?.language?.trimmingCharacters(in: .whitespaces), !stored.isEmpty { return stored }
+        let c = LanguageRules.counts(headword)
+        if c.kana > 0 { return "ja" }
+        if c.han > 0 { return NativeAPI.targetLanguage == "ja" ? "ja" : "zh-TW" }
+        if c.latin > 0 { return "en" }
+        return NativeAPI.targetLanguage
+    }
+
     /// real-usage-links.ts: where native speakers of the learning language actually use the word.
     private var realUsageLinks: [(emoji: String, label: String, url: String)] {
         let q = headword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? headword
         let path = headword.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? headword
-        switch word?.language ?? NativeAPI.targetLanguage {
+        switch linkLanguage {
         case "en":
             return [
                 ("🎬", L("YouTubeで聞く"), "https://www.youtube.com/results?search_query=\(q)&sp=EgIQAQ%253D%253D&gl=US&hl=en"),

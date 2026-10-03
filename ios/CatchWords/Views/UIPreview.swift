@@ -404,7 +404,7 @@ private struct DetailPreview: View {
     private static var sticker: Sticker {
         let n = notes
         let obj: [String: Any] = [
-            "id": "w-teppan", "headword": "鐵板麵", "reading_zhuyin": "ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ", "meaning_ja": n.meaning,
+            "id": "w-teppan", "headword": "鐵板麵", "language": "zh-TW", "reading_zhuyin": "ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ", "meaning_ja": n.meaning,
             "part_of_speech": "名詞", "example_sentence": "早餐我想吃鐵板麵。", "example_translation": n.translation,
             "extras": [
                 "explain_lang": L10n.lang,
