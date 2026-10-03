@@ -110,7 +110,7 @@ final class DexStore {
             await loadReviews()
             await signPaths(for: rows)
         } catch {
-            guard client.userId == uid else { return }
+            guard client.userId == uid, !(error is CancellationError) else { return }
             loadError = (error as? LocalizedError)?.errorDescription ?? L("図鑑を読み込めませんでした。")
         }
     }

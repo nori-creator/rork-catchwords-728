@@ -152,6 +152,8 @@ final class ReviewStore {
             correctCount = 0
             loadError = nil
             hasLoaded = true
+        } catch is CancellationError {
+            await historyTask
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? L("復習を読み込めませんでした。")
             await historyTask

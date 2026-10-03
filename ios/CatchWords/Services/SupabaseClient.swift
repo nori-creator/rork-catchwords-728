@@ -356,16 +356,20 @@ final class SupabaseClient {
 
     func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers", upsert: Bool = false) async throws {
         try await refreshForRequest()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url, timeoutInterval: 60)
-        req.httpMethod = "POST"
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
-        req.httpBody = data
-        let (body, response) = try await perform(req)
+        guard let baseURL, let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        // A token that expired on the way (clock skew, a long upload queue) gets one refresh and a retry.
+        let (body, response) = try await withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: 60)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue(contentType, forHTTPHeaderField: "Content-Type")
+            req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
+            req.httpBody = data
+            return try await perform(req)
+        }
         guard (200..<300).contains(response.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
             throw APIError.server(response.statusCode, (json?["message"] as? String) ?? L("写真の保存に失敗しました。"))
@@ -382,15 +386,19 @@ final class SupabaseClient {
     func signedURLs(for paths: [String], expiresIn: Int = 60 * 60 * 6) async throws -> [String: URL] {
         guard !paths.isEmpty else { return [:] }
         try await refreshForRequest()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/sign/stickers", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["expiresIn": expiresIn, "paths": paths])
-        let (data, response) = try await perform(req)
+        guard let baseURL, let url = URL(string: "storage/v1/object/sign/stickers", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        let payload = try JSONSerialization.data(withJSONObject: ["expiresIn": expiresIn, "paths": paths])
+        let (data, response) = try await withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: 20)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = payload
+            return try await perform(req)
+        }
         guard (200..<300).contains(response.statusCode),
               let arr = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else { return [:] }
         var out: [String: URL] = [:]
@@ -409,11 +417,25 @@ final class SupabaseClient {
             guard let http = response as? HTTPURLResponse else { throw APIError.decoding }
             return (data, http)
         } catch let error as URLError {
-            switch error.code {
-            case .timedOut: throw APIError.timeout
-            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost: throw APIError.offline
-            default: throw APIError.message(error.localizedDescription)
-            }
+            throw APIError.from(error)
+        }
+    }
+}
+
+extension APIError {
+    /// One mapping for every request: no connection (airplane mode, no signal, a captive Wi-Fi that
+    /// breaks TLS, cellular data off for the app) reads as offline with a retry, never as a raw system
+    /// string; a cancelled request (the screen went away) is a cancellation, not an error to show.
+    nonisolated static func from(_ error: URLError) -> Error {
+        switch error.code {
+        case .timedOut: return APIError.timeout
+        case .cancelled: return CancellationError()
+        case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost,
+             .dnsLookupFailed, .dataNotAllowed, .internationalRoamingOff, .callIsActive,
+             .secureConnectionFailed, .cannotLoadFromNetwork, .resourceUnavailable:
+            return APIError.offline
+        default:
+            return APIError.message("")
         }
     }
 }
