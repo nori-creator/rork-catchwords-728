@@ -3163,9 +3163,9 @@
   "en": "Spoken",
   "zh-TW": "口語"
  },
- "詳しくは{1}（第4章・第6章）をご覧ください。": {
-  "en": "For details, see the {1} (sections 4 and 6).",
-  "zh-TW": "詳情請參閱{1}（第 4 章、第 6 章）。"
+ "詳しくは{1}（第4条・第5条）をご覧ください。": {
+  "en": "For details, see the {1} (sections 4 and 5).",
+  "zh-TW": "詳情請參閱{1}（第 4 條、第 5 條）。"
  },
  "語": {
   "en": "words",

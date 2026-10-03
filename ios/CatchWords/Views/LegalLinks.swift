@@ -19,7 +19,7 @@ enum LegalLinks {
 
     /// AI consent: where the details are (privacy policy chapter 4 AI, chapter 6 the providers and countries).
     static func aiConsentDetails() -> AttributedString {
-        linked(L("詳しくは\(slot1)（第4章・第6章）をご覧ください。"), [
+        linked(L("詳しくは\(slot1)（第4条・第5条）をご覧ください。"), [
             (L("プライバシーポリシー"), AppConfig.privacyURL),
         ])
     }
