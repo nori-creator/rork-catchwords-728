@@ -163,7 +163,7 @@ struct WordDetailView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
-                    .background(Theme.foreground.opacity(0.92), in: Capsule())
+                    .background(Theme.toastInk.opacity(0.92), in: Capsule())
                     .padding(.bottom, 30)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }

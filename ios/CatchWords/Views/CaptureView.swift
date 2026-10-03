@@ -55,7 +55,7 @@ struct CaptureView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Theme.foreground.opacity(0.88), in: Capsule())
+                        .background(Theme.toastInk.opacity(0.88), in: Capsule())
                         .padding(.top, 60)
                         .padding(.horizontal, 24)
                     Spacer()

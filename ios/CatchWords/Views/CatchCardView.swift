@@ -78,7 +78,7 @@ struct CatchCardView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .frame(minHeight: 28)
-            .background(Theme.foreground.opacity(0.78), in: Capsule())
+            .background(Theme.toastInk.opacity(0.78), in: Capsule())
             .padding(.bottom, 14)
             .allowsHitTesting(false)
         }

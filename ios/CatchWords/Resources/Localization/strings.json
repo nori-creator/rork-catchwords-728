@@ -2459,6 +2459,10 @@
   "en": "Tap a tag to see its meaning and pronunciation",
   "zh-TW": "點標籤即可看到意思和發音"
  },
+ "条件を外す": {
+  "en": "Clear filters",
+  "zh-TW": "清除篩選條件"
+ },
  "果物": {
   "en": "Fruit",
   "zh-TW": "水果"

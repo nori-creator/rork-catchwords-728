@@ -364,7 +364,15 @@ struct DexView: View {
             // The gallery always shows its shadows, even before the first catch (prototype renderDex grid).
             gallery
         } else if dex.hasLoaded && filtered.isEmpty {
-            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty) { router.tab = .camera }
+            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty,
+                         onCamera: { router.tab = .camera },
+                         onClearFilters: {
+                             withAnimation(.snappy) {
+                                 categoryFilter = nil
+                                 dayFilter = nil
+                                 query = ""
+                             }
+                         })
                 .padding(.top, headerHeight + 12)
         } else {
             switch mode {
@@ -583,6 +591,11 @@ struct DexMapView: View {
             selectedId = dayItems.first?.id
             focus()
         }
+        // A search or filter can leave the shown day with no words: move to the newest day that has some.
+        .onChange(of: days) { _, list in
+            if let d = day, list.contains(d) { return }
+            day = list.first
+        }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
                 ScrollView {
@@ -769,7 +782,7 @@ struct DexMapView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { panelOpen.toggle() }
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    .font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.background)  // not white: the disc is light in dark mode
                     .rotationEffect(.degrees(panelOpen ? 0 : 180))
                     .frame(width: 48, height: 48)
                     .background(Theme.foreground, in: Circle())
@@ -845,6 +858,8 @@ struct MapVisit: Identifiable {
 struct EmptyDexView: View {
     let isFiltered: Bool
     let onCamera: () -> Void
+    /// Filtered to nothing: one tap back to every word.
+    var onClearFilters: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 14) {
@@ -857,6 +872,11 @@ struct EmptyDexView: View {
             if !isFiltered {
                 PrimaryButton(title: L("最初の1枚を撮る"), icon: "camera.fill", sheen: true, action: onCamera)
                     .frame(maxWidth: 260)
+            } else if let onClearFilters {
+                Button(L("条件を外す"), action: onClearFilters)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.primaryInk)
+                    .frame(minHeight: 44)
             }
         }
         .frame(maxWidth: .infinity)

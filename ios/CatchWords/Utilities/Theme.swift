@@ -26,6 +26,10 @@ enum Theme {
     static let ok = Color(hex: 0x00A95C)
     static let radius: CGFloat = 14
 
+    /// Dark pill behind white notice text (toasts, hints): stays dark in the dark theme too, where
+    /// `foreground` turns light and white text on it disappeared.
+    static let toastInk = Color(hex: 0x0B121A)
+
     static let navyDeep = Color(hex: 0x060D1C)
     static let navyCard = Color(hex: 0x131E37)
 
