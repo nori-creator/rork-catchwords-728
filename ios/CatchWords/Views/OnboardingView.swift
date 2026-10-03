@@ -78,7 +78,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 LogoMark(size: 40)
-                Text("CatchWords").font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.foreground)
+                Text("CatchWords").scaledFont(size: 26, weight: .heavy).foregroundStyle(Theme.foreground)
             }
             .padding(.top, 24)
             Spacer(minLength: 12)
@@ -94,7 +94,7 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 PrimaryButton(title: L("はじめる"), icon: "arrow.right", sheen: true) { go(.questions, step: 0) }
                 Button(L("アカウントをお持ちの方はログイン")) { finishToLogin() }
-                    .font(.system(size: 15, weight: .medium))
+                    .scaledFont(size: 15, weight: .medium)
                     .foregroundStyle(Theme.primaryInk)
                     .frame(minHeight: 44)
             }
@@ -111,12 +111,12 @@ struct OnboardingView: View {
                 if step == 0 { go(.intro, step: 0, back: true) } else { go(.questions, step: step - 1, back: true) }
             }
             Text(questionTitle)
-                .font(.system(size: 28, weight: .heavy))
+                .scaledFont(size: 28, weight: .heavy)
                 .foregroundStyle(Theme.foreground)
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
             Text(questionHint)
-                .font(.system(size: 14))
+                .scaledFont(size: 14)
                 .foregroundStyle(Theme.muted)
                 .padding(.horizontal, 24)
                 .padding(.top, 8)
@@ -178,7 +178,7 @@ struct OnboardingView: View {
                             minutes = m
                         } label: {
                             Text(L("\(m)分"))
-                                .font(.system(size: 18, weight: .bold))
+                                .scaledFont(size: 18, weight: .bold)
                                 .foregroundStyle(minutes == m ? .white : Theme.foreground)
                                 .frame(maxWidth: .infinity, minHeight: 58)
                                 .background(minutes == m ? AnyShapeStyle(Theme.brandGradient) : AnyShapeStyle(Color.white), in: .rect(cornerRadius: 16))
@@ -189,7 +189,7 @@ struct OnboardingView: View {
                     }
                 }
                 Text(L("短い時間でも大丈夫。あなたのペースで続けましょう。"))
-                    .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 13).foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity)
         case 3:
@@ -220,10 +220,10 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 0) {
             progressHeader(index: 6) { go(.questions, step: 4, back: true) }
             Text(L("学習の通知を\n設定しますか？"))
-                .font(.system(size: 28, weight: .heavy))
+                .scaledFont(size: 28, weight: .heavy)
                 .padding(.horizontal, 24).padding(.top, 20)
             Text(L("必要なものだけ選べます。あとから変更できます。"))
-                .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 14).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 24).padding(.top, 8)
             VStack(spacing: 10) {
                 ChoiceRow(leading: .icon("sparkles"), title: L("おまかせ"), sub: L("忘れかける頃に1日1回お知らせ"), isOn: reminderMode == "ai") { reminderMode = "ai" }
@@ -255,9 +255,9 @@ struct OnboardingView: View {
             Text(L("最初の発見は、もうすぐ。"))
                 .font(AppFont.hand(18)).foregroundStyle(Theme.muted).padding(.top, 18)
             Text(L("準備ができました！"))
-                .font(.system(size: 30, weight: .heavy)).padding(.top, 26)
+                .scaledFont(size: 30, weight: .heavy).padding(.top, 26)
             Text(L("まずはアプリを見て回って、\n気になるものをひとつ撮ってみましょう。"))
-                .font(.system(size: 15)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 15).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center).padding(.top, 10)
             Spacer()
             PrimaryButton(title: L("はじめる"), icon: "arrow.right", isLoading: isSaving, sheen: true) {
@@ -379,10 +379,13 @@ struct OnboardingView: View {
 
     /// 「ログイン」: leave the session this guide was running in and open the sign-in screen, so the
     /// learner can enter the account they already have.
+    /// The account signing in next is one the learner already has, so it skips the guide too (it adopts the
+    /// device-wide flag once, see `OnboardingState.isDone`).
     private func finishToLogin() {
+        OnboardingState.markDone(userId: SupabaseClient.shared.userId)
         UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
         onFinish()
-        auth.signOut()
+        auth.signOut(keepLanguage: true)
     }
 
     private func finish() async {
@@ -407,7 +410,7 @@ struct OnboardingView: View {
             "notification_preferences": ["mode": reminderMode, "times": times],
         ]
         try? await SupabaseClient.shared.updateUserMetadata(prefs)
-        UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
+        OnboardingState.markDone(userId: SupabaseClient.shared.userId)
         // 質問の後は、本物の画面で「撮る → 図鑑 → 復習」を体験する（FirstCatchFlow の home 段から）。
         UserDefaults.standard.set(true, forKey: TourStep.pendingKey)
         Haptics.success()
@@ -416,8 +419,33 @@ struct OnboardingView: View {
     }
 }
 
+/// Onboarding is done per account on this device (`doneKey.<userId>`): a second account on the same
+/// iPhone gets its own guide. The server's `profiles.onboarded` (and a non-empty dex) still skips it too.
 enum OnboardingState {
+    /// The old device-wide flag. Now only a hand-over: the next account that signs in adopts it once, so
+    /// people who finished onboarding before it was kept per account never see it again.
     static let doneKey = "onboarding.done"
+
+    private static func key(for userId: String?) -> String {
+        guard let userId else { return doneKey }   // a local guest (no account) keeps the device-wide flag
+        return doneKey + "." + userId
+    }
+
+    /// Whether this account has finished (or left) onboarding on this device. Adopts the device-wide flag
+    /// the first time an account asks, and clears it so the next account is asked on its own.
+    static func isDone(userId: String?) -> Bool {
+        let defaults = UserDefaults.standard
+        guard let userId else { return defaults.bool(forKey: doneKey) }
+        if defaults.bool(forKey: key(for: userId)) { return true }
+        guard defaults.bool(forKey: doneKey) else { return false }
+        defaults.set(true, forKey: key(for: userId))
+        defaults.removeObject(forKey: doneKey)
+        return true
+    }
+
+    static func markDone(userId: String?) {
+        UserDefaults.standard.set(true, forKey: key(for: userId))
+    }
 }
 
 // MARK: - Pieces
@@ -447,8 +475,8 @@ private struct ChoiceRow: View {
                         .background(isOn ? Theme.primary : Theme.accent, in: Circle())
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
-                    if let sub { Text(sub).font(.system(size: 13)).foregroundStyle(Theme.muted) }
+                    Text(title).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
+                    if let sub { Text(sub).scaledFont(size: 13).foregroundStyle(Theme.muted) }
                 }
                 Spacer()
                 ZStack {

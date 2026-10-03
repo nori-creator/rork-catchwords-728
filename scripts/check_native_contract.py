@@ -8,6 +8,12 @@ Every server function the iOS app calls (`NativeAPI.call("name", …)`) must be
 When the web side deletes or renames one, the iOS button behind it silently does nothing.
 This check turns that into a red CI run instead.
 
+The one exception is PENDING_WEB_DEPLOY below: functions the iOS app already calls ahead of a web
+patch that is written but not deployed yet, where the iOS side is built to tolerate their absence
+(every failure ignored). Only the names listed there are let through, each with the patch that adds
+it; any other unknown function still fails. A listed function that the web side has is checked
+like every other one (file and export), with a warning to remove the entry.
+
   python3 scripts/check_native_contract.py                 # against the web's main branch on GitHub
   python3 scripts/check_native_contract.py --web ../web    # against a local checkout
   python3 scripts/check_native_contract.py --ref some-branch
@@ -21,6 +27,18 @@ import urllib.request
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "ios", "CatchWords")
 REPO = "nori-creator/Lovable-catch-words-app"
+
+# Called by iOS before the web side has them. Each entry: function → the web patch that adds it.
+# The iOS code behind them must treat any failure (unknown function, 400, 404, network) as "no answer".
+# Remove an entry as soon as the patch is on the web's main (the check then warns, and checks the
+# function fully: the allowance only ever covers a function missing from NATIVE_FNS).
+PENDING_WEB_DEPLOY = {
+    # AI consent record (App Store 5.1.2(i) / APPI art. 28). Web patch: docs/web-changes/
+    # (docs/web-changes/series/0003-*.patch, spec docs/ios-spec/23-ai-consent.md; NATIVE_FNS entries
+    # recordAiConsent / getAiConsent). iOS: Services/AIConsent.swift (failures ignored, retried next launch).
+    "recordAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
+    "getAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
+}
 
 
 def ios_calls():
@@ -77,8 +95,19 @@ def main():
     if "<dynamic>" in calls:
         problems.append("a NativeAPI.call without a written function name")
     cache = {}
+    pending = []
+    for name in sorted(PENDING_WEB_DEPLOY):
+        if name not in calls:
+            print(f"::warning::{name} is in PENDING_WEB_DEPLOY but iOS no longer calls it: remove the entry "
+                  "(scripts/check_native_contract.py)")
+        elif name in listed:
+            print(f"::warning::{name} is on the web's NATIVE_FNS list now: remove it from PENDING_WEB_DEPLOY "
+                  "(scripts/check_native_contract.py)")
     for name, where in sorted(calls.items()):
         if name == "<dynamic>":
+            continue
+        if name not in listed and name in PENDING_WEB_DEPLOY:
+            pending.append(f"{name} (awaiting {PENDING_WEB_DEPLOY[name]})")
             continue
         if name not in listed:
             problems.append(f"{name}: not on the web's NATIVE_FNS list (used at {', '.join(where)})")
@@ -94,12 +123,16 @@ def main():
             problems.append(f"{name}: {rel} no longer exports {export} (used at {', '.join(where)})")
 
     target = args.web or f"{REPO}@{args.ref}"
+    for p in pending:
+        print(f"::warning::iOS ↔ web contract: not on {target} yet, allowed as pending web deploy: {p}")
     if problems:
         for p in problems:
             print(f"::error::iOS ↔ web contract: {p}")
         print(f"\n{len(problems)} broken promise(s) between the iOS app and {target}.")
         return 1
-    print(f"iOS ↔ web contract OK: all {len(calls)} server functions the app calls exist on {target}.")
+    checked = len(calls) - len(pending)
+    extra = f" ({len(pending)} pending web deploy)" if pending else ""
+    print(f"iOS ↔ web contract OK: all {checked} checked server functions the app calls exist on {target}{extra}.")
     return 0
 
 

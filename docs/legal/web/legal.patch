@@ -1,0 +1,1664 @@
+SUPERSEDED (2026-10-03) — DO NOT APPLY THIS FILE.
+古い版です。使わないでください。Web の main 11ff3f0 向けに作った物で、
+docs/web-changes/（main 3fd364f 向けに作り直した版）に置き換えました。この差分の中身は
+そこに 0001 として入っています（0002〜0005 も続けて当てる）。手順は docs/web-changes/README.ja.md。
+(git apply ignores this text before the first diff header; kept for the record only.)
+
+diff --git a/src/components/legal/privacy-ja.tsx b/src/components/legal/privacy-ja.tsx
+--- a/src/components/legal/privacy-ja.tsx
++++ b/src/components/legal/privacy-ja.tsx
+@@ -11,6 +11,11 @@
+  * （TypeSafe Jev）、`geocode.functions.ts` / `DexDayMap.tsx`（地図）、`billing.functions.ts`
+  * （Stripe）。退会で消える物は `profile.functions.ts` の `deleteMyAccount`。
+  * 送り先を足したら、ここと英語版・繁體中文版を同じ日に直す。
++ *
++ * iPhone アプリの扱い（2026-10-03、iOS リポジトリ docs/legal/privacy-policy.ja.md が全文）:
++ * 声で調べる（`SpeechService.swift`。端末または Apple の音声認識、音声は運営者に送らない）、
++ * 地名（`LocationService.swift` の `CLGeocoder` = Apple）、写真アプリ（`PhotosPicker`・追加だけの保存）、
++ * 端末の中の保存（キーチェーン・ウィジェット・通知・解析待ち）、AI への送信の同意（`AIConsentView.swift`）。
+  */
+ export function PrivacyJa({ info }: { info: LegalPublicInfo }) {
+   const name = operatorName(info, "ja");
+@@ -21,7 +26,8 @@
+       <section className="legal-doc mt-6">
+         <p>
+           {name}
+-          （以下「運営者」）は、CatchWords（以下「本サービス」）における利用者の情報を、個人情報の保護に関する法律その他の法令に従い、以下のとおり取り扱います。
++          （以下「運営者」）は、CatchWords（iPhone アプリと Web
++          版。以下「本サービス」）における利用者の情報を、個人情報の保護に関する法律その他の法令に従い、以下のとおり取り扱います。
+         </p>
+ 
+         <h2>1. 取得する情報</h2>
+@@ -32,7 +38,14 @@
+           </li>
+           <li>
+             写真:
+-            撮影・選択した写真、撮影後の自撮り（設定の「自撮りモード」をオンにした場合）、日記に貼った写真
++            撮影・選択した写真、撮影後の自撮り（設定の「自撮りモード」をオンにした場合）、日記に貼った写真。iPhone
++            アプリが写真アプリから読み込むのは、利用者が選んだ画像だけです。設定の「カメラロールに保存」をオンにした場合は、撮った写真を端末の写真アプリに追加します（写真アプリの中身は読みません）
++          </li>
++          <li>
++            音声（iPhone アプリの「声で調べる」）: マイクと Apple
++            の音声認識を使い、話した言葉を文字にします。端末の中で認識できる言語は端末の中で、できない言語は
++            Apple のサーバーで処理されます（Apple
++            のプライバシーポリシーが適用されます）。運営者が音声そのものを受け取ったり保存したりすることはなく、本サービスで使うのは文字にした結果だけです。マイクと音声認識は、端末で許可した場合だけ使います
+           </li>
+           <li>
+             単語と学習の記録:
+@@ -44,7 +57,8 @@
+           </li>
+           <li>
+             位置情報:
+-            撮影したときの端末の位置（緯度・経度）。端末で位置情報の利用を許可した場合のみ取得します。設定の「場所でリマインド」をオンにした場合は、アプリを開いたときの現在地を、保存した場所との比較に使います（この現在地は保存しません）
++            撮影したときの端末の位置（緯度・経度）。端末で位置情報の利用を許可した場合のみ取得します。設定の「場所でリマインド」をオンにした場合は、アプリを開いたときの現在地を、保存した場所との比較に使います（この現在地は保存しません）。iPhone
++            アプリの「場所でリマインド」は、保存した場所の近くに来たかを端末（iOS）が判定して通知を出し、現在地を運営者へ送りません
+           </li>
+           <li>
+             言語と設定:
+@@ -52,7 +66,9 @@
+           </li>
+           <li>
+             有料プランの情報: Pro かどうかの状態。決済は Stripe
+-            が行い、カード番号を運営者が受け取ることはありません
++            が行い、カード番号を運営者が受け取ることはありません。iPhone
++            アプリでアプリ内課金を始めた場合は、購入が有効かを確かめるため、Apple
++            から購入の記録（商品・期間・取引の識別子）を受け取ります（お支払い方法の情報は受け取りません）
+           </li>
+           <li>誤りの報告: 単語の誤りを報告した内容</li>
+           <li>
+@@ -66,6 +82,7 @@
+           <li>本サービスの提供・運営（ログイン、保存、端末間の同期）</li>
+           <li>写真に写った物や文字の解析と、単語カード・解説・例文・クイズの AI による生成</li>
+           <li>発音の読み上げ音声の生成</li>
++          <li>声で調べた言葉を文字にして単語を探すこと（iPhone アプリ）</li>
+           <li>単語に合う画像の検索・生成</li>
+           <li>地図と場所の名前の表示、場所でリマインドする通知</li>
+           <li>復習の予定の計算（記憶の予測を含む）</li>
+@@ -82,7 +99,7 @@
+ 
+         <h2>3. 第三者への提供</h2>
+         <p>
+-          運営者は、法令に基づく場合を除き、本人の同意なく個人情報を第三者に提供しません。次条の事業者への提供は、本サービスを提供するための業務の委託として行います。
++          運営者は、法令に基づく場合を除き、本人の同意なく個人情報を第三者に提供しません。法令に基づく場合とは、人の生命・身体・財産の保護のために必要で本人の同意を得ることが難しい場合、国の機関等の法令に定める事務に協力する場合などです。合併や事業の譲渡で本サービスを引き継ぐ場合は、本ポリシーと同じ水準で取り扱われるようにします。次条の事業者への提供は、本サービスを提供するための業務の委託として行います。運営者は、利用者の情報を販売しません。
+         </p>
+ 
+         <h2>4. 外部の事業者（目的ごと）</h2>
+@@ -116,9 +133,15 @@
+             を作る機能を使った場合は、その写真を 3D 生成の事業者（Tripo3D など）へ送ります
+           </li>
+           <li>
+-            <strong>地図</strong>: Google（Google マップ）。地図を表示するとき、端末は Google
+-            の地図を読み込みます。撮影位置の緯度・経度から場所の名前を調べるとき、その緯度・経度を
+-            Lovable の中継を通して Google へ送ります
++            <strong>地図</strong>: Google（Google マップ）。Web 版で地図を表示するとき、端末は
++            Google の地図を読み込みます。Web
++            版で撮影位置の緯度・経度から場所の名前を調べるとき、その緯度・経度を Lovable
++            の中継を通して Google へ送ります。iPhone アプリでは、場所の名前は端末から Apple
++            の地名検索へ緯度・経度を送って調べます（運営者のサーバーを通りません）
++          </li>
++          <li>
++            <strong>Apple（iPhone アプリ）</strong>: Apple
++            でログインした場合の認証、声で調べるときの音声認識（端末の中で認識できない場合の音声）、場所の名前の検索（緯度・経度）、アプリ内課金（始めた場合の購入の記録）
+           </li>
+           <li>
+             <strong>決済</strong>: Stripe（決済、請求、定期購入の管理画面）。メールアドレス、利用者
+@@ -128,10 +151,34 @@
+             <strong>広告</strong>: Google（AdSense）。広告が有効な場合のみ（第6条）
+           </li>
+         </ul>
++        <p>
++          <strong>AI への送信の同意</strong>: iPhone アプリは、初めて AI
++          の機能を使う前に、送るもの（写真・写真アプリから選んだ画像・スキャンの画面・単語・入力した文章・声で調べた言葉を文字にしたもの・学ぶ言語などの設定）、送り先、使い道を示した画面で同意をいただきます。同意しない場合は、AI
++          を使う機能（カメラ・スキャン・カードの作成・日記の添削など）は使えず、何も送りません。集めた単語の閲覧と復習はそのまま使えます。同意は設定の「プライバシー」→「AIへのデータ送信の同意」からいつでも取り消せます。AI
++          に送る情報には、メールアドレスや名前を含めません。運営者自身が、利用者の写真や日記を AI
++          の学習に使うことはありません。
++        </p>
+ 
+         <h2>5. 外国にある事業者への提供</h2>
+         <p>
+-          上の事業者の多くは日本国外（米国、中国など）にあり、利用者の情報は日本国外のサーバーで処理・保存されることがあります。外国の個人情報の保護に関する制度は、個人情報保護委員会が公表している「外国における個人情報の保護に関する制度等の調査」で確認できます。本ポリシーに同意して本サービスを利用することで、これらの国にある事業者への提供に同意いただいたものとします。
++          上の事業者の多くは日本国外にあり、利用者の情報は日本国外のサーバーで処理・保存されることがあります。個人情報を受け取る事業者の主な所在国は次のとおりです。
++        </p>
++        <ul>
++          <li>
++            米国:
++            Supabase、Cloudflare、Google、Apple、OpenAI、Anthropic、OpenRouter、Microsoft、ElevenLabs、Stripe
++          </li>
++          <li>スウェーデン（EU）と米国: Lovable</li>
++          <li>中国: DeepSeek、Moonshot AI、MiniMax、Tripo3D（設定でこれらを使う場合だけ）</li>
++        </ul>
++        <p>
++          各国の制度:
++          米国には連邦の包括的な個人情報保護法はなく、分野ごとの連邦法とカリフォルニア州消費者プライバシー法（CCPA）などの州法があります。EU
++          には一般データ保護規則（GDPR）があり、個人情報保護委員会は EU
++          を日本と同等の水準にあると認めています。中国には個人情報保護法がありますが、政府による情報の取得を広く認める法律（国家情報法など）もあります。詳しくは、個人情報保護委員会が公表している「外国における個人情報の保護に関する制度等の調査」で確認できます。
++        </p>
++        <p>
++          運営者は、各事業者が利用規約・データ処理の契約などで、個人情報保護法の定める措置に相当する措置（安全管理、目的外利用の禁止など）を講じていることを確かめて利用します。単語の文字だけを送る事業者（画像の検索など）には、利用者を特定できる情報を送りません。上に書いていない事業者の所在国や、事業者が講じている措置について詳しくお知りになりたい場合は、第12条の連絡先へご請求ください。遅滞なくお知らせします。本ポリシーに同意して本サービスを利用することで、これらの国にある事業者への提供に同意いただいたものとします。
+         </p>
+ 
+         <h2>6. 広告</h2>
+@@ -152,7 +199,8 @@
+             Google の広告設定
+           </a>
+           でオフにできます。欧州経済領域（EEA）・英国・スイスの利用者には、Google
+-          の同意メッセージで同意を確認します。Pro の利用者には広告を表示しません。
++          の同意メッセージで同意を確認します。Pro の利用者には広告を表示しません。iPhone
++          アプリでは広告を表示せず、広告のための識別子（IDFA）も使いません。
+         </p>
+ 
+         <h2>7. 保存期間と削除</h2>
+@@ -176,40 +224,95 @@
+           <li>外部の事業者へ送った情報。各事業者の規約に従って扱われます</li>
+         </ul>
+         <p>
++          iPhone
++          アプリからアカウントを削除したときは、アプリが端末の中の情報（第10条）も消します。アプリを削除した場合も、端末の中の情報は消えます。
++        </p>
++        <p>
+           <strong>アカウントを削除しても、有料プランは自動では解約されません。</strong>
+-          削除の前に、設定の「サブスクリプションを管理」から解約してください。
++          削除の前に、設定の「サブスクリプションを管理」から解約してください。iPhone
++          アプリのアプリ内課金で購入した場合は、iPhone の「設定」→ 自分の名前
++          →「サブスクリプション」で解約してください。
+         </p>
+ 
+         <h2>8. 開示・訂正・削除などの請求</h2>
+         <p>
+-          利用者は、運営者が保有する自分の情報について、開示、訂正・追加・削除、利用の停止・消去、第三者への提供の停止を求めることができます。表示名・写真・単語などはアプリの中で直接直せます。アカウントと関連データの削除は、設定の「アカウントを削除」から行えます。そのほかの請求は、第12条の連絡先へお送りください。ご本人であることを確認したうえで、法令に従い対応します。
++          利用者は、運営者が保有する自分の情報について、開示、訂正・追加・削除、利用の停止・消去、第三者への提供の停止を求めることができます。表示名・写真・単語などはアプリの中で直接直せます。アカウントと関連データの削除は、設定の「アカウントを削除」から行えます。そのほかの請求（利用目的の通知、第三者に提供した記録の開示を含みます）は、第12条の連絡先へお送りください。ご本人（または代理人）であることを確認したうえで、法令に従い遅滞なく対応します。手数料はいただきません。法令により応じられない場合は、その理由をお知らせします。
+         </p>
+ 
+         <h2>9. 子どもの利用</h2>
+         <p>
+-          本サービスは13歳未満の方を対象としていません。13歳未満の方は本サービスを利用できません（利用規約第2条）。13歳未満の方の情報を取得したことが分かった場合は、削除します。
++          本サービスは13歳未満の方を対象としていません。13歳未満の方は本サービスを利用できません（利用規約第2条）。18歳未満の方は、保護者の同意を得てから利用してください（有料プランの購入を含みます）。13歳未満の方の情報を取得したことが分かった場合は、削除します。
+         </p>
+ 
+-        <h2>10. Cookie・ローカルストレージ</h2>
++        <h2>10. Cookie・端末の中の保存</h2>
+         <p>
+           本サービスは、ログイン状態の保持、表示言語などの設定、通信できないときの保存待ちのデータ、画像や音声の一時保存のために、ブラウザのローカルストレージと
+           IndexedDB を使います。本サービス自身は、追跡や広告のための Cookie
+           を使いません。ただし、広告が有効な場合は Google が Cookie を使い（第6条）、地図の表示では
+           Google が、決済の画面では Stripe が、それぞれの Cookie 等を使うことがあります。
+         </p>
+-
+-        <h2>11. 安全管理</h2>
+         <p>
+-          通信を暗号化（HTTPS）し、データベースでは利用者ごとにアクセスを制限して、本人の情報は本人だけが読み書きできるようにしています。外部サービスの鍵はサーバーだけが持ち、運営者が利用状況を見るときも、第2条のとおり閲覧の範囲を限っています。
++          iPhone
++          アプリは、次の情報を端末の中に保存します。ログインを続けるための情報（キーチェーン）、表示や音などの設定、AI
++          への送信の同意の状態（同意した日時と版）、ホーム画面のウィジェットに出す単語・写真の縮小画像・復習の数（アプリとウィジェットの共有領域）、予約した通知（復習のリマインダー、場所でリマインド）、通信できなかったときに送るのを待っている写真（解析待ちの写真）と書きかけの日記、画像や音声の一時保存。これらは、通信が戻って写真や日記を送るときを除き、運営者のサーバーに送りません。
+         </p>
+ 
++        <h2>11. 安全管理</h2>
++        <p>運営者は、個人情報の漏えい・滅失・毀損を防ぐため、次の措置を講じています。</p>
++        <ul>
++          <li>基本方針: 本ポリシーを定め、関係する法令とガイドラインを守ります</li>
++          <li>
++            取り扱いの規律:
++            取得・利用・保存・提供・削除の段階ごとに、取り扱いの方法と責任者を決めています
++          </li>
++          <li>
++            組織的な措置:
++            責任者を置き、法令や本ポリシーに反する取り扱いや漏えいの兆しを知ったときの報告と対応の手順を決めています
++          </li>
++          <li>人的な措置: 個人情報を扱う人に、秘密を守ることと適切な取り扱いを徹底させています</li>
++          <li>
++            物理的な措置:
++            個人情報を扱う端末の盗難・紛失を防ぎ、画面のロックと保存の暗号化を行っています
++          </li>
++          <li>
++            技術的な措置:
++            通信を暗号化（HTTPS）し、データベースでは利用者ごとにアクセスを制限して、本人の情報は本人だけが読み書きできるようにしています。外部サービスの鍵はサーバーだけが持ち、アプリには入れていません。運営者が利用状況を見るときも、第2条のとおり閲覧の範囲を限っています
++          </li>
++          <li>
++            外的環境の把握:
++            外国にある事業者を使うにあたり、その国の制度（第5条）を確かめたうえで安全管理の措置を講じています
++          </li>
++        </ul>
++
+         <h2>12. 運営者・お問い合わせ</h2>
++        <p>
++          本ポリシー、個人情報の取り扱い、開示などの請求、苦情は、次の運営者の連絡先で受け付けます。
++        </p>
+         <OperatorDetails info={info} lang="ja" />
+ 
+         <h2>13. 本ポリシーの変更</h2>
+         <p>
+           本ポリシーを変更する場合は、本サービスの中でお知らせします。利用目的を追加する重要な変更は、変更後に本サービスを利用する前に改めて同意をいただきます。
+         </p>
++
++        <h2>14. お住まいの地域ごとの追加事項</h2>
++        <h3 className="mt-4 font-semibold">台湾にお住まいの方</h3>
++        <p>
++          台湾の個人資料保護法第8条に基づき、次のとおりお知らせします。収集する者は運営者（第12条）です。収集の目的は第2条のとおりで、台湾の法令上の分類では主に「契約関係の履行」「消費者・顧客の管理とサービス」「教育・学習サービス」「情報（通信）サービス」「電子商取引サービス」に当たります。個人資料の種類は第1条のとおりです。利用の期間は第7条のとおり、地域は日本と第5条の国、対象は運営者と第4条の事業者、方法は電子的な方法による保存・処理・送信です。利用者は、照会・閲覧、写しの交付、補充・訂正、収集・処理・利用の停止、削除を請求できます（第8条）。メールアドレスなどの必須の情報を提供しない場合はアカウントを作れず、写真・位置情報・音声を提供しない場合はその機能を使えません。
++        </p>
++        <h3 className="mt-4 font-semibold">欧州経済領域（EEA）・英国・スイスにお住まいの方</h3>
++        <p>
++          一般データ保護規則（GDPR）または英国の GDPR
++          が適用される場合、運営者は次の法的根拠に基づいて個人データを取り扱います。契約の履行（本サービスの提供、アカウント、有料プラン）、同意（位置情報・マイク・写真へのアクセス、AI
++          の事業者への送信、パーソナライズ広告。同意はいつでも撤回できます）、正当な利益（不正利用の防止、安全の確保、サービスの改善、統計）、法的義務（取引の記録の保存など）。利用者は、アクセス、訂正、消去、処理の制限、データポータビリティ、異議を述べる権利を持ち、お住まいの国の監督機関に苦情を申し立てることができます。EEA・英国の外への移転は、欧州委員会の標準契約条項など適切な保護措置に基づいて行います。
++        </p>
++        <h3 className="mt-4 font-semibold">米国カリフォルニア州にお住まいの方</h3>
++        <p>
++          運営者は、個人情報を金銭と引き換えに販売しません。Web 版で広告が有効な場合、Google が
++          Cookie
++          等で情報を集めて興味に合わせた広告に使うことがあり（第6条）、これは州法上の「共有」に当たることがあります。Google
++          の広告設定でオフにできるほか、第12条の連絡先へご請求いただければ対応します。利用者は、知る権利、削除の権利、訂正の権利、販売・共有を拒む権利を持ち、これらの権利を使ったことを理由に不利に扱われることはありません。
++        </p>
+       </section>
+     </>
+   );
+diff --git a/src/components/legal/privacy-en.tsx b/src/components/legal/privacy-en.tsx
+--- a/src/components/legal/privacy-en.tsx
++++ b/src/components/legal/privacy-en.tsx
+@@ -13,10 +13,10 @@
+       <p className="mt-1 text-footnote text-muted-foreground">Last updated: {PRIVACY_UPDATED.en}</p>
+       <section className="legal-doc mt-6">
+         <p>
+-          {name} (“the operator”) handles information about users of CatchWords (“the Service”) as
+-          described below, in accordance with Japan's Act on the Protection of Personal Information
+-          and other applicable laws. This is a translation; if it differs from the Japanese version,
+-          the Japanese version prevails.
++          {name} (“the operator”) handles information about users of CatchWords (the iPhone app and
++          the web version; “the Service”) as described below, in accordance with Japan's Act on the
++          Protection of Personal Information and other applicable laws. This is a translation; if it
++          differs from the Japanese version, the Japanese version prevails.
+         </p>
+ 
+         <h2>1. Information we collect</h2>
+@@ -28,7 +28,17 @@
+           </li>
+           <li>
+             Photos: photos you take or choose, the selfie after a capture (if you turn on “Selfie
+-            mode” in Settings) and photos you add to your diary
++            mode” in Settings) and photos you add to your diary. The iPhone app reads only the
++            images you pick from the Photos app. If you turn on “Save to Camera Roll” in Settings,
++            photos are added to the Photos app on your device (the app does not read your library)
++          </li>
++          <li>
++            Voice (“Search by voice” in the iPhone app): the microphone and Apple's speech
++            recognition turn what you say into text. Languages that can be recognised on the device
++            are handled on the device; others are processed on Apple's servers (Apple's privacy
++            policy applies). The operator never receives or stores the audio itself; the Service
++            uses only the resulting text. The microphone and speech recognition are used only if you
++            allow them on your device
+           </li>
+           <li>
+             Words and study records: the words you catch, cards with meanings, examples and
+@@ -43,7 +53,9 @@
+             Location: your device's location (latitude and longitude) when you take a photo, only if
+             you allow location access on your device. If you turn on “Location reminders” in
+             Settings, your current location when you open the app is compared with saved places
+-            (that current location is not stored)
++            (that current location is not stored). In the iPhone app, “Location reminders” are
++            triggered by the device (iOS) when you come near a saved place; your current location is
++            not sent to the operator
+           </li>
+           <li>
+             Language and settings: display language, native and study languages, your browser's
+@@ -51,7 +63,9 @@
+           </li>
+           <li>
+             Paid plan information: whether you are on Pro. Payments are processed by Stripe; the
+-            operator never receives your card number
++            operator never receives your card number. If in-app purchases start in the iPhone app,
++            we receive the purchase record (product, period and transaction identifiers) from Apple
++            to check that it is valid (not your payment details)
+           </li>
+           <li>Error reports: what you send when you report an error in a word</li>
+           <li>
+@@ -68,6 +82,7 @@
+             examples and quizzes with AI
+           </li>
+           <li>To generate pronunciation audio</li>
++          <li>To turn words you say into text and look them up (iPhone app)</li>
+           <li>To find or generate images that match a word</li>
+           <li>To show maps and place names, and to send location reminders</li>
+           <li>To schedule reviews (including memory predictions)</li>
+@@ -90,8 +105,12 @@
+         <h2>3. Sharing with third parties</h2>
+         <p>
+           The operator does not provide your personal information to third parties without your
+-          consent, except where required by law. Providing information to the providers in section 4
+-          is done to entrust them with work needed to run the Service.
++          consent, except where required by law. This includes cases where it is needed to protect a
++          person's life, body or property and your consent is hard to obtain, and cooperating with
++          government bodies performing duties set by law. If the Service is taken over through a
++          merger or business transfer, your information will be handled to the same standard as this
++          policy. Providing information to the providers in section 4 is done to entrust them with
++          work needed to run the Service. The operator does not sell your information.
+         </p>
+ 
+         <h2>4. Service providers, by purpose</h2>
+@@ -129,9 +148,16 @@
+             Tripo3D)
+           </li>
+           <li>
+-            <strong>Maps</strong>: Google (Google Maps). When a map is shown, your device loads it
+-            from Google. To look up a place name from where a photo was taken, its coordinates are
+-            sent to Google through Lovable's relay
++            <strong>Maps</strong>: Google (Google Maps). When a map is shown on the web version,
++            your device loads it from Google. To look up a place name on the web version, the
++            photo's coordinates are sent to Google through Lovable's relay. In the iPhone app, place
++            names are looked up by sending the coordinates from your device to Apple's geocoding
++            service (not through the operator's servers)
++          </li>
++          <li>
++            <strong>Apple (iPhone app)</strong>: sign-in with Apple, speech recognition for search
++            by voice (audio, when it cannot be recognised on the device), place-name lookup
++            (coordinates), and in-app purchases (the purchase record, once they start)
+           </li>
+           <li>
+             <strong>Payments</strong>: Stripe (payments, invoices, and the subscription management
+@@ -142,15 +168,51 @@
+             section 6)
+           </li>
+         </ul>
++        <p>
++          <strong>Consent to sending data to AI</strong>: before you use an AI feature for the first
++          time, the iPhone app shows a screen explaining what is sent (photos, images picked from
++          Photos, scan frames, words, text you enter, words you said as text, and settings such as
++          your study language), where it goes and what it is used for, and asks for your consent. If
++          you do not consent, AI features (the camera, scanning, card creation, diary correction and
++          so on) are unavailable and nothing is sent; browsing your words and reviews still work.
++          You can withdraw consent at any time in Settings → Privacy → “Consent to send data to AI”.
++          Your email address and name are never sent to AI providers. The operator itself does not
++          use your photos or diary to train AI.
++        </p>
+ 
+         <h2>5. Transfers outside Japan</h2>
+         <p>
+-          Many of these providers are located outside Japan (including the United States and China),
+-          and your information may be processed and stored on servers outside Japan. You can find
+-          information about other countries' personal information protection systems in the survey
+-          published by Japan's Personal Information Protection Commission. By agreeing to this
+-          policy and using the Service, you consent to your information being provided to providers
+-          in these countries.
++          Many of these providers are located outside Japan, and your information may be processed
++          and stored on servers outside Japan. The main countries of the providers that receive
++          personal information are:
++        </p>
++        <ul>
++          <li>
++            United States: Supabase, Cloudflare, Google, Apple, OpenAI, Anthropic, OpenRouter,
++            Microsoft, ElevenLabs, Stripe
++          </li>
++          <li>Sweden (EU) and the United States: Lovable</li>
++          <li>China: DeepSeek, Moonshot AI, MiniMax, Tripo3D (only if the settings use them)</li>
++        </ul>
++        <p>
++          Their systems: the United States has no comprehensive federal privacy law, but has
++          sector-specific federal laws and state laws such as the California Consumer Privacy Act
++          (CCPA). The EU has the General Data Protection Regulation (GDPR), and Japan's Personal
++          Information Protection Commission recognises the EU as providing an equivalent level of
++          protection. China has a Personal Information Protection Law, but also laws that broadly
++          allow government access to data (such as the National Intelligence Law). For details, see
++          the survey of foreign systems published by Japan's Personal Information Protection
++          Commission.
++        </p>
++        <p>
++          The operator uses each provider after confirming that, through its terms or data
++          processing agreements, it takes measures equivalent to those required by Japan's Act on
++          the Protection of Personal Information (such as security measures and no use beyond the
++          purpose). Providers that receive only the text of a word (such as image search) receive
++          nothing that identifies you. For the country of a provider not listed above, or for more
++          about the measures providers take, contact us (section 12) and we will tell you without
++          delay. By agreeing to this policy and using the Service, you consent to your information
++          being provided to providers in these countries.
+         </p>
+ 
+         <h2>6. Advertising</h2>
+@@ -170,7 +232,8 @@
+             Google's ad settings
+           </a>
+           . Users in the European Economic Area, the UK and Switzerland are asked for consent
+-          through Google's consent message. Pro users do not see ads.
++          through Google's consent message. Pro users do not see ads. The iPhone app shows no ads
++          and does not use the advertising identifier (IDFA).
+         </p>
+ 
+         <h2>7. Retention and deletion</h2>
+@@ -198,8 +261,14 @@
+           <li>Information already sent to providers, which they handle under their own terms</li>
+         </ul>
+         <p>
++          When you delete your account in the iPhone app, the app also erases the information stored
++          on your device (section 10). Deleting the app also removes it from your device.
++        </p>
++        <p>
+           <strong>Deleting your account does not cancel a paid plan automatically.</strong> Before
+-          deleting, cancel it from “Manage subscription” in Settings.
++          deleting, cancel it from “Manage subscription” in Settings. If you bought it with an
++          in-app purchase on iPhone, cancel it in the iPhone Settings app → your name →
++          Subscriptions.
+         </p>
+ 
+         <h2>8. Your rights</h2>
+@@ -208,18 +277,21 @@
+           correction, addition or deletion, for its use to stop or for it to be erased, and for its
+           provision to third parties to stop. You can edit your display name, photos and words in
+           the app, and delete your account and its data from “Delete account” in Settings. For other
+-          requests, use the contact in section 12. We will respond in accordance with the law after
+-          confirming your identity.
++          requests (including notice of the purposes of use and disclosure of records of provision
++          to third parties), use the contact in section 12. We will respond without delay in
++          accordance with the law after confirming that you (or your agent) are making the request.
++          There is no fee. If the law does not allow us to comply, we will tell you why.
+         </p>
+ 
+         <h2>9. Children</h2>
+         <p>
+           The Service is not directed at children under 13, and children under 13 may not use it
+-          (Terms of Service, section 2). If we learn that we have collected information from a child
+-          under 13, we will delete it.
++          (Terms of Service, section 2). If you are under 18, please get your parent's or guardian's
++          consent before using the Service (including buying a paid plan). If we learn that we have
++          collected information from a child under 13, we will delete it.
+         </p>
+ 
+-        <h2>10. Cookies and local storage</h2>
++        <h2>10. Cookies and storage on your device</h2>
+         <p>
+           The Service uses your browser's local storage and IndexedDB to keep you signed in, to
+           remember settings such as the display language, to hold data waiting to be saved while
+@@ -228,16 +300,58 @@
+           6), and Google (when a map is shown) and Stripe (on the payment page) may use their own
+           cookies and similar technologies.
+         </p>
++        <p>
++          The iPhone app stores the following on your device: what keeps you signed in (the
++          Keychain), display and sound settings, the state of your consent to sending data to AI
++          (date and version), the words, small photo thumbnails and review count shown in home
++          screen widgets (a storage area shared by the app and its widgets), scheduled notifications
++          (review reminders and location reminders), photos waiting to be sent while offline (“Photo
++          waiting to be analyzed”) and unsaved diary drafts, and cached images and audio. None of
++          this is sent to the operator's servers, except photos and diary entries that are sent once
++          you are back online.
++        </p>
+ 
+         <h2>11. Security</h2>
+         <p>
+-          Connections are encrypted (HTTPS), and the database restricts access per user so that only
+-          you can read and write your own information. Keys for external services are held only on
+-          the server, and when the operator looks at usage, the scope is limited as described in
+-          section 2.
++          The operator takes the following measures to prevent leaks, loss or damage of personal
++          information.
+         </p>
++        <ul>
++          <li>Basic policy: we set out this policy and follow the relevant laws and guidelines</li>
++          <li>
++            Handling rules: for each stage (collection, use, storage, provision and deletion) we set
++            how information is handled and who is responsible
++          </li>
++          <li>
++            Organisational measures: a responsible person is appointed, with procedures for
++            reporting and responding to handling that breaks the law or this policy, or to signs of
++            a leak
++          </li>
++          <li>
++            Personnel measures: anyone handling personal information is required to keep it
++            confidential and handle it properly
++          </li>
++          <li>
++            Physical measures: devices that handle personal information are protected against theft
++            and loss, with screen locks and encrypted storage
++          </li>
++          <li>
++            Technical measures: connections are encrypted (HTTPS), and the database restricts access
++            per user so that only you can read and write your own information. Keys for external
++            services are held only on the server, never in the app, and when the operator looks at
++            usage, the scope is limited as described in section 2
++          </li>
++          <li>
++            Understanding the external environment: before using providers in other countries, we
++            check those countries' systems (section 5) and take security measures accordingly
++          </li>
++        </ul>
+ 
+         <h2>12. Operator and contact</h2>
++        <p>
++          Questions about this policy or how we handle personal information, requests for disclosure
++          and similar, and complaints are received at the operator's contact below.
++        </p>
+         <OperatorDetails info={info} lang="en" />
+ 
+         <h2>13. Changes to this policy</h2>
+@@ -246,6 +360,45 @@
+           new purposes of use, we will ask for your consent again before you continue using the
+           Service.
+         </p>
++
++        <h2>14. Additional information by region</h2>
++        <h3 className="mt-4 font-semibold">Users in Taiwan</h3>
++        <p>
++          Under Article 8 of Taiwan's Personal Data Protection Act: the collector is the operator
++          (section 12). The purposes are those in section 2, mainly falling under Taiwan's
++          categories of performance of contractual relationships, consumer and customer management
++          and services, education and learning services, information (communication) services and
++          e-commerce services. The types of personal data are listed in section 1. The period of use
++          is as in section 7; the regions are Japan and the countries in section 5; the users are
++          the operator and the providers in section 4; the method is electronic storage, processing
++          and transmission. You may request to inquire into and review your data, receive copies,
++          supplement or correct it, stop its collection, processing or use, and delete it (section
++          8). Without required information such as an email address you cannot create an account,
++          and without photos, location or voice the related features cannot be used.
++        </p>
++        <h3 className="mt-4 font-semibold">
++          Users in the European Economic Area, the UK and Switzerland
++        </h3>
++        <p>
++          Where the GDPR or the UK GDPR applies, the operator processes personal data on these legal
++          bases: performance of a contract (providing the Service, accounts and the paid plan);
++          consent (location, microphone and photo access, sending data to AI providers, and
++          personalised ads; you can withdraw consent at any time); legitimate interests (preventing
++          abuse, security, improving the Service and statistics); and legal obligations (such as
++          keeping transaction records). You have the rights of access, rectification, erasure,
++          restriction of processing, data portability and objection, and may complain to the
++          supervisory authority in your country. Transfers outside the EEA and the UK rely on
++          appropriate safeguards such as the European Commission's standard contractual clauses.
++        </p>
++        <h3 className="mt-4 font-semibold">Users in California, United States</h3>
++        <p>
++          The operator does not sell personal information for money. When advertising is enabled on
++          the web version, Google may collect information with cookies and similar technologies and
++          use it for interest-based ads (section 6), which may count as “sharing” under state law.
++          You can turn this off in Google's ad settings, or ask us at the contact in section 12. You
++          have the rights to know, to delete, to correct and to opt out of sale or sharing, and you
++          will not be treated unfavourably for using them.
++        </p>
+       </section>
+     </>
+   );
+diff --git a/src/components/legal/privacy-zh-tw.tsx b/src/components/legal/privacy-zh-tw.tsx
+--- a/src/components/legal/privacy-zh-tw.tsx
++++ b/src/components/legal/privacy-zh-tw.tsx
+@@ -17,7 +17,8 @@
+         <p>
+           {name}
+           （以下稱「經營者」）依據日本《個人資料保護法》及其他相關法令，按照以下方式處理
+-          CatchWords（以下稱「本服務」）使用者的資料。本文為翻譯版本，內容如與日文版有出入，以日文版為準。
++          CatchWords（iPhone App
++          與網頁版，以下稱「本服務」）使用者的資料。本文為翻譯版本，內容如與日文版有出入，以日文版為準。
+         </p>
+ 
+         <h2>1. 我們取得的資料</h2>
+@@ -27,7 +28,16 @@
+             登入時，從該服務取得的電子郵件地址等資料
+           </li>
+           <li>
+-            照片：你拍攝或選擇的照片、拍攝後的自拍（在設定中開啟「自拍模式」時）、貼在日記中的照片
++            照片：你拍攝或選擇的照片、拍攝後的自拍（在設定中開啟「自拍模式」時）、貼在日記中的照片。iPhone
++            App 只會讀取你從照片 App
++            中選擇的圖片。在設定中開啟「儲存到相機膠卷」時，拍攝的照片會加入裝置的照片
++            App（不會讀取照片 App 的內容）
++          </li>
++          <li>
++            語音（iPhone App 的「用語音查詢」）：使用麥克風與 Apple
++            的語音辨識，把你說的話轉成文字。可在裝置上辨識的語言會在裝置上處理，無法在裝置上辨識的語言會在
++            Apple 的伺服器上處理（適用 Apple
++            的隱私權政策）。經營者不會取得或保存聲音本身，本服務只使用轉成的文字。麥克風與語音辨識僅在你於裝置上允許時使用
+           </li>
+           <li>
+             單字與學習紀錄：你收集的單字、含意思／例句／解說的字卡、圖鑑、日記內容、複習的作答與結果、複習排程
+@@ -38,12 +48,17 @@
+           </li>
+           <li>
+             位置資料：拍照時裝置的位置（緯度、經度）。僅在你允許裝置使用位置資料時取得。在設定中開啟「地點提醒」時，會用開啟
+-            App 當下的位置與已儲存的地點比對（當下的位置不會儲存）
++            App 當下的位置與已儲存的地點比對（當下的位置不會儲存）。iPhone App
++            的「地點提醒」由裝置（iOS）判斷你是否接近已儲存的地點並發出通知，不會把你當下的位置傳給經營者
+           </li>
+           <li>
+             語言與設定：顯示語言、母語與學習語言、瀏覽器的語言設定（用來決定最初的顯示語言）、主題與音效等設定
+           </li>
+-          <li>付費方案資料：是否為 Pro。付款由 Stripe 處理，經營者不會取得你的信用卡號碼</li>
++          <li>
++            付費方案資料：是否為 Pro。付款由 Stripe 處理，經營者不會取得你的信用卡號碼。若 iPhone
++            App 開始提供 App 內購買，為了確認購買是否有效，我們會從 Apple
++            取得購買紀錄（商品、期間、交易識別碼），不會取得付款方式的資料
++          </li>
+           <li>錯誤回報：你回報單字錯誤時送出的內容</li>
+           <li>技術資料：為了提供服務，IP 位址、瀏覽器類型等資料會在下列業者的伺服器上處理</li>
+         </ul>
+@@ -53,6 +68,7 @@
+           <li>提供與營運本服務（登入、儲存、跨裝置同步）</li>
+           <li>分析照片中的物品與文字，並以 AI 產生單字卡、解說、例句與測驗</li>
+           <li>產生發音的朗讀語音</li>
++          <li>把你用語音查詢的話轉成文字並查詢單字（iPhone App）</li>
+           <li>搜尋或產生與單字相符的圖片</li>
+           <li>顯示地圖與地點名稱，以及地點提醒的通知</li>
+           <li>計算複習排程（包含記憶的預測）</li>
+@@ -67,8 +83,8 @@
+ 
+         <h2>3. 提供給第三方</h2>
+         <p>
+-          除法令另有規定外，經營者不會在未經本人同意的情況下將個人資料提供給第三方。提供給第 4
+-          條所列業者，是為了提供本服務而委託其處理業務。
++          除法令另有規定外，經營者不會在未經本人同意的情況下將個人資料提供給第三方。法令另有規定的情形，包括為保護人的生命、身體或財產而有必要且難以取得本人同意，以及配合國家機關執行法定事務等。因合併或事業轉讓而由他人承接本服務時，會確保以與本政策相同的水準處理。提供給第
++          4 條所列業者，是為了提供本服務而委託其處理業務。經營者不會販售你的資料。
+         </p>
+ 
+         <h2>4. 外部業者（依用途）</h2>
+@@ -101,9 +117,15 @@
+             的功能時，該照片會送到 3D 產生業者（例如 Tripo3D）
+           </li>
+           <li>
+-            <strong>地圖</strong>：Google（Google 地圖）。顯示地圖時，你的裝置會從 Google
+-            載入地圖。以拍照地點的緯度、經度查詢地點名稱時，該緯度、經度會透過 Lovable 的中繼送到
+-            Google
++            <strong>地圖</strong>：Google（Google 地圖）。在網頁版顯示地圖時，你的裝置會從 Google
++            載入地圖。在網頁版以拍照地點的緯度、經度查詢地點名稱時，該緯度、經度會透過 Lovable
++            的中繼送到 Google。iPhone App 則是由裝置把緯度、經度送到 Apple
++            的地名查詢服務來查詢地點名稱（不經過經營者的伺服器）
++          </li>
++          <li>
++            <strong>Apple（iPhone App）</strong>：以 Apple
++            登入時的身分驗證、用語音查詢時的語音辨識（無法在裝置上辨識時的聲音）、地點名稱查詢（緯度、經度）、App
++            內購買（開始提供後的購買紀錄）
+           </li>
+           <li>
+             <strong>付款</strong>：Stripe（付款、帳單、訂閱管理頁面）。電子郵件地址、使用者 ID
+@@ -113,10 +135,34 @@
+             <strong>廣告</strong>：Google（AdSense），僅在啟用廣告時（見第 6 條）
+           </li>
+         </ul>
++        <p>
++          <strong>同意將資料傳送給 AI</strong>：iPhone App 在你第一次使用 AI
++          功能前，會以畫面說明要傳送的內容（照片、從照片 App
++          選的圖片、掃描的畫面、單字、輸入的文字、用語音查詢的詞轉成的文字、學習語言等設定）、傳送對象與用途，並取得你的同意。若不同意，就無法使用
++          AI
++          功能（相機、掃描、建立字卡、日記批改等），也不會傳送任何資料；瀏覽已收集的單字與複習仍可照常使用。你可以隨時在設定的「隱私」→「同意將資料傳送給
++          AI」中撤回同意。傳送給 AI
++          的資料不包含電子郵件地址與名字。經營者本身不會用你的照片或日記訓練 AI。
++        </p>
+ 
+         <h2>5. 提供給日本以外的業者</h2>
+         <p>
+-          上述許多業者位於日本以外（包含美國、中國等），你的資料可能會在日本以外的伺服器上處理與儲存。各國的個人資料保護制度，可參考日本個人情報保護委員會公布的調查資料。同意本政策並使用本服務，即表示你同意將資料提供給位於這些國家的業者。
++          上述許多業者位於日本以外，你的資料可能會在日本以外的伺服器上處理與儲存。取得個人資料的業者主要所在國如下。
++        </p>
++        <ul>
++          <li>
++            美國：Supabase、Cloudflare、Google、Apple、OpenAI、Anthropic、OpenRouter、Microsoft、ElevenLabs、Stripe
++          </li>
++          <li>瑞典（歐盟）與美國：Lovable</li>
++          <li>中國：DeepSeek、Moonshot AI、MiniMax、Tripo3D（僅在設定使用這些業者時）</li>
++        </ul>
++        <p>
++          各國制度：美國沒有聯邦層級的綜合性個人資料保護法，而有各領域的聯邦法與《加州消費者隱私法》（CCPA）等州法。歐盟有《一般資料保護規則》（GDPR），日本個人情報保護委員會認定歐盟具有與日本同等的保護水準。中國有《個人信息保護法》，但也有廣泛允許政府取得資料的法律（如《國家情報法》）。詳情可參考日本個人情報保護委員會公布的外國制度調查資料。
++        </p>
++        <p>
++          經營者會確認各業者透過使用條款、資料處理契約等，採取相當於日本《個人資料保護法》所要求的措置（安全管理、禁止目的外使用等）後才使用。只接收單字文字的業者（如圖片搜尋）不會收到可識別你的資料。若想了解上面未列出的業者所在國，或業者採取的措置詳情，請寄至第
++          12
++          條的聯絡方式，我們會立即告知。同意本政策並使用本服務，即表示你同意將資料提供給位於這些國家的業者。
+         </p>
+ 
+         <h2>6. 廣告</h2>
+@@ -135,7 +181,8 @@
+             Google 廣告設定
+           </a>
+           中關閉個人化廣告。位於歐洲經濟區、英國與瑞士的使用者，會透過 Google
+-          的同意訊息確認是否同意。Pro 使用者不會看到廣告。
++          的同意訊息確認是否同意。Pro 使用者不會看到廣告。iPhone App
++          不顯示廣告，也不使用廣告識別碼（IDFA）。
+         </p>
+ 
+         <h2>7. 保存期間與刪除</h2>
+@@ -154,44 +201,95 @@
+           <li>已送到外部業者的資料，依各業者的條款處理</li>
+         </ul>
+         <p>
++          在 iPhone App 中刪除帳號時，App 也會清除裝置上的資料（第 10 條）。刪除 App
++          時，裝置上的資料也會消失。
++        </p>
++        <p>
+           <strong>刪除帳號不會自動取消付費方案。</strong>
+-          刪除前，請先在設定的「管理訂閱」中取消。
++          刪除前，請先在設定的「管理訂閱」中取消。若是透過 iPhone App 內購買，請在 iPhone
++          的「設定」→ 你的名字 →「訂閱項目」中取消。
+         </p>
+ 
+         <h2>8. 查詢、更正與刪除等請求</h2>
+         <p>
+           你可以要求經營者揭露其保有的你的資料，或要求更正、補充、刪除、停止使用、清除，以及停止提供給第三方。顯示名稱、照片與單字可以直接在
+-          App 中修改；帳號與相關資料可以在設定的「刪除帳號」中刪除。其他請求請寄至第 12
+-          條的聯絡方式。確認為本人後，我們會依法令處理。
++          App
++          中修改；帳號與相關資料可以在設定的「刪除帳號」中刪除。其他請求（包含通知使用目的、揭露提供給第三方的紀錄）請寄至第
++          12
++          條的聯絡方式。確認為本人（或代理人）後，我們會依法令立即處理。不收取費用。若依法令無法處理，我們會告知理由。
+         </p>
+ 
+         <h2>9. 兒童</h2>
+         <p>
+-          本服務不以未滿 13 歲的兒童為對象，未滿 13 歲者不得使用本服務（使用條款第 2
+-          條）。若得知取得了未滿 13 歲兒童的資料，我們會將其刪除。
++          本服務不以未滿 13 歲的兒童為對象，未滿 13 歲者不得使用本服務（使用條款第 2 條）。未滿 18
++          歲者請先取得法定代理人的同意再使用（包含購買付費方案）。若得知取得了未滿 13
++          歲兒童的資料，我們會將其刪除。
+         </p>
+ 
+-        <h2>10. Cookie 與本機儲存</h2>
++        <h2>10. Cookie 與裝置上的儲存</h2>
+         <p>
+           本服務會使用瀏覽器的本機儲存（localStorage）與
+           IndexedDB，用來維持登入狀態、記住顯示語言等設定、保存離線時等待上傳的資料，以及暫存圖片與語音。本服務本身不使用追蹤或廣告用的
+           Cookie。但啟用廣告時 Google 會使用 Cookie（第 6 條），顯示地圖時 Google、付款頁面上 Stripe
+           也可能使用各自的 Cookie 等技術。
+         </p>
+-
+-        <h2>11. 安全管理</h2>
+         <p>
+-          連線經過加密（HTTPS），資料庫依使用者限制存取，只有你本人能讀寫自己的資料。外部服務的金鑰只存放在伺服器上；經營者檢視使用狀況時，也依第
+-          2 條限制檢視範圍。
++          iPhone App
++          會在裝置上儲存下列資料：維持登入的資訊（鑰匙圈）、顯示與音效等設定、同意將資料傳送給 AI
++          的狀態（同意的日期與版本）、主畫面小工具顯示的單字、照片縮圖與複習數（App
++          與小工具共用的儲存區）、排定的通知（複習提醒、地點提醒）、無法連線時等待傳送的照片（等待分析的照片）與未完成的日記，以及圖片與語音的暫存。除了恢復連線後傳送照片與日記之外，這些資料不會傳送到經營者的伺服器。
+         </p>
+ 
++        <h2>11. 安全管理</h2>
++        <p>為防止個人資料外洩、滅失或毀損，經營者採取下列措施。</p>
++        <ul>
++          <li>基本方針：訂定本政策，並遵守相關法令與指引</li>
++          <li>處理規範：在取得、使用、保存、提供、刪除的各階段，訂定處理方式與負責人</li>
++          <li>
++            組織措施：設置負責人，並訂定得知違反法令或本政策的處理、或有外洩跡象時的通報與處理程序
++          </li>
++          <li>人員措施：要求處理個人資料的人員保守秘密並適當處理</li>
++          <li>物理措施：防止處理個人資料的裝置遭竊或遺失，並使用螢幕鎖定與儲存加密</li>
++          <li>
++            技術措施：連線經過加密（HTTPS），資料庫依使用者限制存取，只有你本人能讀寫自己的資料。外部服務的金鑰只存放在伺服器上，不放在
++            App 中；經營者檢視使用狀況時，也依第 2 條限制檢視範圍
++          </li>
++          <li>掌握外部環境：使用位於外國的業者時，會先確認該國制度（第 5 條）再採取安全管理措施</li>
++        </ul>
++
+         <h2>12. 經營者與聯絡方式</h2>
++        <p>關於本政策、個人資料的處理、揭露等請求與申訴，請透過下列經營者的聯絡方式提出。</p>
+         <OperatorDetails info={info} lang={ZH} />
+ 
+         <h2>13. 本政策的變更</h2>
+         <p>
+           變更本政策時，我們會在本服務中公告。若有新增使用目的等重大變更，會在你繼續使用本服務前再次取得你的同意。
+         </p>
++
++        <h2>14. 依居住地區的補充事項</h2>
++        <h3 className="mt-4 font-semibold">居住於台灣的使用者</h3>
++        <p>
++          依台灣《個人資料保護法》第 8 條告知如下。蒐集者為經營者（第 12 條）。蒐集目的如第 2
++          條，依台灣法令的分類主要為「契約、類似契約或其他法律關係事務」「消費者、客戶管理與服務」「教育或訓練行政」「資（通）訊服務」「電子商務服務」。個人資料類別如第
++          1 條。利用期間如第 7 條；利用地區為日本與第 5 條所列國家；利用對象為經營者與第 4
++          條所列業者；利用方式為以電子方式儲存、處理與傳輸。你可以請求查詢或閱覽、製給複製本、補充或更正、停止蒐集處理或利用、刪除（第
++          8
++          條）。若不提供電子郵件地址等必要資料，將無法建立帳號；若不提供照片、位置或語音，將無法使用相關功能。
++        </p>
++        <h3 className="mt-4 font-semibold">居住於歐洲經濟區、英國與瑞士的使用者</h3>
++        <p>
++          適用 GDPR 或英國 GDPR
++          時，經營者依下列法律依據處理個人資料：履行契約（提供本服務、帳號、付費方案）；同意（位置、麥克風與照片的存取、傳送給
++          AI
++          業者、個人化廣告；你可以隨時撤回同意）；正當利益（防止不當使用、安全、改善服務、統計）；法律義務（保存交易紀錄等）。你享有存取、更正、刪除、限制處理、資料可攜與反對的權利，並可向你所在國家的監管機關提出申訴。傳輸到歐洲經濟區與英國以外時，會依歐盟執委會的標準契約條款等適當保護措施進行。
++        </p>
++        <h3 className="mt-4 font-semibold">居住於美國加州的使用者</h3>
++        <p>
++          經營者不會以金錢交換販售個人資料。網頁版啟用廣告時，Google 可能以 Cookie
++          等技術蒐集資料並用於依興趣顯示的廣告（第 6 條），這在州法上可能屬於「分享」。你可以在
++          Google 廣告設定中關閉，或寄至第 12
++          條的聯絡方式請求處理。你享有知情、刪除、更正以及拒絕販售或分享的權利，且不會因行使這些權利而受到不利對待。
++        </p>
+       </section>
+     </>
+   );
+diff --git a/src/components/legal/terms-ja.tsx b/src/components/legal/terms-ja.tsx
+--- a/src/components/legal/terms-ja.tsx
++++ b/src/components/legal/terms-ja.tsx
+@@ -19,13 +19,13 @@
+         <h2>1. 適用</h2>
+         <p>
+           本規約は、{name}
+-          （以下「運営者」）が提供する
+-          CatchWords（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することで本規約に同意したものとみなされます。
++          （以下「運営者」）が提供する CatchWords（iPhone アプリと Web
++          版。以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することで本規約に同意したものとみなされます。
+         </p>
+ 
+         <h2>2. アカウント</h2>
+         <p>
+-          利用者は正確な情報でアカウントを作成し、認証情報を適切に管理する責任があります。13歳未満の方は本サービスを利用できません。
++          利用者は正確な情報でアカウントを作成し、認証情報を適切に管理する責任があります。13歳未満の方は本サービスを利用できません。18歳未満の方は、保護者の同意を得てから本サービスを利用し、有料プランを購入してください。利用者は、設定の「アカウントを削除」から、いつでもアカウントを削除して退会できます。
+         </p>
+ 
+         <h2>3. 利用者のコンテンツ</h2>
+@@ -35,12 +35,23 @@
+ 
+         <h2>4. 禁止事項</h2>
+         <ul>
+-          <li>他者の権利（肖像権・著作権など）を侵害する行為</li>
++          <li>
++            他者の権利（肖像権・著作権など）を侵害する行為（他人を無断で撮影・登録することを含みます）
++          </li>
++          <li>わいせつ・暴力的・差別的な内容や、児童を性的に扱う内容を登録する行為</li>
+           <li>位置情報を悪用したつきまとい等の行為</li>
+           <li>不正なアクセス、自動化した大量の利用など、本サービスの運営を妨げる行為</li>
++          <li>
++            利用回数の上限を回避する行為、AI に指示を与えて意図しない動作をさせる行為、本サービスや
++            AI が作った内容を許可なく販売・再配布し、または他の AI サービスの開発に使う行為
++          </li>
++          <li>他人になりすます行為</li>
+           <li>決済の不正な利用</li>
+           <li>法令または公序良俗に反する行為</li>
+         </ul>
++        <p>
++          利用者が本規約に違反した場合、運営者は、利用者のコンテンツの削除、本サービスの利用の停止、アカウントの削除を行うことがあります。緊急の場合を除き、できる範囲で事前にお知らせします。
++        </p>
+ 
+         <h2>5. AI が作る内容</h2>
+         <p>
+@@ -48,6 +59,15 @@
+           で作ります。AI
+           が作る内容には誤りが含まれることがあり、運営者はその正確性・完全性を保証しません。学習の参考としてお使いいただき、重要な判断は辞書や専門家でご確認ください。誤りに気づいたときは、各単語の「この語の誤りを報告」から知らせることができます。
+         </p>
++        <p>
++          食べ物・植物・きのこ・薬などが安全か、医療・健康・アレルギーに関わるかといった判断に、本サービスを使わないでください。
++        </p>
++        <p>
++          AI
++          の機能を使うと、写真や文章がプライバシーポリシーに書いた外部の事業者に送られます。iPhone
++          アプリでは、初めて AI の機能を使う前に、その送信への同意をいただきます。同意しない場合、AI
++          を使う機能は使えませんが、それ以外の機能は使えます。
++        </p>
+ 
+         <h2>6. 有料プラン（定期購入）</h2>
+         <ol>
+@@ -80,7 +100,11 @@
+               日間の無料体験期間が付きます。体験期間が終わるまでに解約しなかった場合は、終了時に自動で有料プランに切り替わり、料金を請求します。
+             </li>
+           )}
+-          <li>iPhone・Android のアプリの中では、有料プランの購入を受け付けていません。</li>
++          <li>
++            iPhone・Android のアプリの中では、有料プランの購入を受け付けていません。iPhone
++            アプリでの購入（Apple
++            のアプリ内課金）を始めるときは、その前に本条と特定商取引法に基づく表記を改め、本サービスの中でお知らせします。
++          </li>
+           <li>
+             販売条件の詳細は
+             <a href="/legal/tokushoho">特定商取引法に基づく表記</a>
+@@ -124,9 +148,50 @@
+           {info.jurisdictionCourt
+             ? `${info.jurisdictionCourt}を第一審の専属的合意管轄裁判所とします。`
+             : "民事訴訟法の定めに従い管轄を有する裁判所を管轄裁判所とします。"}
++          ただし、消費者である利用者が、お住まいの国の消費者保護の強行法規によって与えられる保護は、本条により妨げられません。
++        </p>
++
++        <h2>12. App Store から入手した iPhone アプリについて</h2>
++        <p>
++          App Store から入手した iPhone
++          アプリ（以下「本アプリ」）には、本規約の他の条項に加えて、次の条項が適用されます。本条と他の条項が矛盾する場合は、本アプリについては本条が優先します。
+         </p>
++        <ol>
++          <li>
++            本規約は利用者と運営者との間の合意であり、Apple
++            Inc.（以下「Apple」）との合意ではありません。本アプリとその内容について責任を負うのは運営者であり、Apple
++            ではありません。
++          </li>
++          <li>
++            運営者は利用者に対し、利用者が所有または管理する Apple ブランドの製品上で、Apple Media
++            Services 利用規約の利用規則に従って本アプリを使用する、譲渡できない権利を許諾します。
++          </li>
++          <li>
++            本アプリの保守とサポートは運営者だけが責任を負い、Apple はその義務を一切負いません。
++          </li>
++          <li>
++            本アプリが適用される保証に適合しない場合、利用者は Apple に通知でき、Apple
++            は本アプリの購入代金（ある場合）を返金します。法令が許す最大の範囲で、Apple
++            は本アプリについてその他の保証責任を負いません。
++          </li>
++          <li>
++            本アプリに関する請求（製造物責任、法令への不適合、消費者保護・プライバシーに関する法令に基づく請求を含みます）や、本アプリが第三者の知的財産権を侵害するとの請求への対応は、Apple
++            ではなく運営者が責任を負います。
++          </li>
++          <li>
++            利用者は、米国政府の禁輸の対象国やテロ支援国家に指定された国に所在せず、米国政府の禁止・制限の対象者の一覧に載っていないことを表明し、保証します。
++          </li>
++          <li>
++            利用者は、本アプリを使う際、通信事業者との契約など該当する第三者の利用条件に従うものとします。
++          </li>
++          <li>
++            Apple と Apple
++            の子会社は本規約の第三者受益者であり、利用者が本規約に同意した時点で、利用者に対して本規約を執行する権利を持ちます。
++          </li>
++          <li>本アプリに関するご質問・苦情・請求は、第13条の連絡先へお送りください。</li>
++        </ol>
+ 
+-        <h2>12. お問い合わせ</h2>
++        <h2>13. お問い合わせ</h2>
+         <OperatorDetails info={info} lang="ja" />
+       </section>
+     </>
+diff --git a/src/components/legal/terms-en.tsx b/src/components/legal/terms-en.tsx
+--- a/src/components/legal/terms-en.tsx
++++ b/src/components/legal/terms-en.tsx
+@@ -12,16 +12,19 @@
+       <section className="legal-doc mt-6">
+         <h2>1. Scope</h2>
+         <p>
+-          These terms set out the conditions for using CatchWords (“the Service”), provided by{" "}
+-          {name} (“the operator”). By using the Service you are deemed to have agreed to these
+-          terms. This is a translation; if it differs from the Japanese version, the Japanese
+-          version prevails.
++          These terms set out the conditions for using CatchWords (the iPhone app and the web
++          version; “the Service”), provided by {name} (“the operator”). By using the Service you are
++          deemed to have agreed to these terms. This is a translation; if it differs from the
++          Japanese version, the Japanese version prevails.
+         </p>
+ 
+         <h2>2. Accounts</h2>
+         <p>
+           You are responsible for creating your account with accurate information and for keeping
+-          your credentials secure. The Service is not available to anyone under 13 years of age.
++          your credentials secure. The Service is not available to anyone under 13 years of age. If
++          you are under 18, get your parent's or guardian's consent before using the Service or
++          buying the paid plan. You can delete your account and leave at any time from “Delete
++          account” in Settings.
+         </p>
+ 
+         <h2>3. Your content</h2>
+@@ -32,15 +35,32 @@
+ 
+         <h2>4. Prohibited conduct</h2>
+         <ul>
+-          <li>Infringing others' rights (portrait rights, copyright and so on)</li>
++          <li>
++            Infringing others' rights (portrait rights, copyright and so on), including
++            photographing or adding people without their permission
++          </li>
++          <li>
++            Adding obscene, violent or discriminatory content, or content sexualising children
++          </li>
+           <li>Misusing location data, including stalking</li>
+           <li>
+             Interfering with the operation of the Service, including unauthorised access and
+             automated mass use
+           </li>
++          <li>
++            Getting around usage limits, instructing the AI to behave in unintended ways, or
++            selling, redistributing or using the Service or its AI-generated content to develop
++            other AI services without permission
++          </li>
++          <li>Impersonating others</li>
+           <li>Fraudulent use of payments</li>
+           <li>Anything illegal or contrary to public order and morals</li>
+         </ul>
++        <p>
++          If you break these terms, the operator may remove your content, suspend your use of the
++          Service or delete your account. Except in an emergency, the operator will tell you in
++          advance where possible.
++        </p>
+ 
+         <h2>5. AI-generated content</h2>
+         <p>
+@@ -50,6 +70,16 @@
+           aid, and check anything important against a dictionary or a qualified person. If you find
+           an error, you can report it with “Report an error in this entry” on that word.
+         </p>
++        <p>
++          Do not rely on the Service to decide whether food, plants, mushrooms, medicines and the
++          like are safe, or for medical, health or allergy decisions.
++        </p>
++        <p>
++          When you use AI features, photos and text are sent to the external providers listed in the
++          Privacy Policy. The iPhone app asks for your consent to this before you first use an AI
++          feature. If you do not consent, AI features are unavailable, but the rest of the Service
++          still works.
++        </p>
+ 
+         <h2>6. Paid plan (subscription)</h2>
+         <ol>
+@@ -91,7 +121,11 @@
+               are charged.
+             </li>
+           )}
+-          <li>The paid plan cannot be purchased inside the iPhone or Android app.</li>
++          <li>
++            The paid plan cannot be purchased inside the iPhone or Android app. Before purchases in
++            the iPhone app (Apple in-app purchase) start, this section and the Legal notice will be
++            revised and announced in the Service.
++          </li>
+           <li>
+             For the full conditions of sale, see the{" "}
+             <a href="/legal/tokushoho">Legal notice (Specified Commercial Transactions Act)</a>.
+@@ -143,10 +177,58 @@
+           These terms are governed by the laws of Japan.{" "}
+           {info.jurisdictionCourt
+             ? `Any dispute relating to the Service shall be subject to the exclusive jurisdiction of the ${info.jurisdictionCourt} as the court of first instance.`
+-            : "Any dispute relating to the Service shall be brought before the court that has jurisdiction under Japan's Code of Civil Procedure."}
++            : "Any dispute relating to the Service shall be brought before the court that has jurisdiction under Japan's Code of Civil Procedure."}{" "}
++          This does not take away the protection that mandatory consumer protection laws of your
++          country of residence give you as a consumer.
+         </p>
+ 
+-        <h2>12. Contact</h2>
++        <h2>12. The iPhone app obtained from the App Store</h2>
++        <p>
++          For the iPhone app obtained from the App Store (“the App”), the following applies in
++          addition to the rest of these terms. If they conflict, this section prevails for the App.
++        </p>
++        <ol>
++          <li>
++            These terms are an agreement between you and the operator, not with Apple Inc.
++            (“Apple”). The operator, not Apple, is responsible for the App and its content.
++          </li>
++          <li>
++            The operator grants you a non-transferable right to use the App on Apple-branded
++            products that you own or control, as permitted by the Usage Rules in the Apple Media
++            Services Terms and Conditions.
++          </li>
++          <li>
++            The operator alone is responsible for maintenance and support of the App; Apple has no
++            obligation to provide any.
++          </li>
++          <li>
++            If the App fails to conform to any applicable warranty, you may notify Apple, and Apple
++            will refund the purchase price of the App (if any). To the maximum extent permitted by
++            law, Apple has no other warranty obligation with respect to the App.
++          </li>
++          <li>
++            The operator, not Apple, is responsible for addressing any claims relating to the App
++            (including product liability, failure to conform to legal or regulatory requirements,
++            and claims under consumer protection, privacy or similar laws) and any claim that the
++            App infringes a third party's intellectual property rights.
++          </li>
++          <li>
++            You represent and warrant that you are not located in a country subject to a U.S.
++            Government embargo or designated as a “terrorist supporting” country, and that you are
++            not listed on any U.S. Government list of prohibited or restricted parties.
++          </li>
++          <li>
++            You must comply with applicable third-party terms (such as your mobile carrier's) when
++            using the App.
++          </li>
++          <li>
++            Apple and its subsidiaries are third-party beneficiaries of these terms, and upon your
++            acceptance Apple has the right to enforce them against you.
++          </li>
++          <li>Send questions, complaints or claims about the App to the contact in section 13.</li>
++        </ol>
++
++        <h2>13. Contact</h2>
+         <OperatorDetails info={info} lang="en" />
+       </section>
+     </>
+diff --git a/src/components/legal/terms-zh-tw.tsx b/src/components/legal/terms-zh-tw.tsx
+--- a/src/components/legal/terms-zh-tw.tsx
++++ b/src/components/legal/terms-zh-tw.tsx
+@@ -14,12 +14,15 @@
+         <h2>1. 適用範圍</h2>
+         <p>
+           本條款規定由{name}
+-          （以下稱「經營者」）提供的
+-          CatchWords（以下稱「本服務」）的使用條件。使用本服務即視為你同意本條款。本文為翻譯版本，內容如與日文版有出入，以日文版為準。
++          （以下稱「經營者」）提供的 CatchWords（iPhone App
++          與網頁版，以下稱「本服務」）的使用條件。使用本服務即視為你同意本條款。本文為翻譯版本，內容如與日文版有出入，以日文版為準。
+         </p>
+ 
+         <h2>2. 帳號</h2>
+-        <p>你應以正確的資料建立帳號，並妥善管理登入資訊。未滿 13 歲者不得使用本服務。</p>
++        <p>
++          你應以正確的資料建立帳號，並妥善管理登入資訊。未滿 13 歲者不得使用本服務。未滿 18
++          歲者請先取得法定代理人的同意，再使用本服務或購買付費方案。你可以隨時在設定的「刪除帳號」中刪除帳號並退出。
++        </p>
+ 
+         <h2>3. 你的內容</h2>
+         <p>
+@@ -28,18 +31,32 @@
+ 
+         <h2>4. 禁止事項</h2>
+         <ul>
+-          <li>侵害他人權利（肖像權、著作權等）的行為</li>
++          <li>侵害他人權利（肖像權、著作權等）的行為（包含未經同意拍攝或登錄他人）</li>
++          <li>登錄猥褻、暴力、歧視的內容，或以性的方式描繪兒童的內容</li>
+           <li>濫用位置資料進行跟蹤等行為</li>
+           <li>未經授權的存取、自動化大量使用等妨礙本服務營運的行為</li>
++          <li>
++            規避使用次數上限、對 AI 下指令使其做出非預期的動作、未經許可販售或散布本服務或 AI
++            產生的內容，或將其用於開發其他 AI 服務的行為
++          </li>
++          <li>冒充他人的行為</li>
+           <li>不當使用付款功能</li>
+           <li>違反法令或公共秩序善良風俗的行為</li>
+         </ul>
++        <p>
++          若你違反本條款，經營者可能刪除你的內容、停止你使用本服務或刪除你的帳號。除緊急情況外，會在可能的範圍內事先通知。
++        </p>
+ 
+         <h2>5. AI 產生的內容</h2>
+         <p>
+           本服務會用 AI 產生單字的意思、讀音、例句、解說、測驗、發音語音與圖片等內容。AI
+           產生的內容可能有錯誤，經營者不保證其正確性與完整性。請將其作為學習參考，重要的判斷請以辭典或專業人士確認。發現錯誤時，可在各單字的「回報這個字的錯誤」中通知我們。
+         </p>
++        <p>請勿用本服務判斷食物、植物、菇類、藥品等是否安全，或做醫療、健康、過敏相關的判斷。</p>
++        <p>
++          使用 AI 功能時，照片與文字會傳送到隱私權政策所列的外部業者。iPhone App 會在你第一次使用 AI
++          功能前取得你對此傳送的同意。若不同意，就無法使用 AI 功能，但其他功能仍可使用。
++        </p>
+ 
+         <h2>6. 付費方案（訂閱）</h2>
+         <ol>
+@@ -66,7 +83,10 @@
+               天的免費試用期。若在試用期結束前未取消，試用期結束時會自動轉為付費方案並收費。
+             </li>
+           )}
+-          <li>iPhone 與 Android App 內不提供付費方案的購買。</li>
++          <li>
++            iPhone 與 Android App 內不提供付費方案的購買。開始在 iPhone App 內購買（Apple 的 App
++            內購買）之前，會先修改本條與特定商業交易法標示，並在本服務中公告。
++          </li>
+           <li>
+             銷售條件的詳細內容，請參閱<a href="/legal/tokushoho">特定商業交易法標示</a>。
+           </li>
+@@ -100,9 +120,44 @@
+           {info.jurisdictionCourt
+             ? `以${info.jurisdictionCourt}為第一審專屬合意管轄法院。`
+             : "由依日本《民事訴訟法》規定具有管轄權的法院管轄。"}
++          但身為消費者的你依居住國家消費者保護強制規定所享有的保護，不因本條而受影響。
+         </p>
+ 
+-        <h2>12. 聯絡方式</h2>
++        <h2>12. 從 App Store 取得的 iPhone App</h2>
++        <p>
++          從 App Store 取得的 iPhone App（以下稱「本
++          App」），除本條款的其他條文外，另適用下列條文。本條與其他條文牴觸時，就本 App 以本條為準。
++        </p>
++        <ol>
++          <li>
++            本條款是你與經營者之間的協議，而非與 Apple Inc.（以下稱「Apple」）的協議。對本 App
++            及其內容負責的是經營者，而非 Apple。
++          </li>
++          <li>
++            經營者授予你不可轉讓的權利，可依 Apple 媒體服務條款的使用規則，在你擁有或控制的 Apple
++            品牌產品上使用本 App。
++          </li>
++          <li>本 App 的維護與支援僅由經營者負責，Apple 不負任何提供義務。</li>
++          <li>
++            本 App 不符合適用的保證時，你可以通知 Apple，Apple 會退還本 App
++            的購買金額（如有）。在法令允許的最大範圍內，Apple 對本 App 不負其他保證責任。
++          </li>
++          <li>
++            與本 App
++            相關的請求（包含產品責任、不符合法令、依消費者保護或隱私等法令提出的請求），以及本 App
++            侵害第三方智慧財產權的請求，由經營者而非 Apple 負責處理。
++          </li>
++          <li>
++            你聲明並保證，你不位於受美國政府禁運或被指定為「支持恐怖主義」的國家，也未列於美國政府的禁止或限制對象名單。
++          </li>
++          <li>使用本 App 時，你應遵守適用的第三方條款（例如電信業者的合約）。</li>
++          <li>
++            Apple 及其子公司為本條款的第三方受益人，在你同意本條款時，Apple 有權對你執行本條款。
++          </li>
++          <li>關於本 App 的問題、申訴或請求，請寄至第 13 條的聯絡方式。</li>
++        </ol>
++
++        <h2>13. 聯絡方式</h2>
+         <OperatorDetails info={info} lang={ZH} />
+       </section>
+     </>
+diff --git a/src/components/legal/SupportDocument.tsx b/src/components/legal/SupportDocument.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/components/legal/SupportDocument.tsx
+@@ -0,0 +1,111 @@
++import type { UiLang } from "@/lib/i18n";
++import type { LegalPublicInfo } from "@/lib/legal-config";
++import { OperatorDetails } from "./operator";
++
++/**
++ * **お問い合わせ・サポート**（`/support`）。iPhone アプリの「設定 › お問い合わせ・サポート」と
++ * App Store Connect のサポート URL が開く頁（審査ガイドライン 1.5「連絡手段を置く」）。
++ *
++ * 連絡先は設定（`LEGAL_EMAIL` など、`legal-config.ts`）だけから出す — `OperatorDetails` が、
++ * 未設定なら「準備中」と本当のことを言う。ここに書く手順は、どれもアプリと Web 版に実際に在る物。
++ */
++const TX = {
++  ja: {
++    title: "お問い合わせ・サポート",
++    intro:
++      "CatchWords（iPhone アプリと Web 版）のサポートの頁です。ご質問・不具合のご報告・個人情報に関するご請求は、下の連絡先へお送りください。",
++    contact: "連絡先",
++    faq: "よくあるご用件",
++    items: [
++      ["単語の内容の誤り", "各単語の「この語の誤りを報告」から送れます。"],
++      [
++        "アカウントの削除",
++        "iPhone アプリ・Web 版の設定の「アカウントを削除」から、いつでもご自身で削除できます。写真・単語・日記・プロフィール写真なども消えます。削除は取り消せません。",
++      ],
++      [
++        "有料プランの解約",
++        "Web 版で購入した場合は、設定の「CatchWords Pro」→「サブスクリプションを管理」から。iPhone のアプリ内課金で購入した場合は、iPhone の「設定」→ 自分の名前 →「サブスクリプション」から。アカウントを削除しても解約にはなりません。",
++      ],
++      [
++        "AI へのデータ送信の同意",
++        "iPhone アプリの設定の「プライバシー」→「AIへのデータ送信の同意」で、内容の確認・同意・取り消しができます。",
++      ],
++      [
++        "個人情報の開示・訂正・削除などの請求",
++        "プライバシーポリシー第8条をご覧のうえ、上の連絡先へお送りください。",
++      ],
++    ],
++  },
++  en: {
++    title: "Contact & Support",
++    intro:
++      "This is the support page for CatchWords (the iPhone app and the web version). Send questions, bug reports and requests about your personal information to the contact below.",
++    contact: "Contact",
++    faq: "Common requests",
++    items: [
++      ["An error in a word", "Use “Report an error in this entry” on that word."],
++      [
++        "Deleting your account",
++        "Delete it yourself at any time from “Delete account” in Settings, in the iPhone app or on the web. Your photos, words, diary and profile photo are erased too. This cannot be undone.",
++      ],
++      [
++        "Cancelling the paid plan",
++        "If you bought it on the web: “CatchWords Pro” → “Manage subscription” in Settings. If you bought it with an in-app purchase on iPhone: the iPhone Settings app → your name → Subscriptions. Deleting your account does not cancel it.",
++      ],
++      [
++        "Consent to sending data to AI",
++        "In the iPhone app, Settings → Privacy → “Consent to send data to AI” lets you review, give or withdraw consent.",
++      ],
++      [
++        "Requests about your personal information",
++        "See section 8 of the Privacy Policy, then write to the contact above.",
++      ],
++    ],
++  },
++  "zh-TW": {
++    title: "聯絡與支援",
++    intro:
++      "這是 CatchWords（iPhone App 與網頁版）的支援頁面。問題、錯誤回報與個人資料相關的請求，請寄至下方的聯絡方式。",
++    contact: "聯絡方式",
++    faq: "常見事項",
++    items: [
++      ["單字內容的錯誤", "可在各單字的「回報這個字的錯誤」中送出。"],
++      [
++        "刪除帳號",
++        "可隨時在 iPhone App 或網頁版設定的「刪除帳號」中自行刪除。照片、單字、日記與個人照片也會一併清除。刪除後無法復原。",
++      ],
++      [
++        "取消付費方案",
++        "在網頁版購買時：設定的「CatchWords Pro」→「管理訂閱」。透過 iPhone App 內購買時：iPhone 的「設定」→ 你的名字 →「訂閱項目」。刪除帳號不會取消訂閱。",
++      ],
++      [
++        "同意將資料傳送給 AI",
++        "在 iPhone App 設定的「隱私」→「同意將資料傳送給 AI」中，可以確認內容、同意或撤回。",
++      ],
++      ["個人資料的揭露、更正、刪除等請求", "請參閱隱私權政策第 8 條，並寄至上方的聯絡方式。"],
++    ],
++  },
++} as const;
++
++export function SupportDocument({ info, lang }: { info: LegalPublicInfo; lang: UiLang }) {
++  const x = TX[lang];
++  return (
++    <>
++      <h1 className="mt-4 text-hero font-bold tracking-tight">{x.title}</h1>
++      <section className="legal-doc mt-6">
++        <p>{x.intro}</p>
++        <h2>{x.contact}</h2>
++        <OperatorDetails info={info} lang={lang} />
++        <h2>{x.faq}</h2>
++        <dl>
++          {x.items.map(([q, a]) => (
++            <div key={q} className="mt-3">
++              <dt className="font-semibold">{q}</dt>
++              <dd>{a}</dd>
++            </div>
++          ))}
++        </dl>
++      </section>
++    </>
++  );
++}
+diff --git a/src/components/legal/LegalShell.tsx b/src/components/legal/LegalShell.tsx
+--- a/src/components/legal/LegalShell.tsx
++++ b/src/components/legal/LegalShell.tsx
+@@ -1,14 +1,15 @@
+ import type { ReactNode } from "react";
+ import { useT } from "@/lib/i18n";
+ 
+-/** 法務の3つの頁（同じ順で、どこからでも行き来できる）。 */
++/** 法務の頁とサポート（同じ順で、どこからでも行き来できる）。 */
+ export const LEGAL_LINKS = [
+   { href: "/terms", key: "auth.terms" },
+   { href: "/privacy", key: "auth.privacy" },
+   { href: "/legal/tokushoho", key: "legal.tokushoho" },
++  { href: "/support", key: "legal.support" },
+ ] as const;
+ 
+-/** 3つへのリンクの列（設定・ログインの画面・法務の頁の下で使う）。`current` は外す。 */
++/** 法務の頁とサポートへのリンクの列（設定・ログインの画面・法務の頁の下で使う）。`current` は外す。 */
+ export function LegalLinks({ current, className }: { current?: string; className?: string }) {
+   const t = useT();
+   return (
+diff --git a/src/routes/support.tsx b/src/routes/support.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/routes/support.tsx
+@@ -0,0 +1,46 @@
++import { siteUrlFor } from "@/lib/site-url";
++import { createFileRoute } from "@tanstack/react-router";
++import { tStatic, useUiLang } from "@/lib/i18n";
++import { LegalShell } from "@/components/legal/LegalShell";
++import { SupportDocument } from "@/components/legal/SupportDocument";
++import { EMPTY_LEGAL } from "@/lib/legal-config";
++import { getLegalInfo } from "@/lib/legal.functions";
++
++/**
++ * **お問い合わせ・サポート**（`/support`）。iPhone アプリの設定と App Store Connect の
++ * サポート URL が開く。連絡先は設定（`LEGAL_*`）から。読めなくても頁は出す。
++ */
++export const Route = createFileRoute("/support")({
++  head: () => ({
++    meta: [
++      { title: tStatic("page.support") },
++      {
++        name: "description",
++        content:
++          "CatchWordsのお問い合わせ・サポート。連絡先、単語の誤りの報告、アカウントの削除、有料プランの解約の方法を案内します。",
++      },
++      { property: "og:title", content: "お問い合わせ・サポート — CatchWords" },
++      { property: "og:type", content: "article" },
++      { property: "og:url", content: siteUrlFor("/support") },
++    ],
++    links: [{ rel: "canonical", href: siteUrlFor("/support") }],
++  }),
++  loader: async () => {
++    try {
++      return await getLegalInfo();
++    } catch {
++      return null;
++    }
++  },
++  component: SupportPage,
++});
++
++function SupportPage() {
++  const lang = useUiLang();
++  const data = Route.useLoaderData();
++  return (
++    <LegalShell current="/support">
++      <SupportDocument lang={lang} info={data?.legal ?? EMPTY_LEGAL} />
++    </LegalShell>
++  );
++}
+diff --git a/src/routes/tokushoho.tsx b/src/routes/tokushoho.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/routes/tokushoho.tsx
+@@ -0,0 +1,11 @@
++import { createFileRoute, redirect } from "@tanstack/react-router";
++
++/**
++ * 古い URL `/tokushoho` → `/legal/tokushoho`。iPhone アプリの初期のビルドがこの URL を開く
++ * （iOS の `AppConfig.tokushohoURL`。新しいビルドは `/legal/tokushoho` を開く）。
++ */
++export const Route = createFileRoute("/tokushoho")({
++  beforeLoad: () => {
++    throw redirect({ to: "/legal/tokushoho", statusCode: 301 });
++  },
++});
+diff --git a/src/routes/sitemap[.]xml.ts b/src/routes/sitemap[.]xml.ts
+--- a/src/routes/sitemap[.]xml.ts
++++ b/src/routes/sitemap[.]xml.ts
+@@ -20,6 +20,7 @@
+           { path: "/terms", changefreq: "yearly", priority: "0.3" },
+           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
+           { path: "/legal/tokushoho", changefreq: "yearly", priority: "0.3" },
++          { path: "/support", changefreq: "yearly", priority: "0.3" },
+         ];
+ 
+         const urls = entries.map((e) =>
+diff --git a/src/lib/i18n.tsx b/src/lib/i18n.tsx
+--- a/src/lib/i18n.tsx
++++ b/src/lib/i18n.tsx
+@@ -788,6 +788,11 @@
+     en: "Legal notice — CatchWords",
+     "zh-TW": "特定商業交易法標示 — CatchWords",
+   },
++  "page.support": {
++    ja: "お問い合わせ・サポート — CatchWords",
++    en: "Contact & Support — CatchWords",
++    "zh-TW": "聯絡與支援 — CatchWords",
++  },
+   // --- 復習・単語カード ---
+   // --- 日記の足場(要望 #88) ---
+   "rv.streakLine": {
+@@ -2825,6 +2830,7 @@
+     en: "Legal notice (Specified Commercial Transactions Act)",
+     "zh-TW": "特定商業交易法標示",
+   },
++  "legal.support": { ja: "お問い合わせ・サポート", en: "Contact & Support", "zh-TW": "聯絡與支援" },
+   "legal.linksAria": { ja: "規約と表記", en: "Legal documents", "zh-TW": "條款與標示" },
+   "legal.sectionTitle": { ja: "規約と表記", en: "Legal", "zh-TW": "條款與標示" },
+   // 待ちの演出の3段。**どの版でも同じ言葉を使う** — 版ごとに直書きしていた
+diff --git a/src/lib/legal-docs.test.ts b/src/lib/legal-docs.test.ts
+--- a/src/lib/legal-docs.test.ts
++++ b/src/lib/legal-docs.test.ts
+@@ -89,3 +89,36 @@
+     expect(billing).toContain("export const createBillingPortalSession");
+   });
+ });
++
++describe("iPhone アプリの扱い（2026-10-03。iOS の docs/legal が全文）", () => {
++  const SPEECH = { ja: "音声認識", en: "speech recognition", "zh-tw": "語音辨識" } as const;
++  for (const lang of LANGS) {
++    const doc = read(`components/legal/privacy-${lang}.tsx`);
++    it(`${lang}: 声で調べる・AI への送信の同意・広告の識別子・地域ごとの追加事項`, () => {
++      expect(doc).toContain(SPEECH[lang]);
++      expect(doc).toContain("IDFA");
++      expect(doc).toContain("GDPR");
++      expect(doc).toContain("CCPA");
++      expect(doc).toContain("<h2>14.");
++    });
++    it(`${lang}: 利用規約に App Store の条項と、連絡先（第13条）がある`, () => {
++      const terms = read(`components/legal/terms-${lang}.tsx`);
++      expect(terms).toContain("App Store");
++      expect(terms).toContain("<h2>13.");
++      expect(terms).toContain("<OperatorDetails");
++    });
++  }
++});
++
++describe("サポートの頁（iPhone アプリと App Store Connect のサポート URL）", () => {
++  it("連絡先は設定から（直書きしない）。法務のリンクの列にも出る", () => {
++    const doc = read("components/legal/SupportDocument.tsx");
++    expect(doc).toContain("<OperatorDetails");
++    expect(doc).not.toMatch(/mailto:/);
++    expect(read("components/legal/LegalShell.tsx")).toContain('href: "/support"');
++    expect(read("routes/support.tsx")).toContain('createFileRoute("/support")');
++  });
++  it("古い /tokushoho は /legal/tokushoho へ送る", () => {
++    expect(read("routes/tokushoho.tsx")).toContain('redirect({ to: "/legal/tokushoho"');
++  });
++});
+diff --git a/src/lib/hardcoded-japanese.test.ts b/src/lib/hardcoded-japanese.test.ts
+--- a/src/lib/hardcoded-japanese.test.ts
++++ b/src/lib/hardcoded-japanese.test.ts
+@@ -38,12 +38,16 @@
+   // 法務文書の**日本語版そのもの**（2026-10-03 に route から components/legal/ へ移し、
+   // 繁體中文版を足した。英語・繁體中文の版は別のファイルで、ここには数えられない）。
+   // 外部事業者・広告・保存期間・有料プランの条項を書き直したので行数が増えた。
+-  "src/components/legal/privacy-ja.tsx": 92,
+-  "src/components/legal/terms-ja.tsx": 48,
++  // 2026-10-03 iPhone アプリの扱い（声で調べる・AI への送信の同意・端末の中の保存）、外国の
++  // 事業者の国と制度、安全管理の措置、地域ごとの追加事項、App Store の条項を足した。
++  "src/components/legal/privacy-ja.tsx": 148,
++  "src/components/legal/terms-ja.tsx": 79,
+   // 特商法の表記の日本語の見出しと固定の文（3言語の表の ja の列。ja: の鍵の形でないので数える）。
+   "src/components/legal/TokushohoDocument.tsx": 20,
+   // 運営者の欄の日本語の見出し（同上、3言語の表の ja の列）。
+   "src/components/legal/operator.tsx": 4,
++  // サポートの頁の日本語の見出しと案内（3言語の表の ja の列。2026-10-03）。
++  "src/components/legal/SupportDocument.tsx": 12,
+ };
+ 
+ function walk(dir: string): string[] {
+diff --git a/src/lib/i18n.test.ts b/src/lib/i18n.test.ts
+--- a/src/lib/i18n.test.ts
++++ b/src/lib/i18n.test.ts
+@@ -114,7 +114,7 @@
+   const keys = Object.keys(DICT);
+ 
+   it("表示文言の登録数を把握する", () => {
+-    expect(keys.length).toBe(1275);
++    expect(keys.length).toBe(1277);
+   });
+ 
+   /**
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -18,7 +18,9 @@
+ import { Route as PrivacyRouteImport } from './routes/privacy'
+ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
++import { Route as SupportRouteImport } from './routes/support'
+ import { Route as TermsRouteImport } from './routes/terms'
++import { Route as TokushohoRouteImport } from './routes/tokushoho'
+ import { Route as WelcomeRouteImport } from './routes/welcome'
+ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+@@ -87,11 +89,21 @@
+   path: '/sitemap.xml',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const SupportRoute = SupportRouteImport.update({
++  id: '/support',
++  path: '/support',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const TermsRoute = TermsRouteImport.update({
+   id: '/terms',
+   path: '/terms',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const TokushohoRoute = TokushohoRouteImport.update({
++  id: '/tokushoho',
++  path: '/tokushoho',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const WelcomeRoute = WelcomeRouteImport.update({
+   id: '/welcome',
+   path: '/welcome',
+@@ -223,7 +235,9 @@
+   '/privacy': typeof PrivacyRoute
+   '/reset-password': typeof ResetPasswordRoute
+   '/sitemap.xml': typeof SitemapDotxmlRoute
++  '/support': typeof SupportRoute
+   '/terms': typeof TermsRoute
++  '/tokushoho': typeof TokushohoRoute
+   '/welcome': typeof WelcomeRoute
+   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+@@ -257,7 +271,9 @@
+   '/privacy': typeof PrivacyRoute
+   '/reset-password': typeof ResetPasswordRoute
+   '/sitemap.xml': typeof SitemapDotxmlRoute
++  '/support': typeof SupportRoute
+   '/terms': typeof TermsRoute
++  '/tokushoho': typeof TokushohoRoute
+   '/welcome': typeof WelcomeRoute
+   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+@@ -293,7 +309,9 @@
+   '/privacy': typeof PrivacyRoute
+   '/reset-password': typeof ResetPasswordRoute
+   '/sitemap.xml': typeof SitemapDotxmlRoute
++  '/support': typeof SupportRoute
+   '/terms': typeof TermsRoute
++  '/tokushoho': typeof TokushohoRoute
+   '/welcome': typeof WelcomeRoute
+   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+@@ -329,7 +347,9 @@
+     | '/privacy'
+     | '/reset-password'
+     | '/sitemap.xml'
++    | '/support'
+     | '/terms'
++    | '/tokushoho'
+     | '/welcome'
+     | '/.mcp/list-tools'
+     | '/.well-known/oauth-protected-resource'
+@@ -363,7 +383,9 @@
+     | '/privacy'
+     | '/reset-password'
+     | '/sitemap.xml'
++    | '/support'
+     | '/terms'
++    | '/tokushoho'
+     | '/welcome'
+     | '/.mcp/list-tools'
+     | '/.well-known/oauth-protected-resource'
+@@ -398,7 +420,9 @@
+     | '/privacy'
+     | '/reset-password'
+     | '/sitemap.xml'
++    | '/support'
+     | '/terms'
++    | '/tokushoho'
+     | '/welcome'
+     | '/.mcp/list-tools'
+     | '/.well-known/oauth-protected-resource'
+@@ -434,7 +458,9 @@
+   PrivacyRoute: typeof PrivacyRoute
+   ResetPasswordRoute: typeof ResetPasswordRoute
+   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
++  SupportRoute: typeof SupportRoute
+   TermsRoute: typeof TermsRoute
++  TokushohoRoute: typeof TokushohoRoute
+   WelcomeRoute: typeof WelcomeRoute
+   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+@@ -512,6 +538,13 @@
+       preLoaderRoute: typeof SitemapDotxmlRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/support': {
++      id: '/support'
++      path: '/support'
++      fullPath: '/support'
++      preLoaderRoute: typeof SupportRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/terms': {
+       id: '/terms'
+       path: '/terms'
+@@ -519,6 +552,13 @@
+       preLoaderRoute: typeof TermsRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/tokushoho': {
++      id: '/tokushoho'
++      path: '/tokushoho'
++      fullPath: '/tokushoho'
++      preLoaderRoute: typeof TokushohoRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/welcome': {
+       id: '/welcome'
+       path: '/welcome'
+@@ -737,7 +777,9 @@
+   PrivacyRoute: PrivacyRoute,
+   ResetPasswordRoute: ResetPasswordRoute,
+   SitemapDotxmlRoute: SitemapDotxmlRoute,
++  SupportRoute: SupportRoute,
+   TermsRoute: TermsRoute,
++  TokushohoRoute: TokushohoRoute,
+   WelcomeRoute: WelcomeRoute,
+   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+   Char91DotwellKnownChar93OauthProtectedResourceRoute:

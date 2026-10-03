@@ -29,6 +29,8 @@ struct DiaryComposer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text: String = ""
     @State private var justCorrected = false
+    /// 「AIに添削してもらう」 without the AI consent: the consent sheet instead (nothing is sent).
+    @State private var askAIConsent = false
     @FocusState private var focused: Bool
 
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
@@ -52,7 +54,7 @@ struct DiaryComposer: View {
                         }
                         editor
                         if let m = diary.message {
-                            Text(m).font(.system(size: 13)).foregroundStyle(Theme.destructive).padding(.horizontal, 16)
+                            Text(m).scaledFont(size: 13).foregroundStyle(Theme.destructive).padding(.horizontal, 16)
                         }
                         if isToday { correctButton }
                         if let e = entry, e.correction != nil || !(e.nativePhrases ?? []).isEmpty {
@@ -106,6 +108,9 @@ struct DiaryComposer: View {
             if isToday { await diary.loadScaffold() }
         }
         .onChange(of: text) { _, v in diary.keepDraft(v, for: day) }
+        .aiConsentSheet(isPresented: $askAIConsent) {
+            if isToday { Task { await diary.loadScaffold() } }
+        }
     }
 
     private var wordChips: some View {
@@ -118,7 +123,7 @@ struct DiaryComposer: View {
                             text += w
                         } label: {
                             Text(w)
-                                .font(.system(size: 15, weight: .semibold))
+                                .scaledFont(size: 15, weight: .semibold)
                                 .foregroundStyle(Theme.primaryInk)
                                 .padding(.horizontal, 12)
                                 .frame(minHeight: 36)
@@ -131,7 +136,7 @@ struct DiaryComposer: View {
             }
             .contentMargins(.horizontal, 16)
             Text(L("今日キャッチした語を押すと本文に入ります"))
-                .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 16)
         }
     }
@@ -162,6 +167,7 @@ struct DiaryComposer: View {
         return VStack(alignment: .leading, spacing: 6) {
             Button {
                 focused = false
+                guard AIConsent.shared.isGranted else { askAIConsent = true; return }
                 Task {
                     justCorrected = false
                     if await diary.correct(text, for: day) {
@@ -182,7 +188,7 @@ struct DiaryComposer: View {
                     }
                     Text(diary.isCorrecting ? L("添削中…") : L("AIに添削してもらう"))
                 }
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(ready ? .white : Theme.muted)
                 .padding(.horizontal, 20)
                 .frame(minHeight: 46)
@@ -197,7 +203,7 @@ struct DiaryComposer: View {
             .buttonStyle(PressableStyle())
             .disabled(!ready || diary.isCorrecting)
             Text(L("書いたものはこの端末に控えてあります。添削が通らなくても消えません。"))
-                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 11).foregroundStyle(Theme.muted)
         }
         .padding(.horizontal, 16)
     }
@@ -218,23 +224,23 @@ private struct ScaffoldCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(L("今日撮ったものから"), systemImage: "sparkles")
-                .font(.system(size: 12, weight: .bold))
+                .scaledFont(size: 12, weight: .bold)
                 .foregroundStyle(Theme.primaryInk)
             ForEach(Array(scaffold.prompts.enumerated()), id: \.offset) { _, p in
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(p.questionZh)
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(Theme.foreground)
                         let q = ReaderLanguage.shown(p.questionJa, source: p.questionZh, hanOnlyOk: false)
                         if !q.isEmpty {
                             Text(q)
-                                .font(.system(size: 12))
+                                .scaledFont(size: 12)
                                 .foregroundStyle(Theme.muted)
                         }
                         if let id = p.stickerId, let head = scaffold.captures.first(where: { $0.id == id })?.headword {
                             Text(L("「\(head)」のこと"))
-                                .font(.system(size: 11, weight: .medium))
+                                .scaledFont(size: 11, weight: .medium)
                                 .foregroundStyle(Theme.primaryInk.opacity(0.8))
                         }
                     }
@@ -247,13 +253,13 @@ private struct ScaffoldCard: View {
             if !scaffold.patterns.isEmpty {
                 Divider().padding(.vertical, 2)
                 Text(L("この型が使えます"))
-                    .font(.system(size: 11, weight: .bold))
+                    .scaledFont(size: 11, weight: .bold)
                     .foregroundStyle(Theme.muted)
                 FlowRow(spacing: 6) {
                     ForEach(Array(scaffold.patterns.enumerated()), id: \.offset) { _, pt in
                         Button { onUsePattern(pt.zh) } label: {
                             Text(pt.zh)
-                                .font(.system(size: 14, weight: .semibold))
+                                .scaledFont(size: 14, weight: .semibold)
                                 .foregroundStyle(Theme.primaryInk)
                                 .padding(.horizontal, 12)
                                 .frame(minHeight: 36)
@@ -263,7 +269,7 @@ private struct ScaffoldCard: View {
                         .accessibilityHint(ReaderLanguage.shown(pt.ja, source: pt.zh))
                     }
                 }
-                Text(L("押すと下に入ります")).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                Text(L("押すと下に入ります")).scaledFont(size: 11).foregroundStyle(Theme.muted)
             }
         }
         .padding(14)
@@ -292,11 +298,11 @@ struct CorrectionBlock: View {
             if let c = entry.correction ?? entry.bodyZh, !c.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     if !compact {
-                        Text(L("✦ 添削後")).font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.primaryInk)
+                        Text(L("✦ 添削後")).scaledFont(size: 12, weight: .bold).foregroundStyle(Theme.primaryInk)
                     }
                     HStack(alignment: .top) {
                         Text(c)
-                            .font(.system(size: 17))
+                            .scaledFont(size: 17)
                             .foregroundStyle(Theme.foreground)
                             .lineSpacing(5)
                             .textSelection(.enabled)
@@ -304,11 +310,11 @@ struct CorrectionBlock: View {
                         if !compact { PronounceCircle(text: c, size: 36) }
                     }
                     if let f = readable(entry.feedbackJa) {
-                        Text(L("型と解説")).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.muted).padding(.top, 4)
-                        Text(f).font(.system(size: 13)).foregroundStyle(Theme.muted).lineSpacing(3)
+                        Text(L("型と解説")).scaledFont(size: 11, weight: .bold).foregroundStyle(Theme.muted).padding(.top, 4)
+                        Text(f).scaledFont(size: 13).foregroundStyle(Theme.muted).lineSpacing(3)
                     }
                     if entry.correction == nil, let ja = readable(entry.bodyJa, source: c) {
-                        Text(ja).font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        Text(ja).scaledFont(size: 14).foregroundStyle(Theme.muted)
                     }
                 }
                 .padding(compact ? 0 : 16)
@@ -324,17 +330,17 @@ struct CorrectionBlock: View {
             if let phrases = entry.nativePhrases, !phrases.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(L("ネイティブならこう言う"), systemImage: "quote.opening")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold)
                         .foregroundStyle(Theme.primaryInk)
                     ForEach(Array(phrases.enumerated()), id: \.offset) { _, p in
                         HStack(alignment: .top, spacing: 8) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(p.zh).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                                Text(p.zh).scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.foreground)
                                 if let ja = readable(p.ja, source: p.zh) {
-                                    Text(ja).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                                    Text(ja).scaledFont(size: 13).foregroundStyle(Theme.muted)
                                 }
                                 if let n = readable(p.note) {
-                                    Text(n).font(.system(size: 12)).foregroundStyle(Theme.muted.opacity(0.9))
+                                    Text(n).scaledFont(size: 12).foregroundStyle(Theme.muted.opacity(0.9))
                                 }
                             }
                             Spacer(minLength: 0)
@@ -385,7 +391,7 @@ struct JournalHistoryView: View {
                         ForEach(past) { e in
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(DiaryStore.date(from: e.entryDate).map { JPDate.monthDay($0) } ?? e.entryDate)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .scaledFont(size: 13, weight: .semibold)
                                     .foregroundStyle(Theme.muted)
                                 if let draft = e.userDraft, !draft.isEmpty {
                                     Text(draft)
@@ -432,11 +438,11 @@ struct StrandedDiaryBanner: View {
                     Image(systemName: "doc.text").foregroundStyle(Theme.primaryInk)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(L("\(JPDate.monthDay(first.date))の日記が保存されていません"))
-                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
-                        Text(first.text).lineLimit(1).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                            .scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
+                        Text(first.text).lineLimit(1).scaledFont(size: 12).foregroundStyle(Theme.muted)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
+                    Image(systemName: "chevron.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
                 }
                 .padding(14)
                 .background(Theme.card, in: .rect(cornerRadius: 14))

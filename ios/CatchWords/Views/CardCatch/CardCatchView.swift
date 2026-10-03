@@ -14,14 +14,22 @@ struct CardCatchView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model = CardCatchModel()
+    /// True while nothing on the stage moves: the timeline stops redrawing the whole screen every frame.
+    @State private var framesPaused = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
 
     let ink = Color(hex: 0x0B121A)
 
     var body: some View {
         GeometryReader { geo in
-            TimelineView(.animation) { _ in
-                stage(now: CCClock.now)
+            // Per-frame redraws only while something moves (`CardCatchModel.needsFrames`). Reading it here as
+            // well makes any observed change of the model (a transition set, the sheet, the card) re-run this
+            // body and turn the frames back on at once; the stage then clears `framesPaused`.
+            TimelineView(.animation(minimumInterval: nil, paused: framesPaused && !model.needsFrames(CCClock.now))) { _ in
+                let now = CCClock.now
+                let idle = !model.needsFrames(now)
+                stage(now: now)
+                    .onChange(of: idle, initial: true) { _, v in framesPaused = v }
             }
             .onAppear {
                 model.space = CCSpace(size: geo.size)

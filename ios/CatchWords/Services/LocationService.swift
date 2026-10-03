@@ -5,7 +5,11 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     static let shared = LocationService()
 
     private let manager = CLLocationManager()
-    private var continuation: CheckedContinuation<CLLocation?, Never>?
+    /// Everyone waiting for the fix in flight: callers within the same few seconds share one request
+    /// (a second call used to answer the first with nil, and the first call's timer cut the second short).
+    private var waiters: [CheckedContinuation<CLLocation?, Never>] = []
+    /// Which request the timeout belongs to (a stale timer must not end a newer request).
+    private var generation = 0
 
     override init() {
         super.init()
@@ -22,12 +26,14 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         guard status == .authorizedWhenInUse || status == .authorizedAlways else { return nil }
         if let cached = manager.location, cached.timestamp.timeIntervalSinceNow > -300 { return cached }
         return await withCheckedContinuation { cont in
-            continuation?.resume(returning: nil)
-            continuation = cont
+            waiters.append(cont)
+            guard waiters.count == 1 else { return }  // a request is already on its way: share its answer
+            generation += 1
+            let mine = generation
             manager.requestLocation()
             Task {
                 try? await Task.sleep(for: .seconds(6))
-                self.finish(nil)
+                if self.generation == mine { self.finish(nil) }
             }
         }
     }
@@ -55,8 +61,11 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     private func finish(_ location: CLLocation?) {
-        continuation?.resume(returning: location)
-        continuation = nil
+        guard !waiters.isEmpty else { return }
+        let done = waiters
+        waiters = []
+        generation += 1  // the finished request's timer is now stale
+        done.forEach { $0.resume(returning: location) }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {

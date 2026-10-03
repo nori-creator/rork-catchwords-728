@@ -17,7 +17,7 @@ final class AIService {
     /// 768px / q0.8, one entry per object (`group`) plus its other names (`register`),
     /// in the server's order (most likely first, everyday name first). Never re-sorted here.
     func suggest(image: UIImage) async throws -> [Candidate] {
-        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 768, quality: 0.8) else {
+        guard let jpeg = await ImageTools.jpegForUploadInBackground(image, maxSide: 768, quality: 0.8) else {
             throw APIError.message(L("写真を読み込めませんでした。"))
         }
         let res = try await NativeAPI.call("suggestWords", [
@@ -34,7 +34,7 @@ final class AIService {
     /// the scan_events funnel log — all on the server, same as the web.
     func detectScan(image: UIImage, lat: Double? = nil, lng: Double? = nil) async throws -> [Candidate] {
         struct Res: Decodable { let items: [Candidate] }
-        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
+        guard let jpeg = await ImageTools.jpegForUploadInBackground(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
         var data: [String: Any] = ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]
         if let lat, let lng { data["lat"] = lat; data["lng"] = lng }
         let res = try await NativeAPI.call("detectScan", data, as: Res.self, timeout: 40)
@@ -60,22 +60,12 @@ final class AIService {
         return first
     }
 
-    /// The web's card (`generateCard`): level resolved against the dictionary (級外 when unsure),
-    /// the learner's level and explanation language, retries on bad shape, every extras section.
+    /// The web's card (`generateCard`): the example sentence and chunks are written at the learner's level
+    /// (the server reads `profiles.current_level` / `level_goal`, set in 設定), in the explanation language,
+    /// with retries on bad shape and every extras section. The card's own `level` field is not used on iOS.
     func cardDetails(for candidate: Candidate) async throws -> CardDetails {
         var data: [String: Any] = ["headword": candidate.headword, "targetLanguage": NativeAPI.targetLanguage]
         if let hint = candidate.categoryKey, !hint.isEmpty { data["hintCategory"] = hint }
         return try await NativeAPI.call("generateCard", data, as: CardDetails.self, timeout: 60)
-    }
-
-    /// Read the words printed on a vocabulary page, not saved yet (web `extractWordbook`; meanings
-    /// in the reader's language).
-    func extractWordbook(image: UIImage) async throws -> WordbookDraft {
-        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 2000, quality: 0.85) else { throw APIError.message(L("写真を読み込めませんでした。")) }
-        let draft = try await NativeAPI.call("extractWordbook", ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"],
-                                             as: WordbookDraft.self, timeout: 60)
-        let cleaned = Wordbook.clean(draft.entries)
-        guard !cleaned.isEmpty else { throw APIError.message(L("このページから語を読み取れませんでした。語が並んでいる所を明るく撮ってください。")) }
-        return WordbookDraft(title: draft.title, entries: cleaned)
     }
 }

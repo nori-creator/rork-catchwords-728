@@ -46,10 +46,10 @@ struct UserStatsPanel: View {
                 AvatarView(url: profile.avatarURL, size: 52)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(profile.displayName.isEmpty ? L("あなた") : profile.displayName)
-                        .font(.system(size: 20, weight: .bold))
+                        .scaledFont(size: 20, weight: .bold)
                         .foregroundStyle(Theme.foreground)
                     Text(profile.targetLanguage == "en" ? L("英語を学習中") : profile.targetLanguage == "ja" ? L("日本語を学習中") : L("台湾華語を学習中"))
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13)
                         .foregroundStyle(Theme.muted)
                 }
                 Spacer()
@@ -74,14 +74,14 @@ struct UserStatsPanel: View {
 
             if failed {
                 Text(L("数字を読み込めませんでした。通信を確かめてください。"))
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
             }
 
             HStack(spacing: 10) {
                 if let due = stats?.reviewsDue, due > 0 {
                     Button(action: onReview) {
                         Label(L("復習する"), systemImage: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 48)
                             .background(Theme.brandGradient, in: Capsule())
@@ -90,7 +90,7 @@ struct UserStatsPanel: View {
                 }
                 Button(action: onSettings) {
                     Label(L("設定"), systemImage: "gearshape")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold)
                         .foregroundStyle(Theme.foreground)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(Theme.card, in: Capsule())
@@ -124,6 +124,7 @@ struct UserStatsPanel: View {
                 .trim(from: 0, to: ringShown)
                 .stroke(Theme.brandGradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(-90))
+            // Fixed sizes: the two lines fill the 60 pt ring (not Dynamic Type; see ScaledFont.swift).
             VStack(spacing: -2) {
                 Text(L("レベル")).font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.7)
                 Text(stats.map { "\($0.level)" } ?? "–")
@@ -142,17 +143,17 @@ struct UserStatsPanel: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold)
                     .foregroundStyle(on ? tint : Theme.muted.opacity(0.5))
                     .symbolEffect(.bounce, value: value)
-                Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text(label).scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
             }
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value.map(String.init) ?? "–")
-                    .font(.system(size: 34, weight: .heavy).monospacedDigit())
+                    .scaledFont(size: 34, weight: .heavy, monospacedDigit: true)
                     .foregroundStyle(Theme.foreground)
                     .contentTransition(.numericText())
-                Text(L("日")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text(L("日")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -169,12 +170,12 @@ struct UserStatsPanel: View {
         VStack(spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value.map(String.init) ?? "–")
-                    .font(.system(size: 22, weight: .bold).monospacedDigit())
+                    .scaledFont(size: 22, weight: .bold, monospacedDigit: true)
                     .foregroundStyle(Theme.foreground)
                     .contentTransition(.numericText())
-                Text(unit).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text(unit).scaledFont(size: 11, weight: .semibold).foregroundStyle(Theme.muted)
             }
-            Text(label).font(.system(size: 11)).foregroundStyle(Theme.muted)
+            Text(label).scaledFont(size: 11).foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)

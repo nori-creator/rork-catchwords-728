@@ -10,12 +10,22 @@ struct PaywallView: View {
     @State private var appeared: Bool = false
     @State private var float: Bool = false
 
-    private let benefits: [(String, String, String)] = [
-        ("infinity", L("撮影・キャッチが無制限"), L("1日3回の上限がなくなります")),
-        ("scissors", L("被写体の切り抜きも無制限"), L("iPhoneの写真と同じ切り抜きで図鑑が美しく")),
-        ("wand.and.stars", L("解説の作り直し"), L("気になるカードをいつでも作り直せます")),
-        ("heart.fill", L("開発を応援"), L("これからの機能づくりを支えます")),
-    ]
+    /// Only what Pro really changes (App Store Review 2.3.1 / 3.1.2: no promise the app does not keep).
+    /// - The daily limit exists only while `catchLimitEnabled` is on.
+    /// - Cut-outs are free and unlimited for everyone, so they are not a Pro benefit.
+    /// - 「作り直す」 is decided by the server, which does not know App Store purchases yet
+    ///   (`PlanStore.serverVerifiesAppStore`).
+    private var benefits: [(String, String, String)] {
+        var list: [(String, String, String)] = []
+        if PlanStore.catchLimitEnabled {
+            list.append(("infinity", L("撮影・キャッチが無制限"), L("1日3回の上限がなくなります")))
+        }
+        if PlanStore.serverVerifiesAppStore {
+            list.append(("wand.and.stars", L("解説の作り直し"), L("気になるカードをいつでも作り直せます")))
+        }
+        list.append(("heart.fill", L("開発を応援"), L("これからの機能づくりを支えます")))
+        return list
+    }
 
     var body: some View {
         ZStack {
@@ -46,9 +56,10 @@ struct PaywallView: View {
                     .frame(height: 150)
                     VStack(spacing: 8) {
                         Text(L("街じゅうを、図鑑にしよう。"))
-                            .font(.system(size: 26, weight: .bold))
+                            .scaledFont(size: 26, weight: .bold)
                             .foregroundStyle(Theme.foreground)
-                        Text(plan.remainingToday == 0 ? L("今日の無料キャッチ（3回）を使い切りました。") : L("Proなら、見つけた瞬間に何度でも。"))
+                            .multilineTextAlignment(.center)
+                        Text(PlanStore.catchLimitEnabled && plan.remainingToday == 0 ? L("今日の無料キャッチ（3回）を使い切りました。") : L("Proなら、見つけた瞬間に何度でも。"))
                             .font(AppFont.hand(17))
                             .foregroundStyle(Theme.muted)
                             .multilineTextAlignment(.center)
@@ -61,8 +72,8 @@ struct PaywallView: View {
                                     .frame(width: 40, height: 40)
                                     .background(Theme.accent, in: .rect(cornerRadius: 12))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(b.1).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
-                                    Text(b.2).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                                    Text(b.1).scaledFont(size: 15, weight: .semibold).foregroundStyle(Theme.foreground)
+                                    Text(b.2).scaledFont(size: 12).foregroundStyle(Theme.muted)
                                 }
                                 Spacer()
                             }
@@ -85,22 +96,27 @@ struct PaywallView: View {
                     }
                     .disabled(plan.isLoadingProducts)
                     if let msg = plan.message {
-                        Text(msg).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        Text(msg).scaledFont(size: 13).foregroundStyle(Theme.muted)
                             .multilineTextAlignment(.center)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     HStack(spacing: 18) {
                         Button(L("購入を復元")) { Task { await plan.restore(); if plan.isPro { dismiss() } } }
                             .buttonStyle(PressableStyle(scale: 0.97))
-                        Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                        Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                        Link(L("利用規約"), destination: AppConfig.termsURL)
+                        Link(L("プライバシー"), destination: AppConfig.privacyURL)
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium)
                     .foregroundStyle(Theme.muted)
-                    Text(L("サブスクリプションは期間終了の24時間前までに解約しない限り自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。"))
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.muted.opacity(0.8))
+                    Link(L("特定商取引法に基づく表記"), destination: AppConfig.tokushohoURL)
+                        .scaledFont(size: 12, weight: .medium)
+                        .foregroundStyle(Theme.muted)
+                    // Auto-renewal terms (Guideline 3.1.2): readable size and full contrast, not fine print.
+                    Text(L("お支払いは購入の確定時にApple IDに請求されます。サブスクリプションは期間終了の24時間前までに解約しない限り、同じ期間・同じ価格で自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。"))
+                        .scaledFont(size: 12)
+                        .foregroundStyle(Theme.muted)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 22)
                 .padding(.bottom, 30)
@@ -136,7 +152,7 @@ struct PaywallView: View {
                     ProgressView().tint(Theme.muted)
                 } else {
                     Text(L("App Store の価格を読み込めませんでした。通信を確かめて、もう一度お試しください。"))
-                        .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 13).foregroundStyle(Theme.muted)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -157,23 +173,27 @@ struct PaywallView: View {
                                 .contentTransition(.symbolEffect(.replace))
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
-                                    Text(isYearly ? L("年額プラン") : L("月額プラン")).font(.system(size: 16, weight: .bold))
+                                    Text(isYearly ? L("年額プラン") : L("月額プラン")).scaledFont(size: 16, weight: .bold)
                                     if isYearly, let off = yearlySaving {
                                         Text(L("\(off)%おトク"))
-                                            .font(.system(size: 10, weight: .bold))
+                                            .scaledFont(size: 10, weight: .bold)
                                             .foregroundStyle(.black)
                                             .padding(.horizontal, 6).padding(.vertical, 2)
                                             .background(Theme.gold, in: Capsule())
                                     }
                                 }
+                                // Schedule 2 / 3.1.2: the length of the subscription next to its price.
+                                Text(isYearly ? L("1年ごとに自動更新") : L("1か月ごとに自動更新"))
+                                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
                                 if isYearly {
                                     Text(L("月あたり \((product.price / 12).formatted(product.priceFormatStyle))"))
-                                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                                        .scaledFont(size: 12).foregroundStyle(Theme.muted)
                                 }
                             }
                             .foregroundStyle(Theme.foreground)
                             Spacer()
-                            Text(product.displayPrice).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
+                            Text(isYearly ? L("\(product.displayPrice)／年") : L("\(product.displayPrice)／月"))
+                                .scaledFont(size: 17, weight: .bold).foregroundStyle(Theme.foreground)
                         }
                         .padding(16)
                         .background(selected ? Theme.primary.opacity(0.06) : Theme.card, in: .rect(cornerRadius: 18, style: .continuous))

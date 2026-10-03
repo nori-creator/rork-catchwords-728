@@ -83,6 +83,22 @@ final class ProfileStore {
         if let s = row["created_at"] as? String { createdAt = SupabaseDate.parse(s) }
     }
 
+    /// Signing out: the next account starts from a blank profile (its own is read on sign-in). The
+    /// learning language is kept: it is only this device's first guess until the profile arrives.
+    func reset() {
+        displayName = ""
+        avatarURL = nil
+        currentLevel = "TOCFL-1"
+        levelGoal = "TOCFL-2"
+        reviewDailyLimit = 20
+        onboarded = false
+        createdAt = nil
+        isLoaded = false
+        loadFailed = false
+        isSavingAvatar = false
+        message = nil
+    }
+
     func update(_ fields: [String: Any]) async {
         guard let uid = client.userId else { return }
         var body = fields

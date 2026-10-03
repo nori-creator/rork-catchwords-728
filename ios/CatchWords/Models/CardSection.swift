@@ -200,7 +200,7 @@ final class CardPrefsStore {
 }
 
 extension String {
-    /// Written in the learning language at all (an example sentence, a wordbook headword): Han for
+    /// Written in the learning language at all (an example sentence): Han for
     /// Taiwan Mandarin, kana or kanji for Japanese, Latin letters for English.
     nonisolated func isIn(target: String) -> Bool { LanguageRules.isIn(self, target: target) }
 }

@@ -26,6 +26,10 @@ enum Theme {
     static let ok = Color(hex: 0x00A95C)
     static let radius: CGFloat = 14
 
+    /// Dark pill behind white notice text (toasts, hints): stays dark in the dark theme too, where
+    /// `foreground` turns light and white text on it disappeared.
+    static let toastInk = Color(hex: 0x0B121A)
+
     static let navyDeep = Color(hex: 0x060D1C)
     static let navyCard = Color(hex: 0x131E37)
 
@@ -116,17 +120,20 @@ enum AppFont {
         }
     }
 
-    static func hand(_ size: CGFloat) -> Font {
-        resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size) ?? .system(size: size, design: .rounded)
+    /// Follows Dynamic Type like the nearest text style (`fixed: true` inside fixed-size frames).
+    static func hand(_ size: CGFloat, fixed: Bool = false) -> Font {
+        resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size, relativeTo: fixed ? nil : AppTypeScale.fontTextStyle(for: size))
+            ?? .system(size: size, design: .rounded)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
 
-    private static func resolve(_ names: [String], _ size: CGFloat) -> Font? {
+    private static func resolve(_ names: [String], _ size: CGFloat, relativeTo style: Font.TextStyle?) -> Font? {
         for name in names where UIFont(name: name, size: size) != nil {
-            return .custom(name, size: size)
+            if let style { return .custom(name, size: size, relativeTo: style) }
+            return .custom(name, fixedSize: size)
         }
         return nil
     }

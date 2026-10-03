@@ -1,0 +1,888 @@
+From 3766ba21a3564416e816c990ee5f47e208910602 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sat, 3 Oct 2026 13:41:35 +0000
+Subject: [PATCH 4/5] =?UTF-8?q?=E9=80=80=E4=BC=9A=E3=81=AE=E3=81=A8?=
+ =?UTF-8?q?=E3=81=8D=E3=81=AB=E3=80=8CApple=20=E3=81=A7=E3=82=B5=E3=82=A4?=
+ =?UTF-8?q?=E3=83=B3=E3=82=A4=E3=83=B3=E3=80=8D=E3=81=AE=E8=A8=B1=E5=8F=AF?=
+ =?UTF-8?q?=E3=82=92=E5=8F=96=E3=82=8A=E6=B6=88=E3=81=99=EF=BC=88Apple=20T?=
+ =?UTF-8?q?N3194=EF=BC=89?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Apple でサインインした直後に届く provider_refresh_token を拾い（apple-token-capture）、サーバに預ける（saveAppleToken → 新しい表 apple_tokens、サーバの鍵だけ）
+- deleteMyAccount で、データを消した後・アカウントを消す前に https://appleid.apple.com/auth/revoke を呼ぶ（client_secret は Web Crypto で ES256 署名）
+- 取り消しが失敗しても・token が無くても・設定が無くても退会は止めず、記録に残す
+- iPhone の橋渡し（/native-auth）は預け終わるのを最大3秒待ってからアプリへ戻る
+- 秘密の値: APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY / APPLE_SERVICES_ID
+- 試験（fetch を差し替え、署名を公開鍵で確かめる）
+---
+ ARCHITECTURE.md                               |   4 +
+ src/lib/apple-revoke.server.ts                | 141 ++++++++
+ src/lib/apple-revoke.test.ts                  | 306 ++++++++++++++++++
+ src/lib/apple-revoke.ts                       | 149 +++++++++
+ src/lib/apple-token-capture.ts                |  67 ++++
+ src/lib/apple-token.functions.ts              |  35 ++
+ src/lib/profile.functions.ts                  |  11 +-
+ src/routes/__root.tsx                         |   4 +
+ src/routes/native-auth.tsx                    |  13 +
+ .../20261003150000_apple_tokens.sql           |  34 ++
+ 10 files changed, 763 insertions(+), 1 deletion(-)
+ create mode 100644 src/lib/apple-revoke.server.ts
+ create mode 100644 src/lib/apple-revoke.test.ts
+ create mode 100644 src/lib/apple-revoke.ts
+ create mode 100644 src/lib/apple-token-capture.ts
+ create mode 100644 src/lib/apple-token.functions.ts
+ create mode 100644 supabase/migrations/20261003150000_apple_tokens.sql
+
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+index 8652cc8..89bf3cb 100644
+--- a/ARCHITECTURE.md
++++ b/ARCHITECTURE.md
+@@ -253,3 +253,7 @@ Small merges: image resize/thumb helpers now live in `image-resize.ts`; the opti
+ ## External AI consent (2026-10-03)
+ 
+ Guideline 5.1.2(i) / APPI §28. Every server function that sends photos, words or typed text to an AI provider calls `assertAiConsent` (`src/lib/ai-consent.server.ts`) before anything is sent; the list is `AI_CONSENT_FUNCTIONS` in `src/lib/ai-consent.ts` (kept in step with iOS `AIConsent.aiFunctions`, checked by `ai-consent.test.ts`). Consent is stored in `ai_consents` (migration `20261003140000`, written by the service role only, users can read their own rows). The web asks in `AiConsentDialog` (signed-in users once after entering the app via `AiConsentAccountGate`, and whenever an AI call is refused with `AI_CONSENT_REQUIRED`; guests in the tutorial before the first AI call, stored on the device and asked again after sign-up). Settings has a card to review/withdraw. `/api/native-fn` (iOS) is enforced only when the request carries `AI-Consent-Version` or `AI_CONSENT_ENFORCE_NATIVE` is set, so older iOS builds keep working; see `docs/ios-spec/23-ai-consent.md` for `recordAiConsent` / `getAiConsent`. Until the migration is applied, the check passes (logged) so AI does not stop.
++
++## Sign in with Apple revocation on account deletion (2026-10-03)
++
++Apple's account-deletion rule (TN3194): `deleteMyAccount` calls `revokeAppleForUser` (`src/lib/apple-revoke.server.ts`) after the data is deleted and before the auth user is deleted. It posts the stored token to `https://appleid.apple.com/auth/revoke` with an ES256 `client_secret` signed by Web Crypto (`src/lib/apple-revoke.ts`; env `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_SERVICES_ID`). It never throws: no token / missing secrets / Apple errors are logged and the deletion continues. The token comes from `session.provider_refresh_token`, which supabase-js emits once right after an Apple OAuth sign-in; `apple-token-capture.ts` (installed at the top of `__root.tsx`) sends it to `saveAppleToken`, which stores it in `apple_tokens` (migration `20261003150000`, service role only). `/native-auth` waits up to 3 s for that upload before handing the session to iOS. Whether the Lovable OAuth broker forwards `provider_refresh_token` must be checked after deploy (README.ja.md); if it does not, revocation is skipped and logged.
+diff --git a/src/lib/apple-revoke.server.ts b/src/lib/apple-revoke.server.ts
+new file mode 100644
+index 0000000..9629c78
+--- /dev/null
++++ b/src/lib/apple-revoke.server.ts
+@@ -0,0 +1,141 @@
++/**
++ * Apple の token の置き場所（`apple_tokens`）を読み書きし、退会のときに取り消す。
++ * 取り消しの決まりは `apple-revoke.ts`。表は移行 `20261003150000_apple_tokens.sql`
++ * （サーバの鍵だけが触る。ブラウザからは何もできない）。
++ *
++ * **退会は、取り消しがどう転んでも止めない**（`revokeAppleForUser` は投げない）。
++ */
++import {
++  readAppleConfig,
++  revokeAppleToken,
++  type AppleTokenKind,
++  type RevokeResult,
++} from "./apple-revoke";
++
++const TABLE = "apple_tokens";
++
++type LooseError = { message?: string; code?: string } | null;
++type Result<T> = PromiseLike<{ data: T | null; error: LooseError }>;
++
++export type AppleTokenRow = { token: string; token_type: AppleTokenKind };
++
++/** 使う所だけの形（試験で差し替える）。 */
++export type AppleTokenDb = {
++  from: (t: string) => {
++    select: (c: string) => {
++      eq: (k: string, v: string) => { maybeSingle: () => Result<AppleTokenRow> };
++    };
++    upsert: (row: Record<string, unknown>, o: { onConflict: string }) => Result<unknown>;
++    delete: () => { eq: (k: string, v: string) => Result<unknown> };
++  };
++};
++
++async function adminDb(): Promise<AppleTokenDb> {
++  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
++  return supabaseAdmin as unknown as AppleTokenDb;
++}
++
++/** Apple の token を置く（同じ人は上書き。refresh token を access token で上書きしない）。 */
++export async function storeAppleToken(
++  userId: string,
++  input: { token: string; kind: AppleTokenKind },
++  db?: AppleTokenDb,
++): Promise<{ stored: boolean }> {
++  const d = db ?? (await adminDb());
++  if (input.kind === "access_token") {
++    const { data } = await d
++      .from(TABLE)
++      .select("token, token_type")
++      .eq("user_id", userId)
++      .maybeSingle();
++    if (data?.token_type === "refresh_token") return { stored: false };
++  }
++  const { error } = await d.from(TABLE).upsert(
++    {
++      user_id: userId,
++      token: input.token,
++      token_type: input.kind,
++      updated_at: new Date().toISOString(),
++    },
++    { onConflict: "user_id" },
++  );
++  if (error) throw new Error(`apple_tokens の保存に失敗しました: ${error.message ?? ""}`);
++  return { stored: true };
++}
++
++export type RevokeOutcome =
++  | { status: "revoked" }
++  | { status: "skipped"; reason: "no_token" | "not_configured" | "table_missing" }
++  | { status: "failed"; error: string; httpStatus: number | null };
++
++/**
++ * 退会の前に呼ぶ。置いてある token を Apple で取り消し、置き場所から消す。
++ * どんな失敗でも投げずに結果を返し、記録（console）に残す。
++ */
++export async function revokeAppleForUser(
++  userId: string,
++  deps: {
++    db?: AppleTokenDb;
++    env?: Record<string, string | undefined>;
++    fetch?: typeof fetch;
++    log?: (msg: string) => void;
++  } = {},
++): Promise<RevokeOutcome> {
++  const log = deps.log ?? ((m: string) => console.warn(m));
++  try {
++    const d = deps.db ?? (await adminDb());
++    const { data, error } = await d
++      .from(TABLE)
++      .select("token, token_type")
++      .eq("user_id", userId)
++      .maybeSingle();
++    if (error) {
++      const missing =
++        error.code === "PGRST205" ||
++        error.code === "42P01" ||
++        /apple_tokens/.test(error.message ?? "");
++      log(
++        `[apple-revoke] token を読めない（${missing ? "表が無い" : error.message}）。取り消さずに退会を続ける`,
++      );
++      return missing
++        ? { status: "skipped", reason: "table_missing" }
++        : { status: "failed", error: error.message ?? "read failed", httpStatus: null };
++    }
++    if (!data?.token) {
++      log(
++        "[apple-revoke] Apple の token が置かれていない（この変更より前の登録・Apple 以外）。取り消しは飛ばす",
++      );
++      return { status: "skipped", reason: "no_token" };
++    }
++    const { config, missing } = readAppleConfig(deps.env ?? process.env);
++    if (!config) {
++      log(`[apple-revoke] 設定が足りない（${missing.join(", ")}）。取り消さずに退会を続ける`);
++      return { status: "skipped", reason: "not_configured" };
++    }
++    const res: RevokeResult = await revokeAppleToken(
++      { token: data.token, kind: data.token_type ?? "refresh_token", config },
++      { fetch: deps.fetch },
++    );
++    // 取り消せても失敗しても、token は残さない（表は退会で消えるが、先に消しておく）。
++    await d
++      .from(TABLE)
++      .delete()
++      .eq("user_id", userId)
++      .then(
++        () => undefined,
++        () => undefined,
++      );
++    if (res.ok) {
++      log("[apple-revoke] Apple の許可を取り消した");
++      return { status: "revoked" };
++    }
++    log(
++      `[apple-revoke] Apple が取り消しを断った（${res.status ?? "network"} ${res.error}）。退会は続ける`,
++    );
++    return { status: "failed", error: res.error, httpStatus: res.status };
++  } catch (e) {
++    const msg = e instanceof Error ? e.message : String(e);
++    log(`[apple-revoke] 取り消しで失敗（${msg}）。退会は続ける`);
++    return { status: "failed", error: msg, httpStatus: null };
++  }
++}
+diff --git a/src/lib/apple-revoke.test.ts b/src/lib/apple-revoke.test.ts
+new file mode 100644
+index 0000000..01db48c
+--- /dev/null
++++ b/src/lib/apple-revoke.test.ts
+@@ -0,0 +1,306 @@
++import fs from "node:fs";
++import path from "node:path";
++import { describe, expect, it, vi } from "vitest";
++
++vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
++
++import {
++  APPLE_REVOKE_URL,
++  CLIENT_SECRET_MAX_TTL_S,
++  makeAppleClientSecret,
++  readAppleConfig,
++  revokeAppleToken,
++  type AppleConfig,
++} from "./apple-revoke";
++import {
++  revokeAppleForUser,
++  storeAppleToken,
++  type AppleTokenDb,
++  type AppleTokenRow,
++} from "./apple-revoke.server";
++import { appleTokenFromSession } from "./apple-token-capture";
++
++/** 試験用の P-256 の鍵（本物の Apple の鍵の代わり）。p8 と同じ PKCS#8 の PEM にする。 */
++async function testKey() {
++  const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
++    "sign",
++    "verify",
++  ])) as CryptoKeyPair;
++  const der = new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
++  const b64 = Buffer.from(der).toString("base64");
++  const pem = `-----BEGIN PRIVATE KEY-----\n${b64.match(/.{1,64}/g)!.join("\n")}\n-----END PRIVATE KEY-----`;
++  return { pem, publicKey: pair.publicKey };
++}
++
++const b64urlDecode = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
++
++async function config(): Promise<{ cfg: AppleConfig; publicKey: CryptoKey }> {
++  const { pem, publicKey } = await testKey();
++  return {
++    cfg: {
++      teamId: "TEAM123456",
++      keyId: "KEY1234567",
++      privateKey: pem,
++      servicesId: "app.catchwords.web",
++    },
++    publicKey,
++  };
++}
++
++function fakeDb(
++  row: AppleTokenRow | null,
++  error: { code?: string; message?: string } | null = null,
++) {
++  const state = { row, deleted: 0, upserts: [] as Record<string, unknown>[] };
++  const db: AppleTokenDb = {
++    from: () => ({
++      select: () => ({
++        eq: () => ({ maybeSingle: async () => ({ data: state.row, error }) }),
++      }),
++      upsert: async (r) => {
++        state.upserts.push(r);
++        state.row = {
++          token: String(r.token),
++          token_type: r.token_type as AppleTokenRow["token_type"],
++        };
++        return { data: null, error: null };
++      },
++      delete: () => ({
++        eq: async () => {
++          state.deleted++;
++          state.row = null;
++          return { data: null, error: null };
++        },
++      }),
++    }),
++  };
++  return { db, state };
++}
++
++const ENV_KEYS = ["APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY", "APPLE_SERVICES_ID"];
++const envFrom = (c: AppleConfig) => ({
++  APPLE_TEAM_ID: c.teamId,
++  APPLE_KEY_ID: c.keyId,
++  APPLE_PRIVATE_KEY: c.privateKey,
++  APPLE_SERVICES_ID: c.servicesId,
++});
++
++describe("client_secret（ES256 の JWT）", () => {
++  it("Apple の決まりどおりの頭と中身で、鍵の対で確かめられる署名", async () => {
++    const { cfg, publicKey } = await config();
++    const jwt = await makeAppleClientSecret(cfg, 1_700_000_000);
++    const [h, p, s] = jwt.split(".");
++    expect(JSON.parse(b64urlDecode(h).toString())).toEqual({
++      alg: "ES256",
++      kid: "KEY1234567",
++      typ: "JWT",
++    });
++    const payload = JSON.parse(b64urlDecode(p).toString());
++    expect(payload).toMatchObject({
++      iss: "TEAM123456",
++      iat: 1_700_000_000,
++      aud: "https://appleid.apple.com",
++      sub: "app.catchwords.web",
++    });
++    expect(payload.exp - payload.iat).toBeLessThanOrEqual(CLIENT_SECRET_MAX_TTL_S);
++    expect(payload.exp).toBeGreaterThan(payload.iat);
++    const sig = b64urlDecode(s);
++    expect(sig.length).toBe(64); // r‖s（JWS の ES256 の形）
++    const ok = await crypto.subtle.verify(
++      { name: "ECDSA", hash: "SHA-256" },
++      publicKey,
++      sig,
++      new TextEncoder().encode(`${h}.${p}`),
++    );
++    expect(ok).toBe(true);
++  });
++
++  it("有効期限は 6 か月（15777000 秒）を超えない", async () => {
++    const { cfg } = await config();
++    const jwt = await makeAppleClientSecret(cfg, 0, 10 ** 9);
++    const payload = JSON.parse(b64urlDecode(jwt.split(".")[1]).toString());
++    expect(payload.exp).toBe(CLIENT_SECRET_MAX_TTL_S);
++  });
++
++  it("環境変数の改行が \\n の文字になっていても読む", async () => {
++    const { cfg } = await config();
++    const flat = { ...cfg, privateKey: cfg.privateKey.replace(/\n/g, "\\n") };
++    await expect(makeAppleClientSecret(flat)).resolves.toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
++  });
++
++  it("設定が欠けていれば名前を返す", () => {
++    expect(readAppleConfig({}).missing).toEqual(ENV_KEYS);
++    expect(readAppleConfig({ APPLE_TEAM_ID: "T" }).config).toBeNull();
++  });
++});
++
++describe("revokeAppleToken（Apple の取り消しの口）", () => {
++  it("決まりどおりの form を POST する", async () => {
++    const { cfg } = await config();
++    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
++    const res = await revokeAppleToken(
++      { token: "r.abc", kind: "refresh_token", config: cfg },
++      { fetch: fetchMock as unknown as typeof fetch },
++    );
++    expect(res).toEqual({ ok: true, status: 200 });
++    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
++    expect(url).toBe(APPLE_REVOKE_URL);
++    expect(init.method).toBe("POST");
++    expect((init.headers as Record<string, string>)["content-type"]).toBe(
++      "application/x-www-form-urlencoded",
++    );
++    const body = new URLSearchParams(String(init.body));
++    expect(body.get("client_id")).toBe("app.catchwords.web");
++    expect(body.get("token")).toBe("r.abc");
++    expect(body.get("token_type_hint")).toBe("refresh_token");
++    expect(body.get("client_secret")).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
++  });
++
++  it("Apple の断り（invalid_client など）は投げずに返す", async () => {
++    const { cfg } = await config();
++    const fetchMock = vi.fn(async () =>
++      Response.json({ error: "invalid_client" }, { status: 400 }),
++    );
++    const res = await revokeAppleToken(
++      { token: "r", kind: "refresh_token", config: cfg },
++      { fetch: fetchMock as unknown as typeof fetch },
++    );
++    expect(res).toEqual({ ok: false, status: 400, error: "invalid_client" });
++  });
++});
++
++describe("revokeAppleForUser（退会の時。どう転んでも投げない）", () => {
++  const quiet = () => undefined;
++
++  it("token が置かれていなければ飛ばす（Apple を呼ばない）", async () => {
++    const { db } = fakeDb(null);
++    const fetchMock = vi.fn();
++    const r = await revokeAppleForUser("u1", { db, env: {}, fetch: fetchMock, log: quiet });
++    expect(r).toEqual({ status: "skipped", reason: "no_token" });
++    expect(fetchMock).not.toHaveBeenCalled();
++  });
++
++  it("設定が無ければ飛ばす", async () => {
++    const { db } = fakeDb({ token: "r", token_type: "refresh_token" });
++    const fetchMock = vi.fn();
++    const r = await revokeAppleForUser("u1", { db, env: {}, fetch: fetchMock, log: quiet });
++    expect(r).toEqual({ status: "skipped", reason: "not_configured" });
++    expect(fetchMock).not.toHaveBeenCalled();
++  });
++
++  it("表が無い（移行待ち）なら飛ばす", async () => {
++    const { db } = fakeDb(null, { code: "PGRST205", message: "apple_tokens not found" });
++    const r = await revokeAppleForUser("u1", { db, env: {}, log: quiet });
++    expect(r).toEqual({ status: "skipped", reason: "table_missing" });
++  });
++
++  it("取り消せたら revoked、token は消す", async () => {
++    const { cfg } = await config();
++    const { db, state } = fakeDb({ token: "r.ok", token_type: "refresh_token" });
++    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
++    const r = await revokeAppleForUser("u1", {
++      db,
++      env: envFrom(cfg),
++      fetch: fetchMock as unknown as typeof fetch,
++      log: quiet,
++    });
++    expect(r).toEqual({ status: "revoked" });
++    expect(state.deleted).toBe(1);
++  });
++
++  it("Apple が失敗しても・通信が落ちても投げない", async () => {
++    const { cfg } = await config();
++    const { db } = fakeDb({ token: "r", token_type: "refresh_token" });
++    const down = vi.fn(async () => {
++      throw new TypeError("fetch failed");
++    });
++    await expect(
++      revokeAppleForUser("u1", {
++        db,
++        env: envFrom(cfg),
++        fetch: down as unknown as typeof fetch,
++        log: quiet,
++      }),
++    ).resolves.toMatchObject({ status: "failed" });
++    const bad = vi.fn(async () => Response.json({ error: "invalid_grant" }, { status: 400 }));
++    const { db: db2 } = fakeDb({ token: "r", token_type: "refresh_token" });
++    await expect(
++      revokeAppleForUser("u1", {
++        db: db2,
++        env: envFrom(cfg),
++        fetch: bad as unknown as typeof fetch,
++        log: quiet,
++      }),
++    ).resolves.toEqual({ status: "failed", error: "invalid_grant", httpStatus: 400 });
++  });
++
++  it("鍵が壊れていても投げない", async () => {
++    const { db } = fakeDb({ token: "r", token_type: "refresh_token" });
++    const r = await revokeAppleForUser("u1", {
++      db,
++      env: {
++        APPLE_TEAM_ID: "T",
++        APPLE_KEY_ID: "K",
++        APPLE_PRIVATE_KEY: "not a key",
++        APPLE_SERVICES_ID: "S",
++      },
++      fetch: vi.fn() as unknown as typeof fetch,
++      log: quiet,
++    });
++    expect(r.status).toBe("failed");
++  });
++});
++
++describe("預ける", () => {
++  it("refresh token を access token で上書きしない", async () => {
++    const { db, state } = fakeDb({ token: "r", token_type: "refresh_token" });
++    expect(await storeAppleToken("u1", { token: "a", kind: "access_token" }, db)).toEqual({
++      stored: false,
++    });
++    expect(state.row?.token).toBe("r");
++    expect(await storeAppleToken("u1", { token: "r2", kind: "refresh_token" }, db)).toEqual({
++      stored: true,
++    });
++    expect(state.row?.token).toBe("r2");
++  });
++
++  it("拾うのは Apple のサインインの直後の session だけ", () => {
++    const apple = { user: { app_metadata: { provider: "apple", providers: ["apple"] } } };
++    expect(appleTokenFromSession({ ...apple, provider_refresh_token: "r" })).toEqual({
++      token: "r",
++      kind: "refresh_token",
++    });
++    expect(appleTokenFromSession({ ...apple, provider_token: "a" })).toEqual({
++      token: "a",
++      kind: "access_token",
++    });
++    expect(appleTokenFromSession(apple)).toBeNull();
++    expect(
++      appleTokenFromSession({
++        user: { app_metadata: { provider: "google" } },
++        provider_refresh_token: "g",
++      }),
++    ).toBeNull();
++    expect(appleTokenFromSession(null)).toBeNull();
++  });
++});
++
++describe("退会の順番", () => {
++  const src = fs.readFileSync(path.join(__dirname, "profile.functions.ts"), "utf8");
++  it("データを消した後・アカウントを消す前に取り消す（失敗しても止めない）", () => {
++    const revoke = src.indexOf("revokeAppleForUser(userId)");
++    const deleteUser = src.indexOf("auth.admin.deleteUser(userId)");
++    const profiles = src.indexOf('["profiles", "id"]');
++    expect(revoke).toBeGreaterThan(profiles);
++    expect(deleteUser).toBeGreaterThan(revoke);
++  });
++  it("表はサーバの鍵だけ（ブラウザの決まりを置かない）", () => {
++    const sql = fs.readFileSync(
++      path.join(__dirname, "../../supabase/migrations/20261003150000_apple_tokens.sql"),
++      "utf8",
++    );
++    expect(sql).toMatch(/enable row level security/);
++    expect(sql).toMatch(/revoke all on public\.apple_tokens from public, anon, authenticated/);
++    expect(sql).not.toMatch(/create policy/);
++  });
++});
+diff --git a/src/lib/apple-revoke.ts b/src/lib/apple-revoke.ts
+new file mode 100644
+index 0000000..ab11446
+--- /dev/null
++++ b/src/lib/apple-revoke.ts
+@@ -0,0 +1,149 @@
++/**
++ * **退会のときに「Apple でサインイン」の許可を取り消す**（Apple の退会の決まり・TN3194）。
++ *
++ * Apple の決まり（2026-10-03 に公式の文書で確かめた）:
++ * - 取り消しの口は `POST https://appleid.apple.com/auth/revoke`
++ *   （`application/x-www-form-urlencoded`）。送る物は `client_id`（Supabase の Apple ログインに
++ *   使っている Services ID）・`client_secret`（下の JWT）・`token`（利用者の refresh token か
++ *   access token）・`token_type_hint`（`refresh_token` / `access_token`）。
++ *   取り消せた・前に無効になっていた時は **200 で本文なし**。失敗は `{"error":"invalid_client"}` など。
++ * - `client_secret` は ES256（P-256 + SHA-256）で署名した JWT。頭は `alg: ES256`・`kid: Key ID`、
++ *   中身は `iss: Team ID`・`iat`・`exp`（今から **15777000 秒（6か月）以内**）・
++ *   `aud: https://appleid.apple.com`・`sub: client_id と同じ Services ID`。
++ * - 取り消す token が無い人（この変更より前に Apple で登録した人）でも退会は必ず終える。
++ *   その人は Apple の「Apple でサインイン」の設定から自分で外せる（TN3194）。
++ *
++ * ここは Cloudflare でも動くように **Web Crypto だけ**を使う（Node の crypto・JWT の道具は使わない）。
++ * DB を読む所は `apple-revoke.server.ts`。
++ */
++
++export const APPLE_REVOKE_URL = "https://appleid.apple.com/auth/revoke";
++export const APPLE_AUDIENCE = "https://appleid.apple.com";
++/** Apple が受ける `exp` の上限（今から 6 か月 = 15777000 秒）。少し余して 1 時間にする。 */
++export const CLIENT_SECRET_TTL_S = 60 * 60;
++export const CLIENT_SECRET_MAX_TTL_S = 15_777_000;
++
++export type AppleConfig = {
++  teamId: string;
++  keyId: string;
++  /** p8 の中身（`-----BEGIN PRIVATE KEY-----` …）。改行が `\n` の文字になっていても読む。 */
++  privateKey: string;
++  servicesId: string;
++};
++
++/** 環境変数から読む。どれか欠けていれば null と足りない名前。 */
++export function readAppleConfig(env: Record<string, string | undefined>): {
++  config: AppleConfig | null;
++  missing: string[];
++} {
++  const names = ["APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY", "APPLE_SERVICES_ID"];
++  const missing = names.filter((n) => !env[n]?.trim());
++  if (missing.length) return { config: null, missing };
++  return {
++    config: {
++      teamId: env.APPLE_TEAM_ID!.trim(),
++      keyId: env.APPLE_KEY_ID!.trim(),
++      privateKey: env.APPLE_PRIVATE_KEY!,
++      servicesId: env.APPLE_SERVICES_ID!.trim(),
++    },
++    missing: [],
++  };
++}
++
++function base64UrlFromBytes(bytes: Uint8Array): string {
++  let bin = "";
++  for (const b of bytes) bin += String.fromCharCode(b);
++  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
++}
++
++function base64UrlFromJson(v: unknown): string {
++  return base64UrlFromBytes(new TextEncoder().encode(JSON.stringify(v)));
++}
++
++/** p8（PKCS#8 の PEM）から鍵の中身（DER）を取り出す。 */
++export function pemToDer(pem: string): Uint8Array {
++  const body = pem
++    .replace(/\\n/g, "\n")
++    .replace(/-----BEGIN [^-]+-----/g, "")
++    .replace(/-----END [^-]+-----/g, "")
++    .replace(/\s+/g, "");
++  if (!body) throw new Error("APPLE_PRIVATE_KEY is empty");
++  const bin = atob(body);
++  const out = new Uint8Array(bin.length);
++  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
++  return out;
++}
++
++/**
++ * Apple に渡す `client_secret`（ES256 の JWT）を作る。Web Crypto の ECDSA の署名は
++ * r‖s の 64 バイト（IEEE P1363）で、JWS の ES256 が求める形そのもの。
++ */
++export async function makeAppleClientSecret(
++  config: AppleConfig,
++  nowSeconds = Math.floor(Date.now() / 1000),
++  ttlSeconds = CLIENT_SECRET_TTL_S,
++): Promise<string> {
++  const ttl = Math.min(Math.max(60, ttlSeconds), CLIENT_SECRET_MAX_TTL_S);
++  const header = { alg: "ES256", kid: config.keyId, typ: "JWT" };
++  const payload = {
++    iss: config.teamId,
++    iat: nowSeconds,
++    exp: nowSeconds + ttl,
++    aud: APPLE_AUDIENCE,
++    sub: config.servicesId,
++  };
++  const signingInput = `${base64UrlFromJson(header)}.${base64UrlFromJson(payload)}`;
++  const der = pemToDer(config.privateKey);
++  const key = await crypto.subtle.importKey(
++    "pkcs8",
++    der.buffer.slice(der.byteOffset, der.byteOffset + der.byteLength) as ArrayBuffer,
++    { name: "ECDSA", namedCurve: "P-256" },
++    false,
++    ["sign"],
++  );
++  const sig = await crypto.subtle.sign(
++    { name: "ECDSA", hash: "SHA-256" },
++    key,
++    new TextEncoder().encode(signingInput),
++  );
++  return `${signingInput}.${base64UrlFromBytes(new Uint8Array(sig))}`;
++}
++
++export type AppleTokenKind = "refresh_token" | "access_token";
++
++export type RevokeResult =
++  { ok: true; status: number } | { ok: false; status: number | null; error: string };
++
++/** Apple の取り消しの口を呼ぶ。**投げない**（退会を止めないため、結果で返す）。 */
++export async function revokeAppleToken(
++  input: { token: string; kind: AppleTokenKind; config: AppleConfig },
++  deps: { fetch?: typeof fetch; now?: number } = {},
++): Promise<RevokeResult> {
++  const doFetch = deps.fetch ?? fetch;
++  try {
++    const secret = await makeAppleClientSecret(input.config, deps.now);
++    const body = new URLSearchParams({
++      client_id: input.config.servicesId,
++      client_secret: secret,
++      token: input.token,
++      token_type_hint: input.kind,
++    });
++    const res = await doFetch(APPLE_REVOKE_URL, {
++      method: "POST",
++      headers: { "content-type": "application/x-www-form-urlencoded" },
++      body: body.toString(),
++      signal: AbortSignal.timeout(8000),
++    });
++    if (res.ok) return { ok: true, status: res.status };
++    let error = `http_${res.status}`;
++    try {
++      const j = (await res.json()) as { error?: string };
++      if (j?.error) error = j.error;
++    } catch {
++      // 本文が JSON でない
++    }
++    return { ok: false, status: res.status, error };
++  } catch (e) {
++    return { ok: false, status: null, error: e instanceof Error ? e.message : String(e) };
++  }
++}
+diff --git a/src/lib/apple-token-capture.ts b/src/lib/apple-token-capture.ts
+new file mode 100644
+index 0000000..334a9da
+--- /dev/null
++++ b/src/lib/apple-token-capture.ts
+@@ -0,0 +1,67 @@
++/**
++ * **Apple でサインインした直後の `provider_refresh_token` を拾ってサーバに預ける**
++ * （退会のときに Apple の許可を取り消すため。`apple-revoke.ts`）。
++ *
++ * supabase-js は、OAuth から戻った URL を読んだ時に `provider_token` /
++ * `provider_refresh_token` を session に載せて**1回だけ**知らせる。後から聞いても無い。
++ * だからアプリの読み込みの最初（`__root.tsx` の読み込み時）に聞き始める。
++ *
++ * Lovable の OAuth の窓口を通る時、窓口がこの2つを戻り先に渡さなければ拾えない
++ * （README.ja.md の「Apple の取り消し」— 拾えたかは `apple_tokens` に行があるかで確かめる）。
++ */
++type SessionLike = {
++  provider_token?: string | null;
++  provider_refresh_token?: string | null;
++  user?: { app_metadata?: { provider?: string; providers?: string[] } } | null;
++} | null;
++
++/** 預ける物（Apple のサインインの直後の session だけ）。無ければ null。 */
++export function appleTokenFromSession(
++  session: SessionLike,
++): { token: string; kind: "refresh_token" | "access_token" } | null {
++  if (!session) return null;
++  const meta = session.user?.app_metadata;
++  const isApple = meta?.provider === "apple" || (meta?.providers ?? []).includes("apple");
++  if (!isApple) return null;
++  if (session.provider_refresh_token)
++    return { token: session.provider_refresh_token, kind: "refresh_token" };
++  if (session.provider_token) return { token: session.provider_token, kind: "access_token" };
++  return null;
++}
++
++const sent = new Set<string>();
++let installed = false;
++let inflight: Promise<void> = Promise.resolve();
++
++/** 預けている途中の送信を待つ（iOS へ戻る前に、`native-auth.tsx`）。最大 `ms` ミリ秒。 */
++export function waitForAppleTokenCapture(ms = 3000): Promise<void> {
++  return Promise.race([inflight, new Promise<void>((r) => setTimeout(r, ms))]);
++}
++
++async function send(session: SessionLike) {
++  const found = appleTokenFromSession(session);
++  if (!found || sent.has(found.token)) return;
++  sent.add(found.token);
++  try {
++    const { saveAppleToken } = await import("./apple-token.functions");
++    await saveAppleToken({ data: found });
++  } catch (e) {
++    // 預けられなくてもサインインは続ける（退会の時に取り消せないだけ。記録には残す）。
++    sent.delete(found.token);
++    console.warn("[apple-token] 預けられなかった", e instanceof Error ? e.message : e);
++  }
++}
++
++/** 1回だけ聞き始める（ブラウザだけ）。 */
++export function installAppleTokenCapture() {
++  if (installed || typeof window === "undefined") return;
++  installed = true;
++  void import("@/integrations/supabase/client")
++    .then(({ supabase }) => {
++      supabase.auth.onAuthStateChange((_event, session) => {
++        if (!appleTokenFromSession(session)) return;
++        inflight = send(session);
++      });
++    })
++    .catch(() => undefined);
++}
+diff --git a/src/lib/apple-token.functions.ts b/src/lib/apple-token.functions.ts
+new file mode 100644
+index 0000000..e165b5c
+--- /dev/null
++++ b/src/lib/apple-token.functions.ts
+@@ -0,0 +1,35 @@
++import { createServerFn } from "@tanstack/react-start";
++import { z } from "zod";
++import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
++
++/**
++ * **Apple でサインインした直後に、Apple の token をサーバに預ける**（退会のときに取り消すため。
++ * `apple-revoke.ts`）。Supabase は Apple の `provider_refresh_token` をサインインの直後に**1回だけ**
++ * ブラウザへ渡すので、画面がそれを拾ってここへ送る（`apple-token-capture.ts`）。
++ *
++ * - 本人の分しか置けない（ログインの token の人の行）。Apple でサインインしたことの無い人の
++ *   送った物は置かない。
++ * - 置き場所（`apple_tokens`）はサーバの鍵だけが触る。返事に token は出さない。
++ */
++export const saveAppleToken = createServerFn({ method: "POST" })
++  .middleware([requireSupabaseAuth])
++  .inputValidator((input: unknown) =>
++    z
++      .object({
++        token: z.string().min(10).max(4096),
++        kind: z.enum(["refresh_token", "access_token"]),
++      })
++      .parse(input),
++  )
++  .handler(async ({ context, data }) => {
++    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
++    const { data: u, error } = await supabaseAdmin.auth.admin.getUserById(context.userId);
++    if (error || !u?.user) return { stored: false };
++    const providers = new Set<string>([
++      ...((u.user.app_metadata?.providers as string[] | undefined) ?? []),
++      ...(u.user.identities ?? []).map((i) => i.provider),
++    ]);
++    if (!providers.has("apple")) return { stored: false };
++    const { storeAppleToken } = await import("./apple-revoke.server");
++    return storeAppleToken(context.userId, { token: data.token, kind: data.kind });
++  });
+diff --git a/src/lib/profile.functions.ts b/src/lib/profile.functions.ts
+index e3b64b2..8cb04a3 100644
+--- a/src/lib/profile.functions.ts
++++ b/src/lib/profile.functions.ts
+@@ -351,7 +351,16 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
+       }
+     }
+ 
+-    // 4) The auth user itself — after this the session token is dead.
++    // 4) Sign in with Apple: revoke the Apple grant (Apple's account-deletion rule, TN3194)
++    //    with the refresh token kept at sign-in (`apple_tokens`). **Never blocks the
++    //    deletion** — no token (signed up before this change / not Apple), missing
++    //    secrets or an Apple error are logged and the deletion continues.
++    {
++      const { revokeAppleForUser } = await import("./apple-revoke.server");
++      await revokeAppleForUser(userId);
++    }
++
++    // 5) The auth user itself — after this the session token is dead.
+     const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+     if (authErr) throw new Error(`アカウントの削除に失敗しました: ${authErr.message}`);
+ 
+diff --git a/src/routes/__root.tsx b/src/routes/__root.tsx
+index 097808f..51ab01d 100644
+--- a/src/routes/__root.tsx
++++ b/src/routes/__root.tsx
+@@ -17,6 +17,10 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Toaster } from "@/components/ui/sonner";
+ import { AiConsentHost } from "@/components/AiConsentHost";
++import { installAppleTokenCapture } from "@/lib/apple-token-capture";
++
++// Apple でサインインした直後の token は1回しか届かないので、読み込みの最初から聞く（退会の取り消し用）。
++installAppleTokenCapture();
+ import { ThemeProvider, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/components/theme-provider";
+ import { DEFAULT_MOTION, MOTION_ATTR, MOTION_STORAGE_KEY } from "@/lib/motion-pref";
+ import { MotionProvider } from "@/components/motion-provider";
+diff --git a/src/routes/native-auth.tsx b/src/routes/native-auth.tsx
+index 09cc9b6..1943d23 100644
+--- a/src/routes/native-auth.tsx
++++ b/src/routes/native-auth.tsx
+@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
+ import { useEffect, useRef, useState } from "react";
+ import { supabase } from "@/integrations/supabase/client";
+ import { lovable } from "@/integrations/lovable/index";
++import { waitForAppleTokenCapture } from "@/lib/apple-token-capture";
+ import { tStatic, useT } from "@/lib/i18n";
+ import {
+   clearLocalSupabaseSession,
+@@ -63,6 +64,18 @@ function NativeAuthPage() {
+     }) => {
+       if (handed.current || cancelled) return;
+       handed.current = true;
++      void handOffAfterCapture(session);
++    };
++    const handOffAfterCapture = async (session: {
++      access_token: string;
++      refresh_token: string;
++      expires_at?: number;
++      expires_in?: number;
++    }) => {
++      // Apple でサインインした時の token をサーバに預け終わるのを待ってから戻る
++      // （戻るとこのページは閉じる。退会の時の取り消し用。`apple-token-capture.ts`）。最大 3 秒。
++      await waitForAppleTokenCapture(3000);
++      if (cancelled) return;
+       const url = nativeCallbackUrl(session, state);
+       clearLocalSupabaseSession(window.localStorage);
+       setAppUrl(url);
+diff --git a/supabase/migrations/20261003150000_apple_tokens.sql b/supabase/migrations/20261003150000_apple_tokens.sql
+new file mode 100644
+index 0000000..8d95e28
+--- /dev/null
++++ b/supabase/migrations/20261003150000_apple_tokens.sql
+@@ -0,0 +1,34 @@
++-- 「Apple でサインイン」の token の置き場所（2026-10-03）。
++--
++-- Apple の決まり（退会できるアプリは、退会のときに Apple の許可を取り消す。TN3194）のため、
++-- Apple でサインインした直後に Supabase が1回だけ渡す provider_refresh_token をサーバに預け、
++-- 退会（deleteMyAccount）のときに https://appleid.apple.com/auth/revoke で取り消す
++-- （src/lib/apple-revoke.ts / apple-revoke.server.ts）。
++--
++-- - **サーバの鍵（service_role）だけが読み書きする。** ブラウザ（anon / authenticated）には
++--   何の権限も無く、決まり（policy）も置かない = RLS ですべて断る。
++-- - 退会（auth.users の削除）で一緒に消える（取り消しの後にサーバが先に消す）。
++-- 何度流しても同じ結果になる。
++
++create table if not exists public.apple_tokens (
++  user_id uuid primary key references auth.users(id) on delete cascade,
++  -- Apple の refresh token（無ければ access token）。返事にも記録にも出さない。
++  token text not null,
++  token_type text not null default 'refresh_token',
++  created_at timestamptz not null default now(),
++  updated_at timestamptz not null default now()
++);
++
++alter table public.apple_tokens drop constraint if exists apple_tokens_type_check;
++alter table public.apple_tokens
++  add constraint apple_tokens_type_check check (token_type in ('refresh_token', 'access_token'));
++
++alter table public.apple_tokens enable row level security;
++alter table public.apple_tokens force row level security;
++
++revoke all on public.apple_tokens from public, anon, authenticated;
++grant all on public.apple_tokens to service_role;
++
++comment on table public.apple_tokens is
++  'Apple でサインインの token（退会のときに Apple の許可を取り消すため）。service_role だけが触る。'
++  'src/lib/apple-revoke.server.ts。';
+-- 
+2.43.0
+

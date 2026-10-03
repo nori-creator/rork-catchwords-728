@@ -8,11 +8,11 @@ import Foundation
 /// Each pack is plain JSON in a raw string so the Swift type checker never sees a large literal.
 ///
 /// Pack shape:
-/// - words: headword, reading_zhuyin, pinyin, part_of_speech, category_key, level, example_sentence, emoji, key,
+/// - words: headword, reading_zhuyin, pinyin, part_of_speech, category_key, example_sentence, emoji, key,
 ///   language, explain { <reader>: { meaning, example_translation, extras } }
 ///   (index 0-5 are seeded with photos, 6 without a photo, 7-8 are new words offered by the AI functions)
 /// - variants: other names of a word (CandidatePickerView "other ways to say it")
-/// - distinctions, wordbook, journal, prompts, patterns, synth (templates for unknown headwords),
+/// - distinctions, journal, prompts, patterns, synth (templates for unknown headwords),
 ///   places (lat / lng / name per reader), common (caption, generic feedback, display name)
 nonisolated enum DemoFixtures {
     /// The parsed pack for a learning language ("zh-TW", "en", "ja"); empty when it cannot be read.
@@ -39,7 +39,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "mángguǒ",
        "part_of_speech": "N",
        "category_key": "fruit",
-       "level": "TOCFL-2",
        "emoji": "🥭",
        "example_sentence": "夏天的芒果特別甜。",
        "language": "zh-TW",
@@ -289,7 +288,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "zhēnzhū nǎichá",
        "part_of_speech": "N",
        "category_key": "drink",
-       "level": "TOCFL-2",
        "emoji": "🧋",
        "example_sentence": "我每天下午都想喝一杯珍珠奶茶。",
        "language": "zh-TW",
@@ -489,7 +487,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "yǔsǎn",
        "part_of_speech": "N",
        "category_key": "accessory",
-       "level": "TOCFL-2",
        "emoji": "☂️",
        "example_sentence": "外面在下雨，記得帶雨傘。",
        "language": "zh-TW",
@@ -679,7 +676,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "māo",
        "part_of_speech": "N",
        "category_key": "animal",
-       "level": "TOCFL-1",
        "emoji": "🐈",
        "example_sentence": "我家的貓很喜歡睡覺。",
        "language": "zh-TW",
@@ -879,7 +875,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "jiéyùn",
        "part_of_speech": "N",
        "category_key": "transport",
-       "level": "TOCFL-3",
        "emoji": "🚇",
        "example_sentence": "我們搭捷運去淡水吧。",
        "language": "zh-TW",
@@ -1079,7 +1074,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "biàndāng",
        "part_of_speech": "N",
        "category_key": "food",
-       "level": "TOCFL-2",
        "emoji": "🍱",
        "example_sentence": "中午我們去買便當吧。",
        "language": "zh-TW",
@@ -1269,7 +1263,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "tiěbǎnmiàn",
        "part_of_speech": "N",
        "category_key": "food",
-       "level": "TOCFL-3",
        "emoji": "🍳",
        "example_sentence": "早餐店的鐵板麵加一顆蛋最好吃。",
        "language": "zh-TW",
@@ -1421,7 +1414,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "fènglí",
        "part_of_speech": "N",
        "category_key": "fruit",
-       "level": "TOCFL-3",
        "emoji": "🍍",
        "example_sentence": "台灣的鳳梨又香又甜。",
        "language": "zh-TW",
@@ -1581,7 +1573,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "jīchē",
        "part_of_speech": "N",
        "category_key": "vehicle",
-       "level": "TOCFL-3",
        "emoji": "🛵",
        "example_sentence": "我每天騎機車上班。",
        "language": "zh-TW",
@@ -1757,68 +1748,6 @@ nonisolated enum DemoFixtures {
        "en": "the everyday word"
       }
      },
-     "wordbook": {
-      "title": {
-       "ja": "果物の単語",
-       "en": "Fruit words"
-      },
-      "entries": [
-       {
-        "headword": "蘋果",
-        "reading_zhuyin": "ㄆㄧㄥˊ ㄍㄨㄛˇ",
-        "pinyin": "píngguǒ",
-        "meaning": {
-         "ja": "りんご",
-         "en": "apple"
-        }
-       },
-       {
-        "headword": "香蕉",
-        "reading_zhuyin": "ㄒㄧㄤ ㄐㄧㄠ",
-        "pinyin": "xiāngjiāo",
-        "meaning": {
-         "ja": "バナナ",
-         "en": "banana"
-        }
-       },
-       {
-        "headword": "西瓜",
-        "reading_zhuyin": "ㄒㄧ ㄍㄨㄚ",
-        "pinyin": "xīguā",
-        "meaning": {
-         "ja": "すいか",
-         "en": "watermelon"
-        }
-       },
-       {
-        "headword": "葡萄",
-        "reading_zhuyin": "ㄆㄨˊ ㄊㄠˊ",
-        "pinyin": "pútáo",
-        "meaning": {
-         "ja": "ぶどう",
-         "en": "grape"
-        }
-       },
-       {
-        "headword": "草莓",
-        "reading_zhuyin": "ㄘㄠˇ ㄇㄟˊ",
-        "pinyin": "cǎoméi",
-        "meaning": {
-         "ja": "いちご",
-         "en": "strawberry"
-        }
-       },
-       {
-        "headword": "荔枝",
-        "reading_zhuyin": "ㄌㄧˋ ㄓ",
-        "pinyin": "lìzhī",
-        "meaning": {
-         "ja": "ライチ",
-         "en": "lychee"
-        }
-       }
-      ]
-     },
      "journal": {
       "draft": "今天我去夜市和吃了芒果冰，很好吃。",
       "correction": "今天我去夜市吃了芒果冰，很好吃。",
@@ -1890,7 +1819,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "synth": {
-      "level": "TOCFL-2",
       "pos": "N",
       "example": "我今天看到了{h}。",
       "ex_tr": {
@@ -1971,7 +1899,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈmæŋɡəʊ",
        "part_of_speech": "noun",
        "category_key": "fruit",
-       "level": "A2",
        "emoji": "🥭",
        "example_sentence": "This mango is perfectly ripe.",
        "language": "en",
@@ -2233,7 +2160,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ʌmˈbrelə",
        "part_of_speech": "noun",
        "category_key": "accessory",
-       "level": "A2",
        "emoji": "☂️",
        "example_sentence": "Don't forget your umbrella. It's going to rain.",
        "language": "en",
@@ -2509,7 +2435,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "kæt",
        "part_of_speech": "noun",
        "category_key": "animal",
-       "level": "A1",
        "emoji": "🐈",
        "example_sentence": "Our cat sleeps on the sofa all afternoon.",
        "language": "en",
@@ -2749,7 +2674,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈbaɪsɪkl̩",
        "part_of_speech": "noun",
        "category_key": "vehicle",
-       "level": "A2",
        "emoji": "🚲",
        "example_sentence": "I ride my bicycle to school every day.",
        "language": "en",
@@ -3001,7 +2925,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈkɒfi",
        "part_of_speech": "noun",
        "category_key": "drink",
-       "level": "A1",
        "emoji": "☕",
        "example_sentence": "Would you like a cup of coffee?",
        "language": "en",
@@ -3283,7 +3206,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "rɪˈsiːt",
        "part_of_speech": "noun",
        "category_key": "document",
-       "level": "B1",
        "emoji": "🧾",
        "example_sentence": "Could I have a receipt, please?",
        "language": "en",
@@ -3497,7 +3419,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈsʌnˌflaʊə",
        "part_of_speech": "noun",
        "category_key": "flower",
-       "level": "B1",
        "emoji": "🌻",
        "example_sentence": "The sunflowers in the field are taller than me.",
        "language": "en",
@@ -3693,7 +3614,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈpaɪnˌæpl̩",
        "part_of_speech": "noun",
        "category_key": "fruit",
-       "level": "A2",
        "emoji": "🍍",
        "example_sentence": "Pineapple on pizza is a hot topic.",
        "language": "en",
@@ -3853,7 +3773,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "ˈskuːtə",
        "part_of_speech": "noun",
        "category_key": "vehicle",
-       "level": "B1",
        "emoji": "🛵",
        "example_sentence": "He rides a scooter to work.",
        "language": "en",
@@ -4049,68 +3968,6 @@ nonisolated enum DemoFixtures {
        "zh-TW": "最常用的說法"
       }
      },
-     "wordbook": {
-      "title": {
-       "ja": "果物の単語",
-       "zh-TW": "水果單字"
-      },
-      "entries": [
-       {
-        "headword": "apple",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "りんご",
-         "zh-TW": "蘋果"
-        }
-       },
-       {
-        "headword": "banana",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "バナナ",
-         "zh-TW": "香蕉"
-        }
-       },
-       {
-        "headword": "watermelon",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "すいか",
-         "zh-TW": "西瓜"
-        }
-       },
-       {
-        "headword": "grape",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "ぶどう",
-         "zh-TW": "葡萄"
-        }
-       },
-       {
-        "headword": "strawberry",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "いちご",
-         "zh-TW": "草莓"
-        }
-       },
-       {
-        "headword": "lychee",
-        "reading_zhuyin": null,
-        "pinyin": null,
-        "meaning": {
-         "ja": "ライチ",
-         "zh-TW": "荔枝"
-        }
-       }
-      ]
-     },
      "journal": {
       "draft": "Today I go to a cafe and drink a coffee. It was very delicious.",
       "correction": "Today I went to a café and had a coffee. It was delicious.",
@@ -4182,7 +4039,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "synth": {
-      "level": "A2",
       "pos": "noun",
       "example": "I saw a {h} today.",
       "ex_tr": {
@@ -4263,7 +4119,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "kasa",
        "part_of_speech": "名詞",
        "category_key": "accessory",
-       "level": "JLPT-N5",
        "emoji": "☂️",
        "example_sentence": "雨が降ってきたので、傘をさしました。",
        "language": "ja",
@@ -4541,7 +4396,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "neko",
        "part_of_speech": "名詞",
        "category_key": "animal",
-       "level": "JLPT-N5",
        "emoji": "🐈",
        "example_sentence": "うちの猫は一日中寝ています。",
        "language": "ja",
@@ -4827,7 +4681,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "jitensha",
        "part_of_speech": "名詞",
        "category_key": "vehicle",
-       "level": "JLPT-N5",
        "emoji": "🚲",
        "example_sentence": "毎日自転車で学校に通っています。",
        "language": "ja",
@@ -5121,7 +4974,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "bentō",
        "part_of_speech": "名詞",
        "category_key": "food",
-       "level": "JLPT-N4",
        "emoji": "🍱",
        "example_sentence": "母が毎朝お弁当を作ってくれます。",
        "language": "ja",
@@ -5403,7 +5255,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "eki",
        "part_of_speech": "名詞",
        "category_key": "transport",
-       "level": "JLPT-N5",
        "emoji": "🚉",
        "example_sentence": "駅まで歩いて十分です。",
        "language": "ja",
@@ -5689,7 +5540,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "kōyō",
        "part_of_speech": "名詞",
        "category_key": "plant",
-       "level": "JLPT-N2",
        "emoji": "🍁",
        "example_sentence": "秋になると山の紅葉がきれいです。",
        "language": "ja",
@@ -5927,7 +5777,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "mangō",
        "part_of_speech": "名詞",
        "category_key": "fruit",
-       "level": "JLPT-N3",
        "emoji": "🥭",
        "example_sentence": "宮崎のマンゴーはとても甘いです。",
        "language": "ja",
@@ -6145,7 +5994,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "painappuru",
        "part_of_speech": "名詞",
        "category_key": "fruit",
-       "level": "JLPT-N3",
        "emoji": "🍍",
        "example_sentence": "沖縄でパイナップルを食べました。",
        "language": "ja",
@@ -6305,7 +6153,6 @@ nonisolated enum DemoFixtures {
        "pinyin": "sukūtā",
        "part_of_speech": "名詞",
        "category_key": "vehicle",
-       "level": "JLPT-N2",
        "emoji": "🛵",
        "example_sentence": "スクーターで近所のスーパーに行きます。",
        "language": "ja",
@@ -6501,68 +6348,6 @@ nonisolated enum DemoFixtures {
        "zh-TW": "最常用的說法"
       }
      },
-     "wordbook": {
-      "title": {
-       "en": "Fruit words",
-       "zh-TW": "水果單字"
-      },
-      "entries": [
-       {
-        "headword": "りんご",
-        "reading_zhuyin": "りんご",
-        "pinyin": "ringo",
-        "meaning": {
-         "en": "apple",
-         "zh-TW": "蘋果"
-        }
-       },
-       {
-        "headword": "バナナ",
-        "reading_zhuyin": "バナナ",
-        "pinyin": "banana",
-        "meaning": {
-         "en": "banana",
-         "zh-TW": "香蕉"
-        }
-       },
-       {
-        "headword": "すいか",
-        "reading_zhuyin": "すいか",
-        "pinyin": "suika",
-        "meaning": {
-         "en": "watermelon",
-         "zh-TW": "西瓜"
-        }
-       },
-       {
-        "headword": "ぶどう",
-        "reading_zhuyin": "ぶどう",
-        "pinyin": "budō",
-        "meaning": {
-         "en": "grape",
-         "zh-TW": "葡萄"
-        }
-       },
-       {
-        "headword": "いちご",
-        "reading_zhuyin": "いちご",
-        "pinyin": "ichigo",
-        "meaning": {
-         "en": "strawberry",
-         "zh-TW": "草莓"
-        }
-       },
-       {
-        "headword": "もも",
-        "reading_zhuyin": "もも",
-        "pinyin": "momo",
-        "meaning": {
-         "en": "peach",
-         "zh-TW": "桃子"
-        }
-       }
-      ]
-     },
      "journal": {
       "draft": "今日は駅の前で猫を見ました。とてもかわいいでした。",
       "correction": "今日は駅の前で猫を見ました。とてもかわいかったです。",
@@ -6634,7 +6419,6 @@ nonisolated enum DemoFixtures {
       }
      ],
      "synth": {
-      "level": "JLPT-N4",
       "pos": "名詞",
       "example": "今日、{h}を見ました。",
       "ex_tr": {

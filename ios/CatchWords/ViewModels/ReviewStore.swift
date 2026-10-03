@@ -42,21 +42,15 @@ final class ReviewStore {
 
     private let client = SupabaseClient.shared
 
-    /// quiz-choices.ts quizFallbackHeadwords, per learning language (4 so one collision still leaves 3).
-    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」).
-    static func fallback(for target: String) -> [QuizChoice] {
-        switch target {
-        case "en":
-            return ["apple", "bus", "umbrella", "lunch box"].map { QuizChoice(headword: $0, zhuyin: nil) }  // l10n-ignore (target words)
-        case "ja":
-            return [("りんご", ""), ("バス", ""), ("傘", "かさ"), ("お弁当", "おべんとう")]  // l10n-ignore (target words)
-                .map { QuizChoice(headword: $0.0, zhuyin: $0.1.isEmpty ? nil : $0.1) }
-        default:
-            return [QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ")]  // l10n-ignore (target word)
-        }
+    /// The padding after the learner's own dex: everyday words of the learning language from the bundled pool
+    /// (Models/QuizPool.swift), the same category key first, then the same room. No exam levels (owner 2026-10-03:
+    /// per-word levels are gone on iOS). It replaces quiz-choices.ts's four fixed words; the pool is far larger,
+    /// so a collision with the correct word still leaves 3.
+    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」):
+    /// the pool keeps one list per learning language.
+    static func fallback(for target: String, categoryKey: String? = nil) -> [QuizChoice] {
+        QuizPool.ranked(for: target, categoryKey: categoryKey)
+            .map { QuizChoice(headword: $0.headword, zhuyin: $0.reading) }
     }
 
     /// The learning language the queue was built for (R5: a switched language must not keep the old cards).
@@ -126,12 +120,12 @@ final class ReviewStore {
         do {
             let now = SupabaseDate.string(Date())
             let enc = DexStore.enc(now)
-            let data = try await client.rest(
-                "GET",
-                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc&limit=5000"
+            // Paged: the server answers at most 1000 rows per request (a big account's due count was cut).
+            let rows = try await client.restAll(
+                "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&due_at=lte.\(enc)&order=due_at.asc,id.asc",
+                as: ReviewState.self, decoder: SupabaseDate.decoder
             )
-            let rows = try SupabaseDate.decoder.decode([ReviewState].self, from: data)
-            if dex.stickers.isEmpty { await dex.load() }
+            if !dex.hasLoaded { await dex.load() }
             // Only this learning language's cards (the dex is already filtered), and the daily limit is
             // counted after that filter — not before (R1 「復習の記憶の状態が他の学習言語と混ざってる」).
             let cards = rows.compactMap { r -> ReviewCard? in
@@ -152,6 +146,8 @@ final class ReviewStore {
             correctCount = 0
             loadError = nil
             hasLoaded = true
+        } catch is CancellationError {
+            await historyTask
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? L("復習を読み込めませんでした。")
             await historyTask
@@ -159,10 +155,13 @@ final class ReviewStore {
     }
 
     private func loadHistory(dex: DexStore) async {
-        guard let data = try? await client.rest("GET", "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc&limit=5000"),
-              var rows = try? SupabaseDate.decoder.decode([ReviewHistoryRow].self, from: data) else { return }
+        // Paged (1000 rows per request at most): the streak and today's count need every row.
+        guard var rows = try? await client.restAll(
+            "review_history?select=sticker_id,reviewed_at,interval_days_after,ease_after&order=reviewed_at.desc,id.desc",
+            as: ReviewHistoryRow.self, decoder: SupabaseDate.decoder, maxPages: 50
+        ) else { return }
         // Streak, today's count and the retention line: this learning language's words only.
-        if dex.stickers.isEmpty { await dex.load() }
+        if !dex.hasLoaded { await dex.load() }
         let mine = Set(dex.stickers.map(\.id))
         if dex.hasLoaded { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
@@ -172,7 +171,7 @@ final class ReviewStore {
         doneToday = rows.filter { SRS.taipeiDay($0.reviewedAt) == today }.count
     }
 
-    /// Distractors from the learner's own dex first (same category preferred), then the fallback pool.
+    /// Distractors from the learner's own dex first (same category preferred), then the bundled pool (same category, then same room).
     /// Choices are drawn once per card. Without this the four buttons reshuffled every time the
     /// screen redrew — including right after a tap, so the answer you pressed jumped to another slot.
     @ObservationIgnored private var choiceCache: [String: [QuizChoice]] = [:]
@@ -193,7 +192,9 @@ final class ReviewStore {
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
         var out: [QuizChoice] = []
-        for c in same + rest + Self.fallback(for: NativeAPI.targetLanguage) where c.headword != correct.headword && !out.contains(c) {
+        let pool = Self.fallback(for: NativeAPI.targetLanguage, categoryKey: card.sticker.categoryKey)
+        // Compared by headword: the same word from the dex and from the pool may carry different readings.
+        for c in same + rest + pool where c.headword != correct.headword && !out.contains(where: { $0.headword == c.headword }) {
             out.append(c)
             if out.count == 3 { break }
         }

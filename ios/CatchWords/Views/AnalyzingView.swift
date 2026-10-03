@@ -54,7 +54,7 @@ struct AnalyzingView: View {
                     Spacer()
                     Button(action: onCancel) {
                         Text(L("やめる"))
-                            .font(.system(size: 15, weight: .medium))
+                            .scaledFont(size: 15, weight: .medium)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .frame(minHeight: 44)
@@ -70,7 +70,7 @@ struct AnalyzingView: View {
                     Image(systemName: "sparkles").symbolEffect(.pulse, isActive: !reduceMotion)
                     Text(L("AIが分析中…"))
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold)
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.6), radius: 6, y: 1)
                 .padding(.bottom, 60)

@@ -34,7 +34,8 @@ final class DexStore {
     var hasLoaded: Bool = false
     var loadError: String?
     var signed: [String: URL] = [:]
-    var pending: [PendingCatch] = []
+    /// This account's photos waiting in 「解析待ち」 (kept up to date by the queue itself).
+    var pending: [PendingCatch] { PendingQueue.shared.items }
     /// sticker id → review state (memory badges). Stickers without a review get no badge.
     var reviews: [String: ReviewState] = [:]
 
@@ -74,20 +75,34 @@ final class DexStore {
     }
 
     func load() async {
-        pending = PendingQueue.shared.all()
+        PendingQueue.shared.reload()
         // Local guest (no account): an empty dex, not a skeleton that never ends.
         guard client.session != nil else {
             loadError = nil
             hasLoaded = true
             return
         }
+        let uid = client.userId
         isLoading = true
         defer { isLoading = false }
         do {
-            let data = try await selectStickers { "stickers?select=\($0)&order=taken_at.desc&limit=500" }
-            let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
+            // Every page, like the web's listMyStickers (one capped read silently dropped the oldest
+            // words of a big dex — and the cap counted other languages' words too).
+            var rows: [Sticker] = []
+            for page in 0..<Self.maxPages {
+                let offset = page * Self.pageSize
+                let data = try await selectStickers {
+                    "stickers?select=\($0)&order=taken_at.desc,id.desc&limit=\(Self.pageSize)&offset=\(offset)"
+                }
+                let chunk = try SupabaseDate.decoder.decode([Sticker].self, from: data)
+                rows += chunk
+                if chunk.count < Self.pageSize { break }
+            }
+            // Signed out (or another account signed in) while this was loading: drop the result.
+            guard client.userId == uid else { return }
             await loadAlbumHidden()
             await loadAlbumPlacements()
+            guard client.userId == uid else { return }
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
             stickers = present(rows.filter { $0.word?.matches(language) ?? true })
             loadError = nil
@@ -95,8 +110,20 @@ final class DexStore {
             await loadReviews()
             await signPaths(for: rows)
         } catch {
+            guard client.userId == uid, !(error is CancellationError) else { return }
             loadError = (error as? LocalizedError)?.errorDescription ?? L("図鑑を読み込めませんでした。")
         }
+    }
+
+    private static let pageSize = 500
+    private static let maxPages = 40
+
+    /// Every row of a read, a page at a time. The server returns at most 1000 rows per request whatever
+    /// `limit` says, so a single `limit=3000` read silently dropped the rest (memory badges, due counts
+    /// and album placements of a big dex). `path` must have a stable `order`.
+    private func readAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
+                                       pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
+        try await client.restAll(path, as: T.self, decoder: decoder, pageSize: pageSize, maxPages: maxPages)
     }
 
     func reloadReviews() async { await loadReviews() }
@@ -126,8 +153,10 @@ final class DexStore {
     }
 
     private func loadReviews() async {
-        guard let data = try? await client.rest("GET", "reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&limit=3000"),
-              let rows = try? SupabaseDate.decoder.decode([ReviewState].self, from: data) else { return }
+        let uid = client.userId
+        guard let rows = try? await readAll("reviews?select=id,sticker_id,ease,interval_days,repetitions,last_reviewed_at,due_at&order=id.asc",
+                                            as: ReviewState.self, decoder: SupabaseDate.decoder),
+              client.userId == uid else { return }
         reviews = Dictionary(rows.map { ($0.stickerId, $0) }, uniquingKeysWith: { a, _ in a })
     }
 
@@ -190,12 +219,15 @@ final class DexStore {
             "pinyin": text("pinyin", c.pinyin),
             "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
             "part_of_speech": text("part_of_speech", c.pos.isEmpty ? NativeAPI.defaultPos : c.pos),
-            "level": text("level", card.level),
             "category_key": text("category_key", card.categoryKey),
             "example_sentence": text("example_sentence", card.exampleSentence),
             "example_translation": text("example_translation", card.exampleTranslation),
         ]
         if let extras = raw?["extras"], case .object = extras { word["extras"] = extras.foundation }
+        // The word's exam level is not used on iOS (owner 2026-10-03). The server's own value from `generateCard`
+        // is handed back untouched when there is one: without it saveSticker would store its default "TOCFL-2"
+        // (stickers.functions.ts SaveStickerInput), which is wrong for English and Japanese words.
+        if let lv = raw?["level"]?.string, !lv.isEmpty { word["level"] = lv }
         let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
         let data: [String: Any] = [
             "word": word,
@@ -210,13 +242,34 @@ final class DexStore {
             "lat": orNull(draft.location?.coordinate.latitude),
             "lng": orNull(draft.location?.coordinate.longitude),
         ]
-        struct Saved: Decodable { let id: String }
+        struct Saved: Decodable {
+            let id: String
+            let wordId: String?
+            enum CodingKeys: String, CodingKey { case id, wordId = "word_id" }
+        }
         let saved = try await NativeAPI.call("saveSticker", data, as: Saved.self, timeout: 45)
 
         cacheLocal(path: obj, image: draft.photo)
         cacheLocal(path: cut, image: draft.cutout)
         cacheLocal(path: selfieRef, image: draft.selfie)
-        let sticker = try await fetchSticker(id: saved.id)
+        let sticker: Sticker
+        if let fresh = try? await fetchSticker(id: saved.id) {
+            sticker = fresh
+        } else {
+            // The catch IS saved — only reading it back failed (the connection dropped right after).
+            // Reporting a failure here made the learner save it again; show it from what was sent
+            // instead (the next dex load replaces it with the server's row).
+            var w = word
+            w["id"] = saved.wordId ?? ""
+            w["language"] = NativeAPI.targetLanguage
+            let localWord = (try? JSONSerialization.data(withJSONObject: w)).flatMap { try? JSONDecoder().decode(Word.self, from: $0) }
+            sticker = present([Sticker(
+                id: saved.id, wordId: saved.wordId ?? "", objectImageUrl: obj, cutoutImageUrl: cut,
+                selfieImageUrl: selfieRef, caption: caption.isEmpty ? nil : caption, locationName: draft.placeName,
+                takenAt: Date(), captureType: draft.captureType, word: localWord,
+                lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude
+            )])[0]
+        }
         stickers.removeAll { $0.id == sticker.id }
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
@@ -298,7 +351,8 @@ final class DexStore {
         if let p = r.picked { explanations[wordId] = p } else { explanations.removeValue(forKey: wordId) }
         stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
         if r.unavailable == true { return }
-        guard ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1),
+        // Writing a new explanation uses the AI (`generateCard`): only with the AI consent.
+        guard AIConsent.shared.isGranted, ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1),
               let shared = sharedWords[wordId], !generatingWords.contains(wordId) else { return }
         generatingWords.insert(wordId)
         Task {
@@ -333,7 +387,7 @@ final class DexStore {
             .contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
         if missing {
             var patch: [String: Any] = [:]
-            for k in ["reading_zhuyin", "pinyin", "part_of_speech", "level", "example_sentence", "example_translation", "meaning_ja"] {
+            for k in ["reading_zhuyin", "pinyin", "part_of_speech", "example_sentence", "example_translation", "meaning_ja"] {
                 if let v = card[k] as? String, !v.isEmpty { patch[k] = v }
             }
             if !patch.isEmpty { data["patch"] = patch }
@@ -386,7 +440,8 @@ final class DexStore {
     }
 
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
-        guard let image, let jpeg = ImageTools.jpegForUpload(image) else { return nil }
+        // Encoded off the main thread: this runs while the reward animation plays.
+        guard let image, let jpeg = await ImageTools.jpegForUploadInBackground(image) else { return nil }
         let path = "\(uid)/\(ts)-\(kind).jpg"
         try await client.upload(jpeg, path: path)
         return path
@@ -394,7 +449,9 @@ final class DexStore {
 
     /// Cutout failures never block the catch.
     private func uploadPNG(_ image: UIImage?, uid: String, ts: Int, kind: String) async -> String? {
-        guard let image, let png = ImageTools.resized(image, maxSide: 1200).pngData() else { return nil }
+        guard let image,
+              let png = await Task.detached(priority: .userInitiated, operation: { ImageTools.resized(image, maxSide: 1200).pngData() }).value
+        else { return nil }
         let path = "\(uid)/\(ts)-\(kind).png"
         do {
             try await client.upload(png, path: path, contentType: "image/png")
@@ -542,7 +599,8 @@ final class DexStore {
 
     func loadAlbumHidden() async {
         struct Res: Decodable { let ids: [String] }
-        guard let r = try? await NativeAPI.call("listAlbumHidden", [:], as: Res.self) else { return }
+        let uid = client.userId
+        guard let r = try? await NativeAPI.call("listAlbumHidden", [:], as: Res.self), client.userId == uid else { return }
         albumHidden = Set(r.ids)
     }
 
@@ -573,8 +631,10 @@ final class DexStore {
             let album_scale: Double?
             let album_rot: Double?
         }
-        guard let data = try? await client.rest("GET", "stickers?select=id,album_order,album_size,album_x,album_y,album_scale,album_rot&limit=3000"),
-              let rows = try? JSONDecoder().decode([Row].self, from: data) else { return }
+        let uid = client.userId
+        guard let rows = try? await readAll("stickers?select=id,album_order,album_size,album_x,album_y,album_scale,album_rot&order=id.asc",
+                                            as: Row.self, decoder: JSONDecoder()),
+              client.userId == uid else { return }
         var out: [String: DayLayoutSticker] = [:]
         for r in rows {
             out[r.id] = DayLayoutSticker(id: r.id, albumOrder: r.album_order, albumSize: r.album_size.flatMap(AlbumSize.init(rawValue:)),
@@ -665,16 +725,23 @@ final class DexStore {
     }
 
     func refreshPending() {
-        pending = PendingQueue.shared.all()
+        PendingQueue.shared.reload()
     }
 
+    /// Signing out / switching accounts: nothing of this account stays in memory for the next one.
     func reset() {
         stickers = []
         sharedWords = [:]
         explanations = [:]
         readerMeanings = [:]
         signed = [:]
+        reviews = [:]
+        albumHidden = []
+        albumPlacements = [:]
+        heroTried = []
+        loadError = nil
         hasLoaded = false
+        PendingQueue.shared.reload()
     }
 
     nonisolated static func enc(_ s: String) -> String {

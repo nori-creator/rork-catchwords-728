@@ -397,11 +397,17 @@ private struct CarouselCardFace: View {
                 }
                 .clipped()
                 .overlay(alignment: .topLeading) {
-                    Text("\(Category.emoji(for: s.categoryKey)) \(Category.label(for: s.categoryKey))")
+                    // One of the 20 dex categories (SPEC §0: no 「その他」), placed exactly like the shadow gallery
+                    // does, in that category's colour (light tone behind dark text, deep tone as the rim).
+                    let no = DexBook.category(of: s, lang: NativeAPI.targetLanguage)
+                    let cat = CCCategory.forDex(no)
+                    let emoji = DexCatalog.categories.first(where: { $0.no == no })?.emoji ?? ""
+                    Text("\(emoji) \(DexCatalog.label(no))")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Self.ink)
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(.black.opacity(0.55), in: Capsule())
+                        .background(Color(hex: cat.b1), in: Capsule())
+                        .overlay(Capsule().stroke(Color(hex: cat.b2), lineWidth: 1))
                         .padding(8)
                 }
                 .overlay(alignment: .topTrailing) {

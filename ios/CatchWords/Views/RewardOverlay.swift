@@ -182,17 +182,17 @@ struct RewardOverlay: View {
     private var wordBlock: some View {
         VStack(spacing: 8) {
             Text(payload.headword)
-                .font(.system(size: 54, weight: .heavy))
+                .scaledFont(size: 54, weight: .heavy)
                 .foregroundStyle(.white)
                 .blur(radius: wordBlur)
                 .shadow(color: Theme.primary.opacity(0.8), radius: 18)
             Text(payload.reading)
-                .font(.system(size: 17, weight: .medium))
+                .scaledFont(size: 17, weight: .medium)
                 .foregroundStyle(readingGlow ? Color(hex: 0xBFEFFF) : .white.opacity(0.85))
                 .shadow(color: Theme.cyan.opacity(readingGlow ? 0.7 : 0), radius: 8)
             Label(payload.gate.isReencounter ? L("再会！写真を追加しました") : L("図鑑に追加"),
                   systemImage: payload.gate.isReencounter ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
                 .foregroundStyle(payload.gate.isReencounter ? Theme.gold : Theme.ok)
                 .padding(.top, 6)
                 .opacity(addedVisible ? 1 : 0)

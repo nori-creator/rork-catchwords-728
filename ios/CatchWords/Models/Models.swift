@@ -8,7 +8,8 @@ nonisolated struct AuthSession: Codable, Sendable {
     let email: String?
 }
 
-/// Row of the shared `words` table (same schema as the web app).
+/// Row of the shared `words` table (same schema as the web app). `words.level` (the word's own exam level) is
+/// not decoded: per-word exam levels are gone on iOS (owner 2026-10-03). The learner's level lives in the profile.
 nonisolated struct Word: Codable, Sendable, Hashable {
     let id: String
     let headword: String
@@ -17,7 +18,6 @@ nonisolated struct Word: Codable, Sendable, Hashable {
     var meaningJa: String
     let partOfSpeech: String?
     let categoryKey: String?
-    let level: String?
     let exampleSentence: String?
     var exampleTranslation: String?
     var extras: WordExtras?
@@ -25,7 +25,7 @@ nonisolated struct Word: Codable, Sendable, Hashable {
     let language: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, headword, pinyin, level, extras, language
+        case id, headword, pinyin, extras, language
         case readingZhuyin = "reading_zhuyin"
         case meaningJa = "meaning_ja"
         case partOfSpeech = "part_of_speech"
@@ -43,7 +43,6 @@ nonisolated struct Word: Codable, Sendable, Hashable {
         meaningJa = (try? c.decodeIfPresent(String.self, forKey: .meaningJa)) ?? ""
         partOfSpeech = try? c.decodeIfPresent(String.self, forKey: .partOfSpeech)
         categoryKey = try? c.decodeIfPresent(String.self, forKey: .categoryKey)
-        level = try? c.decodeIfPresent(String.self, forKey: .level)
         exampleSentence = try? c.decodeIfPresent(String.self, forKey: .exampleSentence)
         exampleTranslation = try? c.decodeIfPresent(String.self, forKey: .exampleTranslation)
         extras = try? c.decodeIfPresent(WordExtras.self, forKey: .extras)
@@ -351,6 +350,17 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         var name: String?
         var link: String?
         var source: String?
+
+        enum CodingKeys: String, CodingKey { case name, link, source }
+
+        /// `placeholder_credit` is a free JSON column: anything but an object (a string, an array, numbers
+        /// where text is expected) reads as "no credit" instead of failing the whole dex read.
+        init(from decoder: Decoder) throws {
+            guard let c = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+            name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? nil
+            link = (try? c.decodeIfPresent(String.self, forKey: .link)) ?? nil
+            source = (try? c.decodeIfPresent(String.self, forKey: .source)) ?? nil
+        }
     }
 
     /// The learner took or chose a picture of their own (web sticker-photo.ts hasOwnPhoto).
@@ -546,10 +556,10 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
     }
 }
 
-/// AI-generated card content for a picked candidate.
+/// AI-generated card content for a picked candidate. The card's `level` (the word's exam level) is not read:
+/// per-word exam levels are gone on iOS (owner 2026-10-03). It stays inside `raw`, which is sent back unchanged.
 nonisolated struct CardDetails: Codable, Sendable {
     var categoryKey: String
-    var level: String
     var exampleSentence: String
     var exampleTranslation: String
     var extras: WordExtras
@@ -558,15 +568,14 @@ nonisolated struct CardDetails: Codable, Sendable {
     var raw: JSONValue?
 
     enum CodingKeys: String, CodingKey {
-        case level, extras
+        case extras
         case categoryKey = "category_key"
         case exampleSentence = "example_sentence"
         case exampleTranslation = "example_translation"
     }
 
-    init(categoryKey: String, level: String, exampleSentence: String, exampleTranslation: String, extras: WordExtras) {
+    init(categoryKey: String, exampleSentence: String, exampleTranslation: String, extras: WordExtras) {
         self.categoryKey = categoryKey
-        self.level = level
         self.exampleSentence = exampleSentence
         self.exampleTranslation = exampleTranslation
         self.extras = extras
@@ -575,7 +584,6 @@ nonisolated struct CardDetails: Codable, Sendable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         categoryKey = (try? c.decode(String.self, forKey: .categoryKey)) ?? "other"
-        level = (try? c.decode(String.self, forKey: .level)) ?? "TOCFL-2"
         exampleSentence = (try? c.decode(String.self, forKey: .exampleSentence)) ?? ""
         exampleTranslation = (try? c.decode(String.self, forKey: .exampleTranslation)) ?? ""
         extras = (try? c.decode(WordExtras.self, forKey: .extras)) ?? WordExtras()
@@ -589,7 +597,6 @@ nonisolated struct CardDetails: Codable, Sendable {
         }
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(categoryKey, forKey: .categoryKey)
-        try c.encode(level, forKey: .level)
         try c.encode(exampleSentence, forKey: .exampleSentence)
         try c.encode(exampleTranslation, forKey: .exampleTranslation)
         try c.encode(extras, forKey: .extras)

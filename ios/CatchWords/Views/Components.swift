@@ -25,6 +25,8 @@ struct PrimaryButton: View {
 
     @State private var sheenPhase: CGFloat = -1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// `.disabled(...)` from the caller (an empty search, nothing to import): the button greys out.
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -32,9 +34,9 @@ struct PrimaryButton: View {
                 if isLoading {
                     ProgressView().tint(.white)
                 } else if let icon {
-                    Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+                    Image(systemName: icon).scaledFont(size: 17, weight: .semibold)
                 }
-                Text(title).font(.system(size: 17, weight: .semibold))
+                Text(title).scaledFont(size: 17, weight: .semibold)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 54)
@@ -51,7 +53,8 @@ struct PrimaryButton: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 16))
-            .shadow(color: Theme.primary.opacity(0.45), radius: 16, y: 8)
+            .shadow(color: Theme.primary.opacity(isEnabled ? 0.45 : 0), radius: 16, y: 8)
+            .opacity(isEnabled ? 1 : 0.45)
         }
         .buttonStyle(PressableStyle())
         .disabled(isLoading)
@@ -78,6 +81,19 @@ struct AppBackground: View {
     }
 }
 
+extension View {
+    /// Scrolled content must not run under the clock and battery: a strip of material over the status bar
+    /// (a zero-height inset whose background reaches up into the safe area). Nothing moves at rest.
+    func statusBarScrim() -> some View {
+        safeAreaInset(edge: .top, spacing: 0) {
+            Color.clear
+                .frame(height: 0)
+                .background(.regularMaterial)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
 /// memory-badge.ts: colour + number only (the level name lives in the accessibility label).
 struct MemoryBadge: View {
     let percent: Int
@@ -99,8 +115,7 @@ struct MemoryBadge: View {
         HStack(spacing: 4) {
             Circle().fill(c).frame(width: 6, height: 6)
             Text("\(percent)%")
-                .font(.system(size: 11, weight: .semibold))
-                .monospacedDigit()
+                .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(c.mix(with: Theme.foreground, by: 0.4))
         }
         .padding(.horizontal, 7)

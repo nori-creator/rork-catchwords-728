@@ -38,6 +38,7 @@ final class FullTourTests: XCTestCase {
         ]
         app.launch()
 
+        aiConsent()
         XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 30), "the tab bar did not appear")
         settle(2)
         snap("home")
@@ -47,9 +48,22 @@ final class FullTourTests: XCTestCase {
         dexAndDetail()
         searchAndCatch()
         review()
-        wordbooks()
         settings()
         signOutAndBackIn()
+    }
+
+    /// The AI consent comes first, once per account (`-uiDemoReset` starts with no answer kept): photographed,
+    /// then agreed to, so the camera and the word cards work for the rest of the tour.
+    private func aiConsent() {
+        let accept = app.buttons["aiConsent.accept"]
+        guard accept.waitForExistence(timeout: 30) else {
+            XCTFail("[\(display)/\(learning)] the AI consent screen did not appear")
+            return
+        }
+        settle(1)
+        snap("ai-consent")
+        accept.tap()
+        settle(1)
     }
 
     private func dexAndDetail() {
@@ -163,18 +177,6 @@ final class FullTourTests: XCTestCase {
         snap("review-end")
     }
 
-    private func wordbooks() {
-        let open = app.buttons["review.wordbooks"]
-        guard open.waitForExistence(timeout: 5) else { return }
-        open.tap()
-        settle(2)
-        snap("wordbooks")
-        // Close it (a full-screen cover with its own close button in the top bar).
-        let close = app.buttons.matching(NSPredicate(format: "identifier == 'wordbook.close' OR label IN %@", closeLabels)).firstMatch
-        if close.exists { close.tap() } else { app.swipeDown(velocity: .fast) }
-        settle(1)
-    }
-
     private func settings() {
         tap("tab.settings")
         settle(2)
@@ -227,6 +229,8 @@ final class FullTourTests: XCTestCase {
         password.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 10) + "demo-pass-1234")
         tap("auth.submit")
         XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 20), "[\(display)/\(learning)] signing in again failed")
+        // The same account: its answer is kept on this device, so the consent is not asked again.
+        XCTAssertFalse(app.buttons["aiConsent.accept"].exists, "[\(display)/\(learning)] the AI consent was asked again for the same account")
         settle(1)
         snap("signed-in-again")
     }
