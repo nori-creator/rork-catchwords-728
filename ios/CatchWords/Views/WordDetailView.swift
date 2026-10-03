@@ -376,7 +376,7 @@ struct WordDetailView: View {
 
     /// A later encounter's photo in the hero, with when and where it was taken.
     private func laterFace(_ p: StickerPhoto, number: Int) -> some View {
-        Color(hex: 0xEEF3F9)
+        Theme.surface2  // photo placeholder (was a fixed light grey, glaring in dark mode)
             .aspectRatio(0.8, contentMode: .fit)
             .overlay {
                 AsyncImage(url: URL(string: p.url)) { phase in
@@ -420,7 +420,7 @@ struct WordDetailView: View {
         let back = showSelfie
         let path = back ? current.selfieImageUrl : frontPath
         let isCut = !back && showCutout && path == current.cutoutImageUrl
-        return Color(hex: 0xEEF3F9)
+        return Theme.surface2
             .aspectRatio(0.8, contentMode: .fit)
             .overlay {
                 StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: isCut ? .fit : .fill)
@@ -1405,7 +1405,7 @@ struct WordDetailView: View {
 
     private func webTile(_ c: WebImageCandidate) -> some View {
         Button { pickWeb(c) } label: {
-            Color(hex: 0xEEF3F9)
+            Theme.surface2
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
                     if let img = WebImages.inlineImage(c) {
