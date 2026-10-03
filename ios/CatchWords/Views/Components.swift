@@ -25,6 +25,8 @@ struct PrimaryButton: View {
 
     @State private var sheenPhase: CGFloat = -1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// `.disabled(...)` from the caller (an empty search, nothing to import): the button greys out.
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -51,7 +53,8 @@ struct PrimaryButton: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 16))
-            .shadow(color: Theme.primary.opacity(0.45), radius: 16, y: 8)
+            .shadow(color: Theme.primary.opacity(isEnabled ? 0.45 : 0), radius: 16, y: 8)
+            .opacity(isEnabled ? 1 : 0.45)
         }
         .buttonStyle(PressableStyle())
         .disabled(isLoading)

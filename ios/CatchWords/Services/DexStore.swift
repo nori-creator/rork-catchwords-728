@@ -123,14 +123,7 @@ final class DexStore {
     /// and album placements of a big dex). `path` must have a stable `order`.
     private func readAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
                                        pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
-        var out: [T] = []
-        for page in 0..<maxPages {
-            let data = try await client.rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
-            let chunk = try decoder.decode([T].self, from: data)
-            out += chunk
-            if chunk.count < pageSize { break }
-        }
-        return out
+        try await client.restAll(path, as: T.self, decoder: decoder, pageSize: pageSize, maxPages: maxPages)
     }
 
     func reloadReviews() async { await loadReviews() }
@@ -443,7 +436,8 @@ final class DexStore {
     }
 
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
-        guard let image, let jpeg = ImageTools.jpegForUpload(image) else { return nil }
+        // Encoded off the main thread: this runs while the reward animation plays.
+        guard let image, let jpeg = await ImageTools.jpegForUploadInBackground(image) else { return nil }
         let path = "\(uid)/\(ts)-\(kind).jpg"
         try await client.upload(jpeg, path: path)
         return path
@@ -451,7 +445,9 @@ final class DexStore {
 
     /// Cutout failures never block the catch.
     private func uploadPNG(_ image: UIImage?, uid: String, ts: Int, kind: String) async -> String? {
-        guard let image, let png = ImageTools.resized(image, maxSide: 1200).pngData() else { return nil }
+        guard let image,
+              let png = await Task.detached(priority: .userInitiated, operation: { ImageTools.resized(image, maxSide: 1200).pngData() }).value
+        else { return nil }
         let path = "\(uid)/\(ts)-\(kind).png"
         do {
             try await client.upload(png, path: path, contentType: "image/png")

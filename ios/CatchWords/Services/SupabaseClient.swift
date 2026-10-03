@@ -206,6 +206,44 @@ final class SupabaseClient {
         KeychainStore.delete(account: sessionAccount)
     }
 
+    /// A sign-out the user asked for: the local session goes at once, and the server is told to revoke
+    /// this device's session (`POST auth/v1/logout?scope=local`, so the web stays signed in) in the
+    /// background. Best effort: offline or a server error never holds the sign-out up.
+    func signOutRevokingSession() {
+        guard let ended = session else { signOut(); return }
+        signOut()
+        guard let baseURL else { return }
+        let key = anonKey
+        let http = urlSession
+        Task.detached {
+            await SupabaseClient.revoke(ended, baseURL: baseURL, anonKey: key, urlSession: http)
+        }
+    }
+
+    /// `/logout` needs a live access token: an expired one is swapped for a fresh one first (with the
+    /// refresh token the device still holds), so the refresh token is revoked too.
+    nonisolated private static func revoke(_ s: AuthSession, baseURL: URL, anonKey: String, urlSession: URLSession) async {
+        var access = s.accessToken
+        if s.expiresAt.timeIntervalSinceNow < 30,
+           let url = URL(string: "auth/v1/token?grant_type=refresh_token", relativeTo: baseURL) {
+            var req = URLRequest(url: url, timeoutInterval: 10)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh_token": s.refreshToken])
+            guard let answer = try? await urlSession.data(for: req),
+                  let json = (try? JSONSerialization.jsonObject(with: answer.0)) as? [String: Any],
+                  let fresh = json["access_token"] as? String else { return }
+            access = fresh
+        }
+        guard let url = URL(string: "auth/v1/logout?scope=local", relativeTo: baseURL) else { return }
+        var req = URLRequest(url: url, timeoutInterval: 10)
+        req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(access)", forHTTPHeaderField: "Authorization")
+        _ = try? await urlSession.data(for: req)
+    }
+
     private func authRequest(path: String, body: [String: String]) async throws -> [String: Any] {
         guard let baseURL, let url = URL(string: "auth/v1/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url)
@@ -323,6 +361,21 @@ final class SupabaseClient {
         return data
     }
 
+    /// Every row of a GET, a page at a time. The server returns at most 1000 rows per request whatever
+    /// `limit` says, so a single big `limit` silently dropped the rest. `path` must have a stable,
+    /// unique `order` (end it with the primary key) and no `limit` / `offset` of its own.
+    func restAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
+                               pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
+        var out: [T] = []
+        for page in 0..<maxPages {
+            let data = try await rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
+            let chunk = try decoder.decode([T].self, from: data)
+            out += chunk
+            if chunk.count < pageSize { break }
+        }
+        return out
+    }
+
     /// Before a request: refresh an expiring token, but never fail the request for a network hiccup
     /// during the refresh — the current token may still work (or the request reports offline itself).
     /// A dead refresh token (`.unauthorized`) does fail it: the user has to log in again.
@@ -341,15 +394,26 @@ final class SupabaseClient {
     func withTokenRetry(_ send: (String) async throws -> (Data, HTTPURLResponse)) async throws -> (Data, HTTPURLResponse) {
         guard let token = session?.accessToken else { throw APIError.unauthorized }
         let first = try await send(token)
-        guard first.1.statusCode == 401 else { return first }
+        guard Self.isExpiredToken(first) else { return first }
         try await refreshIfNeeded(force: true)
         guard let fresh = session?.accessToken else { throw APIError.unauthorized }
         let second = try await send(fresh)
-        if second.1.statusCode == 401 {
+        if Self.isExpiredToken(second) {
             expireSession()
             throw APIError.unauthorized
         }
         return second
+    }
+
+    /// 401, or Storage's way of saying the same: HTTP 400 (sometimes 403) with `jwt expired`,
+    /// `"exp" claim timestamp check failed` or `InvalidJWT` in the body.
+    nonisolated static func isExpiredToken(_ answer: (Data, HTTPURLResponse)) -> Bool {
+        let status = answer.1.statusCode
+        if status == 401 { return true }
+        guard status == 400 || status == 403, answer.0.count < 4096 else { return false }
+        let body = String(decoding: answer.0, as: UTF8.self).lowercased()
+        return body.contains("jwt expired") || body.contains("\"exp\" claim") || body.contains("exp claim")
+            || body.contains("invalidjwt") || body.contains("token is expired")
     }
 
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)

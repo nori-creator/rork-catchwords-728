@@ -12,6 +12,7 @@ struct AuthView: View {
     /// Nudges the form sideways when sign-in fails, like a head shake.
     @State private var shake: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @FocusState private var focused: Field?
 
     private enum Field { case email, password }
@@ -48,7 +49,7 @@ struct AuthView: View {
                         } onCompletion: { result in
                             Task { await auth.completeApple(result) }
                         }
-                        .signInWithAppleButtonStyle(.black)
+                        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)  // HIG: white on a dark screen
                         .frame(height: 54)
                         .clipShape(.rect(cornerRadius: 16))
                     } else {
@@ -59,9 +60,9 @@ struct AuthView: View {
                                 Image(systemName: "apple.logo").font(.system(size: 20, weight: .medium))
                                 Text(L("Appleでサインイン")).font(.system(size: 19, weight: .medium))
                             }
-                            .foregroundStyle(.white)
+                            .foregroundStyle(colorScheme == .dark ? .black : .white)
                             .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(.black, in: .rect(cornerRadius: 16))
+                            .background(colorScheme == .dark ? Color.white : Color.black, in: .rect(cornerRadius: 16))
                         }
                         .buttonStyle(PressableStyle())
                         .disabled(auth.isBusy)
@@ -183,6 +184,7 @@ struct AuthView: View {
                 .fieldStyle()
                 .accessibilityIdentifier("auth.password")
             PrimaryButton(title: isSignUp ? L("新規登録") : L("ログイン"), isLoading: auth.isBusy, action: submit)
+                .disabled(trimmedEmail.isEmpty || password.isEmpty)
                 .accessibilityIdentifier("auth.submit")
             HStack {
                 Button(isSignUp ? L("ログインに切り替え") : L("新規登録はこちら")) {
@@ -194,10 +196,10 @@ struct AuthView: View {
                 Spacer()
                 if !isSignUp {
                     Button(L("パスワードを忘れた")) {
-                        Task { await auth.resetPassword(email: email) }
+                        Task { await auth.resetPassword(email: trimmedEmail) }
                     }
                     .buttonStyle(PressableStyle(scale: 0.97))
-                    .disabled(email.isEmpty)
+                    .disabled(trimmedEmail.isEmpty)
                     .transition(.opacity)
                 }
             }
@@ -218,13 +220,19 @@ struct AuthView: View {
         }
     }
 
+    /// AutoFill and the keyboard's suggestion bar can leave a space at either end of the address.
+    private var trimmedEmail: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     private func submit() {
+        // The keyboard's Go key works even while the button is greyed out.
+        guard !trimmedEmail.isEmpty, !password.isEmpty, !auth.isBusy else { return }
         focused = nil
+        let mail = trimmedEmail
         Task {
             if isSignUp {
-                await auth.signUp(email: email, password: password)
+                await auth.signUp(email: mail, password: password)
             } else {
-                await auth.signIn(email: email, password: password)
+                await auth.signIn(email: mail, password: password)
             }
         }
     }

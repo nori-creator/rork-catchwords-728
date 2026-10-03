@@ -40,6 +40,11 @@ struct WordbookView: View {
             }
         }
         .task { if !store.hasLoaded { await store.load() } }
+        // Back from a book's review (the back button or 「単語帳の一覧へ」): today's counts and the
+        // learned level on the spines changed.
+        .onChange(of: reviewing) { old, new in
+            if old != nil, new == nil { Task { await store.load() } }
+        }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             Task {
@@ -57,6 +62,7 @@ struct WordbookView: View {
                 showCamera = false
                 if let img { Task { await read(img) } }
             }
+            .statusBarTone(.light)
         }
         .sheet(item: Binding(get: { draft.map { DraftBox(draft: $0) } }, set: { if $0 == nil { draft = nil } })) { box in
             WordbookConfirmView(draft: box.draft, store: store) { added in
@@ -83,7 +89,7 @@ struct WordbookView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18).padding(.vertical, 12)
-                    .background(Theme.foreground.opacity(0.92), in: Capsule())
+                    .background(Theme.toastInk.opacity(0.92), in: Capsule())
                     .padding(.bottom, 30)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -432,8 +438,7 @@ struct WordbookReviewView: View {
             Text(L("この本の今日ぶんは終わりです")).font(.system(size: 20, weight: .bold))
             Text(L("\(correct)／\(cards.count) 正解")).font(.system(size: 16)).monospacedDigit().foregroundStyle(Theme.muted)
             PrimaryButton(title: L("単語帳の一覧へ"), icon: "books.vertical") {
-                Task { await store.load() }
-                dismiss()
+                dismiss()  // the shelf reloads its counts when the review closes
             }
             .padding(.top, 8)
         }

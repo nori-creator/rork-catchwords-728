@@ -55,7 +55,7 @@ struct CaptureView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Theme.foreground.opacity(0.88), in: Capsule())
+                        .background(Theme.toastInk.opacity(0.88), in: Capsule())
                         .padding(.top, 60)
                         .padding(.horizontal, 24)
                     Spacer()
@@ -74,6 +74,8 @@ struct CaptureView: View {
             }
             CCShutterFlash(start: shotFlash, calm: reduceMotion).zIndex(30)
         }
+        // The camera machine, the card catch and the reward are dark full-screen views.
+        .statusBarTone(isMachine || showsCardCatch || reward != nil ? .light : .automatic)
         .task { await camera.start() }
         .onAppear {
             LocationService.shared.requestPermissionIfNeeded()
@@ -122,6 +124,7 @@ struct CaptureView: View {
         }
         .fullScreenCover(isPresented: $showScan, onDismiss: { Task { await camera.start() } }) {
             ScanView()
+                .statusBarTone(.light)
         }
         .sheet(isPresented: $showTextSearch) { textSearchSheet }
         .onAppear { takePendingRequest() }

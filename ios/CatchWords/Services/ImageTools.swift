@@ -10,6 +10,11 @@ nonisolated enum ImageTools {
         resized(image, maxSide: maxSide).jpegData(compressionQuality: quality)
     }
 
+    /// `jpegForUpload` off the main thread (a full-size photo takes 100–200 ms to resize and encode).
+    static func jpegForUploadInBackground(_ image: UIImage, maxSide: CGFloat = 1600, quality: CGFloat = 0.88) async -> Data? {
+        await Task.detached(priority: .userInitiated) { jpegForUpload(image, maxSide: maxSide, quality: quality) }.value
+    }
+
     static func resized(_ image: UIImage, maxSide: CGFloat) -> UIImage {
         let size = image.size
         let scale = min(1, maxSide / max(size.width, size.height))

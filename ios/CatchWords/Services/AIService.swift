@@ -17,7 +17,7 @@ final class AIService {
     /// 768px / q0.8, one entry per object (`group`) plus its other names (`register`),
     /// in the server's order (most likely first, everyday name first). Never re-sorted here.
     func suggest(image: UIImage) async throws -> [Candidate] {
-        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 768, quality: 0.8) else {
+        guard let jpeg = await ImageTools.jpegForUploadInBackground(image, maxSide: 768, quality: 0.8) else {
             throw APIError.message(L("写真を読み込めませんでした。"))
         }
         let res = try await NativeAPI.call("suggestWords", [
@@ -34,7 +34,7 @@ final class AIService {
     /// the scan_events funnel log — all on the server, same as the web.
     func detectScan(image: UIImage, lat: Double? = nil, lng: Double? = nil) async throws -> [Candidate] {
         struct Res: Decodable { let items: [Candidate] }
-        guard let jpeg = ImageTools.jpegForUpload(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
+        guard let jpeg = await ImageTools.jpegForUploadInBackground(image) else { throw APIError.message(L("写真を読み込めませんでした。")) }
         var data: [String: Any] = ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"]
         if let lat, let lng { data["lat"] = lat; data["lng"] = lng }
         let res = try await NativeAPI.call("detectScan", data, as: Res.self, timeout: 40)
@@ -71,7 +71,7 @@ final class AIService {
     /// Read the words printed on a vocabulary page, not saved yet (web `extractWordbook`; meanings
     /// in the reader's language).
     func extractWordbook(image: UIImage) async throws -> WordbookDraft {
-        guard let jpeg = ImageTools.jpegForUpload(image, maxSide: 2000, quality: 0.85) else { throw APIError.message(L("写真を読み込めませんでした。")) }
+        guard let jpeg = await ImageTools.jpegForUploadInBackground(image, maxSide: 2000, quality: 0.85) else { throw APIError.message(L("写真を読み込めませんでした。")) }
         let draft = try await NativeAPI.call("extractWordbook", ["imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())"],
                                              as: WordbookDraft.self, timeout: 60)
         let cleaned = Wordbook.clean(draft.entries)

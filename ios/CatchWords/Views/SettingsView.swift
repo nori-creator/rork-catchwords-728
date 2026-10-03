@@ -308,10 +308,10 @@ struct SettingsView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { deleteOpen.toggle() }
             } label: {
                 HStack {
-                    Text(L("アカウントを削除")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(hex: 0xB42329))
+                    Text(L("アカウントを削除")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(light: 0xB42329, dark: 0xF87171))
                     Spacer()
                     Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xB42329).opacity(0.7))
+                        .foregroundStyle(Color(light: 0xB42329, dark: 0xF87171).opacity(0.7))
                         .rotationEffect(.degrees(deleteOpen ? 180 : 0))
                 }
                 .frame(minHeight: 44).contentShape(Rectangle())

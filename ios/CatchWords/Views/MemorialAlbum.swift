@@ -203,6 +203,7 @@ struct MemorialAlbumView: View {
                 .zIndex(2)
             }
         }
+        .statusBarTone(revealed ? .dark : .light)  // the night-sky reveal, then the paper album
     }
 }
 

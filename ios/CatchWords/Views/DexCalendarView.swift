@@ -26,6 +26,10 @@ struct DexCalendarView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.88), value: timelineDay)
+        .onAppear {
+            // Open on the month of the day already chosen (the map's day can be months back).
+            if let d = selectedDay, let m = cal.date(from: cal.dateComponents([.year, .month], from: d)) { month = m }
+        }
     }
 
     private var monthGrid: some View {
@@ -83,7 +87,7 @@ struct DexCalendarView: View {
             Haptics.selection()
             if let onPickDay { onPickDay(cal.startOfDay(for: day)) } else { timelineDay = day }
         } label: {
-            Color(hex: 0xE8F1FD)
+            Color(light: 0xE8F1FD, dark: 0x17233A)
                 .aspectRatio(0.72, contentMode: .fit)
                 .overlay {
                     if let path {

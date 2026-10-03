@@ -16,10 +16,11 @@ final class WordbookStore {
         defer { isLoading = false }
         do {
             async let booksData = client.rest("GET", "wordbooks?select=id,title,created_at&order=created_at.desc")
-            async let rowsData = client.rest("GET", "wordbook_entries?select=id,wordbook_id,headword,due_at,repetitions&limit=10000")
-            let (b, r) = try await (booksData, rowsData)
+            // Paged: the server answers at most 1000 rows per request (the shelf's counts were cut).
+            async let rowsList = client.restAll("wordbook_entries?select=id,wordbook_id,headword,due_at,repetitions&order=id.asc",
+                                                as: WordbookEntry.self, decoder: SupabaseDate.decoder)
+            let (b, rows) = try await (booksData, rowsList)
             let rawBooks = (try JSONSerialization.jsonObject(with: b) as? [[String: Any]]) ?? []
-            let rows = try SupabaseDate.decoder.decode([WordbookEntry].self, from: r)
             let byBook = Dictionary(grouping: rows, by: \.wordbookId)
             books = rawBooks.compactMap { d in
                 guard let id = d["id"] as? String else { return nil }

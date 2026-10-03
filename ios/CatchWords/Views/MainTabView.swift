@@ -78,7 +78,7 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch router.tab {
-                case .home: HomeView().environment(\.colorScheme, .light)  // the paper album stays paper
+                case .home: HomeView().environment(\.colorScheme, .light).statusBarTone(.dark)  // the paper album stays paper
                 case .dex:
                     // A card-catch landing: the dex page rises over the camera screen (#dex translateY(102%) → none).
                     DexView()
@@ -176,6 +176,7 @@ struct MainTabView: View {
         }
         .fullScreenCover(isPresented: $router.showPaywall) {
             PaywallView()
+                .statusBarTone(.automatic)
         }
     }
 
