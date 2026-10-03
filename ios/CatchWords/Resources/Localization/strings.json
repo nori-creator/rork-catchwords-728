@@ -2563,6 +2563,10 @@
   "en": "Search",
   "zh-TW": "搜尋"
  },
+ "検索を消す": {
+  "en": "Clear search",
+  "zh-TW": "清除搜尋"
+ },
  "検証済み": {
   "en": "Verified",
   "zh-TW": "已驗證"

@@ -274,8 +274,11 @@ struct DexView: View {
             if !query.isEmpty {
                 Button { query = "" } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
+                        .frame(width: 44, height: 44)  // HIG: 44pt to tap
+                        .contentShape(Rectangle())
                 }
-                .frame(width: 32, height: 32)
+                .padding(.horizontal, -6)  // same look as the old 32pt frame; only the hit area grows
+                .accessibilityLabel(L("検索を消す"))
             }
         }
         .padding(.horizontal, 14)
