@@ -292,7 +292,6 @@ nonisolated extension DemoDatabase {
             card["meaning_ja"] = DJ.str(e["meaning"]) ?? ""
             card["part_of_speech"] = DJ.str(f["part_of_speech"]) ?? ""
             card["category_key"] = DJ.str(f["category_key"]) ?? (hint ?? "other")
-            card["level"] = DJ.str(f["level"]) ?? ""
             card["example_sentence"] = DJ.str(f["example_sentence"]) ?? ""
             card["example_translation"] = DJ.str(e["example_translation"]) ?? ""
             card["extras"] = DJ.dict(e["extras"])
@@ -325,7 +324,6 @@ nonisolated extension DemoDatabase {
         card["meaning_ja"] = meaning
         card["part_of_speech"] = DJ.str(s["pos"]) ?? ""
         card["category_key"] = category ?? "other"
-        card["level"] = DJ.str(s["level"]) ?? ""
         card["example_sentence"] = fill(DJ.str(s["example"]) ?? h)
         card["example_translation"] = fill(text(s["ex_tr"], r))
         card["extras"] = extras

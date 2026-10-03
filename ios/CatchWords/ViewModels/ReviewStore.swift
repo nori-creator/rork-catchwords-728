@@ -43,13 +43,13 @@ final class ReviewStore {
     private let client = SupabaseClient.shared
 
     /// The padding after the learner's own dex: everyday words of the learning language from the bundled pool
-    /// (Models/QuizPool.swift, which says where the levels come from), closest to the card's exam level first,
-    /// then the same category (owner 2026-10-03: a distractor of a very different level looks odd). It replaces
-    /// quiz-choices.ts's four fixed words; the pool is far larger, so a collision with the correct word still leaves 3.
+    /// (Models/QuizPool.swift), the same category key first, then the same room. No exam levels (owner 2026-10-03:
+    /// per-word levels are gone on iOS). It replaces quiz-choices.ts's four fixed words; the pool is far larger,
+    /// so a collision with the correct word still leaves 3.
     /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」):
     /// the pool keeps one list per learning language.
-    static func fallback(for target: String, level: String? = nil, categoryKey: String? = nil) -> [QuizChoice] {
-        QuizPool.ranked(for: target, level: level, categoryKey: categoryKey)
+    static func fallback(for target: String, categoryKey: String? = nil) -> [QuizChoice] {
+        QuizPool.ranked(for: target, categoryKey: categoryKey)
             .map { QuizChoice(headword: $0.headword, zhuyin: $0.reading) }
     }
 
@@ -171,7 +171,7 @@ final class ReviewStore {
         doneToday = rows.filter { SRS.taipeiDay($0.reviewedAt) == today }.count
     }
 
-    /// Distractors from the learner's own dex first (same category preferred), then the level-matched pool.
+    /// Distractors from the learner's own dex first (same category preferred), then the bundled pool (same category, then same room).
     /// Choices are drawn once per card. Without this the four buttons reshuffled every time the
     /// screen redrew — including right after a tap, so the answer you pressed jumped to another slot.
     @ObservationIgnored private var choiceCache: [String: [QuizChoice]] = [:]
@@ -192,7 +192,7 @@ final class ReviewStore {
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
         var out: [QuizChoice] = []
-        let pool = Self.fallback(for: NativeAPI.targetLanguage, level: card.sticker.word?.level, categoryKey: card.sticker.categoryKey)
+        let pool = Self.fallback(for: NativeAPI.targetLanguage, categoryKey: card.sticker.categoryKey)
         // Compared by headword: the same word from the dex and from the pool may carry different readings.
         for c in same + rest + pool where c.headword != correct.headword && !out.contains(where: { $0.headword == c.headword }) {
             out.append(c)

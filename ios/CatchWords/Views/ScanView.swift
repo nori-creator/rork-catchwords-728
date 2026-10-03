@@ -348,7 +348,7 @@ struct ScanView: View {
             let unique = Array(Set(heads.filter { !$0.isEmpty }))
             guard !unique.isEmpty else { return [:] }
             let list = unique.map { "\"\($0)\"" }.joined(separator: ",")
-            let q = "dictionary_entries?select=headword,zhuyin,pinyin,meaning_ja,pos,tocfl_level,source&language=eq.\(NativeAPI.targetLanguage)&headword=in.(\(list))"
+            let q = "dictionary_entries?select=headword,zhuyin,pinyin,meaning_ja,pos,source&language=eq.\(NativeAPI.targetLanguage)&headword=in.(\(list))"
             guard let path = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                   let data = try? await SupabaseClient.shared.rest("GET", path, timeout: 4),
                   let rows = try? JSONDecoder().decode([DictEntry].self, from: data) else { return [:] }
@@ -365,13 +365,11 @@ nonisolated struct DictEntry: Decodable, Sendable, Hashable {
     let pinyin: String?
     let meaningJa: String
     let pos: String?
-    let tocflLevel: Int?
     let source: String?
 
     enum CodingKeys: String, CodingKey {
         case headword, zhuyin, pinyin, pos, source
         case meaningJa = "meaning_ja"
-        case tocflLevel = "tocfl_level"
     }
 }
 

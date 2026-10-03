@@ -219,12 +219,15 @@ final class DexStore {
             "pinyin": text("pinyin", c.pinyin),
             "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
             "part_of_speech": text("part_of_speech", c.pos.isEmpty ? NativeAPI.defaultPos : c.pos),
-            "level": text("level", card.level),
             "category_key": text("category_key", card.categoryKey),
             "example_sentence": text("example_sentence", card.exampleSentence),
             "example_translation": text("example_translation", card.exampleTranslation),
         ]
         if let extras = raw?["extras"], case .object = extras { word["extras"] = extras.foundation }
+        // The word's exam level is not used on iOS (owner 2026-10-03). The server's own value from `generateCard`
+        // is handed back untouched when there is one: without it saveSticker would store its default "TOCFL-2"
+        // (stickers.functions.ts SaveStickerInput), which is wrong for English and Japanese words.
+        if let lv = raw?["level"]?.string, !lv.isEmpty { word["level"] = lv }
         let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
         let data: [String: Any] = [
             "word": word,
@@ -383,7 +386,7 @@ final class DexStore {
             .contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
         if missing {
             var patch: [String: Any] = [:]
-            for k in ["reading_zhuyin", "pinyin", "part_of_speech", "level", "example_sentence", "example_translation", "meaning_ja"] {
+            for k in ["reading_zhuyin", "pinyin", "part_of_speech", "example_sentence", "example_translation", "meaning_ja"] {
                 if let v = card[k] as? String, !v.isEmpty { patch[k] = v }
             }
             if !patch.isEmpty { data["patch"] = patch }

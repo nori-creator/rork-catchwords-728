@@ -149,7 +149,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         row["meaning_ja"] = DJ.str(e["meaning"]) ?? ""
         row["part_of_speech"] = DJ.orNull(DJ.str(fixture["part_of_speech"]))
         row["category_key"] = DJ.orNull(DJ.str(fixture["category_key"]))
-        row["level"] = DJ.orNull(DJ.str(fixture["level"]))
         row["example_sentence"] = DJ.orNull(DJ.str(fixture["example_sentence"]))
         row["example_translation"] = DJ.orNull(DJ.str(e["example_translation"]))
         row["extras"] = DJ.dict(e["extras"])
