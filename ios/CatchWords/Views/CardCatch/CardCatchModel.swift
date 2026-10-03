@@ -161,14 +161,28 @@ final class CardCatchModel {
         await wait(motion.sleep(max(0, 260 - elapsed * 1000)))
         guard my == runId else { return }
         // The answer is not known yet (the prototype's camera-roll path): the brackets keep looking.
-        while my == runId, !objectsReady {
+        while my == runId, vm != nil, !objectsReady {
+            // useRollPhoto: no objects → the pill and the glow go, a toast, 600 ms, back to the camera.
+            if let vm, vm.step == .select, vm.objects.isEmpty {
+                await nothingFound(my)
+                return
+            }
             await analyze(my, objects: [], waiting: true)
         }
-        guard my == runId else { return }
+        guard my == runId, vm != nil else { return }
         buildObjects()
         await analyze(my, objects: objs, waiting: false)
         guard my == runId else { return }
         showPick()
+    }
+
+    private func nothingFound(_ my: Int) async {
+        setPill(false)
+        aiGlow.set(0, duration: motion.transition(600))
+        vm?.showToast(L("写っている物を見つけられませんでした。別の写真で試してください。"))
+        await wait(motion.sleep(600))
+        guard my == runId else { return }
+        vm?.reset()
     }
 
     private func buildObjects() {
