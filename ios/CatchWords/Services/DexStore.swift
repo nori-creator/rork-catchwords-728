@@ -231,13 +231,34 @@ final class DexStore {
             "lat": orNull(draft.location?.coordinate.latitude),
             "lng": orNull(draft.location?.coordinate.longitude),
         ]
-        struct Saved: Decodable { let id: String }
+        struct Saved: Decodable {
+            let id: String
+            let wordId: String?
+            enum CodingKeys: String, CodingKey { case id, wordId = "word_id" }
+        }
         let saved = try await NativeAPI.call("saveSticker", data, as: Saved.self, timeout: 45)
 
         cacheLocal(path: obj, image: draft.photo)
         cacheLocal(path: cut, image: draft.cutout)
         cacheLocal(path: selfieRef, image: draft.selfie)
-        let sticker = try await fetchSticker(id: saved.id)
+        let sticker: Sticker
+        if let fresh = try? await fetchSticker(id: saved.id) {
+            sticker = fresh
+        } else {
+            // The catch IS saved — only reading it back failed (the connection dropped right after).
+            // Reporting a failure here made the learner save it again; show it from what was sent
+            // instead (the next dex load replaces it with the server's row).
+            var w = word
+            w["id"] = saved.wordId ?? ""
+            w["language"] = NativeAPI.targetLanguage
+            let localWord = (try? JSONSerialization.data(withJSONObject: w)).flatMap { try? JSONDecoder().decode(Word.self, from: $0) }
+            sticker = present([Sticker(
+                id: saved.id, wordId: saved.wordId ?? "", objectImageUrl: obj, cutoutImageUrl: cut,
+                selfieImageUrl: selfieRef, caption: caption.isEmpty ? nil : caption, locationName: draft.placeName,
+                takenAt: Date(), captureType: draft.captureType, word: localWord,
+                lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude
+            )])[0]
+        }
         stickers.removeAll { $0.id == sticker.id }
         stickers.insert(sticker, at: 0)
         await signPaths(for: [sticker])
