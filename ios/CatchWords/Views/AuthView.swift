@@ -32,7 +32,7 @@ struct AuthView: View {
                     } label: {
                         HStack(spacing: 10) {
                             GoogleMark(size: 20)
-                            Text(L("Googleで続ける")).font(.system(size: 17, weight: .semibold))
+                            Text(L("Googleで続ける")).scaledFont(size: 17, weight: .semibold)
                         }
                         .foregroundStyle(Color(hex: 0x1F1F1F))
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -53,19 +53,14 @@ struct AuthView: View {
                         .frame(height: 54)
                         .clipShape(.rect(cornerRadius: 16))
                     } else {
-                        Button {
+                        // Apple's own button (HIG: the system draws the logo, title and proportions), but the tap
+                        // runs the web sign-in so the account is the same as on the web.
+                        AppleIDWebButton(style: colorScheme == .dark ? .white : .black, isEnabled: !auth.isBusy) {
                             Task { await auth.signInWithWeb(provider: "apple") }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "apple.logo").font(.system(size: 20, weight: .medium))
-                                Text(L("Appleでサインイン")).font(.system(size: 19, weight: .medium))
-                            }
-                            .foregroundStyle(colorScheme == .dark ? .black : .white)
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(colorScheme == .dark ? Color.white : Color.black, in: .rect(cornerRadius: 16))
                         }
-                        .buttonStyle(PressableStyle())
-                        .disabled(auth.isBusy)
+                        .id(colorScheme)  // the button's style is fixed at creation; rebuild it when the scheme flips
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
                         .accessibilityIdentifier("auth.apple")
                     }
 
@@ -77,7 +72,7 @@ struct AuthView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
-                            Text(L("メールアドレスで続ける")).font(.system(size: 17, weight: .semibold))
+                            Text(L("メールアドレスで続ける")).scaledFont(size: 17, weight: .semibold)
                         }
                         .foregroundStyle(Theme.foreground)
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -90,14 +85,14 @@ struct AuthView: View {
 
                     if let msg = auth.errorMessage {
                         Label(msg, systemImage: "exclamationmark.circle.fill")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13)
                             .foregroundStyle(Theme.destructive)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     if let msg = auth.infoMessage {
                         Label(msg, systemImage: "checkmark.circle.fill")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13)
                             .foregroundStyle(Theme.ok)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -129,13 +124,13 @@ struct AuthView: View {
                 }
 
                 Text(L("Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。"))
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
 
                 // Consent to the terms and the privacy policy is given by continuing (both pages are links).
                 Text(LegalLinks.signInAgreement())
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12)
                     .foregroundStyle(Theme.muted)
                     .tint(Theme.primaryInk)
                     .multilineTextAlignment(.center)
@@ -145,7 +140,7 @@ struct AuthView: View {
                     Link(L("利用規約"), destination: AppConfig.termsURL)
                     Link(L("プライバシー"), destination: AppConfig.privacyURL)
                 }
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium)
                 .foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 24)
@@ -163,7 +158,7 @@ struct AuthView: View {
             LogoMark(size: 96)
             VStack(spacing: 6) {
                 Text("CatchWords")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .scaledFont(size: 34, weight: .bold, design: .rounded)
                     .foregroundStyle(Theme.foreground)
                 Text(L("街で見つけた物が、学びたい言葉になる。"))
                     .font(AppFont.hand(18))
@@ -211,7 +206,7 @@ struct AuthView: View {
                     .transition(.opacity)
                 }
             }
-            .font(.system(size: 13, weight: .medium))
+            .scaledFont(size: 13, weight: .medium)
             .foregroundStyle(Theme.primary)
             .frame(minHeight: 44)
             if AuthStore.devSkipLogin {
@@ -219,7 +214,7 @@ struct AuthView: View {
                     Task { await auth.enterAsGuest() }
                 } label: {
                     Label(L("ログインせずに入る（開発用）"), systemImage: "arrow.right.circle")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold)
                         .foregroundStyle(Theme.muted)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
@@ -243,6 +238,37 @@ struct AuthView: View {
                 await auth.signIn(email: mail, password: password)
             }
         }
+    }
+}
+
+/// The system "Sign in with Apple" button (`ASAuthorizationAppleIDButton`, so the look follows the HIG) with our
+/// own tap action. `SignInWithAppleButton` always starts the native ASAuthorization flow, so it can't be used
+/// while Apple sign-in goes through the web app (`AppConfig.nativeAppleSignIn == false`).
+private struct AppleIDWebButton: UIViewRepresentable {
+    var style: ASAuthorizationAppleIDButton.Style
+    var isEnabled: Bool
+    var action: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+
+    func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
+        let button = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: style)
+        button.cornerRadius = 16
+        button.accessibilityIdentifier = "auth.apple"
+        button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        return button
+    }
+
+    func updateUIView(_ button: ASAuthorizationAppleIDButton, context: Context) {
+        context.coordinator.action = action
+        button.isEnabled = isEnabled
+        button.alpha = isEnabled ? 1 : 0.5
+    }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+        init(action: @escaping () -> Void) { self.action = action }
+        @objc func tapped() { action() }
     }
 }
 
@@ -276,7 +302,7 @@ private struct GoogleMark: View {
 private extension View {
     func fieldStyle() -> some View {
         self
-            .font(.system(size: 16))
+            .scaledFont(size: 16)
             .foregroundStyle(Theme.foreground)
             .padding(.horizontal, 16)
             .frame(minHeight: 52)

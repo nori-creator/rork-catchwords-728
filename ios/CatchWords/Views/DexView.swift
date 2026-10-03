@@ -50,18 +50,17 @@ struct DexDropdownRow: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon ?? "checkmark")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .foregroundStyle(icon == nil ? Theme.primary : Theme.muted)
                     .opacity(isSelected || icon != nil ? 1 : 0)
                     .frame(width: 18)
                 Text(title)
-                    .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
-                    .monospacedDigit()
+                    .scaledFont(size: 15, weight: isSelected ? .semibold : .regular, monospacedDigit: true)
                     .foregroundStyle(Theme.foreground)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if let count {
-                    Text("\(count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                    Text("\(count)").scaledFont(size: 13, monospacedDigit: true).foregroundStyle(Theme.muted)
                 }
             }
             .padding(.horizontal, 12)
@@ -196,11 +195,11 @@ struct DexView: View {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L("図鑑"))
-                        .font(.system(size: 24, weight: .black))
+                        .scaledFont(size: 24, weight: .black)
                         .foregroundStyle(Theme.foreground)
                     // N枚 counts words (one per headword, like the prototype's S.dex), not stickers.
                     Text(L("\(DexBook.words(dex.stickers, lang: lang).count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(Theme.muted)
                         .lineLimit(1)
                 }
@@ -268,14 +267,17 @@ struct DexView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
             TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
-                .font(.system(size: 16))
+                .scaledFont(size: 16)
                 .foregroundStyle(Theme.foreground)
                 .submitLabel(.search)
             if !query.isEmpty {
                 Button { query = "" } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
+                        .frame(width: 44, height: 44)  // HIG: 44pt to tap
+                        .contentShape(Rectangle())
                 }
-                .frame(width: 32, height: 32)
+                .padding(.horizontal, -6)  // same look as the old 32pt frame; only the hit area grows
+                .accessibilityLabel(L("検索を消す"))
             }
         }
         .padding(.horizontal, 14)
@@ -338,10 +340,10 @@ struct DexView: View {
     private func pill(_ text: String, active: Bool, open: Bool) -> some View {
         HStack(spacing: 4) {
             Text(text).lineLimit(1)
-            Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+            Image(systemName: "chevron.down").scaledFont(size: 10, weight: .semibold)
                 .rotationEffect(.degrees(open ? 180 : 0))
         }
-        .font(.system(size: 14, weight: .medium))
+        .scaledFont(size: 14, weight: .medium)
         .foregroundStyle(active ? .white : Theme.foreground)
         .padding(.horizontal, 12)
         .frame(minHeight: 44)
@@ -461,10 +463,10 @@ struct DexView: View {
                     let items = filtered.filter { DexBook.category(of: $0, lang: lang) == cat.no }
                     if !items.isEmpty {
                         HStack(spacing: 6) {
-                            Text(cat.emoji).font(.system(size: 17))
-                            Text(cat.label).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Text(cat.emoji).scaledFont(size: 17)
+                            Text(cat.label).scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.foreground)
                             Spacer()
-                            Text("\(items.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                            Text("\(items.count)").scaledFont(size: 13, monospacedDigit: true).foregroundStyle(Theme.muted)
                         }
                         .padding(.top, 6)
                         VStack(spacing: 0) {
@@ -501,7 +503,7 @@ struct DexListRow: View {
                         .detailZoomSource(sticker.id)
                     VStack(alignment: .leading, spacing: 4) {
                         ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
-                        Text(sticker.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
+                        Text(sticker.word?.meaningJa ?? "").scaledFont(size: 14).foregroundStyle(Theme.muted).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -573,7 +575,7 @@ struct DexMapView: View {
             VStack(spacing: 10) {
                 if located.isEmpty && !dayItems.isEmpty {
                     Text(L("この日は場所の記録がありません"))
-                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.foreground)
+                        .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.foreground)
                         .padding(.horizontal, 16).frame(minHeight: 40)
                         .background(.regularMaterial, in: Capsule())
                 }
@@ -675,7 +677,7 @@ struct DexMapView: View {
                     .overlay(alignment: .topTrailing) {
                         if v.items.count > 1 {
                             Text("\(v.items.count)")
-                                .font(.system(size: 12, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                                .scaledFont(size: 12, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
                                 .frame(minWidth: 22, minHeight: 22)
                                 .background(Theme.primary, in: Circle())
                                 .overlay(Circle().stroke(.white, lineWidth: 2))
@@ -685,7 +687,7 @@ struct DexMapView: View {
                     .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
                 if isOn {
                     Text(JPDate.time(v.start))
-                        .font(.system(size: 13, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                        .scaledFont(size: 13, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Theme.primary, in: Capsule())
                 }
@@ -710,7 +712,7 @@ struct DexMapView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 8) {
                                     Text(v.timeLabel)
-                                        .font(.system(size: 17, weight: .bold)).monospacedDigit()
+                                        .scaledFont(size: 17, weight: .bold, monospacedDigit: true)
                                         .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
                                     if v.coordinate != nil || v.placeName != nil {
                                         Label {
@@ -718,7 +720,7 @@ struct DexMapView: View {
                                         } icon: {
                                             Image(systemName: "mappin")
                                         }
-                                        .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
+                                        .scaledFont(size: 12).foregroundStyle(Theme.muted).lineLimit(1)
                                     }
                                 }
                                 ForEach(v.items) { s in
@@ -758,11 +760,11 @@ struct DexMapView: View {
                                             .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                                             .clipShape(.rect(cornerRadius: 16, style: .continuous))
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(s.word?.headword ?? "").font(.system(size: 17, weight: .medium)).foregroundStyle(Theme.foreground)
+                                            Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
                                             if let cap = s.caption, !cap.isEmpty {
                                                 Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
                                             } else {
-                                                Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Theme.muted).lineLimit(1)
+                                                Text(s.word?.meaningJa ?? "").scaledFont(size: 15).foregroundStyle(Theme.muted).lineLimit(1)
                                             }
                                         }
                                         Spacer(minLength: 0)
@@ -790,7 +792,7 @@ struct DexMapView: View {
             .buttonStyle(PressableStyle(scale: 0.9))
             .accessibilityLabel(panelOpen ? L("一覧を閉じる") : L("一覧を開く"))
             Text(day.map { JPDate.monthDayWeek($0) } ?? "—")
-                .font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
+                .scaledFont(size: 19, weight: .bold).foregroundStyle(Theme.foreground)
             Spacer()
             circleButton("calendar") { showDatePicker = true }.accessibilityLabel(L("日付を選ぶ"))
             circleButton("chevron.left") {
@@ -874,7 +876,7 @@ struct EmptyDexView: View {
                     .frame(maxWidth: 260)
             } else if let onClearFilters {
                 Button(L("条件を外す"), action: onClearFilters)
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(Theme.primaryInk)
                     .frame(minHeight: 44)
             }

@@ -30,7 +30,7 @@ struct CatchCardView: View {
                     actions
                     if vm.selfie != nil {
                         Text(L("画像をタップで自撮りにフリップ"))
-                            .font(.system(size: 12))
+                            .scaledFont(size: 12)
                             .foregroundStyle(Theme.muted)
                     }
                     if let c = vm.picked { headwordCard(c).tourAnchor(.headword) }
@@ -74,7 +74,7 @@ struct CatchCardView: View {
                 if vm.isCutting { ProgressView().controlSize(.mini).tint(.white) }
                 Text(vm.isCutting || (vm.cutoutLift != nil && !revealDone) ? L("切り抜いています") : L("好きな方向にはがしてキャッチ"))
             }
-            .font(.system(size: 12, weight: .medium))
+            .scaledFont(size: 12, weight: .medium)
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .frame(minHeight: 28)
@@ -92,7 +92,7 @@ struct CatchCardView: View {
                 vm.reset()
             } label: {
                 Text(L("やり直す"))
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold)
                     .foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(Theme.card, in: Capsule())
@@ -104,9 +104,9 @@ struct CatchCardView: View {
                     if isCatching && vm.details == nil {
                         ProgressView().controlSize(.small).tint(.white)
                     } else {
-                        Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "checkmark").scaledFont(size: 15, weight: .semibold)
                     }
-                    Text(L("図鑑に追加")).font(.system(size: 16, weight: .semibold))
+                    Text(L("図鑑に追加")).scaledFont(size: 16, weight: .semibold)
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -139,9 +139,9 @@ struct CatchCardView: View {
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
                     .background(Theme.primary, in: Circle())
-                Text(L("意味")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                Text(L("意味")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
             }
-            Text(meaning(c)).font(.system(size: 22, weight: .medium)).foregroundStyle(Theme.foreground)
+            Text(meaning(c)).scaledFont(size: 22, weight: .medium).foregroundStyle(Theme.foreground)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,7 +157,7 @@ struct CatchCardView: View {
 
     private var captionField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(L("一言メモ（任意）")).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.muted)
+            Text(L("一言メモ（任意）")).scaledFont(size: 13, weight: .medium).foregroundStyle(Theme.muted)
             TextField("", text: $vm.caption, prompt: Text(L("今の気持ちや場所をメモ…")).foregroundStyle(Theme.muted.opacity(0.7)), axis: .vertical)
                 .font(AppFont.hand(18))
                 .foregroundStyle(Theme.foreground)
@@ -168,7 +168,7 @@ struct CatchCardView: View {
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
             if let place = vm.placeName {
                 Label(place, systemImage: "mappin.and.ellipse")
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12)
                     .foregroundStyle(Theme.muted)
             }
         }

@@ -42,7 +42,7 @@ struct EncounterHistoryView: View {
             if photos.count > 1 {
                 SectionCard(title: L("この言葉に出会った記録"), icon: "photo.stack") {
                     HStack {
-                        Text(L("\(photos.count)枚")).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        Text(L("\(photos.count)枚")).scaledFont(size: 13).foregroundStyle(Theme.muted)
                         Spacer()
                     }
                     ScrollView(.horizontal) {
@@ -83,7 +83,7 @@ struct EncounterHistoryView: View {
             .clipShape(.rect(cornerRadius: 18, style: .continuous))
             .overlay(alignment: .topLeading) {
                 Text(p.first ? L("はじめて") : L("\(index + 1)回目"))
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(p.first ? .white : Theme.primaryInk)
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(p.first ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(.white.opacity(0.92)), in: Capsule())
@@ -91,10 +91,10 @@ struct EncounterHistoryView: View {
             }
             .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
             if let d = SupabaseDate.parse(p.takenAt) {
-                Text(JPDate.full(d)).font(.system(size: 11)).monospacedDigit().foregroundStyle(Theme.muted)
+                Text(JPDate.full(d)).scaledFont(size: 11, monospacedDigit: true).foregroundStyle(Theme.muted)
             }
             if let place = p.place, !place.isEmpty {
-                Label(place, systemImage: "mappin").font(.system(size: 11)).foregroundStyle(Theme.muted).lineLimit(1)
+                Label(place, systemImage: "mappin").scaledFont(size: 11).foregroundStyle(Theme.muted).lineLimit(1)
             }
         }
         .frame(width: 118, alignment: .leading)

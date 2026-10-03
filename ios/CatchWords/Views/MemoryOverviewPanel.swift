@@ -27,12 +27,12 @@ struct MemoryOverviewPanel: View {
                 .scrollIndicators(.visible)
 
                 Text(L("タップで単語ごとの忘却曲線と「いつ忘れるか」の予測が見られます"))
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
                     .padding(.top, 8)
             }
             Divider().overlay(Theme.border).padding(.vertical, 12)
             Text(L("全体の記憶率（前後2週間）"))
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
             RetentionMiniChart(data: store.retentionSeries(dex: dex))
                 .frame(height: 150)
                 .padding(.top, 6)
@@ -50,7 +50,7 @@ struct MemoryOverviewPanel: View {
         return Button { Haptics.selection(); onOpenWord(s) } label: {
             HStack(spacing: 10) {
                 Text(s.word?.headword ?? "")
-                    .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
+                    .scaledFont(size: 16, weight: .medium).foregroundStyle(Theme.foreground)
                     .lineLimit(1).minimumScaleFactor(0.7).truncationMode(.tail)
                     .frame(minWidth: 58, maxWidth: 110, alignment: .leading)
                 GeometryReader { g in
@@ -60,10 +60,10 @@ struct MemoryOverviewPanel: View {
                     }
                 }
                 .frame(height: 8)
-                Text("\(pct)%").font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(ink)
+                Text("\(pct)%").scaledFont(size: 12, weight: .semibold, monospacedDigit: true).foregroundStyle(ink)
                     .frame(width: 36, alignment: .trailing)
                 Text(MemoryBadge.labels[lv])
-                    .font(.system(size: 11, weight: .medium)).foregroundStyle(ink)
+                    .scaledFont(size: 11, weight: .medium).foregroundStyle(ink)
                     .lineLimit(1).minimumScaleFactor(0.7)
                     .frame(width: 60).padding(.vertical, 4)
                     .background(c.opacity(0.14), in: Capsule())
@@ -88,7 +88,7 @@ struct RetentionMiniChart: View {
         let last = data.series.last?.date ?? Date()
         if data.series.isEmpty {
             Text(L("復習を始めると、ここに記憶率の推移が出ます"))
-                .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 13).foregroundStyle(Theme.muted)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             Chart {
@@ -106,7 +106,7 @@ struct RetentionMiniChart: View {
                     PointMark(x: .value("date", Date()), y: .value("%", Double(t)))
                         .symbol { Circle().fill(Theme.primary).overlay(Circle().stroke(.white, lineWidth: 2)).frame(width: 13, height: 13) }
                         .annotation(position: .top, spacing: 4) {
-                            Text(L("今日 \(t)%")).font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.foreground)
+                            Text(L("今日 \(t)%")).scaledFont(size: 12, weight: .bold).foregroundStyle(Theme.foreground)
                         }
                 }
             }
@@ -114,7 +114,7 @@ struct RetentionMiniChart: View {
             .chartYAxis {
                 AxisMarks(position: .leading, values: [0, 50, 100]) { v in
                     AxisGridLine().foregroundStyle(Theme.border)
-                    AxisValueLabel { Text("\(v.as(Int.self) ?? 0)%").font(.system(size: 11)).foregroundStyle(Theme.muted) }
+                    AxisValueLabel { Text("\(v.as(Int.self) ?? 0)%").scaledFont(size: 11).foregroundStyle(Theme.muted) }
                 }
             }
             .chartXAxis {
@@ -122,7 +122,7 @@ struct RetentionMiniChart: View {
                     AxisValueLabel(anchor: .top) {
                         if let d = v.as(Date.self) {
                             Text(abs(d.timeIntervalSinceNow) < 3600 ? L("今日") : JPDate.slash(d))
-                                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                                .scaledFont(size: 11).foregroundStyle(Theme.muted)
                         }
                     }
                 }

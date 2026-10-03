@@ -56,11 +56,11 @@ struct HomeView: View {
                         router.tab = .camera
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "hourglass").font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "hourglass").scaledFont(size: 15, weight: .semibold)
                             Text(L("解析待ちの写真が\(dex.pending.count)枚あります"))
-                                .font(.system(size: 14, weight: .semibold))
+                                .scaledFont(size: 14, weight: .semibold)
                             Spacer()
-                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.right").scaledFont(size: 12, weight: .semibold)
                         }
                         .foregroundStyle(Color(hex: 0x33291F))
                         .padding(.horizontal, 16)
@@ -74,11 +74,11 @@ struct HomeView: View {
 
                 HStack(alignment: .firstTextBaseline) {
                     Text(L("\(JPDate.month(today))のアルバム"))
-                        .font(.system(size: 20, weight: .heavy))
+                        .scaledFont(size: 20, weight: .heavy)
                         .foregroundStyle(Color(hex: 0x33291F))
                     Spacer()
                     Text(L("横にスワイプでページをめくる"))
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
                 }
                 .padding(.horizontal, 22)
@@ -108,7 +108,7 @@ struct HomeView: View {
 
                 Button { showJournal = true } label: {
                     Label(L("過去の日記と添削"), systemImage: "books.vertical")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.7))
                         .frame(minHeight: 44)
                 }
@@ -173,7 +173,7 @@ struct HomeView: View {
                 .buttonStyle(PressableStyle(scale: 0.92))
                 .accessibilityLabel(L("あなたの記録"))
             Text("CatchWords")
-                .font(.system(size: 18, weight: .medium))
+                .scaledFont(size: 18, weight: .medium)
                 .foregroundStyle(Theme.muted)
             Spacer()
         }
@@ -398,7 +398,7 @@ struct AlbumHiddenTray: View {
                         Spacer()
                         Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0))
                     }
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium)
                     .foregroundStyle(Color(hex: 0x33291F).opacity(0.7))
                     .frame(minHeight: 44)
                     .contentShape(.rect)
@@ -413,7 +413,7 @@ struct AlbumHiddenTray: View {
                                     Theme.secondary.frame(width: 84, height: 84)
                                         .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                                         .clipShape(.rect(cornerRadius: 12))
-                                    Text(s.word?.headword ?? "").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                                    Text(s.word?.headword ?? "").scaledFont(size: 12, weight: .semibold).lineLimit(1)
                                     Button(L("戻す")) {
                                         Haptics.selection()
                                         Task {
@@ -421,7 +421,7 @@ struct AlbumHiddenTray: View {
                                             withAnimation(.easeOut(duration: 0.2)) { failed = !ok }
                                         }
                                     }
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .scaledFont(size: 13, weight: .semibold)
                                     .frame(minWidth: 44, minHeight: 32)
                                 }
                                 .frame(width: 84)
@@ -432,7 +432,7 @@ struct AlbumHiddenTray: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                     if failed {
                         Text(L("保存できませんでした。通信を確かめてください。"))
-                            .font(.system(size: 12)).foregroundStyle(Color(hex: 0xB91C1C))
+                            .scaledFont(size: 12).foregroundStyle(Color(hex: 0xB91C1C))
                     }
                 }
             }
@@ -506,15 +506,15 @@ struct AlbumLoadFailed: View {
                         .font(.system(size: 40, weight: .light))
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.45))
                     Text(L("アルバムを読み込めませんでした"))
-                        .font(.system(size: 18, weight: .bold))
+                        .scaledFont(size: 18, weight: .bold)
                         .foregroundStyle(Color(hex: 0x33291F))
                     Text(message)
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14)
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                         .multilineTextAlignment(.center)
                     Button(action: onRetry) {
                         Label(L("もう一度読み込む"), systemImage: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(.white)
                             .padding(.horizontal, 22).frame(minHeight: 48)
                             .background(Theme.primary, in: Capsule())
                     }

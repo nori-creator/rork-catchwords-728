@@ -193,6 +193,35 @@ final class SoundService {
         return dir
     }()
 
+    /// Caches/tts keeps at most this many files and bytes (the OS may also clear it when space runs low).
+    nonisolated private static let ttsMaxFiles = 300
+    nonisolated private static let ttsMaxBytes = 50 * 1024 * 1024
+
+    /// Deletes the least recently used pronunciations (oldest modification date first; a replay touches
+    /// the file) until the cache is within both limits. File work only, so it runs off the main actor.
+    nonisolated private static func trimTTSCache(_ dir: URL) {
+        let fm = FileManager.default
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey, .isRegularFileKey]
+        guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: Array(keys),
+                                                      options: [.skipsHiddenFiles]) else { return }
+        var entries: [(url: URL, date: Date, size: Int)] = []
+        for url in files {
+            guard let v = try? url.resourceValues(forKeys: keys), v.isRegularFile == true else { continue }
+            entries.append((url: url, date: v.contentModificationDate ?? .distantPast, size: v.fileSize ?? 0))
+        }
+        var count = entries.count
+        var total = entries.reduce(0) { $0 + $1.size }
+        guard count > ttsMaxFiles || total > ttsMaxBytes else { return }
+        entries.sort { $0.date < $1.date }
+        for e in entries {
+            guard count > ttsMaxFiles || total > ttsMaxBytes else { break }
+            if (try? fm.removeItem(at: e.url)) != nil {
+                count -= 1
+                total -= e.size
+            }
+        }
+    }
+
     private static func cacheURL(for text: String) -> URL {
         let key = text.unicodeScalars.reduce(into: UInt64(1469598103934665603)) { h, c in
             h = (h ^ UInt64(c.value)) &* 1099511628211
@@ -210,7 +239,11 @@ final class SoundService {
         if let t = inflight[text] { return t }
         let file = Self.cacheURL(for: text)
         let task = Task<Data?, Never> {
-            if let d = try? Data(contentsOf: file) { return d }
+            if let d = try? Data(contentsOf: file) {
+                // Used again: newest for the cache limit (`trimTTSCache` drops the least recently used).
+                try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
+                return d
+            }
             struct Res: Decodable {
                 let audioURL: String?
                 let locked: Bool?
@@ -235,7 +268,11 @@ final class SoundService {
             } else {
                 data = nil
             }
-            if let data, !data.isEmpty { try? data.write(to: file, options: .atomic) }
+            if let data, !data.isEmpty {
+                try? data.write(to: file, options: .atomic)
+                let dir = Self.ttsDir
+                Task.detached(priority: .utility) { Self.trimTTSCache(dir) }
+            }
             return data
         }
         inflight[text] = task

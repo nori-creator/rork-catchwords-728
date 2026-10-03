@@ -22,10 +22,10 @@ struct AnswerPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: correct ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold)
                     .symbolEffect(.bounce, value: settled)
                 Text(correct ? L("正解！") : L("もう一度覚えよう"))
-                    .font(.system(size: 16, weight: .bold))
+                    .scaledFont(size: 16, weight: .bold)
             }
             .foregroundStyle(tint.mix(with: .black, by: 0.25))
             .padding(.horizontal, 18)
@@ -53,7 +53,7 @@ struct AnswerPanel: View {
                 HStack(spacing: 10) {
                     Button(action: onDex) {
                         Label(L("図鑑で見る"), systemImage: "book")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(Theme.foreground)
                             .labelStyle(TintedIconLabel())
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -63,7 +63,7 @@ struct AnswerPanel: View {
                     .buttonStyle(PressableStyle(scale: 0.98))
                     Button(action: onNext) {
                         Text(L("次へ"))
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.primary, in: .rect(cornerRadius: 16, style: .continuous))
@@ -133,7 +133,7 @@ struct AnswerPanel: View {
                     if !measures.isEmpty { measureSection }
                     if !note.isEmpty {
                         section(L("知っておくと得"), tone: Color(light: 0x134E4A, dark: 0x5EEAD4), bg: Color(light: 0xF0FDFA, dark: 0x0F2A2A)) {
-                            Text(note).font(.system(size: 14)).foregroundStyle(Theme.foreground).lineSpacing(4)
+                            Text(note).scaledFont(size: 14).foregroundStyle(Theme.foreground).lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -152,7 +152,7 @@ struct AnswerPanel: View {
     private var fallback: some View {
         if let m = word?.meaningJa, !m.isEmpty {
             section(L("意味"), tone: Theme.muted, bg: Theme.secondary.opacity(0.6)) {
-                Text(m).font(.system(size: 15)).foregroundStyle(Theme.foreground)
+                Text(m).scaledFont(size: 15).foregroundStyle(Theme.foreground)
             }
         }
         // An example is shown only when it is in the learning language (as on the detail), its translation
@@ -160,10 +160,10 @@ struct AnswerPanel: View {
         if let ex = word?.exampleSentence, !ex.isEmpty, LanguageRules.isIn(ex, target: learningLang) {
             section(L("例文"), tone: Color(light: 0x312E81, dark: 0xA5B4FC), bg: Theme.secondary.opacity(0.6)) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(ex).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
+                    Text(ex).scaledFont(size: 16, weight: .medium).foregroundStyle(Theme.foreground)
                     let tr = ReaderLanguage.shown(word?.exampleTranslation, source: ex)
                     if !tr.isEmpty {
-                        Text(tr).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                        Text(tr).scaledFont(size: 13).foregroundStyle(Theme.muted)
                     }
                 }
             }
@@ -181,7 +181,7 @@ struct AnswerPanel: View {
                     ForEach(ChunkKind.allCases.filter { kinds.contains($0) }, id: \.self) { k in
                         HStack(spacing: 4) {
                             Circle().fill(k.ink).frame(width: 7, height: 7)
-                            Text(k.label(for: learningLang)).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                            Text(k.label(for: learningLang)).scaledFont(size: 11).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -195,9 +195,9 @@ struct AnswerPanel: View {
                 ForEach(related, id: \.word) { r in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         kindTag(r.kind)
-                        Text(r.word).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(r.word).scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.foreground)
                         if !r.note.isEmpty {
-                            Text(r.note).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                            Text(r.note).scaledFont(size: 12).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -212,7 +212,7 @@ struct AnswerPanel: View {
         default: (L("関"), 0xE2E8F0, 0x0F172A)
         }
         return Text(label)
-            .font(.system(size: 11, weight: .bold))
+            .scaledFont(size: 11, weight: .bold)
             .foregroundStyle(Color(hex: ink))
             .padding(.horizontal, 4).padding(.vertical, 1)
             .background(Color(hex: bg), in: .rect(cornerRadius: 4))
@@ -223,9 +223,9 @@ struct AnswerPanel: View {
             FlowRow(spacing: 12) {
                 ForEach(measures, id: \.word) { m in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(m.word).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(m.word).scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.foreground)
                         if let n = m.note, !n.isEmpty {
-                            Text(n).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                            Text(n).scaledFont(size: 12).foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -235,7 +235,7 @@ struct AnswerPanel: View {
 
     private func section<Content: View>(_ title: String, tone: Color, bg: Color, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(tone)
+            Text(title).scaledFont(size: 12, weight: .semibold).foregroundStyle(tone)
             content()
         }
         .padding(.horizontal, 12).padding(.vertical, 10)

@@ -29,6 +29,40 @@ enum UIPreview {
     }
 }
 
+/// CI photographs screens from outside the app (`xcrun simctl io screenshot`, .github/workflows/ios-check.yml),
+/// where XCUITest's `waitForExistence` is not available. Instead the app leaves a file in
+/// Caches/ui-ready/<name> once a known element of the screen is on screen, and the workflow waits for that
+/// file before the first picture — so a slow launch or an entrance transition is never captured as a blank
+/// frame. DEBUG builds launched with `-uiPreview` / `-uiDemo` only; nothing is written otherwise.
+enum UIReady {
+    static func mark(_ name: String) {
+        #if DEBUG
+        guard UIPreview.requested != nil || DemoBackend.isOn else { return }
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ui-ready", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? Data().write(to: dir.appendingPathComponent(name))
+        #endif
+    }
+}
+
+extension View {
+    /// Marks the screen ready for CI's screenshots once this element has appeared (plus a short settle, so
+    /// the first frame has been drawn). No effect in App Store builds.
+    func uiReady(_ name: String) -> some View {
+        #if DEBUG
+        onAppear {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                UIReady.mark(name)
+            }
+        }
+        #else
+        self
+        #endif
+    }
+}
+
 #if DEBUG
 struct UIPreviewRoot: View {
     let name: String
@@ -47,6 +81,7 @@ struct UIPreviewRoot: View {
                 AnalyzingView(photo: PreviewFixtures.photo,
                               previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
                                                CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
+                    .uiReady("preview")
             case "hero": HeroPickerPreview()
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
@@ -69,6 +104,8 @@ struct UIPreviewRoot: View {
             case "paywall": PaywallView()
             case "dex": DexView()
             case "done": DonePreview()
+            case "home": HomePreview()
+            case "camblocked": CameraBlockedPreview()
             case "homeload": VStack(spacing: 20) {
                 AlbumSkeleton().frame(height: 440)
                 AlbumLoadFailed(message: L("通信できませんでした。電波のよい場所でもう一度お試しください。")) {}.frame(height: 300)
@@ -76,8 +113,13 @@ struct UIPreviewRoot: View {
             default: Text("unknown preview: \(name)")
             }
         }
+        // Scenes that mark a known element of their own (the quiz card, the analysis view, the web-images
+        // section) are ready only when that element is up; every other scene when its root appears.
+        .uiReady(Self.marksOwnElement.contains(name) ? "root-\(name)" : "preview")
         .environment(router)
     }
+
+    private static let marksOwnElement: Set<String> = ["analyzing", "quiz", "answer", "jaquiz", "enanswer", "webimg"]
 }
 
 /// A made-up photo (sky + ground + a round "mango") and its lifted subject, the same size,
@@ -130,7 +172,7 @@ private struct CutoutPreview: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("切り抜きアニメーション").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
+            Text("切り抜きアニメーション").scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
             ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
@@ -404,7 +446,7 @@ private struct DetailPreview: View {
     private static var sticker: Sticker {
         let n = notes
         let obj: [String: Any] = [
-            "id": "w-teppan", "headword": "鐵板麵", "reading_zhuyin": "ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ", "meaning_ja": n.meaning,
+            "id": "w-teppan", "headword": "鐵板麵", "language": "zh-TW", "reading_zhuyin": "ㄊㄧㄝˇ ㄅㄢˇ ㄇㄧㄢˋ", "meaning_ja": n.meaning,
             "part_of_speech": "名詞", "example_sentence": "早餐我想吃鐵板麵。", "example_translation": n.translation,
             "extras": [
                 "explain_lang": L10n.lang,
@@ -573,7 +615,11 @@ private struct ReviewPreview: View {
             + ReviewStore.fallback(for: learning, categoryKey: c.sticker.categoryKey).filter { $0.headword != c.sticker.word?.headword }.prefix(3)
         ZStack(alignment: .bottom) {
             AppBackground()
-            ScrollView { QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {}).padding(.top, 40) }
+            ScrollView {
+                QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {})
+                    .padding(.top, 40)
+                    .uiReady("preview")
+            }
             if answered {
                 AnswerPanel(sticker: c.sticker, correct: true, onDex: {}, onNext: {})
             }
@@ -590,6 +636,28 @@ private struct DonePreview: View {
             ReviewDone(total: 12, correct: 9, doneToday: 12, missed: 3, isRetry: false, canLoadMore: true) {}
                 .padding(16)
         }
+    }
+}
+
+/// Home (album and bookshelf) as a guest sees it: the empty album, read once so the skeleton ends.
+private struct HomePreview: View {
+    @Environment(DexStore.self) private var dex
+
+    var body: some View {
+        HomeView()
+            .environment(\.colorScheme, .light)  // as in MainTabView: the paper album stays paper
+            .task { await dex.load() }
+    }
+}
+
+/// The camera screen when camera access was refused (CaptureView `.denied`).
+private struct CameraBlockedPreview: View {
+    var body: some View {
+        CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
+                          message: L("1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る"),
+                          buttonTitle: L("設定を開く")) {}
+            .ignoresSafeArea()
+            .denseTypeSizeCap()  // as inside CaptureView
     }
 }
 

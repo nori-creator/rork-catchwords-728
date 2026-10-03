@@ -37,9 +37,9 @@ struct CCPop {
 
 enum CCImages {
     /// `CENTER.d2`.
-    static let center = CGPoint(x: 140, y: 174)
-    static let fit = CGSize(width: 248, height: 240)
-    static let clipY: CGFloat = 294
+    nonisolated static let center = CGPoint(x: 140, y: 174)
+    nonisolated static let fit = CGSize(width: 248, height: 240)
+    nonisolated static let clipY: CGFloat = 294
 
     /// `bigPop(cut, zhLen)`: the largest size (height 287 down to 120, step 3, bottom at y=293, centred at
     /// x=140) whose opaque pixels (alpha > 110 on a 72-px-wide sample) stay inside x 7–273, y ≥ 7 and 4 pt
@@ -99,7 +99,8 @@ enum CCImages {
 
     /// `cropAt(img, bb, ART.d2, CENTER.d2.c, k, extend:false)` for the photo card: the photo window that puts
     /// the object's centre on (140,174) at 95% of the fit, clamped inside the photo, mirrored tiles beyond it.
-    static func cropAt(photo: UIImage, box bb: CGRect) -> UIImage {
+    /// Heavy (up to 9 draws of the whole photo): called off the main thread (`CardCatchModel.formLight`).
+    nonisolated static func cropAt(photo: UIImage, box bb: CGRect) -> UIImage {
         let wn = photo.size.width, hn = photo.size.height
         let pw = bb.width * wn, ph = bb.height * hn
         let fb = CGSize(width: fit.width * 0.95, height: fit.height * 0.95)
@@ -136,7 +137,8 @@ enum CCImages {
     }
 
     /// `cropFrom(img, bbox, aspect-of-bbox, 1, 500)`: the bbox itself (formLight's piece without a cut-out).
-    static func cropFrom(photo: UIImage, box bb: CGRect) -> UIImage {
+    /// Redraws the whole photo: called off the main thread (`CardCatchModel.buildObjects`).
+    nonisolated static func cropFrom(photo: UIImage, box bb: CGRect) -> UIImage {
         let wn = photo.size.width, hn = photo.size.height
         let cw = max(1, bb.width * wn), ch = max(1, bb.height * hn)
         let x = min(max(0, bb.midX * wn - cw / 2), wn - cw), y = min(max(0, bb.midY * hn - ch / 2), hn - ch)

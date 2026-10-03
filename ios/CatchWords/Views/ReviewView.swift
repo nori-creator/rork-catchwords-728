@@ -159,14 +159,14 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L("きょうの復習")).font(.system(size: 30, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(L("きょうの復習")).scaledFont(size: 30, weight: .heavy).foregroundStyle(Theme.foreground)
                     Text(store.streak > 0 ? L("復習が\(store.streak)日続いています") : L("今日から復習を始めましょう"))
-                        .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 14).foregroundStyle(Theme.muted)
                 }
                 Spacer()
                 if !store.queue.isEmpty {
                     Text("\(min(store.index + 1, store.queue.count)) / \(store.queue.count)")
-                        .font(.system(size: 15)).monospacedDigit().foregroundStyle(Theme.muted)
+                        .scaledFont(size: 15, monospacedDigit: true).foregroundStyle(Theme.muted)
                 }
             }
             GeometryReader { geo in
@@ -218,7 +218,7 @@ struct ReviewView: View {
             .overlay(alignment: .bottom) {
                 if let err = store.gradeError {
                     Label(err, systemImage: "wifi.exclamationmark")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.leading)
                         .padding(.horizontal, 16).padding(.vertical, 10)
@@ -273,7 +273,7 @@ struct MemoryBar: View {
                     }
                     .frame(height: 12)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(Theme.muted)
                         .rotationEffect(.degrees(isOpen ? 180 : 0))
                 }
@@ -292,7 +292,7 @@ struct MemoryBar: View {
                                 Text(MemoryBadge.labels[i]).foregroundStyle(Theme.memoryLevels[i].mix(with: Theme.foreground, by: 0.35))
                                 Text("\(counts[i])").fontWeight(.bold).foregroundStyle(Theme.memoryLevels[i].mix(with: Theme.foreground, by: 0.35))
                             }
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14)
                         }
                     }
                 }
@@ -358,7 +358,7 @@ struct QuizCard: View {
                         .foregroundStyle(.white)
                         .frame(width: 26, height: 26)
                         .background(Theme.primary, in: Circle())
-                    Text(L("4択クイズ")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    Text(L("4択クイズ")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
                 }
                 .padding(.leading, 4).padding(.trailing, 12).padding(.vertical, 4)
                 .background(Theme.secondary, in: Capsule())
@@ -368,7 +368,7 @@ struct QuizCard: View {
                         let lv = MemoryBadge.level(percent)
                         HStack(spacing: 5) {
                             Circle().fill(Theme.memoryLevels[lv]).frame(width: 7, height: 7)
-                            Text("\(percent)%").font(.system(size: 14, weight: .semibold)).monospacedDigit()
+                            Text("\(percent)%").scaledFont(size: 14, weight: .semibold, monospacedDigit: true)
                                 .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.35))
                         }
                         .padding(.horizontal, 10).frame(minHeight: 30)
@@ -393,7 +393,7 @@ struct QuizCard: View {
             }
 
             Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
-                .font(.system(size: 17, weight: .bold))
+                .scaledFont(size: 17, weight: .bold)
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
@@ -436,7 +436,7 @@ struct QuizCard: View {
             HStack {
                 if revealed && (isCorrect || isPicked) {
                     Image(systemName: isCorrect ? "checkmark" : "xmark")
-                        .font(.system(size: 18, weight: .bold))
+                        .scaledFont(size: 18, weight: .bold)
                         .foregroundStyle(isCorrect ? Theme.ok : Theme.destructive)
                         .padding(.leading, 18)
                         .transition(.scale.combined(with: .opacity))
@@ -511,12 +511,11 @@ struct ReviewDone: View {
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 0) {
                         Text("\(shownCorrect)")
-                            .font(.system(size: 44, weight: .heavy, design: .rounded))
-                            .monospacedDigit()
+                            .scaledFont(size: 44, weight: .heavy, design: .rounded, monospacedDigit: true)
                             .contentTransition(.numericText(value: Double(shownCorrect)))
                             .foregroundStyle(Theme.foreground)
                         Text("/ \(total)")
-                            .font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                            .scaledFont(size: 15, weight: .semibold, monospacedDigit: true)
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -527,11 +526,11 @@ struct ReviewDone: View {
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 22, weight: .bold))
+                    .scaledFont(size: 22, weight: .bold)
                     .foregroundStyle(Theme.foreground)
                     .multilineTextAlignment(.center)
                 Text(subtitle)
-                    .font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 15).foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
             }
 
@@ -539,18 +538,18 @@ struct ReviewDone: View {
                 if missed > 0 {
                     Button(action: onRetry) {
                         Label(L("まちがえた\(missed)語をもう一度"), systemImage: "arrow.counterclockwise")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.primary.opacity(0.1), in: Capsule())
                     }
                     .buttonStyle(PressableStyle())
                     Text(L("練習なので、記憶の記録は変わりません。"))
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 }
                 if capped {
                     Button(action: onSettings) {
                         Label(L("設定で枚数を変える"), systemImage: "slider.horizontal.3")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.primary.opacity(0.1), in: Capsule())
                     }
@@ -559,7 +558,7 @@ struct ReviewDone: View {
                 if canLoadMore {
                     Button(action: onMore) {
                         Label(capped ? L("もっと復習する") : L("続ける"), systemImage: "plus.circle")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.card, in: Capsule())
                             .overlay(Capsule().stroke(Theme.primary.opacity(0.35), lineWidth: 1.2))
@@ -568,7 +567,7 @@ struct ReviewDone: View {
                 }
                 Button(action: onCamera) {
                     Label(L("単語を撮りに行く"), systemImage: "camera.fill")
-                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                        .scaledFont(size: 16, weight: .semibold).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(Theme.primary, in: Capsule())
                 }

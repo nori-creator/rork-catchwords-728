@@ -95,7 +95,7 @@ struct CandidatePickerView: View {
     private var stageOne: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(L("写っている物"))
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 6)
             VStack(spacing: 0) {
@@ -131,9 +131,9 @@ struct CandidatePickerView: View {
                     if !g.others.isEmpty {
                         HStack(spacing: 2) {
                             Text(L("ほかの言い方 \(g.others.count)"))
-                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                            Image(systemName: "chevron.right").scaledFont(size: 11, weight: .semibold)
                         }
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12)
                         .foregroundStyle(Theme.muted)
                         .lineLimit(1)
                         .layoutPriority(-1)
@@ -157,10 +157,10 @@ struct CandidatePickerView: View {
                 openGroup = nil
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "chevron.left").scaledFont(size: 14, weight: .semibold)
                     Text(L("戻る"))
                 }
-                .font(.system(size: 16))
+                .scaledFont(size: 16)
                 .foregroundStyle(Theme.muted)
                 .frame(minHeight: 44)
             }
@@ -173,7 +173,7 @@ struct CandidatePickerView: View {
                 }
                 Button { vm.pick(g.main) } label: {
                     Text(L("この語で図鑑に入れる"))
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 46)
                         .background(Theme.primary, in: Capsule())
@@ -187,7 +187,7 @@ struct CandidatePickerView: View {
             .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
 
             Text(L("ほかの言い方"))
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
                 .foregroundStyle(Theme.muted)
                 .padding(.horizontal, 4)
             VStack(spacing: 0) {
@@ -197,7 +197,7 @@ struct CandidatePickerView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 if let chip = Self.registerLabel(c.register) {
                                     Text(chip)
-                                        .font(.system(size: 11))
+                                        .scaledFont(size: 11)
                                         .foregroundStyle(Theme.muted)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 2)
@@ -237,13 +237,13 @@ struct CandidatePickerView: View {
         VStack(alignment: .leading, spacing: 3) {
             ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: size, pinyin: c.pinyin)
             Text(ReaderLanguage.shown(c.meaningJa))
-                .font(.system(size: size >= 34 ? 16 : 13))
+                .scaledFont(size: size >= 34 ? 16 : 13)
                 .foregroundStyle(Theme.muted)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
             if note, !ReaderLanguage.shown(c.distinction, hanOnlyOk: false).isEmpty {
                 Text(ReaderLanguage.shown(c.distinction, hanOnlyOk: false))
-                    .font(.system(size: size >= 34 ? 14 : 12))
+                    .scaledFont(size: size >= 34 ? 14 : 12)
                     .foregroundStyle(Theme.primaryInk)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -256,11 +256,11 @@ struct CandidatePickerView: View {
     private var manualInput: some View {
         VStack(alignment: .trailing, spacing: 8) {
             Text(L("違う単語を入力"))
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium)
                 .foregroundStyle(Theme.muted)
             HStack(spacing: 8) {
                 TextField("", text: $typed, prompt: Text(L("例: \(NativeAPI.sample(.word))")).foregroundStyle(Theme.muted.opacity(0.7)))
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16)
                     .foregroundStyle(Theme.foreground)
                     .focused($inputFocused)
                     .submitLabel(.search)
@@ -274,7 +274,7 @@ struct CandidatePickerView: View {
                         if vm.isLookingUp { ProgressView().controlSize(.small) } else { Image(systemName: "magnifyingglass") }
                         Text(L("検索"))
                     }
-                    .font(.system(size: 15, weight: .medium))
+                    .scaledFont(size: 15, weight: .medium)
                     .foregroundStyle(Theme.foreground)
                     .padding(.horizontal, 16)
                     .frame(minHeight: 46)
@@ -285,7 +285,7 @@ struct CandidatePickerView: View {
             }
             if let err = vm.searchError {
                 Text(err)
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundStyle(Theme.destructive)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -315,7 +315,7 @@ struct CollectHeader: View {
         HStack(spacing: 10) {
             LogoMark(size: 30)
             Text(L("集める"))
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Theme.muted)
             Spacer()
             if let onClose {

@@ -39,11 +39,11 @@ struct DexCalendarView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(JPDate.year(month))
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 12).foregroundStyle(Theme.muted)
                     Text(JPDate.month(month))
-                        .font(.system(size: 26, weight: .bold)).foregroundStyle(Theme.primaryInk)
+                        .scaledFont(size: 26, weight: .bold).foregroundStyle(Theme.primaryInk)
                     Text(L("\(monthItems.count)枚・\(dayCount)日"))
-                        .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                        .scaledFont(size: 12, weight: .semibold, monospacedDigit: true)
                         .foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Theme.primary.opacity(0.12), in: Capsule())
@@ -132,7 +132,7 @@ struct DexCalendarView: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Button { timelineDay = nil } label: {
-                    Label(L("月に戻る"), systemImage: "chevron.left").font(.system(size: 14, weight: .semibold))
+                    Label(L("月に戻る"), systemImage: "chevron.left").scaledFont(size: 14, weight: .semibold)
                 }
                 .foregroundStyle(Theme.primary)
                 .frame(minHeight: 44)
@@ -158,15 +158,15 @@ struct DexCalendarView: View {
                                 .background(Theme.surface2.opacity(0.5))
                                 .clipShape(.rect(cornerRadius: 14))
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(s.word?.headword ?? "").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.foreground)
-                                Text(s.word?.meaningJa ?? "").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                                Text(s.word?.headword ?? "").scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
+                                Text(s.word?.meaningJa ?? "").scaledFont(size: 13).foregroundStyle(Theme.muted)
                                 if s.lat != nil || !(s.locationName ?? "").isEmpty {
                                     Label {
                                         LocalizedPlaceText(lat: s.lat, lng: s.lng, saved: s.locationName)
                                     } icon: {
                                         Image(systemName: "mappin")
                                     }
-                                    .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                                    .scaledFont(size: 11).foregroundStyle(Theme.muted)
                                 }
                                 if let cap = s.caption, !cap.isEmpty {
                                     Text(cap).font(AppFont.hand(14)).foregroundStyle(Theme.foreground.opacity(0.8)).lineLimit(2)

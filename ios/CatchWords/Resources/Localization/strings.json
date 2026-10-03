@@ -127,10 +127,6 @@
   "en": "Sign in with Apple failed.",
   "zh-TW": "使用 Apple 登入失敗。"
  },
- "Appleでサインイン": {
-  "en": "Sign in with Apple",
-  "zh-TW": "使用 Apple 登入"
- },
  "CatchWords は、写真から単語を見つけたり、単語カードを作ったり、日記を添削したりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
   "en": "CatchWords uses third-party AI services to find words in your photos, write word cards and correct your diary. Before you start, please check what is sent and choose whether you agree.",
   "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字、製作單字卡、批改日記。開始使用前，請確認傳送的內容，並選擇是否同意。"
@@ -571,10 +567,6 @@
   "en": "You don't have permission to edit this word.",
   "zh-TW": "你沒有編輯這個單字的權限。"
  },
- "この単語帳を復習する": {
-  "en": "Review this wordbook",
-  "zh-TW": "複習這本單字本"
- },
  "この型が使えます": {
   "en": "Patterns you can use",
   "zh-TW": "可以用這些句型"
@@ -786,10 +778,6 @@
  "まだ保存できません。サーバの更新を待ってください。": {
   "en": "This can't be saved yet. Please wait for the server update.",
   "zh-TW": "目前還無法儲存。請等待伺服器更新。"
- },
- "まだ単語帳がありません": {
-  "en": "No wordbooks yet",
-  "zh-TW": "還沒有單字本"
  },
  "まだ見つけていない言葉 {1}": {
   "en": "Not found yet: {1}",
@@ -1827,38 +1815,6 @@
   "en": "Search word / reading / meaning",
   "zh-TW": "用單字、讀音、意思搜尋"
  },
- "単語帳": {
-  "en": "Wordbooks",
-  "zh-TW": "單字本"
- },
- "単語帳で復習する": {
-  "en": "Review a wordbook",
-  "zh-TW": "用單字本複習"
- },
- "単語帳の一覧へ": {
-  "en": "Back to wordbooks",
-  "zh-TW": "回到單字本清單"
- },
- "単語帳の一覧を読み込めませんでした。": {
-  "en": "Couldn't load your word lists.",
-  "zh-TW": "無法載入單字本列表。"
- },
- "単語帳の名前": {
-  "en": "Wordbook name",
-  "zh-TW": "單字本名稱"
- },
- "単語帳の形が読み取れませんでした。もう一度撮ってみてください。": {
-  "en": "Couldn't recognize the word list layout. Please take the photo again.",
-  "zh-TW": "無法辨識單字本的格式。請再拍一次。"
- },
- "単語帳を作れませんでした": {
-  "en": "Couldn't create the word list",
-  "zh-TW": "無法建立單字本"
- },
- "単語帳を撮る": {
-  "en": "Photograph a wordbook",
-  "zh-TW": "拍單字本"
- },
  "反": {
   "en": "ant",
   "zh-TW": "反"
@@ -2606,6 +2562,10 @@
  "検索": {
   "en": "Search",
   "zh-TW": "搜尋"
+ },
+ "検索を消す": {
+  "en": "Clear search",
+  "zh-TW": "清除搜尋"
  },
  "検証済み": {
   "en": "Verified",
