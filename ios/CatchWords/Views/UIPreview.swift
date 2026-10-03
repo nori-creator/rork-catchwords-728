@@ -569,7 +569,7 @@ private struct ReviewPreview: View {
         let _ = { NativeAPI.targetLanguage = learning }()
         let c = card
         let choices = [QuizChoice(headword: c.sticker.word?.headword ?? "", zhuyin: c.sticker.word?.readingZhuyin)]
-            + ReviewStore.fallback(for: learning).filter { $0.headword != c.sticker.word?.headword }.prefix(3)
+            + ReviewStore.fallback(for: learning, level: c.sticker.word?.level, categoryKey: c.sticker.categoryKey).filter { $0.headword != c.sticker.word?.headword }.prefix(3)
         ZStack(alignment: .bottom) {
             AppBackground()
             ScrollView { QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {}).padding(.top, 40) }

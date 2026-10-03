@@ -42,21 +42,15 @@ final class ReviewStore {
 
     private let client = SupabaseClient.shared
 
-    /// quiz-choices.ts quizFallbackHeadwords, per learning language (4 so one collision still leaves 3).
-    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」).
-    static func fallback(for target: String) -> [QuizChoice] {
-        switch target {
-        case "en":
-            return ["apple", "bus", "umbrella", "lunch box"].map { QuizChoice(headword: $0, zhuyin: nil) }  // l10n-ignore (target words)
-        case "ja":
-            return [("りんご", ""), ("バス", ""), ("傘", "かさ"), ("お弁当", "おべんとう")]  // l10n-ignore (target words)
-                .map { QuizChoice(headword: $0.0, zhuyin: $0.1.isEmpty ? nil : $0.1) }
-        default:
-            return [QuizChoice(headword: "蘋果", zhuyin: "ㄆㄧㄥˊ ㄍㄨㄛˇ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "公車", zhuyin: "ㄍㄨㄥ ㄔㄜ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "雨傘", zhuyin: "ㄩˇ ㄙㄢˇ"),  // l10n-ignore (target word)
-                    QuizChoice(headword: "便當", zhuyin: "ㄅㄧㄢˋ ㄉㄤ")]  // l10n-ignore (target word)
-        }
+    /// The padding after the learner's own dex: everyday words of the learning language from the bundled pool
+    /// (Models/QuizPool.swift, which says where the levels come from), closest to the card's exam level first,
+    /// then the same category (owner 2026-10-03: a distractor of a very different level looks odd). It replaces
+    /// quiz-choices.ts's four fixed words; the pool is far larger, so a collision with the correct word still leaves 3.
+    /// A Mandarin fallback in an English quiz was a reported bug (R3 「4択が学習言語英語なのに台湾華語の単語が混ざってる」):
+    /// the pool keeps one list per learning language.
+    static func fallback(for target: String, level: String? = nil, categoryKey: String? = nil) -> [QuizChoice] {
+        QuizPool.ranked(for: target, level: level, categoryKey: categoryKey)
+            .map { QuizChoice(headword: $0.headword, zhuyin: $0.reading) }
     }
 
     /// The learning language the queue was built for (R5: a switched language must not keep the old cards).
@@ -177,7 +171,7 @@ final class ReviewStore {
         doneToday = rows.filter { SRS.taipeiDay($0.reviewedAt) == today }.count
     }
 
-    /// Distractors from the learner's own dex first (same category preferred), then the fallback pool.
+    /// Distractors from the learner's own dex first (same category preferred), then the level-matched pool.
     /// Choices are drawn once per card. Without this the four buttons reshuffled every time the
     /// screen redrew — including right after a tap, so the answer you pressed jumped to another slot.
     @ObservationIgnored private var choiceCache: [String: [QuizChoice]] = [:]
@@ -198,7 +192,9 @@ final class ReviewStore {
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
         var out: [QuizChoice] = []
-        for c in same + rest + Self.fallback(for: NativeAPI.targetLanguage) where c.headword != correct.headword && !out.contains(c) {
+        let pool = Self.fallback(for: NativeAPI.targetLanguage, level: card.sticker.word?.level, categoryKey: card.sticker.categoryKey)
+        // Compared by headword: the same word from the dex and from the pool may carry different readings.
+        for c in same + rest + pool where c.headword != correct.headword && !out.contains(where: { $0.headword == c.headword }) {
             out.append(c)
             if out.count == 3 { break }
         }
