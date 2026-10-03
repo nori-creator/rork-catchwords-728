@@ -382,7 +382,7 @@ struct OnboardingView: View {
     private func finishToLogin() {
         UserDefaults.standard.set(true, forKey: OnboardingState.doneKey)
         onFinish()
-        auth.signOut()
+        auth.signOut(keepLanguage: true)
     }
 
     private func finish() async {

@@ -87,7 +87,9 @@ struct RootView: View {
         // Meanings and notes follow the display language too (read again in the new one).
         .onChange(of: LanguageState.shared.lang) { _, _ in
             dex.readerLanguageChanged()
-            // Scheduled reminders were written in the old language: write them again (N1).
+            // Scheduled reminders were written in the old language: write them again (N1). Not after a
+            // sign-out (the language goes back to the iPhone's): that account's reminders were just cleared.
+            guard auth.phase == .signedIn else { return }
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
         }
         .onChange(of: scenePhase) { _, phase in

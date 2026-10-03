@@ -23,6 +23,8 @@ enum AccountCleanup {
     /// After `deleteMyAccount` succeeded. `userId` is the deleted account (read before signing out).
     static func accountDeleted(userId: String?) async {
         await signedOut()
+        // The display language chosen by that account (the sign-out right after resets it too).
+        L10n.resetToDevice()
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         UserDefaults.standard.set("off", forKey: ReminderService.modeKey)
         if let userId { PendingQueue.shared.removeAll(ownerId: userId) }
