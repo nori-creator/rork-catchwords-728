@@ -181,7 +181,7 @@ struct TourCoachCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 if let title = step.title {
-                    Text(title).font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(title).scaledFont(size: 18, weight: .heavy).foregroundStyle(Theme.foreground)
                 }
                 Spacer()
                 if let label = step.stepLabel {
@@ -191,12 +191,12 @@ struct TourCoachCard: View {
                 }
             }
             Text(step.text)
-                .font(.system(size: 15))
+                .scaledFont(size: 15)
                 .foregroundStyle(Theme.foreground.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(L("案内を終える"), action: onSkip)
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(Theme.muted)
                     .frame(minHeight: 44)
                 Spacer()
@@ -207,9 +207,9 @@ struct TourCoachCard: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(next)
-                            Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold))
+                            Image(systemName: "arrow.right").scaledFont(size: 13, weight: .bold)
                         }
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
                         .frame(minHeight: 44)
@@ -247,10 +247,10 @@ struct TourCompleteView: View {
             VStack(spacing: 18) {
                 Spacer(minLength: 20)
                 Text(L("最初のキャッチ、完了！"))
-                    .font(.system(size: 28, weight: .heavy))
+                    .scaledFont(size: 28, weight: .heavy)
                     .foregroundStyle(Theme.foreground)
                 Text(L("撮って、意味を知って、思い出す。\n身のまわりから、ことばを増やしていこう。"))
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.muted)
                 ZStack {
@@ -278,7 +278,7 @@ struct TourCompleteView: View {
                 }
                 .frame(height: 320)
                 if let head = sticker?.word?.headword {
-                    Text(head).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(head).scaledFont(size: 30, weight: .bold).foregroundStyle(Theme.foreground)
                 }
                 Spacer()
                 PrimaryButton(title: L("はじめる"), icon: "arrow.right", sheen: true, action: onDone)

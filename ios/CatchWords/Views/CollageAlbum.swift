@@ -39,7 +39,7 @@ struct CollageBoard: View {
                         Image(systemName: editing ? "checkmark" : "hand.draw")
                         Text(editing ? L("完了") : L("並べ替え"))
                     }
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .foregroundStyle(editing ? .white : Color(hex: 0x33291F).opacity(0.75))
                     .padding(.horizontal, 12)
                     .frame(minHeight: 34)
@@ -124,7 +124,7 @@ struct CollageBoard: View {
                         Text(JPDate.time(s.takenAt)).font(.system(size: 11)).foregroundStyle(Color(hex: 0x241C14).opacity(0.55))
                     }
                     if let c = s.caption, !c.isEmpty {
-                        Text(c).font(AppFont.hand(15)).foregroundStyle(Color(hex: 0x33291F).opacity(0.85)).lineLimit(2)
+                        Text(c).font(AppFont.hand(15, fixed: true)).foregroundStyle(Color(hex: 0x33291F).opacity(0.85)).lineLimit(2)
                     }
                 }
                 .frame(width: max(size.w, Double(boardW) * 0.3), height: max(0, captionH - 4))

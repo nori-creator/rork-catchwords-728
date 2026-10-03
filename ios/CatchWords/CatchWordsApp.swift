@@ -52,6 +52,7 @@ struct CatchWordsApp: App {
                     .environment(plan)
                     .environment(profile)
                     .preferredColorScheme(p.dark ? .dark : .light)
+                    .appTypeSizeCap()
             } else {
                 app
             }
@@ -72,6 +73,7 @@ struct CatchWordsApp: App {
                 .statusBarRoot()  // status-bar text colour per screen (inside the theme's colour scheme)
                 .preferredColorScheme(scheme)
                 .tint(Theme.primary)
+                .appTypeSizeCap()  // Dynamic Type up to accessibility 2 (ScaledFont.swift)
                 .widgetBridge(dex: dex)  // home/lock-screen widgets: snapshot upkeep + catchwords:// links
                 .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
     }

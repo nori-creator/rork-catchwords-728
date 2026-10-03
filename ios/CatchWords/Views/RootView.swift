@@ -154,7 +154,7 @@ struct ConnectionFailedView: View {
                 .font(.system(size: 44, weight: .semibold))
                 .foregroundStyle(Theme.muted)
             Text(reason)
-                .font(.system(size: 15))
+                .scaledFont(size: 15)
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
             PrimaryButton(title: L("もう一度試す"), icon: "arrow.clockwise", action: retry)

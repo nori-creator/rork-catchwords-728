@@ -77,6 +77,7 @@ struct ScanView: View {
 
             chrome
         }
+        .denseTypeSizeCap()  // tags and chrome sit over the live camera
         .task {
             await camera.start()
             location = await LocationService.shared.current()
@@ -105,7 +106,7 @@ struct ScanView: View {
         switch camera.state {
         case .denied:
             VStack(spacing: 12) {
-                Image(systemName: "camera.fill").font(.system(size: 30)).foregroundStyle(.white.opacity(0.6))
+                Image(systemName: "camera.fill").scaledFont(size: 30).foregroundStyle(.white.opacity(0.6))
                 Text(L("カメラの使用が許可されていません")).foregroundStyle(.white)
                 Button(L("設定を開く")) {
                     if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
@@ -149,7 +150,7 @@ struct ScanView: View {
                 }
                 .accessibilityLabel(L("閉じる"))
                 Spacer()
-                Text(L("かざす")).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                Text(L("かざす")).scaledFont(size: 17, weight: .semibold).foregroundStyle(.white)
                 Spacer()
                 Text(String(format: "%.1f×", camera.zoom))
                     .font(AppFont.mono(13, weight: .semibold)).foregroundStyle(.white)
@@ -173,7 +174,7 @@ struct ScanView: View {
                         Text(L("看板や物にかざして、ボタンを押してください"))
                     }
                 }
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium)
                 .foregroundStyle(.white.opacity(0.9))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -183,7 +184,7 @@ struct ScanView: View {
                     Button(L("設定を開く")) {
                         if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Theme.cyan).frame(minHeight: 44)
                 }
 
@@ -480,13 +481,13 @@ struct ScanTag: View {
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
                     // Fixed ink: the tag is always a white label on the camera, in light and dark.
-                    Text(item.headword).font(.system(size: 18, weight: .bold)).foregroundStyle(Color(hex: 0x0B121A))
+                    Text(item.headword).scaledFont(size: 18, weight: .bold).foregroundStyle(Color(hex: 0x0B121A))
                     if isDoubtful {
-                        Text("?").font(.system(size: 13, weight: .heavy)).foregroundStyle(Color(hex: 0xB45309))
+                        Text("?").scaledFont(size: 13, weight: .heavy).foregroundStyle(Color(hex: 0xB45309))
                             .accessibilityLabel(L("台湾での言い方として不確か"))
                     }
                     if owned {
-                        Image(systemName: "checkmark.seal.fill").font(.system(size: 12)).foregroundStyle(Theme.ok)
+                        Image(systemName: "checkmark.seal.fill").scaledFont(size: 12).foregroundStyle(Theme.ok)
                     }
                 }
                 .padding(.horizontal, 14)
@@ -572,7 +573,7 @@ struct ScanCatchSheet: View {
                 Spacer()
                 PronounceCircle(text: item.headword, size: 48)
             }
-            Text(item.meaning).font(.system(size: 20, weight: .semibold))  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
+            Text(item.meaning).scaledFont(size: 20, weight: .semibold)  // lang-ok: ScanItem.meaning is ReaderLanguage.shown
                     .foregroundStyle(Theme.foreground)
             HStack(spacing: 6) {
                 if item.isVerified {
@@ -584,8 +585,8 @@ struct ScanCatchSheet: View {
                     Text(L("・取得済み")).foregroundStyle(Theme.primaryInk)
                 }
             }
-            .font(.system(size: 12, weight: .medium))
-            if let error { Text(error).font(.system(size: 13)).foregroundStyle(Theme.destructive) }
+            .scaledFont(size: 12, weight: .medium)
+            if let error { Text(error).scaledFont(size: 13).foregroundStyle(Theme.destructive) }
             Spacer(minLength: 0)
             PrimaryButton(title: L("キャッチする"), icon: "sparkles", isLoading: isSaving, sheen: true) { caught() }
         }
