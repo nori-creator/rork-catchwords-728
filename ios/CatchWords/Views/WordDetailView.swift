@@ -7,6 +7,7 @@ struct WordDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
+    @Environment(PlanStore.self) private var plan
     let sticker: Sticker
     /// DEBUG preview: open scrolled to this section so the simulator frame shows it.
     var previewFocus: CardSection? = nil
@@ -757,7 +758,10 @@ struct WordDetailView: View {
     @ViewBuilder
     private func sectionView(_ s: CardSection) -> some View {
         sectionBody(s)
-            .environment(\.sectionRefresh, s.isExternal ? nil : SectionRefresh(running: refreshing.contains(s)) {
+            // 「作り直す」 is Pro on the server (`runSectionRegen` refuses free accounts with 「項目の再生成は Pro 限定です」),
+            // so like the web (`WordCard` canRegen = isPro) the button is only offered when the SERVER counts this
+            // account as Pro. A StoreKit-only Pro is not enough until the server checks Apple purchases.
+            .environment(\.sectionRefresh, s.isExternal || !plan.serverGrantsPro ? nil : SectionRefresh(running: refreshing.contains(s)) {
                 regenerate(s)
             })
     }

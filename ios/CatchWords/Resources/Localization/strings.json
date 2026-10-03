@@ -7,6 +7,14 @@
   "en": "1. Tap “Open Settings” below\n2. Turn on “Camera” and come back to this screen",
   "zh-TW": "1. 點下方的「打開設定」\n2. 開啟「相機」後回到這個畫面"
  },
+ "1か月ごとに自動更新": {
+  "en": "Renews every month",
+  "zh-TW": "每月自動續訂"
+ },
+ "1年ごとに自動更新": {
+  "en": "Renews every year",
+  "zh-TW": "每年自動續訂"
+ },
  "1日3回の上限がなくなります": {
   "en": "No more 3-a-day limit",
   "zh-TW": "不再有每天 3 次的限制"
@@ -303,6 +311,14 @@
   "en": "{1}/{2} correct",
   "zh-TW": "答對 {1}／{2}"
  },
+ "{1}／年": {
+  "en": "{1} / year",
+  "zh-TW": "{1}／年"
+ },
+ "{1}／月": {
+  "en": "{1} / month",
+  "zh-TW": "{1}／月"
+ },
  "→ 日記": {
   "en": "→ Diary",
   "zh-TW": "→ 日記"
@@ -434,6 +450,10 @@
  "お店": {
   "en": "Shops",
   "zh-TW": "店家"
+ },
+ "お支払いは購入の確定時にApple IDに請求されます。サブスクリプションは期間終了の24時間前までに解約しない限り、同じ期間・同じ価格で自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。": {
+  "en": "Payment is charged to your Apple ID when you confirm the purchase. The subscription renews automatically for the same period and price unless cancelled at least 24 hours before the end of the current period. You can cancel anytime in your App Store account settings.",
+  "zh-TW": "確認購買時將向你的 Apple ID 收費。除非在目前期間結束前至少 24 小時取消，訂閱將以相同期間與價格自動續訂。你可以隨時在 App Store 帳號設定中取消。"
  },
  "お菓子・パン": {
   "en": "Sweets & Bread",
@@ -3062,6 +3082,10 @@
  "購入を復元": {
   "en": "Restore purchases",
   "zh-TW": "恢復購買"
+ },
+ "購入を確認できませんでした。しばらくしてから「購入を復元」をお試しください。": {
+  "en": "We couldn't verify the purchase. Please try \"Restore Purchases\" in a little while.",
+  "zh-TW": "無法確認購買。請稍後再試「恢復購買」。"
  },
  "趣味・教養": {
   "en": "Hobbies & culture",
