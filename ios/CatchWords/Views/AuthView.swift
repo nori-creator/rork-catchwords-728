@@ -133,9 +133,17 @@ struct AuthView: View {
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
 
+                // Consent to the terms and the privacy policy is given by continuing (both pages are links).
+                Text(LegalLinks.signInAgreement())
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.muted)
+                    .tint(Theme.primaryInk)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("auth.agreement")
+
                 HStack(spacing: 16) {
-                    Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                    Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                    Link(L("利用規約"), destination: AppConfig.termsURL)
+                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
                 }
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.muted)

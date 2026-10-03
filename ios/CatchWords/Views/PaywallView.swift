@@ -103,8 +103,8 @@ struct PaywallView: View {
                     HStack(spacing: 18) {
                         Button(L("購入を復元")) { Task { await plan.restore(); if plan.isPro { dismiss() } } }
                             .buttonStyle(PressableStyle(scale: 0.97))
-                        Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                        Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                        Link(L("利用規約"), destination: AppConfig.termsURL)
+                        Link(L("プライバシー"), destination: AppConfig.privacyURL)
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.muted)

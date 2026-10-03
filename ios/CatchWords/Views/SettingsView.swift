@@ -247,8 +247,8 @@ struct SettingsView: View {
     private var legalSection: some View {
         SettingsCard(title: L("このアプリについて")) {
             HStack(spacing: 18) {
-                Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                Link(L("利用規約"), destination: AppConfig.termsURL)
+                Link(L("プライバシー"), destination: AppConfig.privacyURL)
             }
             .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
             .frame(minHeight: 44)
@@ -274,8 +274,8 @@ struct SettingsView: View {
                 }
                 HStack(spacing: 18) {
                     Button(L("購入を復元")) { Task { await plan.restore() } }
-                    Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                    Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                    Link(L("利用規約"), destination: AppConfig.termsURL)
+                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
                 }
                 .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
                 .frame(minHeight: 44)

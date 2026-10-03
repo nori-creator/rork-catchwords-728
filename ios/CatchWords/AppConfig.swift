@@ -12,6 +12,11 @@ enum AppConfig {
     /// The published Lovable web app. Its server hosts `/api/native-fn`.
     nonisolated static let webBaseURL = URL(string: "https://catchwords.lovable.app")!
 
+    /// The legal pages on the web app (texts in docs/legal). Built from `webBaseURL`, so every link in the
+    /// app (sign-in, settings, paywall, AI consent) moves with it.
+    nonisolated static let termsURL = webBaseURL.appendingPathComponent("terms")
+    nonisolated static let privacyURL = webBaseURL.appendingPathComponent("privacy")
+
     /// Where the web's `/native-auth` bridge hands a Google / Apple login back to the app
     /// (`catchwords://auth-callback#…`, see `WebAuthSession`).
     nonisolated static let authCallbackScheme = "catchwords"

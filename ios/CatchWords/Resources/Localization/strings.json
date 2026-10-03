@@ -1127,6 +1127,10 @@
   "en": "Privacy",
   "zh-TW": "隱私"
  },
+ "プライバシーポリシー": {
+  "en": "Privacy Policy",
+  "zh-TW": "隱私權政策"
+ },
  "プロフィール": {
   "en": "Profile",
   "zh-TW": "個人檔案"
@@ -2762,6 +2766,10 @@
  "続ける": {
   "en": "Keep going",
   "zh-TW": "繼續"
+ },
+ "続けることで、{1}と{2}に同意したものとみなされます。": {
+  "en": "By continuing, you agree to the {1} and the {2}.",
+  "zh-TW": "繼續即表示您同意{1}與{2}。"
  },
  "練習なので、記憶の記録は変わりません。": {
   "en": "This is practice — your memory record won't change.",
