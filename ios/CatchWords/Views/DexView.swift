@@ -87,8 +87,8 @@ struct DexView: View {
     @State private var openMenu: DexFilterMenu?
     /// The header's height (the content starts under it).
     @State private var headerHeight: CGFloat = 120
-    /// A landing word kept in its slot until the gallery is redrawn (the prototype's `.slot.fill` stays until
-    /// the next `renderDex`).
+    /// The landing word while its light is on the way (drawn as its shadow / an empty square). Cleared the
+    /// moment it lands, so the gallery is redrawn with the word in the caught group (prototype `renderDex`).
     @State private var galleryHold: DexBook.Hold?
     /// The gallery slot being landed on / pointed at (frame reporting, fillIn, blue ring).
     @State private var focus: DexGalleryFocus?
@@ -173,9 +173,8 @@ struct DexView: View {
         .onChange(of: router.landing?.stickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: router.landingStickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: mode) { _, _ in
-            // Switching views redraws the gallery (`renderDex`): the landed slot settles into its place.
+            // Switching views redraws the gallery (`renderDex`): the `.slot.fill` ring goes.
             guard router.landing == nil else { return }
-            galleryHold = nil
             focus = nil
         }
     }
@@ -199,7 +198,8 @@ struct DexView: View {
                     Text(L("図鑑"))
                         .font(.system(size: 24, weight: .black))
                         .foregroundStyle(Theme.foreground)
-                    Text(L("\(dex.stickers.count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
+                    // N枚 counts words (one per headword, like the prototype's S.dex), not stickers.
+                    Text(L("\(DexBook.words(dex.stickers, lang: lang).count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.muted)
                         .lineLimit(1)
@@ -392,10 +392,17 @@ struct DexView: View {
             .onChange(of: router.landing?.stickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landingStickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landing?.fillStart) { _, start in
-                // pon! — the slot fills with the cut-out (`.slot.fill`)
-                guard let start, let l = router.landing, galleryHold?.stickerId == l.stickerId else { return }
-                galleryHold?.filled = true
+                // pon! — addEntry + renderDex: the gallery is redrawn at once (the word joins the caught group by
+                // No., a new shadow refills to 5), and its new slot fills (`.slot.fill`) and is scrolled to.
+                guard let start, let l = router.landing else { return }
+                galleryHold = nil
                 focus = DexGalleryFocus(id: l.stickerId, fillStart: start)
+                Task {
+                    await scroll(to: l.stickerId, proxy: proxy)
+                    // one more frame so the slot reports its new frame before the burst
+                    try? await Task.sleep(for: .milliseconds(16))
+                    l.settled = true
+                }
             }
         }
     }
@@ -404,8 +411,8 @@ struct DexView: View {
     /// prototype sets `scrollTop` at once); CatchLandingController flies the star there. Any other landing
     /// (re-encounter, a catch from search or scan): centre the word and light its slot.
     private func takeLanding(_ proxy: ScrollViewProxy) {
-        if let l = router.landing, galleryHold?.stickerId != l.stickerId {
-            galleryHold = DexBook.Hold(stickerId: l.stickerId, filled: false)
+        if let l = router.landing, l.fillStart == nil, galleryHold?.stickerId != l.stickerId {
+            galleryHold = DexBook.Hold(stickerId: l.stickerId)
             focus = DexGalleryFocus(id: l.stickerId, fillStart: nil)
             Task { await scroll(to: l.stickerId, proxy: proxy) }
         } else if router.landing == nil, let id = router.landingStickerId {
