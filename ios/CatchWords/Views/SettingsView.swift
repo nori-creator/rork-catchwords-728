@@ -65,7 +65,8 @@ struct SettingsView: View {
         .onChange(of: avatarItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = await ImageTools.downsampledInBackground(data, maxSide: 1024) {
                     await profile.uploadAvatar(img)
                 } else {
                     profile.message = L("写真を読み込めませんでした。")
@@ -467,9 +468,15 @@ struct SettingsView: View {
         deleteError = nil
         let deletedId = SupabaseClient.shared.userId
         do {
+            let uid = SupabaseClient.shared.userId
             try await profile.deleteAccount()
             await AccountCleanup.accountDeleted(userId: deletedId)
             isDeleting = false
+            // Nothing of the deleted account stays on this device (waiting photos, unsent diary drafts).
+            if let uid {
+                PendingQueue.shared.removeAll(ownerId: uid)
+                DiaryStore.removeDrafts(userId: uid)
+            }
             auth.signOut()
         } catch {
             isDeleting = false

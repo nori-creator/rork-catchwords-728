@@ -94,6 +94,10 @@ final class CaptureViewModel {
     func analyze(_ image: UIImage, askSelfie: Bool = false) {
         runToken += 1
         let token = runToken
+        // A word check still running belongs to the old run: its result is dropped, so its flag must not
+        // keep blocking taps on the new run's words.
+        isCheckingOwned = false
+        isLoadingDetails = false
         photo = image
         selfie = nil
         candidates = []
@@ -209,6 +213,7 @@ final class CaptureViewModel {
     func search(text: String, keepPhoto: Bool = false) {
         runToken += 1
         let token = runToken
+        isCheckingOwned = false
         searchError = nil
         if !keepPhoto {
             step = .processing

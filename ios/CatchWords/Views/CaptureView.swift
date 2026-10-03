@@ -111,8 +111,9 @@ struct CaptureView: View {
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
-                    beginAnalyze(img.normalizedOrientation(), askSelfie: false)
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = await ImageTools.downsampledInBackground(data) {
+                    beginAnalyze(img, askSelfie: false)
                 } else {
                     vm.showToast(L("写真を読み込めませんでした。"))
                 }
@@ -843,7 +844,7 @@ struct PendingListView: View {
                 ForEach(dex.pending) { item in
                     Button { onRestore(item) } label: {
                         HStack(spacing: 12) {
-                            if let img = PendingQueue.shared.image(for: item) {
+                            if let img = PendingQueue.shared.thumbnail(for: item) {
                                 Color.clear.frame(width: 56, height: 56)
                                     .overlay { Image(uiImage: img).resizable().scaledToFill().allowsHitTesting(false) }
                                     .clipShape(.rect(cornerRadius: 10))

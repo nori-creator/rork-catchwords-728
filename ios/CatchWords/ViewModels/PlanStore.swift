@@ -82,6 +82,8 @@ final class PlanStore {
         isServerPro = plan == "pro" || plan == "premium"
     }
 
+    /// Signing out: the web plan belonged to that account (App Store entitlements follow the Apple ID).
+
     func purchase(_ product: Product) async {
         isPurchasing = true
         message = nil

@@ -224,7 +224,14 @@ final class SoundService {
             if raw.hasPrefix("data:"), let comma = raw.firstIndex(of: ",") {
                 data = Data(base64Encoded: String(raw[raw.index(after: comma)...]))
             } else if let url = URL(string: raw) {
-                data = try? await URLSession.shared.data(from: url).0
+                // Only a real answer is kept: an error page (expired link, 403) cached as the word's
+                // audio would make that word silent for good.
+                if let (body, response) = try? await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: 20)),
+                   (response as? HTTPURLResponse)?.statusCode == 200 {
+                    data = body
+                } else {
+                    data = nil
+                }
             } else {
                 data = nil
             }

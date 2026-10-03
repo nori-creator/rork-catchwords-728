@@ -27,6 +27,18 @@ enum WidgetBridge {
         }
     }
 
+    /// Signing out: the widgets go back to their empty state, so the next person to pick up the phone
+    /// (or the next account) never sees this account's words, pictures or streak.
+    @MainActor
+    static func clear() {
+        pendingTask?.cancel()
+        pendingTask = nil
+        lastStreak = nil
+        WidgetShared.defaults?.removeObject(forKey: WidgetShared.snapshotKey)
+        removeStaleThumbs(keeping: [])
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     @MainActor
     private static func write(dex: DexStore) async {
         let now = Date()
@@ -49,6 +61,7 @@ enum WidgetBridge {
                 let path = s.heroPath ?? s.placeholderImageUrl
                 var file: String?
                 if let path, let jpeg = await thumbnail(path: path, dex: dex) {
+                    if Task.isCancelled { return }
                     let name = "\(s.id).jpg"
                     if let url = WidgetShared.thumbURL(name) {
                         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -64,6 +77,8 @@ enum WidgetBridge {
                                         isCutout: path != nil && path == s.cutoutImageUrl))
             }
         }
+        // Signed out (`clear()`) or superseded while the pictures were loading: write nothing stale.
+        guard !Task.isCancelled else { return }
         removeStaleThumbs(keeping: keep)
 
         let snapshot = WidgetSnapshot(lang: L10n.lang, words: words, dueNow: dueNow, upcomingDue: upcoming,

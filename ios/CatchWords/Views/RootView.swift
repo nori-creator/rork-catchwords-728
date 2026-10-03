@@ -45,6 +45,11 @@ struct RootView: View {
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
+                        // Place reminders are this account's (cleared on sign-out): set them again from its
+                        // own catches when the setting is on.
+                        if UserDefaults.standard.bool(forKey: ReminderService.placeKey), dex.hasLoaded {
+                            await ReminderService.applyPlaces(enabled: true, stickers: dex.stickers)
+                        }
                     }
             case .failed(let reason):
                 ConnectionFailedView(reason: reason) {
@@ -53,13 +58,29 @@ struct RootView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: auth.phase)
-        .task { await auth.bootstrap() }
+        .task {
+            // A review Live Activity left from a previous run (the app was closed mid-round) shows a round
+            // that no longer exists: end it; a new round starts its own.
+            ReviewActivityController.end()
+            await auth.bootstrap()
+        }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut {
+                // Nothing of the account that just left may stay for the next one: the stores, the
+                // pictures in memory, the widgets' snapshot, the review Live Activity and the reminders
+                // (place reminders name its words and places).
                 dex.reset()
                 diary.reset()
+                profile.reset()
                 plan.reset()
-                Task { await AccountCleanup.signedOut() }
+                ImageCache.shared.removeAll()
+                StickerPhoto.invalidateAll()
+                ReviewActivityController.end()
+                WidgetBridge.clear()
+                Task {
+                    await ReminderService.clearAll()
+                    await AccountCleanup.signedOut()
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }

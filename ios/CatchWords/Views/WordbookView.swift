@@ -43,7 +43,8 @@ struct WordbookView: View {
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = await ImageTools.downsampledInBackground(data) {
                     await read(img)
                 } else {
                     showToast(L("写真を読み込めませんでした。"))

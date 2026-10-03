@@ -25,7 +25,7 @@ enum AccountCleanup {
         await signedOut()
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         UserDefaults.standard.set("off", forKey: ReminderService.modeKey)
-        PendingQueue.shared.removeAll()
+        if let userId { PendingQueue.shared.removeAll(ownerId: userId) }
 
         // Diary drafts kept on this device for that account (DiaryStore `draftPrefix`).
         if let userId {

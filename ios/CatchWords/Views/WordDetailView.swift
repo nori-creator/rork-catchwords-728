@@ -1552,7 +1552,8 @@ struct WordDetailView: View {
 
     /// 写真を替える: upload + web replaceStickerPhoto; in cut-out mode the new photo is cut out too.
     private func replacePhoto(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data)?.normalizedOrientation() else {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let img = await ImageTools.downsampledInBackground(data) else {
             showToast(L("写真を読み込めませんでした。"))
             return
         }

@@ -351,6 +351,17 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         var name: String?
         var link: String?
         var source: String?
+
+        enum CodingKeys: String, CodingKey { case name, link, source }
+
+        /// `placeholder_credit` is a free JSON column: anything but an object (a string, an array, numbers
+        /// where text is expected) reads as "no credit" instead of failing the whole dex read.
+        init(from decoder: Decoder) throws {
+            guard let c = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+            name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? nil
+            link = (try? c.decodeIfPresent(String.self, forKey: .link)) ?? nil
+            source = (try? c.decodeIfPresent(String.self, forKey: .source)) ?? nil
+        }
     }
 
     /// The learner took or chose a picture of their own (web sticker-photo.ts hasOwnPhoto).

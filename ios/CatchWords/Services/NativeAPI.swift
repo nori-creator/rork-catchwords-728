@@ -77,7 +77,7 @@ enum NativeAPI {
                 guard let h = r as? HTTPURLResponse else { throw APIError.decoding }
                 return (d, h)
             } catch let e as URLError {
-                throw e.code == .timedOut ? APIError.timeout : APIError.offline
+                throw APIError.from(e)
             }
         }
         let status = http.statusCode
