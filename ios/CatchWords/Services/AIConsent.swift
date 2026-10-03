@@ -213,19 +213,27 @@ final class AIConsent {
         return false
     }
 
-    /// Answers go to the server one at a time, in the order given: each send waits for the one before it and
-    /// then sends whatever is the newest answer by then (`sendPending` reads it at send time), so an agreement
-    /// can never overtake a withdrawal made right after it.
+    /// Every `recordAiConsent` — answers given on screen and the sends a sync makes — goes to the server one at
+    /// a time, in the order queued. Each job re-reads the answer kept on this device when its turn comes, so
+    /// nothing older can overtake a withdrawal (or an agreement) made after it was queued.
     @ObservationIgnored private var sendChain: Task<Void, Never>?
+
+    /// Queues `work` behind every send already queued; await `.value` for its result.
+    @discardableResult
+    private func enqueue<T: Sendable>(_ work: @escaping () async -> T) -> Task<T, Never> {
+        let previous = sendChain
+        let job = Task { () -> T in
+            await previous?.value
+            return await work()
+        }
+        sendChain = Task { _ = await job.value }
+        return job
+    }
 
     /// Right after 「同意して始める」 / 「同意しない」 / withdrawing: the answer goes to the server in the background.
     private func sendAnswer() {
         guard let uid = userId else { return }
-        let previous = sendChain
-        sendChain = Task {
-            await previous?.value
-            _ = await self.sendPending(for: uid)
-        }
+        enqueue { await self.sendPending(for: uid) }
     }
 
     private static func outcome(of sent: ServerRecord?) -> SyncOutcome {
@@ -235,10 +243,9 @@ final class AIConsent {
 
     private func reconcile(_ uid: String) async -> SyncOutcome {
         // 1. An answer given on this device that has not reached the server goes first; while it cannot be
-        //    sent, it is the one that counts (the server's record is older than it). Sends already queued
-        //    finish first, so this never races them.
-        await sendChain?.value
-        if let sent = await sendPending(for: uid) { return Self.outcome(of: sent) }
+        //    sent, it is the one that counts (the server's record is older than it). Queued like every send,
+        //    so an answer given on screen meanwhile goes after it and wins.
+        if let sent = await enqueue({ await self.sendPending(for: uid) }).value { return Self.outcome(of: sent) }
         if Self.isPending(uid) { return .unknown }
 
         // 2. The server's record. No such function yet (the production server before the web patch), no
@@ -258,7 +265,11 @@ final class AIConsent {
                 return .agreed
             case .declined where localDate > (agreedAt ?? .distantPast):
                 // Declined on this device after the server's agreement (with a build that did not send answers).
-                _ = await send(agreed: false, version: Self.currentVersion, for: uid)
+                // Sent only if it is still the answer here when its turn comes.
+                _ = await enqueue { () -> ServerRecord? in
+                    guard self.userId == uid, !self.isGranted, !Self.isPending(uid) else { return nil }
+                    return await self.send(agreed: false, version: Self.currentVersion, for: uid)
+                }.value
                 return .notAgreed
             case .declined, .undecided:
                 // Agreed on another device or on the web: not asked again here.
@@ -275,8 +286,12 @@ final class AIConsent {
         }
         // Agreed here before the server kept a record (an earlier build): send that agreement, a copy of what
         // this person explicitly chose. A failure is tried again on the next sync.
+        // Sent only if it is still the answer here when its turn comes (a withdrawal queued meanwhile wins).
         let version = local?["version"] as? Int ?? Self.currentVersion
-        let sent = await send(agreed: true, version: version, for: uid)
+        let sent = await enqueue { () -> ServerRecord? in
+            guard self.userId == uid, self.isGranted, !Self.isPending(uid) else { return nil }
+            return await self.send(agreed: true, version: version, for: uid)
+        }.value
         return Self.outcome(of: sent)
     }
 
@@ -315,7 +330,7 @@ final class AIConsent {
         guard SupabaseClient.shared.userId == uid else { return nil }
         do {
             return try await NativeAPI.call("recordAiConsent", ["version": version, "agreed": agreed],
-                                            as: ServerRecord.self, timeout: 15)
+                                            as: ServerRecord.self, timeout: 15, asUser: uid)
         } catch {
             return nil
         }

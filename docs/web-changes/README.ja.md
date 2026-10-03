@@ -56,6 +56,10 @@ git push -u origin legal-and-compliance-2026-10-03
 パッチは約 400KB あるので、チャットに貼るより **ファイルとして添付** してください。添付できない時は、
 上の GitHub の方法を使ってください（Lovable が手で書き直すと、細かい所がずれます）。
 
+**注意:** 今の Web の `main`（`3bf12d2`）には、このパッチは `FirstCatchFlow.tsx` の1か所でそのままでは当たりません
+（3-way なら当たります）。Lovable は 3-way で当てられないので、Lovable の道を選ぶ前に Claude に
+「docs/web-changes を今の main に合わせて作り直して」と頼むか、上の GitHub の `git am -3` の道を使ってください。
+
 **Lovable に貼る文（そのまま使えます）:**
 
 > 添付の `web-changes-onto-3fd364f.patch` は、このプロジェクトの main（3fd364f を土台）に対する unified diff です。

@@ -58,24 +58,28 @@ enum NativeAPI {
     }
 
     /// Returns the function's `result` as raw JSON bytes.
-    static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40) async throws -> Data {
+    /// `asUser`: send only while this account is the one signed in, checked right before the request leaves
+    /// with that account's token (an answer about one person must never be recorded for another).
+    static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40,
+                     asUser: String? = nil) async throws -> Data {
         // Photos, words and text go on to a third-party AI only after this account agreed (Guideline 5.1.2(i)).
         // Refused here, before anything leaves the phone; the screens turn the error into the consent screen.
         if AIConsent.aiFunctions.contains(fn), !AIConsent.shared.allowsSending() {
             throw APIError.aiConsentRequired
         }
         do {
-            return try await post(fn, data, timeout: timeout)
+            return try await post(fn, data, timeout: timeout, asUser: asUser)
         } catch APIError.aiConsentRequired where !AIConsent.recordFunctions.contains(fn) {
             // The server's record has no agreement for this account (web patch, docs/ios-spec/23-ai-consent.md).
             // An agreement made on this device that had not reached it yet is sent now and the call tried once
             // more; otherwise the consent screen asks again.
             guard await AIConsent.shared.serverRefused() else { throw APIError.aiConsentRequired }
-            return try await post(fn, data, timeout: timeout)
+            return try await post(fn, data, timeout: timeout, asUser: asUser)
         }
     }
 
-    private static func post(_ fn: String, _ data: [String: Any], timeout: TimeInterval) async throws -> Data {
+    private static func post(_ fn: String, _ data: [String: Any], timeout: TimeInterval,
+                             asUser: String? = nil) async throws -> Data {
         let url = AppConfig.webBaseURL.appendingPathComponent("api/native-fn")
         let client = SupabaseClient.shared
         // An expiring token is refreshed first; a dead login throws `.unauthorized` (the app shows the
@@ -85,6 +89,7 @@ enum NativeAPI {
         let consentVersion = String(AIConsent.currentVersion)
         // A 401 gets one forced refresh and a retry; a second 401 ends the login.
         let (body, http) = try await client.withTokenRetry { token in
+            if let asUser, client.userId != asUser { throw APIError.server(409, "account changed") }
             var req = URLRequest(url: url, timeoutInterval: timeout)
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -119,8 +124,8 @@ enum NativeAPI {
     }
 
     static func call<T: Decodable>(_ fn: String, _ data: [String: Any], as type: T.Type,
-                                   timeout: TimeInterval = 40) async throws -> T {
-        let raw = try await call(fn, data, timeout: timeout)
+                                   timeout: TimeInterval = 40, asUser: String? = nil) async throws -> T {
+        let raw = try await call(fn, data, timeout: timeout, asUser: asUser)
         do {
             return try JSONDecoder().decode(T.self, from: raw)
         } catch {

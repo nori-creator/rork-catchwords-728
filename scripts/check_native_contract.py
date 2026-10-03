@@ -34,7 +34,7 @@ REPO = "nori-creator/Lovable-catch-words-app"
 # function fully: the allowance only ever covers a function missing from NATIVE_FNS).
 PENDING_WEB_DEPLOY = {
     # AI consent record (App Store 5.1.2(i) / APPI art. 28). Web patch: docs/web-changes/
-    # (rebased-onto-3fd364f series 0003, spec docs/ios-spec/23-ai-consent.md; NATIVE_FNS entries
+    # (docs/web-changes/series/0003-*.patch, spec docs/ios-spec/23-ai-consent.md; NATIVE_FNS entries
     # recordAiConsent / getAiConsent). iOS: Services/AIConsent.swift (failures ignored, retried next launch).
     "recordAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
     "getAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
