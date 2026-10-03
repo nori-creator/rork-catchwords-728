@@ -263,6 +263,7 @@ App Store Connect で「審査へ提出」
 - アプリは StoreKit 2 の購入記録（`Transaction.currentEntitlements`）を端末で確かめ、撮影回数などの**端末で決める制限**はそれで外す（`PlanStore.isPro`）。払った人が締め出されることはない。
 - **サーバが決める Pro の機能**（項目の「作り直す」、Pro 用の AI モデル、報告からの AI 修正）は、サーバの `isProUser` が `profiles.plan = 'pro'`（または管理者）かで決める。`profiles.plan` を書くのは **Stripe の webhook だけ**で、Apple の購入を確かめる処理は**サーバにない**。だから iPhone で買っても、サーバは無料のまま扱う。
 - アプリは「作り直す」を、サーバが Pro と認める時（`PlanStore.serverGrantsPro`）だけ出す（Web と同じ）。課金画面はサーバがまだ認めない機能を約束しない（`PlanStore.serverVerifiesAppStore = false`）。
+- App Store 審査ガイドライン 3.1.3(b) により、Web（Stripe）で買った Pro は、同じ機能をアプリ内課金でも買えるようになるまで iPhone では効かせない。アプリ内課金が出ていない間（`PlanStore.inAppPurchaseAvailable` = `paywallEnabled` がオフ）は、Web で Pro の人もアプリでは無料扱い（「作り直す」が出ない）。課金画面も Web 購入への案内も出さない。
 - 購入時にユーザー ID を `appAccountToken` として付けるようにした。Apple の署名つき購入記録とサーバ通知に入るので、サーバが持ち主を確かめられる。
 
 ### 7-2. Web 版（サーバ）に要る変更（このリポジトリからは入れられない）

@@ -2,7 +2,8 @@ import SwiftUI
 import StoreKit
 
 /// Freemium: free users get 3 catches per day (Tokyo-day boundary like the server's `startOfTokyoDay`).
-/// Pro = StoreKit subscription OR `profiles.plan == "pro"` (so web Stripe subscribers stay Pro on iPhone).
+/// Pro = StoreKit subscription OR `profiles.plan == "pro"` (so web Stripe subscribers stay Pro on iPhone),
+/// but only once in-app purchase is offered too (`inAppPurchaseAvailable`, App Review Guideline 3.1.3(b)).
 @Observable
 final class PlanStore {
     static let freeCatchesPerDay = 3
@@ -17,6 +18,14 @@ final class PlanStore {
     /// server-decided Pro features such as 「作り直す」). Not built yet: see docs/self-managing-ios.md §7.
     /// Until then the paywall does not promise those features.
     static let serverVerifiesAppStore = false
+    /// App Review Guideline 3.1.3(b) (multiplatform services): a subscription bought outside the app (web
+    /// Stripe) may unlock features in the iOS app only if those same features can also be bought here with
+    /// in-app purchase. While IAP is not offered (`paywallEnabled` off), the app treats every account as
+    /// free for Pro-only features — web Pro included — and never shows a paywall or points to buying on the
+    /// web. This is the one switch for that: it turns on with the paywall, once the server verifies App
+    /// Store purchases (docs/self-managing-ios.md §7-2) so the in-app Pro unlocks the same features.
+    /// Server calls are unchanged; only what the app offers follows this.
+    static let inAppPurchaseAvailable = paywallEnabled
     static let productIDs = ["catchwords.pro.yearly", "catchwords.pro.monthly"]
 
     var products: [Product] = []
@@ -28,11 +37,13 @@ final class PlanStore {
 
     /// Pro for what the APP gates on the device (catch limit, paywall): an active App Store subscription is
     /// trusted locally, so a paying user is never locked out while the server does not know the purchase yet.
-    var isPro: Bool { isStorePro || isServerPro }
+    /// Off entirely while in-app purchase is unavailable (`inAppPurchaseAvailable`, Guideline 3.1.3(b)).
+    var isPro: Bool { Self.inAppPurchaseAvailable && (isStorePro || isServerPro) }
     /// Pro for features the SERVER decides (`isProUser`: `profiles.plan == "pro"` or admin), e.g. section
     /// 「作り直す」. The server does not verify App Store purchases yet (only web Stripe writes
     /// `profiles.plan`), so a StoreKit-only Pro does NOT count here — offering those buttons would only fail.
-    var serverGrantsPro: Bool { isServerPro }
+    /// Also off while in-app purchase is unavailable: web Pro alone must not unlock them here (3.1.3(b)).
+    var serverGrantsPro: Bool { Self.inAppPurchaseAvailable && isServerPro }
     var remainingToday: Int { max(0, Self.freeCatchesPerDay - usedToday) }
     var canCatch: Bool { !Self.catchLimitEnabled || isPro || remainingToday > 0 }
 
