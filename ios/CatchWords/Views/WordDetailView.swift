@@ -1391,6 +1391,7 @@ struct WordDetailView: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(shownWeb) { c in webTile(c) }
                 }
+                .uiReady("preview")  // CI's 「webimg」 picture waits for the pictures (DEBUG only)
                 HStack(spacing: 14) {
                     Button {
                         Haptics.selection()

@@ -29,6 +29,40 @@ enum UIPreview {
     }
 }
 
+/// CI photographs screens from outside the app (`xcrun simctl io screenshot`, .github/workflows/ios-check.yml),
+/// where XCUITest's `waitForExistence` is not available. Instead the app leaves a file in
+/// Caches/ui-ready/<name> once a known element of the screen is on screen, and the workflow waits for that
+/// file before the first picture — so a slow launch or an entrance transition is never captured as a blank
+/// frame. DEBUG builds launched with `-uiPreview` / `-uiDemo` only; nothing is written otherwise.
+enum UIReady {
+    static func mark(_ name: String) {
+        #if DEBUG
+        guard UIPreview.requested != nil || DemoBackend.isOn else { return }
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ui-ready", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? Data().write(to: dir.appendingPathComponent(name))
+        #endif
+    }
+}
+
+extension View {
+    /// Marks the screen ready for CI's screenshots once this element has appeared (plus a short settle, so
+    /// the first frame has been drawn). No effect in App Store builds.
+    func uiReady(_ name: String) -> some View {
+        #if DEBUG
+        onAppear {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                UIReady.mark(name)
+            }
+        }
+        #else
+        self
+        #endif
+    }
+}
+
 #if DEBUG
 struct UIPreviewRoot: View {
     let name: String
@@ -47,6 +81,7 @@ struct UIPreviewRoot: View {
                 AnalyzingView(photo: PreviewFixtures.photo,
                               previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
                                                CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
+                    .uiReady("preview")
             case "hero": HeroPickerPreview()
             case "journal": JournalPreview()
             case "memorial": MemorialPreview()
@@ -76,8 +111,13 @@ struct UIPreviewRoot: View {
             default: Text("unknown preview: \(name)")
             }
         }
+        // Scenes that mark a known element of their own (the quiz card, the analysis view, the web-images
+        // section) are ready only when that element is up; every other scene when its root appears.
+        .uiReady(Self.marksOwnElement.contains(name) ? "root-\(name)" : "preview")
         .environment(router)
     }
+
+    private static let marksOwnElement: Set<String> = ["analyzing", "quiz", "answer", "jaquiz", "enanswer", "webimg"]
 }
 
 /// A made-up photo (sky + ground + a round "mango") and its lifted subject, the same size,
@@ -573,7 +613,11 @@ private struct ReviewPreview: View {
             + ReviewStore.fallback(for: learning, categoryKey: c.sticker.categoryKey).filter { $0.headword != c.sticker.word?.headword }.prefix(3)
         ZStack(alignment: .bottom) {
             AppBackground()
-            ScrollView { QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {}).padding(.top, 40) }
+            ScrollView {
+                QuizCard(card: c, choices: choices, percent: 62, isAnswered: answered, onAnswer: { _, _ in }, onBadge: {})
+                    .padding(.top, 40)
+                    .uiReady("preview")
+            }
             if answered {
                 AnswerPanel(sticker: c.sticker, correct: true, onDex: {}, onNext: {})
             }

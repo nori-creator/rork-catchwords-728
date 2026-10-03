@@ -31,11 +31,13 @@ struct RootView: View {
                     .transition(.opacity)
             case .signedOut:
                 AuthView()
+                    .uiReady("root")  // CI's launch pictures wait for the first real screen (DEBUG only)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             case .signedIn:
                 ZStack {
                     MainTabView()
                         .accessibilityHidden(needsAIConsent)
+                        .uiReady("root")
                     if needsAIConsent {
                         AIConsentView()
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
