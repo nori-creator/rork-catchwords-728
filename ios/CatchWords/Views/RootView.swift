@@ -45,6 +45,11 @@ struct RootView: View {
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
+                        // Place reminders are this account's (cleared on sign-out): set them again from its
+                        // own catches when the setting is on.
+                        if UserDefaults.standard.bool(forKey: ReminderService.placeKey), dex.hasLoaded {
+                            await ReminderService.applyPlaces(enabled: true, stickers: dex.stickers)
+                        }
                     }
             case .failed(let reason):
                 ConnectionFailedView(reason: reason) {
