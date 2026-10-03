@@ -65,7 +65,14 @@ final class WordbookStore {
                 "meaning_ja": e.meaningJa ?? NSNull(),
             ]
         }
-        _ = try await client.rest("POST", "wordbook_entries", body: rows)
+        do {
+            _ = try await client.rest("POST", "wordbook_entries", body: rows)
+        } catch {
+            // The words did not go in: take the empty book back out, so trying again does not leave
+            // an empty duplicate on the shelf.
+            _ = try? await client.rest("DELETE", "wordbooks?id=eq.\(id)")
+            throw error
+        }
         await load()
         return cleaned.count
     }

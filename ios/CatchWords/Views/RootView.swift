@@ -53,7 +53,12 @@ struct RootView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: auth.phase)
-        .task { await auth.bootstrap() }
+        .task {
+            // A review Live Activity left from a previous run (the app was closed mid-round) shows a round
+            // that no longer exists: end it; a new round starts its own.
+            ReviewActivityController.end()
+            await auth.bootstrap()
+        }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut {
                 // Nothing of the account that just left may stay for the next one: the stores, the
