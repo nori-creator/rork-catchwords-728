@@ -1527,6 +1527,10 @@
   "en": "In the photo",
   "zh-TW": "照片裡的東西"
  },
+ "写っている物を見つけられませんでした。別の写真で試してください。": {
+  "en": "Couldn't find anything in this photo. Try a different photo.",
+  "zh-TW": "找不到照片裡的東西。請換一張照片試試看。"
+ },
  "写真": {
   "en": "Photos",
   "zh-TW": "照片"

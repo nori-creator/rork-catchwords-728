@@ -116,6 +116,9 @@ final class SoundService {
         }
     }
 
+    /// 設定 › 効果音 is off (the sound level "off").
+    var isMuted: Bool { levelMultiplier == 0 }
+
     func configure() {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
         try? AVAudioSession.sharedInstance().setActive(true)

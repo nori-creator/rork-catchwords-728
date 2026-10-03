@@ -161,29 +161,53 @@ final class CardCatchModel {
         await wait(motion.sleep(max(0, 260 - elapsed * 1000)))
         guard my == runId else { return }
         // The answer is not known yet (the prototype's camera-roll path): the brackets keep looking.
-        while my == runId, !objectsReady {
+        while my == runId, vm != nil, !objectsReady {
+            // useRollPhoto: no objects → the pill and the glow go, a toast, 600 ms, back to the camera.
+            if let vm, vm.step == .select, vm.objects.isEmpty {
+                await nothingFound(my)
+                return
+            }
             await analyze(my, objects: [], waiting: true)
         }
+        guard my == runId, vm != nil else { return }
+        await buildObjects()
         guard my == runId else { return }
-        buildObjects()
         await analyze(my, objects: objs, waiting: false)
         guard my == runId else { return }
         showPick()
     }
 
-    private func buildObjects() {
+    private func nothingFound(_ my: Int) async {
+        setPill(false)
+        aiGlow.set(0, duration: motion.transition(600))
+        vm?.showToast(L("写っている物を見つけられませんでした。別の写真で試してください。"))
+        await wait(motion.sleep(600))
+        guard my == runId else { return }
+        vm?.reset()
+    }
+
+    private func buildObjects() async {
         guard let vm, let photo = vm.photo else { return }
         let size = space.size
         let pw = max(1, photo.size.width), ph = max(1, photo.size.height)
         // coverMap(): the photo fills the screen (object-fit: cover)
         let s = max(size.width / pw, size.height / ph)
         let ox = (size.width - pw * s) / 2, oy = (size.height - ph * s) / 2
-        objs = vm.objects.map { o -> Obj in
+        let list = vm.objects
+        let rects = list.map { o -> CGRect in
             let real = CGRect(x: ox + o.box.minX * pw * s, y: oy + o.box.minY * ph * s,
                               width: o.box.width * pw * s, height: o.box.height * ph * s)
-            let r = space.toDesign(real)
+            return space.toDesign(real)
+        }
+        // outlineEl: rendered off the main thread (each one composites the cut-out 21 times).
+        let jobs = zip(list, rects).map { ($0.cut, $1.size) }
+        let outlines = await Task.detached(priority: .userInitiated) {
+            jobs.map { CCImages.outline(cut: $0.0, size: $0.1) }
+        }.value
+        objs = list.indices.map { i -> Obj in
+            let o = list[i]
             let shown = ReaderLanguage.shown(o.words[0].meaningJa)
-            return Obj(id: o.id, source: o, rect: r, outline: CCImages.outline(cut: o.cut, size: r.size),
+            return Obj(id: o.id, source: o, rect: rects[i], outline: outlines[i],
                        name: shown.isEmpty ? o.words[0].headword : shown)
         }
     }
@@ -404,8 +428,8 @@ final class CardCatchModel {
         await wait(motion.sleep(200))
         guard my == runId else { return }
 
-        // chooseWord, after formLight
-        SoundService.shared.speak(w.headword)
+        // chooseWord, after formLight: say(w.zh) — silent when the sound is off (`if (S.sfx !== "on") return`)
+        if !SoundService.shared.isMuted { SoundService.shared.speak(w.headword) }
         sweepStart = CCClock.now
         particles.burst(195, 346, n: 90, speed: 8, up: 3)
         particles.glints(Self.cardRect, n: 18)

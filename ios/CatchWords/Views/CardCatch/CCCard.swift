@@ -119,8 +119,12 @@ enum CCImages {
         return UIGraphicsImageRenderer(size: out, format: fmt).image { ctx in
             let g = ctx.cgContext
             g.concatenate(CGAffineTransform(a: s, b: 0, c: 0, d: s, tx: -x0 * s, ty: -y0 * s))
+            // Only the tiles the window can see (each draw resamples the whole photo; the result is the same).
+            let window = CGRect(x: x0, y: y0, width: w, height: h)
             for i in [-1, 0, 1] {
                 for j in [-1, 0, 1] {
+                    let tile = CGRect(x: CGFloat(i) * wn, y: CGFloat(j) * hn, width: wn, height: hn)
+                    guard tile.intersects(window) else { continue }
                     g.saveGState()
                     g.translateBy(x: i > 0 ? 2 * wn : 0, y: j > 0 ? 2 * hn : 0)
                     g.scaleBy(x: i != 0 ? -1 : 1, y: j != 0 ? -1 : 1)
@@ -149,9 +153,10 @@ enum CCImages {
     /// `outlineEl`: a canvas 12 pt larger on each side at 2 px/pt. With a cut-out: its shape tinted with the
     /// #BFE8FF → #9CC8FF → #CFE3FF diagonal, drawn at 20 offsets of 3.5 canvas px, the shape itself cut away.
     /// Without: a #CFF6FF rounded rect (radius 22, width 5 canvas px).
-    static func outline(cut: UIImage?, size r: CGSize) -> UIImage {
+    /// Heavy (21 composites of the cut-out): called off the main thread (`CardCatchModel.buildObjects`).
+    nonisolated static func outline(cut: UIImage?, size r: CGSize) -> UIImage {
         let pad: CGFloat = 12, sc: CGFloat = 2
-        let size = CGSize(width: ((r.width + pad * 2) * sc).rounded(), height: ((r.height + pad * 2) * sc).rounded())
+        let size = CGSize(width: max(1, ((r.width + pad * 2) * sc).rounded()), height: max(1, ((r.height + pad * 2) * sc).rounded()))
         let fmt = UIGraphicsImageRendererFormat()
         fmt.scale = 1
         fmt.opaque = false
@@ -159,10 +164,12 @@ enum CCImages {
         guard let cut else {
             return renderer.image { ctx in
                 let g = ctx.cgContext
-                g.setStrokeColor(UIColor(red: 0xCF / 255, green: 0xF6 / 255, blue: 1, alpha: 1).cgColor)
+                g.setStrokeColor(CGColor(red: 0xCF / 255, green: 0xF6 / 255, blue: 1, alpha: 1))
                 g.setLineWidth(5)
-                g.addPath(UIBezierPath(roundedRect: CGRect(x: pad * sc, y: pad * sc, width: r.width * sc, height: r.height * sc),
-                                       cornerRadius: 22).cgPath)
+                // canvas roundRect(…, 22): circular corners, clamped to the box like the canvas does
+                let box = CGRect(x: pad * sc, y: pad * sc, width: max(0, r.width * sc), height: max(0, r.height * sc))
+                let rad = max(0, min(22, box.width / 2, box.height / 2))
+                g.addPath(CGPath(roundedRect: box, cornerWidth: rad, cornerHeight: rad, transform: nil))
                 g.strokePath()
             }
         }
@@ -170,9 +177,9 @@ enum CCImages {
             cut.draw(in: CGRect(x: pad * sc, y: pad * sc, width: r.width * sc, height: r.height * sc))
             let g = ctx.cgContext
             g.setBlendMode(.sourceIn)
-            let colors = [UIColor(red: 0xBF / 255, green: 0xE8 / 255, blue: 1, alpha: 1).cgColor,
-                          UIColor(red: 0x9C / 255, green: 0xC8 / 255, blue: 1, alpha: 1).cgColor,
-                          UIColor(red: 0xCF / 255, green: 0xE3 / 255, blue: 1, alpha: 1).cgColor] as CFArray
+            let colors = [CGColor(red: 0xBF / 255, green: 0xE8 / 255, blue: 1, alpha: 1),
+                          CGColor(red: 0x9C / 255, green: 0xC8 / 255, blue: 1, alpha: 1),
+                          CGColor(red: 0xCF / 255, green: 0xE3 / 255, blue: 1, alpha: 1)] as CFArray
             if let grad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.5, 1]) {
                 g.drawLinearGradient(grad, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
             }

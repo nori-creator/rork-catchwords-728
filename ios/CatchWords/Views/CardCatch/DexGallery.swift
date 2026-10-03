@@ -230,10 +230,12 @@ private struct DexFillIn<Content: View>: View {
     let start: Double?
     let calm: Bool
     @ViewBuilder let content: Content
+    /// The `start` whose animation has played out: the TimelineView goes away instead of redrawing forever.
+    @State private var done: Double?
 
     var body: some View {
-        if let start, !calm {
-            TimelineView(.animation(minimumInterval: nil, paused: CCClock.now - start > 1.0)) { _ in
+        if let start, !calm, done != start {
+            TimelineView(.animation) { _ in
                 let t = max(0, min(1, (CCClock.now - start) / 0.9))
                 let e = CCBezier(0.3, 1.5, 0.5, 1)
                 let p = e(t)
@@ -242,6 +244,11 @@ private struct DexFillIn<Content: View>: View {
                     .scaleEffect(1.7 + (1 - 1.7) * p)
                     .rotationEffect(.degrees(-10 * (1 - p)))
                     .opacity(o)
+            }
+            .task(id: start) {
+                let left = 0.95 - (CCClock.now - start)
+                if left > 0 { try? await Task.sleep(for: .seconds(left)) }
+                done = start
             }
         } else {
             content
@@ -263,8 +270,10 @@ struct DexSilhouette: View {
                 } else if let sf = item.symbol {
                     Image(systemName: sf).resizable().symbolVariant(.fill).scaledToFit()
                 } else {
-                    RoundedRectangle(cornerRadius: s * 0.22, style: .continuous)
-                        .frame(width: s * 0.78, height: s * 0.78)
+                    // .sil.ph: 52% of the square, radius 22%
+                    let ph = min(g.size.width, g.size.height) * 0.52
+                    RoundedRectangle(cornerRadius: ph * 0.22, style: .circular)
+                        .frame(width: ph, height: ph)
                 }
             }
             .foregroundStyle(DexInk.sil)
