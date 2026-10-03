@@ -245,6 +245,8 @@ Gemini を Google の API で直接使う場合（`AI_PROVIDER=google`）、**�
 
 ### iPhone アプリ（このリポジトリ）
 
+**2026-10-03 追記**: A1〜A8 はアプリ側を入れた（同意画面と関所の仕組みは `docs/self-managing-ios.md` 6-6）。A1 のサーバでの記録は W1、A9・A10 は未対応。サポートページ（W5）と特商法のページを Web 版に公開するまで、設定・課金画面のリンク先（`/support`・`/tokushoho`）は開けない。
+
 | # | 重要度 | 内容 | 場所 |
 |---|---|---|---|
 | A1 | **必須** | **外部 AI に送る前の同意の画面が無い**。審査ガイドライン 5.1.2(i) は「第三者の AI を含め、個人データを第三者と共有する場所をはっきり示し、共有の前に明示的な許可を得る」ことを求めている（2025年に追加された文言）。初めて AI の機能（撮影の候補・スキャン・日記の添削・単語帳の読み取りなど）を使う前に、「写真と文章を Google（Gemini）などに送ります」と示して「同意して続ける」を押してもらう。同意の状態はサーバに保存して Web と共有する（W1）。同意しない人は AI の機能を使えない形にする | AI を呼ぶ入口 `ios/CatchWords/Services/NativeAPI.swift:61`（`suggestWordCandidates`・`generateCard`・`correctMyJournal` など）。はじめの設定の段階 `Views/OnboardingView.swift:14`（`intro, questions, notifications, ready` の間に同意の段階を足すのが分かりやすい） |
