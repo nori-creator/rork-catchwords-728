@@ -65,7 +65,8 @@ struct SettingsView: View {
         .onChange(of: avatarItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = await ImageTools.downsampledInBackground(data, maxSide: 1024) {
                     await profile.uploadAvatar(img)
                 } else {
                     profile.message = L("写真を読み込めませんでした。")
