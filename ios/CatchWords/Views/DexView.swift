@@ -201,8 +201,11 @@ struct DexView: View {
                     Text(L("\(DexBook.words(dex.stickers, lang: lang).count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
                         .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
+                        // Large text on a small iPhone: wrap instead of cutting the counts off.
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .layoutPriority(1)
                 Spacer(minLength: 0)
                 DexModeSegment(mode: $mode) { m in
                     Haptics.selection()

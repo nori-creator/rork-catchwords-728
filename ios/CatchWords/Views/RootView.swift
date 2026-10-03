@@ -40,6 +40,8 @@ struct RootView: View {
                         .uiReady("root")
                     if needsAIConsent {
                         AIConsentView()
+                            // Over the home screen (dark status-bar text): follow this screen's own background.
+                            .statusBarTone(.automatic)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .zIndex(1)
                     }

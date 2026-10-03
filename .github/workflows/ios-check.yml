@@ -180,10 +180,17 @@ jobs:
           SCENES="home:3 dex:2 detail:3 quiz:2 settings:2 camblocked:2 aiconsent:2"
           shoot() {  # shoot <udid> <ファイル名の頭> [追加の起動引数...]
             local dev=$1 prefix=$2; shift 2
+            # 他の見本と同じく、画面の決まった要素が出た印（ui-ready/preview）を待ってから撮る（監査 D-10）。
+            local data ready
+            data=$(xcrun simctl get_app_container "$dev" "$BUNDLE_ID" data 2>/dev/null || echo "$RUNNER_TEMP/no-data-container")
+            ready="$data/Library/Caches/ui-ready/preview"
             for spec in $SCENES; do
-              local name=${spec%%:*} wait_s=${spec##*:}
+              local name=${spec%%:*} wait_s=${spec##*:} n=0
               xcrun simctl terminate "$dev" "$BUNDLE_ID" 2>/dev/null || true
+              rm -f "$ready"
               xcrun simctl launch "$dev" "$BUNDLE_ID" -uiPreview "$name" -uiDemo zh-TW ${1+"$@"} >/dev/null || { echo "::warning::$prefix$name を開けませんでした"; continue; }
+              while [ ! -f "$ready" ] && [ $n -lt 80 ]; do sleep 0.25; n=$((n + 1)); done
+              [ -f "$ready" ] || echo "::warning::$prefix$name の画面が出るのを待ちきれませんでした"
               sleep "$wait_s"
               xcrun simctl io "$dev" screenshot "$OUT/${prefix}${name}.png" >/dev/null 2>&1 || echo "::warning::$prefix$name を撮れませんでした"
             done
