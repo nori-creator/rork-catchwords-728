@@ -48,6 +48,7 @@ struct PaywallView: View {
                         Text(L("街じゅうを、図鑑にしよう。"))
                             .font(.system(size: 26, weight: .bold))
                             .foregroundStyle(Theme.foreground)
+                            .multilineTextAlignment(.center)
                         Text(plan.remainingToday == 0 ? L("今日の無料キャッチ（3回）を使い切りました。") : L("Proなら、見つけた瞬間に何度でも。"))
                             .font(AppFont.hand(17))
                             .foregroundStyle(Theme.muted)
