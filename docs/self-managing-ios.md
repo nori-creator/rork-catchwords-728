@@ -249,7 +249,31 @@ App Store Connect で「審査へ提出」
   agrees on the consent screen shown before the first AI feature (Settings > Privacy to withdraw).
   Without consent the camera and AI features stay off and nothing is sent.
 - この版は無料のみで、アプリ内課金はありません。
+
+ログインが必要な理由（Guideline 5.1.1(v)）:
+このアプリは Web 版 CatchWords と同じアカウント・同じデータを使います。撮った写真、単語カード、
+復習の記録、日記はアカウントごとに当社サーバに保存され、iPhone と Web のどちらからでも続きを使えます。
+写真から単語を見つける・カードを作る・日記を添削するといった中心の機能は、当社サーバの AI で動き、
+使い過ぎを防ぐためにアカウントごとに1日の利用回数の上限があります。写真もアカウントごとに保存します。
+このため、ログインせずに使える部分はほとんど無く、ログインを必須にしています。
+審査では、上のテスト用アカウント（メール: 【審査用メールアドレス】／パスワード: 【審査用パスワード】）で
+ログイン画面の「メールアドレスで続ける」から入ってください。単語と写真が入った状態で、撮影・図鑑・復習・日記を
+すべて試せます。初回だけ AI への送信の同意画面が出るので「同意して始める」を押してください。
+
+Why sign-in is required (Guideline 5.1.1(v)):
+CatchWords on iPhone shares one account and one set of data with the CatchWords web app. The photos you
+take, your word cards, review history and journal entries are stored per account on our server, so you can
+continue on either iPhone or the web. The core features (finding words in a photo, generating word cards,
+correcting journal entries) run on server-side AI, which has a per-account daily usage limit to prevent
+abuse, and photos are stored per account. Very little of the app works without an account, so sign-in is
+required.
+To review the app, please sign in with the demo account (email: [REVIEW_EMAIL] / password:
+[REVIEW_PASSWORD]) using "Continue with email" on the sign-in screen. The account already has words and
+photos, so the camera, word dex, review and journal can all be tried. On first sign-in a consent screen for
+sending data to AI appears; tap "Agree and start".
 ```
+
+審査メモを書くときは【】と [] の所を、審査用に作ったアカウントの本物のメールとパスワードに置き換える（2か所とも同じもの）。そのアカウントは提出前に Web 版か TestFlight で単語を10語ほど撮って入れ、はじめの設定と AI の同意まで済ませておく（「単語と写真が入った状態」と書いているため）。ボタンの文言はアプリの今の表示に合わせて確かめる。
 
 ### 6-5. 提出後によく返ってくる指摘と対応
 
