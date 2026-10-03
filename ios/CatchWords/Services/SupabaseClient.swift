@@ -10,6 +10,8 @@ nonisolated enum APIError: LocalizedError {
     case message(String)
     /// The server's rolling-24h cap (`assertWithinDailyCap`). Waiting a few minutes does not help.
     case limit(String)
+    /// An AI function was refused before sending: this account has not agreed to send data to AI (`AIConsent`).
+    case aiConsentRequired
 
     /// err.dailyCap (web i18n).
     static var dailyCapMessage: String { L("1日の利用上限に達しました。24時間以内に自動で回復します。") }
@@ -24,6 +26,7 @@ nonisolated enum APIError: LocalizedError {
         case .decoding: L("データの読み込みに失敗しました。")
         case .message(let m): L10n.readerSafe(m, fallback: L("うまくいきませんでした。もう一度お試しください。"))
         case .limit(let m): L10n.readerSafe(m, fallback: Self.dailyCapMessage)
+        case .aiConsentRequired: L("AIを使う機能は、AIへのデータ送信に同意すると使えます。")
         }
     }
 

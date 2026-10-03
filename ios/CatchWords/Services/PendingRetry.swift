@@ -156,6 +156,8 @@ final class PendingRetry {
         loadRecords()
         if let until = pausedUntil, until > Date() { return }
         guard online != false, let owner = SupabaseClient.shared.userId else { return }
+        // No consent to send photos to AI: nothing is tried (agreeing kicks a new pass).
+        guard AIConsent.shared.allowsSending() else { return }
         PendingQueue.shared.reload()
         for item in PendingQueue.shared.items.reversed() {   // oldest first
             guard active, !Task.isCancelled, SupabaseClient.shared.userId == owner else { return }
@@ -211,8 +213,8 @@ final class PendingRetry {
                 failed.attempts -= 1
                 failed.nextAt = nil
                 outcome = .stop
-            case .unauthorized?, .notConfigured?:
-                // The login is handled elsewhere (sessionExpired); not this photo's fault.
+            case .unauthorized?, .notConfigured?, .aiConsentRequired?:
+                // The login is handled elsewhere (sessionExpired), the consent on its screen; not this photo's fault.
                 failed.attempts -= 1
                 outcome = .stop
             case .limit?:

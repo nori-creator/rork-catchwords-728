@@ -22,6 +22,12 @@ struct CatchWordsApp: App {
     init() {
         #if DEBUG
         DemoBackend.install()  // -uiDemo: every request answered offline (UI tests on CI)
+        // -uiPreview: the screens are photographed as an account that agreed to the AI consent sees them
+        // (the consent screen itself is the "aiconsent" scene).
+        if UIPreview.parsed != nil {
+            AIConsent.shared.load(userId: nil)
+            if !AIConsent.shared.isGranted { AIConsent.shared.grant() }
+        }
         #endif
         // Settings values renamed to the web's: sound "soft" → "subtle".
         if UserDefaults.standard.string(forKey: "sound.level") == "soft" {

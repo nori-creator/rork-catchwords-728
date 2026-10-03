@@ -34,6 +34,8 @@ struct SettingsView: View {
     @State private var isDeleting: Bool = false
     @State private var deleteError: String?
     @State private var confirmSignOut: Bool = false
+    @State private var showAIConsent: Bool = false
+    @State private var confirmWithdrawAI: Bool = false
 
     var body: some View {
         ScrollView {
@@ -44,6 +46,7 @@ struct SettingsView: View {
                 notifySection
                 appearanceSection
                 feelSection
+                aiConsentSection
                 if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
@@ -240,6 +243,53 @@ struct SettingsView: View {
                 }))
                 .padding(.top, 6)
             }
+        }
+    }
+
+    /// AIへのデータ送信の同意 (AIConsent): its state, reading it again, agreeing later or withdrawing it.
+    private var aiConsentSection: some View {
+        let consent = AIConsent.shared
+        return SettingsCard(title: L("プライバシー")) {
+            VStack(alignment: .leading, spacing: 8) {
+                label(L("AIへのデータ送信の同意"))
+                Text(aiConsentStatus)
+                    .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("settings.aiConsent.status")
+                HStack(spacing: 18) {
+                    Button(consent.isGranted ? L("内容を見る") : L("内容を確認して同意する")) { showAIConsent = true }
+                        .foregroundStyle(Theme.primaryInk)
+                        .accessibilityIdentifier("settings.aiConsent.review")
+                    if consent.isGranted {
+                        Button(L("同意を取り消す")) { confirmWithdrawAI = true }
+                            .foregroundStyle(Theme.destructive)
+                            .accessibilityIdentifier("settings.aiConsent.withdraw")
+                    }
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .frame(minHeight: 44)
+            }
+        }
+        .confirmationDialog(L("AIへのデータ送信の同意を取り消しますか？"), isPresented: $confirmWithdrawAI, titleVisibility: .visible) {
+            Button(L("同意を取り消す"), role: .destructive) {
+                AIConsent.shared.decline()
+                Haptics.warning()
+            }
+        } message: {
+            Text(L("取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
+        }
+        .aiConsentSheet(isPresented: $showAIConsent)
+    }
+
+    private var aiConsentStatus: String {
+        switch AIConsent.shared.status {
+        case .granted(let date):
+            let day = date.formatted(.dateTime.year().month().day().locale(L10n.locale))
+            return L("同意しています（\(day)）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。")
+        case .declined:
+            return L("同意していません。カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません。")
+        case .undecided:
+            return L("まだ選んでいません。AI を使う機能を使う前に確認します。")
         }
     }
 

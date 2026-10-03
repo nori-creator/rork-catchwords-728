@@ -28,6 +28,8 @@ enum AccountCleanup {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         UserDefaults.standard.set("off", forKey: ReminderService.modeKey)
         if let userId { PendingQueue.shared.removeAll(ownerId: userId) }
+        // That account's answer to the AI consent.
+        if let userId { AIConsent.removeRecord(userId: userId) }
 
         // Diary drafts kept on this device for that account (DiaryStore `draftPrefix`).
         if let userId {

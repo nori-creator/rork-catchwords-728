@@ -17,6 +17,13 @@ enum LegalLinks {
         ])
     }
 
+    /// AI consent: where the details are (privacy policy chapter 4 AI, chapter 6 the providers and countries).
+    static func aiConsentDetails() -> AttributedString {
+        linked(L("詳しくは\(slot1)（第4章・第6章）をご覧ください。"), [
+            (L("プライバシーポリシー"), AppConfig.privacyURL),
+        ])
+    }
+
     /// Replaces each slot character (U+0001, U+0002 …) in `template` with its link.
     private static func linked(_ template: String, _ links: [(title: String, url: URL)]) -> AttributedString {
         var out = AttributedString()

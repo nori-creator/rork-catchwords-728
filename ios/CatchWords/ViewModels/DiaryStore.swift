@@ -160,7 +160,8 @@ final class DiaryStore {
     func loadScaffold() async {
         // Once a day per learning language (the prompts are written in it).
         let today = Self.key(Date()) + "|" + NativeAPI.targetLanguage
-        guard scaffoldDay != today else { return }
+        // Without the AI consent there are none; asked again once it is given (the day is not used up).
+        guard AIConsent.shared.isGranted, scaffoldDay != today else { return }
         scaffoldDay = today
         scaffold = try? await NativeAPI.call("getJournalPrompts", [:], as: JournalScaffold?.self, timeout: 45)
     }

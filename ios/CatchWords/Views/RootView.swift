@@ -14,6 +14,14 @@ struct RootView: View {
         !onboardingDone && profile.isLoaded && !profile.loadFailed && !profile.onboarded && dex.stickers.isEmpty
     }
 
+    /// The AI consent, once per account: after onboarding (or right after sign-in for an account that has
+    /// done it), before the camera or any AI feature. Waits for the profile, so it never flashes in front of
+    /// the onboarding that is about to open.
+    private var needsAIConsent: Bool {
+        let consent = AIConsent.shared
+        return consent.isLoaded && consent.isUndecided && !needsOnboarding && (profile.isLoaded || profile.loadFailed)
+    }
+
     var body: some View {
         ZStack {
             AppBackground()
@@ -27,6 +35,12 @@ struct RootView: View {
             case .signedIn:
                 ZStack {
                     MainTabView()
+                        .accessibilityHidden(needsAIConsent)
+                    if needsAIConsent {
+                        AIConsentView()
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .zIndex(1)
+                    }
                     if needsOnboarding {
                         OnboardingView { withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { onboardingDone = true } }
                             .environment(\.colorScheme, .light)
@@ -40,6 +54,7 @@ struct RootView: View {
                         // Before the profile arrives (`needsOnboarding` waits for it): the account that just
                         // signed in, not the previous one.
                         onboardingDone = OnboardingState.isDone(userId: SupabaseClient.shared.userId)
+                        AIConsent.shared.load(userId: SupabaseClient.shared.userId)
                         let guessed = NativeAPI.targetLanguage
                         async let p: Void = profile.load()
                         await dex.load()
@@ -66,6 +81,7 @@ struct RootView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: auth.phase)
+        .animation(.spring(response: 0.45, dampingFraction: 0.9), value: AIConsent.shared.status)
         .task {
             // A review Live Activity left from a previous run (the app was closed mid-round) shows a round
             // that no longer exists: end it; a new round starts its own.
@@ -81,6 +97,7 @@ struct RootView: View {
                 diary.reset()
                 profile.reset()
                 plan.reset()
+                AIConsent.shared.reset()
                 PendingRetry.shared.stop()
                 ImageCache.shared.removeAll()
                 StickerPhoto.invalidateAll()

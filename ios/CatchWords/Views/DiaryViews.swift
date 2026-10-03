@@ -29,6 +29,8 @@ struct DiaryComposer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text: String = ""
     @State private var justCorrected = false
+    /// 「AIに添削してもらう」 without the AI consent: the consent sheet instead (nothing is sent).
+    @State private var askAIConsent = false
     @FocusState private var focused: Bool
 
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
@@ -106,6 +108,9 @@ struct DiaryComposer: View {
             if isToday { await diary.loadScaffold() }
         }
         .onChange(of: text) { _, v in diary.keepDraft(v, for: day) }
+        .aiConsentSheet(isPresented: $askAIConsent) {
+            if isToday { Task { await diary.loadScaffold() } }
+        }
     }
 
     private var wordChips: some View {
@@ -162,6 +167,7 @@ struct DiaryComposer: View {
         return VStack(alignment: .leading, spacing: 6) {
             Button {
                 focused = false
+                guard AIConsent.shared.isGranted else { askAIConsent = true; return }
                 Task {
                     justCorrected = false
                     if await diary.correct(text, for: day) {

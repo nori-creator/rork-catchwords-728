@@ -65,6 +65,7 @@ struct UIPreviewRoot: View {
             case "settings": SettingsView()
             case "auth": AuthView()
             case "onboarding": OnboardingView {}
+            case "aiconsent": AIConsentView()
             case "paywall": PaywallView()
             case "dex": DexView()
             case "done": DonePreview()

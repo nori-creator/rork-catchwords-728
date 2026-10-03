@@ -38,6 +38,8 @@ struct WordDetailView: View {
     @State private var reporting: Bool = false
     @State private var reportNote: String = ""
     @State private var isFixing: Bool = false
+    /// A report or 「作り直す」 without the AI consent: the consent sheet instead (nothing is sent).
+    @State private var askAIConsent: Bool = false
     @State private var newPhoto: PhotosPickerItem?
     @State private var isReplacing: Bool = false
     /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
@@ -133,6 +135,7 @@ struct WordDetailView: View {
         .onAppear { prefs.use(learningLang) }
         .onChange(of: learningLang) { _, l in prefs.use(l) }
         .onAppear { applyHeroRole(animated: false) }
+        .aiConsentSheet(isPresented: $askAIConsent)
         .sheet(isPresented: $pickingHero) {
             HeroPhotoPickerSheet(sticker: current) { role in
                 try await dex.setHeroRole(current, role: role)
@@ -263,6 +266,7 @@ struct WordDetailView: View {
                 // web ReportButton: let the AI find what is wrong, or point at the item yourself.
                 Menu {
                     Button(L("AIに探してもらう"), systemImage: "sparkle.magnifyingglass") {
+                        guard AIConsent.shared.isGranted else { askAIConsent = true; return }
                         reportNote = ""
                         reporting = true
                     }
@@ -770,6 +774,7 @@ struct WordDetailView: View {
     /// Web 「作り直す」 (regenerateCardSection): this one item is written again at the learner's level.
     private func regenerate(_ s: CardSection) {
         guard !refreshing.contains(s) else { return }
+        guard AIConsent.shared.isGranted else { askAIConsent = true; return }
         Haptics.impact(.light)
         let wordId = current.wordId
         withAnimation(.snappy) { _ = refreshing.insert(s) }
@@ -902,6 +907,8 @@ struct WordDetailView: View {
         await dex.loadExplanation(wordId: current.wordId, target: target)
         // A whole explanation is being written for this reader: its sections arrive together.
         guard !Task.isCancelled, !dex.generatingWords.contains(current.wordId) else { return }
+        // Writing the missing sections uses the AI: not without the consent (they stay empty, never "filling").
+        guard AIConsent.shared.isGranted else { return }
         let missing = visibleSections.filter { !$0.isExternal && !hasContent($0) }
         guard !missing.isEmpty else { return }
         let wordId = current.wordId
@@ -926,6 +933,7 @@ struct WordDetailView: View {
     }
 
     private func reportAndFix(item: String = "auto") {
+        guard AIConsent.shared.isGranted else { askAIConsent = true; return }
         let note = item == "auto" ? reportNote.trimmingCharacters(in: .whitespacesAndNewlines) : ""
         let wordId = current.wordId
         let candidates = reportItems

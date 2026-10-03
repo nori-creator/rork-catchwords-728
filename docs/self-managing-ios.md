@@ -183,6 +183,8 @@ App Store Connect で「審査へ提出」
 | 設定 | 「Pro にアップグレード」「購入を復元」が出ない。末尾に `1.0.0 (ビルド番号)` が出る |
 | 設定 → アカウント削除 | 削除後にログイン画面に戻り、同じメールで再ログインできない。ウィジェットの単語・予約した通知・解析待ちの写真も消える |
 | 図鑑（棚） | 上に本棚が出ない。スライド表示でカードが輪になって回り、音が鳴る |
+| 初めてログイン（または「ようこそ」の後） | 「AIへのデータ送信について」が出る。「同意しない」→ カメラのタブは「AIの機能は止まっています」になり、撮影・検索はできないが、図鑑・復習は使える。「内容を確認して同意する」→ 同意するとカメラが使える |
+| 設定 → プライバシー → AIへのデータ送信の同意 | 同意した日が出る。「同意を取り消す」→ カメラのタブがまた止まる。同じアカウントでログインし直しても聞き直さない |
 
 ### 6-2. App Store Connect に入れる情報
 
@@ -241,6 +243,9 @@ App Store Connect で「審査へ提出」
   当社の Web サイト catchwords.lovable.app のログインを行い、アプリに戻ります。
 - アカウント削除は 設定 → アカウント削除 から行え、サーバのアカウントごと消えます。
 - 写真の候補・単語カードの生成は当社サーバ（catchwords.lovable.app）で行います。
+- AI: photos and text are sent to third-party AI (Google Gemini via our server) only after the user
+  agrees on the consent screen shown before the first AI feature (Settings > Privacy to withdraw).
+  Without consent the camera and AI features stay off and nothing is sent.
 - この版は無料のみで、アプリ内課金はありません。
 ```
 
@@ -252,6 +257,16 @@ App Store Connect で「審査へ提出」
 | Guideline 5.1.1（権限の説明が足りない） | カメラ・マイク・位置・写真の説明文（pbxproj の `INFOPLIST_KEY_*UsageDescription`）を直す |
 | Guideline 4.8（Sign in with Apple） | Google と並べて Apple も出している。指摘があれば Claude に見せる |
 | Guideline 5.1.1(v)（アカウント削除） | 設定 → アカウント削除 の場所を審査メモに書く |
+| Guideline 5.1.2(i)（第三者の AI への送信） | 初回の同意画面（6-6）と、設定の「AIへのデータ送信の同意」を審査メモに書く |
+
+### 6-6. AI への送信の同意（Guideline 5.1.2(i)）
+
+審査ガイドライン 5.1.2(i) は「第三者の AI を含め、個人データを第三者と共有する場所をはっきり示し、共有の前に明示的な許可を得る」ことを求めている。アプリでは次のように入れた（`docs/legal/checklist.ja.md` 8章 A1）。
+
+- **画面**: ログイン（新しい人は「ようこそ」の後）の直後に、アカウントごとに1回「AIへのデータ送信について」を出す（`Views/AIConsentView.swift`）。送るもの（写真・単語・文章・声で調べた言葉の文字）、送り先（当社のサーバを通して外部の AI サービス〈Google など〉）、使い道、同意しない場合、プライバシーポリシーへのリンク。「同意して始める」／「同意しない」。
+- **関所は1か所**: `NativeAPI.call` が、AI に渡る関数（`AIConsent.aiFunctions`: `suggestWords`・`detectScan`・`rankScanCandidates`・`suggestWordCandidates`・`generateCard`・`regenerateCardSection`・`reportAndFixSection`・`getJournalPrompts`・`correctMyJournal`）を、同意が無ければ送る前に `APIError.aiConsentRequired` で止める。画面はそれに合わせて、カメラのタブを止め、単語の「報告」「作り直す」と日記の「AIに添削してもらう」では同意の画面を出す。
+- **保存**: 端末の UserDefaults にアカウントごと（`aiConsent.<ユーザー ID>` に状態・版・日時）。送る内容や送り先を変えたら `AIConsent.currentVersion` を上げると、同意した人にも聞き直す（ポリシー 14章）。アカウントを削除すると消える。
+- **サーバ側（このリポジトリからは入れられない）**: サーバも同意を記録するべき（同意した日時とポリシーの版。Web 版でも同じ同意を出し、同意していない人の AI の関数をサーバで断る。checklist 8章 W1）。今はアプリの端末にしか残らないので、同じ人が Web 版や別の iPhone で使うと、そこでは同意の記録が無い。サーバに入ったら、アプリはログインのときにサーバの記録を読み、同意・取り消しをサーバに書くように変える。
 
 ---
 

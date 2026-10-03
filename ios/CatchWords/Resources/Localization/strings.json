@@ -83,6 +83,10 @@
   "en": "Ask AI to review",
   "zh-TW": "請 AI 幫忙修改"
  },
+ "AIの機能は止まっています": {
+  "en": "AI features are off",
+  "zh-TW": "AI 功能已停用"
+ },
  "AIの解析に失敗しました（{1}）": {
   "en": "The AI analysis failed ({1}).",
   "zh-TW": "AI 分析失敗（{1}）"
@@ -94,6 +98,22 @@
  "AIは間違いを見つけられませんでした。報告として残しました": {
   "en": "The AI couldn't find a mistake. Your report has been kept.",
   "zh-TW": "AI 沒有找到錯誤，已保留你的回報。"
+ },
+ "AIへのデータ送信について": {
+  "en": "Sending data to AI",
+  "zh-TW": "關於將資料傳送給 AI"
+ },
+ "AIへのデータ送信の同意": {
+  "en": "Consent to send data to AI",
+  "zh-TW": "同意將資料傳送給 AI"
+ },
+ "AIへのデータ送信の同意を取り消しますか？": {
+  "en": "Withdraw your consent to send data to AI?",
+  "zh-TW": "要撤回將資料傳送給 AI 的同意嗎？"
+ },
+ "AIを使う機能は、AIへのデータ送信に同意すると使えます。": {
+  "en": "AI features are available once you agree to sending data to AI.",
+  "zh-TW": "同意將資料傳送給 AI 後，即可使用 AI 功能。"
  },
  "App Store で購入したサブスクリプションは、アカウントを削除しても自動では解約されません。先に iPhone の「設定」→ Apple ID →「サブスクリプション」から解約してください。": {
   "en": "A subscription bought on the App Store is not cancelled automatically when you delete your account. Cancel it first in iPhone Settings → Apple ID → Subscriptions.",
@@ -110,6 +130,10 @@
  "Appleでサインイン": {
   "en": "Sign in with Apple",
   "zh-TW": "使用 Apple 登入"
+ },
+ "CatchWords は、写真から単語を見つけたり、単語カードを作ったり、日記を添削したりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
+  "en": "CatchWords uses third-party AI services to find words in your photos, write word cards and correct your diary. Before you start, please check what is sent and choose whether you agree.",
+  "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字、製作單字卡、批改日記。開始使用前，請確認傳送的內容，並選擇是否同意。"
  },
  "Dcardで見る": {
   "en": "See it on Dcard",
@@ -775,6 +799,10 @@
   "en": "No past diary entries yet",
   "zh-TW": "還沒有過去的日記"
  },
+ "まだ選んでいません。AI を使う機能を使う前に確認します。": {
+  "en": "Not chosen yet. You will be asked before using an AI feature.",
+  "zh-TW": "尚未選擇。使用 AI 功能前會先詢問你。"
+ },
  "まちがえた{1}語をもう一度": {
   "en": "Try again: {1} words you missed",
   "zh-TW": "再試一次答錯的 {1} 個字"
@@ -899,6 +927,10 @@
   "en": "Camera access is not allowed",
   "zh-TW": "尚未允許使用相機"
  },
+ "カメラやスキャンで撮った写真は、単語を見つけるために外部のAIサービスに送られます。AIへのデータ送信に同意すると、カメラ・スキャン・単語の検索が使えます。": {
+  "en": "Photos taken with the camera or scan are sent to third-party AI services to find words. Agree to sending data to AI to use the camera, scanning and word search.",
+  "zh-TW": "用相機或掃描拍下的照片，會傳送給外部的 AI 服務來找出單字。同意將資料傳送給 AI 後，即可使用相機、掃描與單字搜尋。"
+ },
  "カメラを起動できませんでした": {
   "en": "Couldn't start the camera",
   "zh-TW": "無法啟動相機"
@@ -906,6 +938,10 @@
  "カメラロールに保存": {
   "en": "Save to Camera Roll",
   "zh-TW": "儲存到相機膠卷"
+ },
+ "カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。": {
+  "en": "Features that use AI, such as the camera, scanning, making word cards and diary correction, are unavailable (nothing is sent). You can still view your words and review them. You can agree, or withdraw your consent, later in Settings.",
+  "zh-TW": "相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回同意。"
  },
  "カメラ切替": {
   "en": "Switch camera",
@@ -1455,6 +1491,10 @@
   "en": "Usage chunks",
   "zh-TW": "用法組塊"
  },
+ "使い道": {
+  "en": "What it is used for",
+  "zh-TW": "用途"
+ },
  "例: JLPT N4 第3課": {
   "en": "e.g. JLPT N4 Lesson 3",
   "zh-TW": "例：JLPT N4 第3課"
@@ -1547,6 +1587,14 @@
   "en": "Overall retention (±2 weeks)",
   "zh-TW": "整體記憶率（前後兩週）"
  },
+ "内容を確認して同意する": {
+  "en": "Review and agree",
+  "zh-TW": "確認內容並同意"
+ },
+ "内容を見る": {
+  "en": "View details",
+  "zh-TW": "查看內容"
+ },
  "再会": {
   "en": "meet again",
   "zh-TW": "再次相遇"
@@ -1566,6 +1614,10 @@
  "写っている物": {
   "en": "In the photo",
   "zh-TW": "照片裡的東西"
+ },
+ "写っている物の判定、単語カード・解説・例文の作成、日記の添削のためだけに使います。当社が写真や日記を AI の学習に使うことはありません。": {
+  "en": "Only to recognize what is in a photo, to write word cards, notes and example sentences, and to correct your diary. We never use your photos or diary to train AI.",
+  "zh-TW": "只用於辨識照片中的物品、製作單字卡、解說與例句，以及批改日記。我們不會把你的照片或日記用於訓練 AI。"
  },
  "写っている物を見つけられませんでした。別の写真で試してください。": {
   "en": "Couldn't find anything in this photo. Try a different photo.",
@@ -1815,6 +1867,10 @@
   "en": "Antonyms",
   "zh-TW": "反義詞"
  },
+ "取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。": {
+  "en": "Features that use AI, such as the camera, scanning, making word cards and diary correction, will stop working. Your words and reviews stay available.",
+  "zh-TW": "撤回後，相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用。收集的單字與複習仍可照常使用。"
+ },
  "取り込めませんでした": {
   "en": "Couldn't import those",
   "zh-TW": "匯入失敗"
@@ -1850,6 +1906,30 @@
  "台湾華語を学習中": {
   "en": "Learning Taiwanese Mandarin",
   "zh-TW": "正在學台灣華語"
+ },
+ "同意しています（{1}）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。": {
+  "en": "You agreed ({1}). Photos and the words and text you enter are sent through our server to third-party AI services (such as Google).",
+  "zh-TW": "已同意（{1}）。照片與輸入的單字、文字，會經由我們的伺服器傳送給外部的 AI 服務（例如 Google）。"
+ },
+ "同意していません。カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません。": {
+  "en": "You have not agreed. Features that use AI, such as the camera, scanning, making word cards and diary correction, are unavailable.",
+  "zh-TW": "尚未同意。相機、掃描、製作單字卡、批改日記等使用 AI 的功能無法使用。"
+ },
+ "同意して始める": {
+  "en": "Agree and start",
+  "zh-TW": "同意並開始"
+ },
+ "同意しない": {
+  "en": "Don't agree",
+  "zh-TW": "不同意"
+ },
+ "同意しない場合": {
+  "en": "If you do not agree",
+  "zh-TW": "不同意時"
+ },
+ "同意を取り消す": {
+  "en": "Withdraw consent",
+  "zh-TW": "撤回同意"
  },
  "名前": {
   "en": "Name",
@@ -2055,6 +2135,10 @@
   "en": "Stress",
   "zh-TW": "重音"
  },
+ "当社のサーバを通して、外部のAIサービス（Google など）に送ります。送り先の会社と国は、プライバシーポリシーに書いてあります。": {
+  "en": "Through our server to third-party AI services (such as Google). The companies and countries are listed in the Privacy Policy.",
+  "zh-TW": "經由我們的伺服器，傳送給外部的 AI 服務（例如 Google）。傳送對象的公司與國家，記載於隱私權政策。"
+ },
  "形": {
   "en": "Shapes",
   "zh-TW": "形狀"
@@ -2194,6 +2278,10 @@
  "控えめ": {
   "en": "Subtle",
   "zh-TW": "輕微"
+ },
+ "撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（日記・報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
+  "en": "Photos you take, images you pick from the Photos app, scan frames, words you look up, text you enter (diary entries and report notes), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
+  "zh-TW": "你拍的照片、從照片 App 選的圖片、掃描的畫面、查詢的單字、輸入的文字（日記、回報的備註）、用語音查詢的詞（轉成的文字，不會傳送聲音本身），以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
  },
  "撮った写真をスマホの写真アプリにも残します": {
   "en": "Also save your photos to the Photos app",
@@ -3075,6 +3163,10 @@
   "en": "Spoken",
   "zh-TW": "口語"
  },
+ "詳しくは{1}（第4章・第6章）をご覧ください。": {
+  "en": "For details, see the {1} (sections 4 and 6).",
+  "zh-TW": "詳情請參閱{1}（第 4 章、第 6 章）。"
+ },
  "語": {
   "en": "words",
   "zh-TW": "個"
@@ -3162,6 +3254,14 @@
  "送った内容の形が違います。アプリを最新にしてください。": {
   "en": "The request was in an unexpected format. Please update the app.",
   "zh-TW": "送出的資料格式不符，請將 App 更新到最新版本。"
+ },
+ "送り先": {
+  "en": "Where it goes",
+  "zh-TW": "傳送對象"
+ },
+ "送るもの": {
+  "en": "What is sent",
+  "zh-TW": "傳送的內容"
  },
  "通信が時間切れになりました。電波の良い場所でもう一度お試しください。": {
   "en": "The connection timed out. Please try again where the signal is better.",
@@ -3274,6 +3374,10 @@
  "集めた単語": {
   "en": "Words collected",
   "zh-TW": "收集的單字"
+ },
+ "集めた単語を見ることや復習は、同意しなくても使えます。": {
+  "en": "You can view your words and review them without agreeing.",
+  "zh-TW": "即使不同意，也能瀏覽收集的單字與複習。"
  },
  "集める": {
   "en": "Catch",

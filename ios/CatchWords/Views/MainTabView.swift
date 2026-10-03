@@ -85,7 +85,10 @@ struct MainTabView: View {
                         .transition(router.landing != nil ? AnyTransition.move(edge: .bottom) : AnyTransition.opacity)
                         .zIndex(router.landing != nil ? 1 : 0)
                 case .camera:
-                    CaptureView()
+                    // Without the AI consent the camera stays off: its photos would go to AI (AIConsentGateView).
+                    Group {
+                        if AIConsent.shared.isGranted { CaptureView() } else { AIConsentGateView() }
+                    }
                         .transition(router.landing != nil
                                     ? AnyTransition.asymmetric(insertion: .opacity,
                                                                removal: AnyTransition.opacity.animation(.linear(duration: 0.01).delay(0.6)))

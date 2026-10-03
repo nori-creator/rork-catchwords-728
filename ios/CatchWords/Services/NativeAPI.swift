@@ -59,6 +59,11 @@ enum NativeAPI {
 
     /// Returns the function's `result` as raw JSON bytes.
     static func call(_ fn: String, _ data: [String: Any], timeout: TimeInterval = 40) async throws -> Data {
+        // Photos, words and text go on to a third-party AI only after this account agreed (Guideline 5.1.2(i)).
+        // Refused here, before anything leaves the phone; the screens turn the error into the consent screen.
+        if AIConsent.aiFunctions.contains(fn), !AIConsent.shared.allowsSending() {
+            throw APIError.aiConsentRequired
+        }
         let url = AppConfig.webBaseURL.appendingPathComponent("api/native-fn")
         let client = SupabaseClient.shared
         // An expiring token is refreshed first; a dead login throws `.unauthorized` (the app shows the

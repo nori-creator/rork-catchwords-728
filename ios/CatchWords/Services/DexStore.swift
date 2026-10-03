@@ -351,7 +351,8 @@ final class DexStore {
         if let p = r.picked { explanations[wordId] = p } else { explanations.removeValue(forKey: wordId) }
         stickers = stickers.map { $0.wordId == wordId ? applyReader($0) : $0 }
         if r.unavailable == true { return }
-        guard ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1),
+        // Writing a new explanation uses the AI (`generateCard`): only with the AI consent.
+        guard AIConsent.shared.isGranted, ReaderLanguage.needsGeneration(r.picked, lang: lang, l1: l1),
               let shared = sharedWords[wordId], !generatingWords.contains(wordId) else { return }
         generatingWords.insert(wordId)
         Task {
