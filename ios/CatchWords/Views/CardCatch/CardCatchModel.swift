@@ -170,7 +170,8 @@ final class CardCatchModel {
             await analyze(my, objects: [], waiting: true)
         }
         guard my == runId, vm != nil else { return }
-        buildObjects()
+        await buildObjects()
+        guard my == runId else { return }
         await analyze(my, objects: objs, waiting: false)
         guard my == runId else { return }
         showPick()
@@ -185,19 +186,28 @@ final class CardCatchModel {
         vm?.reset()
     }
 
-    private func buildObjects() {
+    private func buildObjects() async {
         guard let vm, let photo = vm.photo else { return }
         let size = space.size
         let pw = max(1, photo.size.width), ph = max(1, photo.size.height)
         // coverMap(): the photo fills the screen (object-fit: cover)
         let s = max(size.width / pw, size.height / ph)
         let ox = (size.width - pw * s) / 2, oy = (size.height - ph * s) / 2
-        objs = vm.objects.map { o -> Obj in
+        let list = vm.objects
+        let rects = list.map { o -> CGRect in
             let real = CGRect(x: ox + o.box.minX * pw * s, y: oy + o.box.minY * ph * s,
                               width: o.box.width * pw * s, height: o.box.height * ph * s)
-            let r = space.toDesign(real)
+            return space.toDesign(real)
+        }
+        // outlineEl: rendered off the main thread (each one composites the cut-out 21 times).
+        let jobs = zip(list, rects).map { ($0.cut, $1.size) }
+        let outlines = await Task.detached(priority: .userInitiated) {
+            jobs.map { CCImages.outline(cut: $0.0, size: $0.1) }
+        }.value
+        objs = list.indices.map { i -> Obj in
+            let o = list[i]
             let shown = ReaderLanguage.shown(o.words[0].meaningJa)
-            return Obj(id: o.id, source: o, rect: r, outline: CCImages.outline(cut: o.cut, size: r.size),
+            return Obj(id: o.id, source: o, rect: rects[i], outline: outlines[i],
                        name: shown.isEmpty ? o.words[0].headword : shown)
         }
     }
