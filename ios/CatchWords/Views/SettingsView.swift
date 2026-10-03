@@ -52,6 +52,7 @@ struct SettingsView: View {
             .padding(.bottom, 130)
         }
         .scrollDismissesKeyboard(.interactively)
+        .statusBarScrim()
         .background(AppBackground())
         .overlay {
             if let wheel {

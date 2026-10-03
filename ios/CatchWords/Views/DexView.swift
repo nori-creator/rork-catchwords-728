@@ -226,8 +226,13 @@ struct DexView: View {
         .padding(.top, 4)
         .padding(.bottom, 10)
         .background {
+            // Solid behind the title and progress line, fading out only in a strip below the header — scrolled
+            // category cards must not show through 「図鑑」 (the prototype's head sits outside the scroll).
             Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(colors: [.black, .black, .black.opacity(0)], startPoint: .top, endPoint: .bottom))
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.86),
+                                             .init(color: .black.opacity(0), location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
+                .padding(.bottom, -18)
                 .ignoresSafeArea(edges: .top)
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
