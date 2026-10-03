@@ -22,6 +22,9 @@ struct StickerPhoto: Decodable, Identifiable, Equatable {
 
     /// A new or replaced photo: the next look asks the server again instead of showing the old list.
     static func invalidate(_ stickerId: String) { cache[stickerId] = nil }
+
+    /// Signing out: forget every list (they hold that account's signed photo links).
+    static func invalidateAll() { cache = [:] }
 }
 
 /// Web `StickerPhotoHistory`: every photo of this word — the first catch and each re-encounter —

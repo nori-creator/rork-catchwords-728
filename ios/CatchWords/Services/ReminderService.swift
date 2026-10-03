@@ -140,6 +140,16 @@ enum ReminderService {
         await applyReview(mode: d.string(forKey: modeKey) ?? "off", times: parseTimes(d.string(forKey: timesKey) ?? defaultTime), due: due)
     }
 
+    /// Signing out: no reminder of this account may fire for the next one (place reminders carry its
+    /// words and where they were caught). The next sign-in plans its own again.
+    static func clearAll() async {
+        let center = UNUserNotificationCenter.current()
+        let pending = await center.pendingNotificationRequests()
+        let ours = pending.map(\.identifier).filter { $0.hasPrefix(reviewPrefix) || $0.hasPrefix(placePrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: ours)
+        center.removeAllDeliveredNotifications()
+    }
+
     // MARK: Account sync (web user_metadata.notification_preferences)
 
     static func saveToAccount(mode: String, times: [String]) async {

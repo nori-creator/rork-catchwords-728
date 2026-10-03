@@ -56,8 +56,18 @@ struct RootView: View {
         .task { await auth.bootstrap() }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedOut {
+                // Nothing of the account that just left may stay for the next one: the stores, the
+                // pictures in memory, the widgets' snapshot, the review Live Activity and the reminders
+                // (place reminders name its words and places).
                 dex.reset()
                 diary.reset()
+                profile.reset()
+                plan.resetAccount()
+                ImageCache.shared.removeAll()
+                StickerPhoto.invalidateAll()
+                ReviewActivityController.end()
+                WidgetBridge.clear()
+                Task { await ReminderService.clearAll() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
