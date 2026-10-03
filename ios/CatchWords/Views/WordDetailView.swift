@@ -1151,7 +1151,7 @@ struct WordDetailView: View {
                         .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.primaryInk)
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(Theme.primary.opacity(0.1), in: Capsule())
-                    if let a = c?.article?.trimmingCharacters(in: .whitespaces), !a.isEmpty {
+                    if let a = c?.article.trimmingCharacters(in: .whitespaces), !a.isEmpty {
                         // The server sends either the bare article ("an") or the whole phrase ("a coffee").
                         let phrase = a.localizedCaseInsensitiveContains(headword) ? a : "\(a) \(headword)"
                         Text(phrase).font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.foreground)
