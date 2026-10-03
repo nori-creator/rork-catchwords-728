@@ -171,7 +171,7 @@ final class AuthStore {
     }
 
     func signOut() {
-        client.signOut()
+        client.signOutRevokingSession()
         isGuest = false
         phase = .signedOut
     }
