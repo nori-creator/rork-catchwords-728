@@ -64,18 +64,35 @@ enum NativeAPI {
         if AIConsent.aiFunctions.contains(fn), !AIConsent.shared.allowsSending() {
             throw APIError.aiConsentRequired
         }
+        do {
+            return try await post(fn, data, timeout: timeout)
+        } catch APIError.aiConsentRequired where !AIConsent.recordFunctions.contains(fn) {
+            // The server's record has no agreement for this account (web patch, docs/ios-spec/23-ai-consent.md).
+            // An agreement made on this device that had not reached it yet is sent now and the call tried once
+            // more; otherwise the consent screen asks again.
+            guard await AIConsent.shared.serverRefused() else { throw APIError.aiConsentRequired }
+            return try await post(fn, data, timeout: timeout)
+        }
+    }
+
+    private static func post(_ fn: String, _ data: [String: Any], timeout: TimeInterval) async throws -> Data {
         let url = AppConfig.webBaseURL.appendingPathComponent("api/native-fn")
         let client = SupabaseClient.shared
         // An expiring token is refreshed first; a dead login throws `.unauthorized` (the app shows the
         // login screen), a network hiccup during the refresh is not an error here.
         try await client.refreshForRequest()
         let payload = try JSONSerialization.data(withJSONObject: ["fn": fn, "data": data])
+        let consentVersion = String(AIConsent.currentVersion)
         // A 401 gets one forced refresh and a retry; a second 401 ends the login.
         let (body, http) = try await client.withTokenRetry { token in
             var req = URLRequest(url: url, timeoutInterval: timeout)
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            // On every call (spec: the server checks its consent record only for callers that send this, so
+            // builds without the record keep working until the owner sets AI_CONSENT_ENFORCE_NATIVE). A server
+            // without the web patch ignores it.
+            req.setValue(consentVersion, forHTTPHeaderField: "AI-Consent-Version")
             req.httpBody = payload
             do {
                 let (d, r) = try await URLSession.shared.data(for: req)
@@ -94,6 +111,8 @@ enum NativeAPI {
             if result is NSNull { return Data("null".utf8) }
             return try JSONSerialization.data(withJSONObject: result, options: [.fragmentsAllowed])
         case 401: throw APIError.unauthorized
+        // An AI function refused by the server for want of a recorded consent (nothing was sent on to AI).
+        case 403 where message.hasPrefix("AI_CONSENT_REQUIRED"): throw APIError.aiConsentRequired
         case 429: throw APIError.limit(message.isEmpty ? APIError.dailyCapMessage : message)
         default: throw APIError.server(status, message)
         }

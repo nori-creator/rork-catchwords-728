@@ -1,5 +1,12 @@
 # Web 版の法務の頁への反映（オーナー向け手順）
 
+> **【古い版・使わないでください】（2026-10-03 夕方）** このファイルと `docs/legal/web/legal.patch` は、
+> **`docs/web-changes/`** に置き換えました。Web の main が `11ff3f0` → `3fd364f` に進んだので、その上に作り直した版です。
+> `legal.patch` の中身はそこに **0001** としてそのまま入っていて、ほかに 0002（MiniMax・Tripo3D と写真から 3D を作る機能の削除）・
+> 0003（AI への送信の同意のサーバでの記録）・0004（退会のときの Apple の許可の取り消し）・0005（特商法の最終確認画面）があります。
+> 当て方・Supabase の移行・Secrets・公開後の確認は **`docs/web-changes/README.ja.md`** を見てください。
+> 下は記録のために残しています（特に、プライバシーポリシーの MiniMax・Tripo3D の記述は 0002 で消えます）。
+
 作成: 2026-10-03／対象: Web リポジトリ `nori-creator/Lovable-catch-words-app` の **main 11ff3f0**／公開先 https://catchwords.lovable.app
 
 > 前の版のこのファイルは、古い Web の写し（e67b63a）を見て「法務の頁が無い」前提で、新しい頁を丸ごと作る手順になっていました。**それは間違いでした。** 今の main には頁がもうあります。前の版の `docs/legal/web/privacy.tsx`・`terms.tsx`・`tokushoho.tsx`（別の頁を作る物）は消し、今の頁に足すだけの差分 `docs/legal/web/legal.patch` に置き換えました。

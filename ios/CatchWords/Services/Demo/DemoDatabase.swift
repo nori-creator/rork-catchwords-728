@@ -29,6 +29,8 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
     var albumHidden: [String] = []
     var scanTapped: [String] = []
     var userMetadata: [String: Any] = [:]
+    /// The account's AI consent record (web `ai_consents`): version, agreedAt, revokedAt. Empty: never agreed.
+    var aiConsent: [String: Any] = [:]
     var email: String?
     var tokenCounter = 0
 
@@ -46,6 +48,7 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         albumHidden = []
         scanTapped = []
         userMetadata = [:]
+        aiConsent = [:]
         email = nil
         tokenCounter = 0
     }

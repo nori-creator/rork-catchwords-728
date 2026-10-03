@@ -1,3 +1,9 @@
+SUPERSEDED (2026-10-03) — DO NOT APPLY THIS FILE.
+古い版です。使わないでください。Web の main 11ff3f0 向けに作った物で、
+docs/web-changes/（main 3fd364f 向けに作り直した版）に置き換えました。この差分の中身は
+そこに 0001 として入っています（0002〜0005 も続けて当てる）。手順は docs/web-changes/README.ja.md。
+(git apply ignores this text before the first diff header; kept for the record only.)
+
 diff --git a/src/components/legal/privacy-ja.tsx b/src/components/legal/privacy-ja.tsx
 --- a/src/components/legal/privacy-ja.tsx
 +++ b/src/components/legal/privacy-ja.tsx

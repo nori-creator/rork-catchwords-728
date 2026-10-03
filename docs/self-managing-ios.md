@@ -292,7 +292,15 @@ sending data to AI appears; tap "Agree and start".
 - **画面**: ログイン（新しい人は「ようこそ」の後）の直後に、アカウントごとに1回「AIへのデータ送信について」を出す（`Views/AIConsentView.swift`）。送るもの（写真・単語・文章・声で調べた言葉の文字）、送り先（当社のサーバを通して外部の AI サービス〈Google など〉）、使い道、同意しない場合、プライバシーポリシーへのリンク。「同意して始める」／「同意しない」。
 - **関所は1か所**: `NativeAPI.call` が、AI に渡る関数（`AIConsent.aiFunctions`: `suggestWords`・`detectScan`・`rankScanCandidates`・`suggestWordCandidates`・`generateCard`・`regenerateCardSection`・`reportAndFixSection`・`getJournalPrompts`・`correctMyJournal`）を、同意が無ければ送る前に `APIError.aiConsentRequired` で止める。画面はそれに合わせて、カメラのタブを止め、単語の「報告」「作り直す」と日記の「AIに添削してもらう」では同意の画面を出す。
 - **保存**: 端末の UserDefaults にアカウントごと（`aiConsent.<ユーザー ID>` に状態・版・日時）。送る内容や送り先を変えたら `AIConsent.currentVersion` を上げると、同意した人にも聞き直す（ポリシー 14章）。アカウントを削除すると消える。
-- **サーバ側（このリポジトリからは入れられない）**: サーバも同意を記録するべき（同意した日時とポリシーの版。Web 版でも同じ同意を出し、同意していない人の AI の関数をサーバで断る。checklist 8章 W1）。今はアプリの端末にしか残らないので、同じ人が Web 版や別の iPhone で使うと、そこでは同意の記録が無い。サーバに入ったら、アプリはログインのときにサーバの記録を読み、同意・取り消しをサーバに書くように変える。
+- **サーバの記録（アプリ側は入れた。Web 側はパッチ待ち）**: Web 側の変更は `docs/web-changes/`（Web の main `3fd364f` に当てる版。3番目のパッチが同意。仕様は Web の `docs/ios-spec/23-ai-consent.md`）。Web 版にも同じ同意の画面が入り、表 `ai_consents` に「誰が・どの版に・いつ同意し・いつ取り消したか」が残り、同意の無い人の AI の関数はサーバで断られる（checklist 8章 W1）。アプリ側で入れたこと:
+  - **見出し**: `/api/native-fn` へのすべての呼び出しに `AI-Consent-Version: 1`（`AIConsent.currentVersion`）を付ける（`NativeAPI.call`）。パッチの入ったサーバは、この見出しが付いた呼び出しだけ同意の記録を確かめる。
+  - **書く**: 「同意して始める」「同意しない」・設定での取り消しのたびに `recordAiConsent`（`{version, agreed}`）を送る。送れなかったら、端末にアカウントごとの「未送信」の印（`aiConsent.<ユーザー ID>` の `pending`）を残し、次の起動（ログインの後）で送り直す。
+  - **読む**: ログインしてプロフィールを読んだ後に `getAiConsent` を読み、端末とそろえる（画面は待たせない）。サーバが同意済み → 端末も同意済み（別の端末・Web で同意した人に聞き直さない）。この版より前に iPhone で同意し、サーバに記録が無い → その同意を送る。サーバで後から取り消されている（Web・別の端末）→ 端末も取り消す。端末とサーバの日時を比べて新しい方を取る。
+  - **断られた時**: AI の関数が 403 `AI_CONSENT_REQUIRED` を返したら `APIError.aiConsentRequired` と同じ扱い。まず端末の同意をサーバに送ってみて、届いたらもう一度だけ呼ぶ。届かなければ端末の同意を外し、同意の画面を出し直す。
+  - **今の本番サーバ（パッチ前）とも動く**: `recordAiConsent` / `getAiConsent` が無い（知らない関数・400・404・通信の失敗など）時は、何も表示せず端末の同意をそのまま使う（今までと同じ動き）。見出しは無視される。
+  - **デモ（UI テスト）**: `Services/Demo/DemoFunctions.swift` が 2つの関数に Web と同じ形で答える。
+  - **`check_native_contract.py`**: 2つの関数は Web の main にまだ無いので、`PENDING_WEB_DEPLOY`（パッチの場所つき）にだけ載せて通している。他の知らない関数は今までどおり落ちる。Web に入ったら警告が出るので、その2行を消す。
+- **オーナーがやること（スイッチ）**: Web のパッチを当てて Supabase の移行（`20261003140000_ai_consents.sql`）を流した後、**全員がこの版以降のアプリに上がってから**、Lovable の Secrets に **`AI_CONSENT_ENFORCE_NATIVE=true`** を入れる。入れると、見出しを付けない古いアプリからの呼び出しも、サーバの同意の記録が無ければ AI の関数が断られる（古いアプリは記録を送らないので、AI が使えなくなる）。入れる前は、古いアプリは今までどおり通る（古いアプリも端末の中で同意を確かめてから送っている）。
 
 ---
 
