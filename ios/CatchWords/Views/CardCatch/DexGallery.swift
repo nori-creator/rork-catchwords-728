@@ -270,8 +270,10 @@ struct DexSilhouette: View {
                 } else if let sf = item.symbol {
                     Image(systemName: sf).resizable().symbolVariant(.fill).scaledToFit()
                 } else {
-                    RoundedRectangle(cornerRadius: s * 0.22, style: .continuous)
-                        .frame(width: s * 0.78, height: s * 0.78)
+                    // .sil.ph: 52% of the square, radius 22%
+                    let ph = min(g.size.width, g.size.height) * 0.52
+                    RoundedRectangle(cornerRadius: ph * 0.22, style: .circular)
+                        .frame(width: ph, height: ph)
                 }
             }
             .foregroundStyle(DexInk.sil)
