@@ -455,16 +455,25 @@ nonisolated enum SupabaseDate {
             s.removeSubrange(dot..<tzStart)
         }
         if !(s.hasSuffix("Z") || s.contains("+") || s.dropFirst(10).contains("-")) { s += "Z" }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
+        return parser.date(from: s)
     }
 
     static func string(_ date: Date) -> String {
+        writer.string(from: date)
+    }
+
+    // One formatter each, made once: a new ISO8601DateFormatter per field cost ~1 ms × every date of a
+    // 5000-row history read, on the main thread. ISO8601DateFormatter is thread-safe.
+    nonisolated(unsafe) private static let parser: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    nonisolated(unsafe) private static let writer: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f.string(from: date)
-    }
+        return f
+    }()
 
     static var decoder: JSONDecoder {
         let d = JSONDecoder()
