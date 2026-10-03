@@ -74,6 +74,8 @@ enum NativeAPI {
             // An agreement made on this device that had not reached it yet is sent now and the call tried once
             // more; otherwise the consent screen asks again.
             guard await AIConsent.shared.serverRefused() else { throw APIError.aiConsentRequired }
+            // Withdrawn while that was settled: nothing more goes out.
+            guard AIConsent.shared.allowsSending() else { throw APIError.aiConsentRequired }
             return try await post(fn, data, timeout: timeout, asUser: asUser)
         }
     }
