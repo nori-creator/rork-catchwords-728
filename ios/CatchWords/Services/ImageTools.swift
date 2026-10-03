@@ -61,35 +61,8 @@ nonisolated enum CutoutService {
         guard let result = request.results?.first, !result.allInstances.isEmpty else { return nil }
 
         var instances = result.allInstances
-        if let point {
-            let mask = result.instanceMask
-            CVPixelBufferLockBaseAddress(mask, .readOnly)
-            defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
-            let w = CVPixelBufferGetWidth(mask)
-            let h = CVPixelBufferGetHeight(mask)
-            let x = min(w - 1, max(0, Int(point.x * CGFloat(w))))
-            let y = min(h - 1, max(0, Int(point.y * CGFloat(h))))
-            if let base = CVPixelBufferGetBaseAddress(mask) {
-                let row = CVPixelBufferGetBytesPerRow(mask)
-                func label(_ px: Int, _ py: Int) -> Int { Int(base.advanced(by: py * row + px).load(as: UInt8.self)) }
-                var hit = label(x, y)
-                // The AI's point can land just beside a thin or small subject: take the nearest
-                // instance within ~8% of the image instead of lifting every subject in the photo.
-                if hit == 0 {
-                    let reach = max(4, Int(Double(max(w, h)) * 0.08))
-                    let step = max(1, reach / 16)
-                    var best = Int.max
-                    for py in stride(from: max(0, y - reach), through: min(h - 1, y + reach), by: step) {
-                        for px in stride(from: max(0, x - reach), through: min(w - 1, x + reach), by: step) {
-                            let l = label(px, py)
-                            guard l != 0 else { continue }
-                            let d = (px - x) * (px - x) + (py - y) * (py - y)
-                            if d < best { best = d; hit = l }
-                        }
-                    }
-                }
-                if hit != 0, instances.contains(hit) { instances = IndexSet(integer: hit) }
-            }
+        if let point, let hit = nearestInstance(in: result.instanceMask, to: point), instances.contains(hit) {
+            instances = IndexSet(integer: hit)
         }
 
         let context = CIContext()
@@ -107,6 +80,125 @@ nonisolated enum CutoutService {
         if wantCropOnly { return Lift(cropped: croppedImage, full: croppedImage, photo: image) }
         guard let fullImage = render(false) else { return nil }
         return Lift(cropped: croppedImage, full: fullImage, photo: image)
+    }
+}
+
+extension CutoutService {
+    /// The instance label under `point` (0–1, top-left origin) in Vision's label mask, or the nearest
+    /// instance within ~8% of the image when the point lands just beside a thin or small subject.
+    nonisolated static func nearestInstance(in mask: CVPixelBuffer, to point: CGPoint) -> Int? {
+        CVPixelBufferLockBaseAddress(mask, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
+        let w = CVPixelBufferGetWidth(mask)
+        let h = CVPixelBufferGetHeight(mask)
+        guard w > 0, h > 0, let base = CVPixelBufferGetBaseAddress(mask) else { return nil }
+        let row = CVPixelBufferGetBytesPerRow(mask)
+        let x = min(w - 1, max(0, Int(point.x * CGFloat(w))))
+        let y = min(h - 1, max(0, Int(point.y * CGFloat(h))))
+        func label(_ px: Int, _ py: Int) -> Int { Int(base.advanced(by: py * row + px).load(as: UInt8.self)) }
+        var hit = label(x, y)
+        // The AI's point can land just beside a thin or small subject: take the nearest
+        // instance within ~8% of the image instead of lifting every subject in the photo.
+        if hit == 0 {
+            let reach = max(4, Int(Double(max(w, h)) * 0.08))
+            let step = max(1, reach / 16)
+            var best = Int.max
+            for py in stride(from: max(0, y - reach), through: min(h - 1, y + reach), by: step) {
+                for px in stride(from: max(0, x - reach), through: min(w - 1, x + reach), by: step) {
+                    let l = label(px, py)
+                    guard l != 0 else { continue }
+                    let d = (px - x) * (px - x) + (py - y) * (py - y)
+                    if d < best { best = d; hit = l }
+                }
+            }
+        }
+        return hit == 0 ? nil : hit
+    }
+
+    /// Card catch: ONE foreground-instance request per photo, reused for every object in it.
+    /// Nil when Vision finds no subject (or on the Simulator, where the model does not run).
+    nonisolated static func instanceMasks(from source: UIImage) async -> InstanceMasks? {
+        await Task.detached(priority: .userInitiated) { () -> InstanceMasks? in
+            let image = ImageTools.resized(source, maxSide: 1600)
+            guard let cg = image.cgImage else { return nil }
+            let request = VNGenerateForegroundInstanceMaskRequest()
+            let handler = VNImageRequestHandler(cgImage: cg, orientation: .up)
+            do { try handler.perform([request]) } catch { return nil }
+            guard let result = request.results?.first, !result.allInstances.isEmpty else { return nil }
+            return InstanceMasks(observation: result, handler: handler)
+        }.value
+    }
+}
+
+/// The result of `CutoutService.instanceMasks`: hit-test a point, and cut one instance out with its alpha
+/// bounding box (normalized to the photo, top-left origin) so the cut-out and its box always match.
+nonisolated final class InstanceMasks: @unchecked Sendable {
+    nonisolated struct Cut: @unchecked Sendable {
+        /// The subject on transparency, cropped exactly to `box`.
+        let image: UIImage
+        /// The opaque pixels' bounding box, 0–1 of the photo.
+        let box: CGRect
+    }
+
+    private let observation: VNInstanceMaskObservation
+    private let handler: VNImageRequestHandler
+    private let lock = NSLock()
+    private var cache: [Int: Cut] = [:]
+
+    init(observation: VNInstanceMaskObservation, handler: VNImageRequestHandler) {
+        self.observation = observation
+        self.handler = handler
+    }
+
+    func instance(near point: CGPoint) -> Int? {
+        guard let hit = CutoutService.nearestInstance(in: observation.instanceMask, to: point),
+              observation.allInstances.contains(hit) else { return nil }
+        return hit
+    }
+
+    /// Heavy (renders a full-size mask): call off the main thread.
+    func cut(instance label: Int) -> Cut? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let c = cache[label] { return c }
+        guard let masked = try? observation.generateMaskedImage(ofInstances: IndexSet(integer: label), from: handler,
+                                                               croppedToInstancesExtent: false) else { return nil }
+        let ci = CIImage(cvPixelBuffer: masked)
+        guard let full = CIContext().createCGImage(ci, from: ci.extent),
+              let px = Self.alphaBounds(full),
+              let cropped = full.cropping(to: px) else { return nil }
+        let w = CGFloat(full.width), h = CGFloat(full.height)
+        let c = Cut(image: UIImage(cgImage: cropped),
+                    box: CGRect(x: px.minX / w, y: px.minY / h, width: px.width / w, height: px.height / h))
+        cache[label] = c
+        return c
+    }
+
+    /// Pixel rect (top-left origin) of every pixel whose alpha is above a faint threshold.
+    private static func alphaBounds(_ image: CGImage) -> CGRect? {
+        let w = image.width, h = image.height
+        guard w > 0, h > 0 else { return nil }
+        var bytes = [UInt8](repeating: 0, count: w * h * 4)
+        let drawn: Bool = bytes.withUnsafeMutableBytes { raw -> Bool in
+            guard let ctx = CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return true
+        }
+        guard drawn else { return nil }
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            let rowStart = y * w * 4
+            for x in 0..<w where bytes[rowStart + x * 4 + 3] > 8 {
+                if x < minX { minX = x }
+                if x > maxX { maxX = x }
+                if y < minY { minY = y }
+                if y > maxY { maxY = y }
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return nil }
+        return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
     }
 }
 

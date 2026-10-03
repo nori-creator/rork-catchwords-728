@@ -71,7 +71,7 @@ nonisolated enum Category {
         "money": (.marks, "💰"), "document": (.marks, "📄"), "medicine": (.marks, "💊"), "other": (.marks, "✨"),
     ]
 
-    /// CATEGORY_META definition order (shelves are grouped by room in this order).
+    /// CATEGORY_META definition order (grouped by room in this order).
     static let orderedKeys: [String] = [
         "fruit", "vegetable", "drink", "food", "dessert",
         "vehicle", "transport", "building", "street", "sign", "shop",
@@ -98,18 +98,13 @@ nonisolated enum Category {
         "money": L("お金"), "document": L("書類"), "medicine": L("薬"), "other": L("その他"),
     ] }
 
-    /// The learner's own shelves and renamed built-in shelves (`user_shelves`), set by DexStore.
-    /// Built-in keys keep their room; new shelves live in the "mine" room.
-    nonisolated(unsafe) static var custom: [String: UserShelf] = [:]
-
     static func key(for raw: String?) -> String {
-        guard let raw, meta[raw] != nil || custom[raw] != nil else { return "other" }
+        guard let raw, meta[raw] != nil else { return "other" }
         return raw
     }
 
     static func label(for key: String?) -> String {
-        let k = Category.key(for: key)
-        return custom[k]?.label ?? labels[k] ?? L("その他")
+        labels[Category.key(for: key)] ?? L("その他")
     }
 
     static func room(for key: String?) -> Room {
@@ -118,15 +113,9 @@ nonisolated enum Category {
     }
 
     static func emoji(for key: String?) -> String {
-        if let key, let c = custom[key], !c.emoji.isEmpty { return c.emoji }
         guard let key, let m = meta[key] else { return "✨" }
         return m.emoji
     }
 
     static func isBuiltin(_ key: String) -> Bool { meta[key] != nil }
-
-    /// Built-in order, then the learner's own shelves (oldest first as loaded).
-    static var allOrderedKeys: [String] {
-        orderedKeys + custom.keys.filter { meta[$0] == nil }.sorted()
-    }
 }

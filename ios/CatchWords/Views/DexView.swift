@@ -2,22 +2,15 @@ import SwiftUI
 import MapKit
 
 enum DexMode: String, CaseIterable, Identifiable {
+    /// The prototype's #dxSeg: カード (slide) / 地図 / ギャラリー (category shadows) / リスト.
     case cover, map, grid, list
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .cover: L("スライド")
+        case .cover: L("カード")
         case .map: L("地図")
-        case .grid: L("棚")
+        case .grid: L("ギャラリー")
         case .list: L("リスト")
-        }
-    }
-    var icon: String {
-        switch self {
-        case .cover: "rectangle.split.3x1"
-        case .map: "map"
-        case .grid: "square.grid.2x2"
-        case .list: "list.bullet"
         }
     }
 }
@@ -86,69 +79,35 @@ struct DexView: View {
     @Environment(AppRouter.self) private var router
 
     @State private var mode: DexMode = .grid
-    @State private var categoryFilter: String?
+    /// One of the dex's 20 categories (DexCatalog), or nil for all.
+    @State private var categoryFilter: Int?
     @State private var dayFilter: Date?
     @State private var query: String = ""
     @State private var showCalendar: Bool = false
-    @State private var landedId: String?
-    @State private var impactTick: Int = 0
     @State private var openMenu: DexFilterMenu?
-    @Namespace private var modeBubble
-    @State private var shelfEdit: ShelfEdit?
-    @State private var deleteShelfKey: String?
-    @State private var moveError: String?
-    @State private var undoMove: UndoMove?
-
-    /// Create (key nil) or rename a shelf.
-    struct ShelfEdit: Identifiable {
-        let key: String?
-        var label: String
-        var emoji: String
-        var id: String { key ?? "new" }
-    }
-
-    private func editShelf(_ key: String) {
-        shelfEdit = ShelfEdit(key: key, label: Category.label(for: key), emoji: Category.emoji(for: key))
-    }
-
-    private func saveShelfEdit() {
-        guard let e = shelfEdit else { return }
-        let label = e.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty else { return }
-        let emoji = e.emoji.trimmingCharacters(in: .whitespacesAndNewlines)
-        Task {
-            do {
-                try await dex.saveShelf(key: e.key, label: String(label.prefix(24)), emoji: emoji.isEmpty ? "📦" : String(emoji.prefix(8)))
-                Haptics.success()
-            } catch {
-                Haptics.warning()
-                moveError = L("棚を保存できませんでした。もう一度お試しください。")
-            }
-        }
-    }
-
-    /// A renamed built-in shelf back to its own name and emoji (the server drops the rename).
-    private func restoreShelf(_ key: String) {
-        Task {
-            do {
-                try await dex.deleteShelf(key: key)
-                Haptics.success()
-            } catch {
-                Haptics.warning()
-                moveError = L("棚を保存できませんでした。もう一度お試しください。")
-            }
-        }
-    }
+    /// The header's height (the content starts under it).
+    @State private var headerHeight: CGFloat = 120
+    /// A landing word kept in its slot until the gallery is redrawn (the prototype's `.slot.fill` stays until
+    /// the next `renderDex`).
+    @State private var galleryHold: DexBook.Hold?
+    /// The gallery slot being landed on / pointed at (frame reporting, fillIn, blue ring).
+    @State private var focus: DexGalleryFocus?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var categoryCounts: [(key: String, count: Int)] {
-        var counts: [String: Int] = [:]
-        for s in dex.stickers { counts[s.categoryKey, default: 0] += 1 }
-        let order = Category.orderedKeys
+    private var lang: String { NativeAPI.targetLanguage }
+
+    private var categoryCounts: [(no: Int, count: Int)] {
+        var counts: [Int: Int] = [:]
+        for s in dex.stickers { counts[DexBook.category(of: s, lang: lang), default: 0] += 1 }
         return counts.map { ($0.key, $0.value) }.sorted {
-            $0.count != $1.count ? $0.count > $1.count
-                : (order.firstIndex(of: $0.key) ?? 99) < (order.firstIndex(of: $1.key) ?? 99)
+            $0.count != $1.count ? $0.count > $1.count : $0.no < $1.no
         }
+    }
+
+    /// A dex category's emoji and name, for the filter pill and its menu.
+    private func categoryTitle(_ no: Int) -> String {
+        let emoji = DexCatalog.categories.first { $0.no == no }?.emoji ?? "✨"
+        return "\(emoji) \(DexCatalog.label(no))"
     }
 
     private var dayCounts: [(day: Date, count: Int)] {
@@ -161,7 +120,7 @@ struct DexView: View {
     private var filtered: [Sticker] {
         let q = query.trimmingCharacters(in: .whitespaces)
         return dex.stickers.filter { s in
-            if let categoryFilter, s.categoryKey != categoryFilter { return false }
+            if let categoryFilter, DexBook.category(of: s, lang: lang) != categoryFilter { return false }
             if let dayFilter, !Calendar.current.isDate(s.takenAt, inSameDayAs: dayFilter) { return false }
             if !q.isEmpty {
                 let w = s.word
@@ -209,87 +168,115 @@ struct DexView: View {
                 .presentationBackground(Theme.background)
             }
         }
+        // A landing (card catch, re-encounter, a catch from elsewhere) always opens the gallery.
+        .onAppear { if router.landing != nil || router.landingStickerId != nil { showGallery() } }
+        .onChange(of: router.landing?.stickerId) { _, id in if id != nil { showGallery() } }
+        .onChange(of: router.landingStickerId) { _, id in if id != nil { showGallery() } }
+        .onChange(of: mode) { _, _ in
+            // Switching views redraws the gallery (`renderDex`): the landed slot settles into its place.
+            guard router.landing == nil else { return }
+            galleryHold = nil
+            focus = nil
+        }
     }
 
-    // MARK: Header (toolbar + search)
+    /// `S.view = "grid"`: the gallery, unfiltered.
+    private func showGallery() {
+        categoryFilter = nil
+        dayFilter = nil
+        query = ""
+        openMenu = nil
+        mode = .grid
+    }
+
+    // MARK: Header (the prototype's `.dex-head`: 図鑑, progress, #dxSeg)
 
     private var header: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                HStack(spacing: 2) {
-                    ForEach(DexMode.allCases) { m in
-                        Button {
-                            Haptics.selection()
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) { mode = m }
-                            router.advanceTour(from: .dexTypes, to: .dexOpen)
-                        } label: {
-                            Image(systemName: m.icon)
-                                .font(.system(size: 16, weight: .regular))
-                                .foregroundStyle(Theme.foreground.opacity(mode == m ? 1 : 0.7))
-                                .frame(width: 44, height: 38)
-                                .background {
-                                    if mode == m {
-                                        Capsule().fill(Theme.card)
-                                            .shadow(color: .black.opacity(0.1), radius: 4, y: 1)
-                                            .matchedGeometryEffect(id: "mode", in: modeBubble)
-                                    }
-                                }
-                        }
-                        .buttonStyle(PressableStyle(scale: 0.92))
-                        .accessibilityLabel(m.label)
-                    }
+            // .dex-head: h2 24 pt 900 + .dex-prog 12 pt 600 #5C646F; the round buttons on the right
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(L("図鑑"))
+                        .font(.system(size: 24, weight: .black))
+                        .foregroundStyle(Theme.foreground)
+                    Text(L("\(dex.stickers.count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
                 }
-                .padding(3)
-                .background(Theme.secondary, in: Capsule())
-                .tourAnchor(.dexModes)
-
                 Spacer(minLength: 0)
-
-                Button { toggleMenu(.category) } label: {
-                    pill(categoryFilter.map { "\(Category.emoji(for: $0)) \(Category.label(for: $0))" } ?? L("棚"),
-                         active: categoryFilter != nil, open: openMenu == .category)
+                DexModeSegment(mode: $mode) { m in
+                    Haptics.selection()
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) { mode = m }
+                    router.advanceTour(from: .dexTypes, to: .dexOpen)
                 }
-                .buttonStyle(PressableStyle(scale: 0.95))
-                .overlay(alignment: .topLeading) {
-                    if openMenu == .category { categoryMenu.offset(x: -30, y: 52) }
-                }
-                .zIndex(openMenu == .category ? 2 : 0)
-                Button { toggleMenu(.day) } label: {
-                    pill(dayFilter.map { JPDate.mmdd($0) } ?? L("日付"), active: dayFilter != nil, open: openMenu == .day)
-                }
-                .buttonStyle(PressableStyle(scale: 0.95))
-                .overlay(alignment: .topTrailing) {
-                    if openMenu == .day { dayMenu.offset(y: 52) }
-                }
-                .zIndex(openMenu == .day ? 2 : 0)
+                .tourAnchor(.dexModes)
             }
-            .zIndex(1)
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
-                TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
-                    .font(.system(size: 16))
-                    .foregroundStyle(Theme.foreground)
-                    .submitLabel(.search)
-                if !query.isEmpty {
-                    Button { query = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
-                    }
-                    .frame(width: 32, height: 32)
+            .padding(.horizontal, 2)
+            // The app's own search and filters (not in the prototype) stay for カード / 地図 / リスト, in one row.
+            if mode != .grid {
+                HStack(spacing: 8) {
+                    searchField
+                    filterPills
                 }
+                .zIndex(1)
             }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 46)
-            .background(Theme.card, in: Capsule())
-            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
         }
         .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.top, 4)
         .padding(.bottom, 10)
         .background {
             Rectangle().fill(.regularMaterial)
                 .mask(LinearGradient(colors: [.black, .black, .black.opacity(0)], startPoint: .top, endPoint: .bottom))
                 .ignoresSafeArea(edges: .top)
         }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { h in
+            headerHeight = h
+        }
+    }
+
+    private var filterPills: some View {
+        HStack(spacing: 8) {
+            Button { toggleMenu(.category) } label: {
+                pill(categoryFilter.map { categoryTitle($0) } ?? L("カテゴリー"),
+                     active: categoryFilter != nil, open: openMenu == .category)
+            }
+            .buttonStyle(PressableStyle(scale: 0.95))
+            .overlay(alignment: .topTrailing) {
+                if openMenu == .category { categoryMenu.offset(x: 30, y: 52) }
+            }
+            .zIndex(openMenu == .category ? 2 : 0)
+            Button { toggleMenu(.day) } label: {
+                pill(dayFilter.map { JPDate.mmdd($0) } ?? L("日付"), active: dayFilter != nil, open: openMenu == .day)
+            }
+            .buttonStyle(PressableStyle(scale: 0.95))
+            .overlay(alignment: .topTrailing) {
+                if openMenu == .day { dayMenu.offset(y: 52) }
+            }
+            .zIndex(openMenu == .day ? 2 : 0)
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
+            TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
+                .font(.system(size: 16))
+                .foregroundStyle(Theme.foreground)
+                .submitLabel(.search)
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
+                }
+                .frame(width: 32, height: 32)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 46)
+        .background(Theme.card, in: Capsule())
+        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
     }
 
     // MARK: Filter dropdowns
@@ -308,10 +295,9 @@ struct DexView: View {
             DexDropdownRow(title: L("すべて"), count: nil, isSelected: categoryFilter == nil) {
                 pick { categoryFilter = nil }
             }
-            ForEach(categoryCounts, id: \.key) { item in
-                DexDropdownRow(title: "\(Category.emoji(for: item.key)) \(Category.label(for: item.key))",
-                               count: item.count, isSelected: categoryFilter == item.key) {
-                    pick { categoryFilter = item.key }
+            ForEach(categoryCounts, id: \.no) { item in
+                DexDropdownRow(title: categoryTitle(item.no), count: item.count, isSelected: categoryFilter == item.no) {
+                    pick { categoryFilter = item.no }
                 }
             }
         }
@@ -369,102 +355,94 @@ struct DexView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dex.isLoading && !dex.hasLoaded {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if mode == .grid {
+            // The gallery always shows its shadows, even before the first catch (prototype renderDex grid).
+            gallery
         } else if dex.hasLoaded && filtered.isEmpty {
             EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty) { router.tab = .camera }
-                .padding(.top, 130)
+                .padding(.top, headerHeight + 12)
         } else {
             switch mode {
-            case .cover: DexCoverFlow(stickers: filtered) { router.detailSticker = $0 }.padding(.top, 118)
+            case .cover: DexCoverFlow(stickers: filtered) { router.detailSticker = $0 }.padding(.top, headerHeight)
             case .map: DexMapView(stickers: filtered) { router.detailSticker = $0 }
-            case .grid: shelves
+            case .grid: gallery
             case .list: list
             }
         }
     }
 
-    private var shelves: some View {
-        ScrollViewReader { proxy in
+    // MARK: ギャラリー (category shadows)
+
+    private var gallery: some View {
+        let numbers = DexNumbering.assign(dex.stickers, lang: lang, uid: SupabaseClient.shared.userId)
+        let sections = DexBook.sections(stickers: dex.stickers, numbers: numbers, lang: lang, hold: galleryHold)
+        return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 22) {
-                    Color.clear.frame(height: 108)
-                    ForEach(Category.allOrderedKeys, id: \.self) { key in
-                        let items = filtered.filter { $0.categoryKey == key }
-                        if !items.isEmpty {
-                            CategoryShelf(key: key, stickers: items, landedId: landedId, impactTick: impactTick,
-                                          onEdit: { editShelf(key) }, onDelete: Category.isBuiltin(key) ? nil : { deleteShelfKey = key },
-                                          onRestore: Category.isBuiltin(key) && Category.custom[key] != nil ? { restoreShelf(key) } : nil,
-                                          onDrop: { id in drop(id, on: key, proxy: proxy) }) { s in
-                                router.openDetail(s, zoom: true)   // the sheet zooms out of the tile
-                            }
-                        }
-                    }
-                    Button {
-                        shelfEdit = ShelfEdit(key: nil, label: "", emoji: "📦")
-                    } label: {
-                        Label(L("自分の棚を作る"), systemImage: "plus")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Theme.primaryInk)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Theme.primary.opacity(0.07), in: .rect(cornerRadius: 18, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(Theme.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
-                    }
-                    .buttonStyle(PressableStyle())
-                    Text(L("写真を長押ししたまま、別の棚へ動かせます。"))
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
-                        .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 120)
+                // .dex-body: padding 4 18 40 (each .dcat adds its 12 pt margin on top)
+                DexGallery(sections: sections, focus: focus, calm: reduceMotion,
+                           onTargetFrame: { frame in router.landing?.target = frame },
+                           onOpen: { router.openDetail($0, zoom: true) })
+                    .padding(.top, max(0, headerHeight - 8))
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 120)
             }
+            .scrollIndicators(.hidden)
             .refreshable { await dex.load() }
-            .alert(L("うまくいきませんでした"), isPresented: Binding(get: { moveError != nil }, set: { if !$0 { moveError = nil } })) {
-                Button(L("閉じる"), role: .cancel) { moveError = nil }
-            } message: {
-                Text(moveError ?? "")
-            }
-            .overlay(alignment: .bottom) {
-                if let u = undoMove { undoBanner(u) }
-            }
-            .onChange(of: router.landingStickerId) { _, id in
-                guard let id else { return }
-                land(id, proxy: proxy)
-            }
-            .onAppear {
-                if let id = router.landingStickerId { land(id, proxy: proxy) }
+            .onAppear { takeLanding(proxy) }
+            .onChange(of: router.landing?.stickerId) { _, _ in takeLanding(proxy) }
+            .onChange(of: router.landingStickerId) { _, _ in takeLanding(proxy) }
+            .onChange(of: router.landing?.fillStart) { _, start in
+                // pon! — the slot fills with the cut-out (`.slot.fill`)
+                guard let start, let l = router.landing, galleryHold?.stickerId == l.stickerId else { return }
+                galleryHold?.filled = true
+                focus = DexGalleryFocus(id: l.stickerId, fillStart: start)
             }
         }
-        .alert(shelfEdit?.key == nil ? L("自分の棚を作る") : L("棚の名前と絵文字"),
-               isPresented: Binding(get: { shelfEdit != nil }, set: { if !$0 { shelfEdit = nil } })) {
-            TextField(L("棚の名前（24文字まで）"), text: Binding(get: { shelfEdit?.label ?? "" }, set: { shelfEdit?.label = $0 }))
-            TextField(L("絵文字"), text: Binding(get: { shelfEdit?.emoji ?? "" }, set: { shelfEdit?.emoji = $0 }))
-            Button(L("キャンセル"), role: .cancel) { shelfEdit = nil }
-            Button(L("保存")) { saveShelfEdit(); shelfEdit = nil }
-        } message: {
-            Text(shelfEdit?.key == nil ? L("単語の詳細の「棚」から、語をこの棚に移せます。") : L("この棚の名前は、あなたの図鑑だけで変わります。"))
-        }
-        .confirmationDialog(L("この棚を消しますか？"), isPresented: Binding(get: { deleteShelfKey != nil }, set: { if !$0 { deleteShelfKey = nil } }),
-                            titleVisibility: .visible) {
-            Button(L("消す（語は元の棚に戻ります）"), role: .destructive) {
-                guard let key = deleteShelfKey else { return }
-                deleteShelfKey = nil
-                Task {
-                    do { try await dex.deleteShelf(key: key) } catch { moveError = L("棚を消せませんでした。もう一度お試しください。") }
-                }
+    }
+
+    /// A card-catch landing: hold the word as its shadow (or an empty square) and centre its slot (the
+    /// prototype sets `scrollTop` at once); CatchLandingController flies the star there. Any other landing
+    /// (re-encounter, a catch from search or scan): centre the word and light its slot.
+    private func takeLanding(_ proxy: ScrollViewProxy) {
+        if let l = router.landing, galleryHold?.stickerId != l.stickerId {
+            galleryHold = DexBook.Hold(stickerId: l.stickerId, filled: false)
+            focus = DexGalleryFocus(id: l.stickerId, fillStart: nil)
+            Task { await scroll(to: l.stickerId, proxy: proxy) }
+        } else if router.landing == nil, let id = router.landingStickerId {
+            router.landingStickerId = nil
+            galleryHold = nil
+            focus = nil
+            Task {
+                await scroll(to: id, proxy: proxy)
+                try? await Task.sleep(for: .milliseconds(200))
+                focus = DexGalleryFocus(id: id, fillStart: CCClock.now)
+                SoundService.shared.play(.landBounce)
+                HapticPatterns.shared.land()
             }
         }
+    }
+
+    /// Centre a word's slot: first its category card (the gallery is lazy), then the slot itself.
+    private func scroll(to id: String, proxy: ScrollViewProxy) async {
+        await Task.yield()
+        if let s = dex.sticker(id: id) {
+            proxy.scrollTo("dexcat-\(DexBook.category(of: s, lang: lang))", anchor: .center)
+            try? await Task.sleep(for: .milliseconds(30))
+        }
+        proxy.scrollTo(id, anchor: .center)
     }
 
     private var list: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                Color.clear.frame(height: 104)
-                ForEach(Category.allOrderedKeys, id: \.self) { key in
-                    let items = filtered.filter { $0.categoryKey == key }
+                Color.clear.frame(height: max(0, headerHeight - 14))
+                // Grouped by the dex's 20 categories, in their order.
+                ForEach(DexCatalog.categories) { cat in
+                    let items = filtered.filter { DexBook.category(of: $0, lang: lang) == cat.no }
                     if !items.isEmpty {
                         HStack(spacing: 6) {
-                            Text(Category.emoji(for: key)).font(.system(size: 17))
-                            Text(Category.label(for: key)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Text(cat.emoji).font(.system(size: 17))
+                            Text(cat.label).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
                             Spacer()
                             Text("\(items.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
                         }
@@ -484,237 +462,6 @@ struct DexView: View {
             .padding(.bottom, 120)
         }
         .refreshable { await dex.load() }
-    }
-
-    /// A word dragged onto another shelf: move it there, then let it drop into place like a new catch.
-    /// Moving it back to the AI's own shelf clears the learner's choice instead of pinning it.
-    private func drop(_ id: String, on key: String, proxy: ScrollViewProxy) -> Bool {
-        guard let s = dex.sticker(id: id), s.categoryKey != key else { return false }
-        let aiKey = Category.key(for: s.word?.categoryKey)
-        let before = s.shelfKey
-        Haptics.impact(.medium)
-        Task {
-            do {
-                try await dex.move(s, to: key == aiKey ? nil : key)
-                land(id, proxy: proxy)
-                showUndo(UndoMove(stickerId: id, previousShelf: before, word: s.word?.headword ?? "", shelf: key))
-            } catch {
-                Haptics.warning()
-                moveError = (error as? LocalizedError)?.errorDescription ?? L("通信できませんでした。電波のよい場所でもう一度お試しください。")
-            }
-        }
-        return true
-    }
-
-    /// 「X を Y に移しました ・ 元に戻す」 for a few seconds after a move (web DexCategoryDrag undo).
-    private func showUndo(_ u: UndoMove) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { undoMove = u }
-        Task {
-            try? await Task.sleep(for: .seconds(5))
-            withAnimation(.easeOut(duration: 0.25)) { if undoMove?.id == u.id { undoMove = nil } }
-        }
-    }
-
-    private func undo(_ u: UndoMove) {
-        withAnimation(.easeOut(duration: 0.2)) { undoMove = nil }
-        guard let s = dex.sticker(id: u.stickerId) else { return }
-        Task {
-            do {
-                try await dex.move(s, to: u.previousShelf)
-                Haptics.selection()
-            } catch {
-                Haptics.warning()
-                moveError = L("棚を移せませんでした。もう一度お試しください。")
-            }
-        }
-    }
-
-    private func undoBanner(_ u: UndoMove) -> some View {
-        HStack(spacing: 12) {
-            Text(L("「\(u.word)」を\(Category.label(for: u.shelf))に移しました"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white)
-                .lineLimit(2)
-            Spacer(minLength: 4)
-            Button(L("元に戻す")) { undo(u) }
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Theme.gold)
-                .frame(minHeight: 44)
-        }
-        .padding(.horizontal, 18)
-        .background(Theme.foreground.opacity(0.92), in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.bottom, 104)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
-
-    private func land(_ id: String, proxy: ScrollViewProxy) {
-        categoryFilter = nil
-        dayFilter = nil
-        query = ""
-        mode = .grid
-        router.landingStickerId = nil
-        Task {
-            try? await Task.sleep(for: .milliseconds(120))
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { proxy.scrollTo(id, anchor: .center) }
-            try? await Task.sleep(for: .milliseconds(200))
-            landedId = id
-            try? await Task.sleep(for: .milliseconds(420))
-            SoundService.shared.play(.landBounce)
-            HapticPatterns.shared.land()   // thud + two smaller bounces under the pon-pon-pon
-            impactTick += 1
-            try? await Task.sleep(for: .milliseconds(1400))
-            landedId = nil
-        }
-    }
-}
-
-/// One category shelf: "🏠 家   6" then a 3-column grid of photo tiles.
-struct CategoryShelf: View {
-    let key: String
-    let stickers: [Sticker]
-    let landedId: String?
-    let impactTick: Int
-    var onEdit: (() -> Void)? = nil
-    var onDelete: (() -> Void)? = nil
-    /// A built-in shelf the learner renamed: back to its own name (web CategorySheet 「元の名前に戻す」).
-    var onRestore: (() -> Void)? = nil
-    /// A word's id dropped on this shelf; returns whether it was taken.
-    var onDrop: ((String) -> Bool)? = nil
-    let onTap: (Sticker) -> Void
-
-    @State private var isTargeted = false
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text(Category.emoji(for: key)).font(.system(size: 17))
-                Text(Category.label(for: key)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
-                Spacer()
-                Text("\(stickers.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
-                if onEdit != nil || onDelete != nil {
-                    Menu {
-                        if let onEdit { Button(L("名前と絵文字を変える"), systemImage: "pencil", action: onEdit) }
-                        if let onRestore { Button(L("元の名前に戻す"), systemImage: "arrow.uturn.backward", action: onRestore) }
-                        if let onDelete { Button(L("この棚を消す"), systemImage: "trash", role: .destructive, action: onDelete) }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Theme.muted)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel(L("\(Category.label(for: key))の棚を編集"))
-                }
-            }
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(Array(stickers.enumerated()), id: \.element.id) { idx, s in
-                    let landedIndex = stickers.firstIndex { $0.id == landedId }
-                    let distance = landedIndex.map { abs($0 - idx) } ?? 99
-                    Button { onTap(s) } label: {
-                        DexCell(sticker: s, isLanding: s.id == landedId, neighborDistance: distance, impactTick: impactTick)
-                            .detailZoomSource(s.id)
-                    }
-                    .buttonStyle(PressableStyle(scale: 0.95))
-                    .accessibilityIdentifier("dex.cell")
-                    .draggable(s.id) {
-                        DexCell(sticker: s, isLanding: false, neighborDistance: 99, impactTick: 0)
-                            .frame(width: 96)
-                    }
-                    .id(s.id)
-                }
-            }
-        }
-        .padding(isTargeted ? 8 : 0)
-        .background {
-            if isTargeted {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Theme.primary.opacity(0.08))
-                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(Theme.primary.opacity(0.6), style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
-            }
-        }
-        .animation(.snappy(duration: 0.2), value: isTargeted)
-        .dropDestination(for: String.self) { ids, _ in
-            guard let id = ids.first, let onDrop else { return false }
-            return onDrop(id)
-        } isTargeted: { on in
-            if on && !isTargeted { Haptics.selection() }
-            isTargeted = on
-        }
-    }
-}
-
-/// Photo tile: rounded photo, memory badge top-right, headword on a soft dark fade at the bottom.
-struct DexCell: View {
-    @Environment(DexStore.self) private var dex
-    let sticker: Sticker
-    let isLanding: Bool
-    let neighborDistance: Int
-    let impactTick: Int
-
-    @State private var dropOffset: CGFloat = 0
-    @State private var squash: CGFloat = 1
-    @State private var shake: CGFloat = 0
-    @State private var glow: Bool = false
-
-    var body: some View {
-        let path = sticker.heroPath
-        Theme.secondary
-            .aspectRatio(0.92, contentMode: .fit)
-            .overlay {
-                StickerImage(path: path, url: dex.url(for: path),
-                             contentMode: path == sticker.cutoutImageUrl ? .fit : .fill)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottom) {
-                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 46)
-                    .overlay(alignment: .bottomLeading) {
-                        Text(sticker.word?.headword ?? "—")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .padding(.horizontal, 9)
-                            .padding(.bottom, 7)
-                    }
-            }
-            .clipShape(.rect(cornerRadius: 18, style: .continuous))
-            .overlay(alignment: .topTrailing) {
-                if let pct = dex.memoryPercent(for: sticker) {
-                    MemoryBadge(percent: pct).padding(6)
-                }
-            }
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(glow ? Theme.primary : .black.opacity(0.04), lineWidth: glow ? 2.5 : 1))
-            .shadow(color: glow ? Theme.primary.opacity(0.5) : .black.opacity(0.08), radius: glow ? 14 : 5, y: glow ? 0 : 3)
-            .scaleEffect(x: 2 - squash, y: squash, anchor: .bottom)
-            .offset(x: shake, y: dropOffset)
-            .onChange(of: isLanding) { _, landing in
-                guard landing else { return }
-                dropOffset = -220
-                glow = true
-                withAnimation(.easeIn(duration: 0.38)) { dropOffset = 0 }
-                Task {
-                    try? await Task.sleep(for: .milliseconds(380))
-                    withAnimation(.spring(response: 0.12, dampingFraction: 0.5)) { squash = 0.84 }
-                    try? await Task.sleep(for: .milliseconds(90))
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.45)) { squash = 1 }
-                    try? await Task.sleep(for: .milliseconds(1100))
-                    withAnimation(.easeOut(duration: 0.6)) { glow = false }
-                }
-            }
-            .onChange(of: impactTick) { _, _ in
-                let amp: CGFloat = neighborDistance == 1 ? 3.4 : (neighborDistance == 2 ? 1.2 : 0)
-                guard amp > 0 else { return }
-                Task {
-                    try? await Task.sleep(for: .milliseconds(40 * neighborDistance))
-                    withAnimation(.spring(response: 0.08, dampingFraction: 0.3)) { shake = amp }
-                    try? await Task.sleep(for: .milliseconds(70))
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.35)) { shake = 0 }
-                }
-            }
-            .accessibilityLabel(sticker.word?.headword ?? "")
     }
 }
 
@@ -1103,13 +850,4 @@ struct EmptyDexView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
     }
-}
-
-/// A shelf move that can still be undone.
-struct UndoMove: Equatable {
-    let id = UUID()
-    let stickerId: String
-    let previousShelf: String?
-    let word: String
-    let shelf: String
 }

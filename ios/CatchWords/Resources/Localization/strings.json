@@ -191,10 +191,6 @@
   "en": "{1} · {2} words",
   "zh-TW": "{1} {2} 個單字"
  },
- "{1} {2}（AIのおすすめ）": {
-  "en": "{1} {2} (AI pick)",
-  "zh-TW": "{1} {2}（AI 推薦）"
- },
  "{1}%おトク": {
   "en": "Save {1}%",
   "zh-TW": "省 {1}%"
@@ -215,6 +211,10 @@
   "en": "{1}, {2} words",
   "zh-TW": "{1}，{2} 個單字"
  },
+ "{1}つ見つかりました": {
+  "en": "Found {1}",
+  "zh-TW": "找到 {1} 個"
+ },
  "{1}で「{2}」をキャッチしました。覚えていますか？": {
   "en": "You caught “{2}” at {1}. Do you remember it?",
   "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
@@ -234,10 +234,6 @@
  "{1}の日記が保存されていません": {
   "en": "Your diary for {1} hasn't been saved",
   "zh-TW": "{1}的日記尚未儲存"
- },
- "{1}の棚を編集": {
-  "en": "Edit the {1} shelf",
-  "zh-TW": "編輯「{1}」書架"
  },
  "{1}を作っています": {
   "en": "Making {1}",
@@ -283,6 +279,10 @@
   "en": "{1} photos · {2} days",
   "zh-TW": "{1} 張、{2} 天"
  },
+ "{1}枚・影 {2} / 100": {
+  "en": "{1} cards · shadows {2} / 100",
+  "zh-TW": "{1} 張，影子 {2} / 100"
+ },
  "{1}語": {
   "en": "{1} words",
   "zh-TW": "{1} 個單字"
@@ -326,6 +326,10 @@
  "「{1}」を{2}に移しました": {
   "en": "Moved “{1}” to {2}",
   "zh-TW": "已將「{1}」移到{2}"
+ },
+ "「{1}」をどの言葉で集める？": {
+  "en": "Which word for “{1}”?",
+  "zh-TW": "「{1}」要用哪個詞收集？"
  },
  "「{1}」を外す": {
   "en": "Remove “{1}”",
@@ -431,6 +435,10 @@
   "en": "Shops",
   "zh-TW": "店家"
  },
+ "お菓子・パン": {
+  "en": "Sweets & Bread",
+  "zh-TW": "點心、麵包"
+ },
  "お金": {
   "en": "Money",
   "zh-TW": "金錢"
@@ -450,10 +458,6 @@
  "くわしい名前": {
   "en": "Specific name",
   "zh-TW": "具體名稱"
- },
- "ここで撮った思い出 {1}": {
-  "en": "Memories here: {1}",
-  "zh-TW": "在這裡拍下的回憶 {1}"
  },
  "ここで覚えた単語": {
   "en": "A word you learned here",
@@ -566,18 +570,6 @@
  "この条件の単語はまだありません": {
   "en": "No words match these filters yet",
   "zh-TW": "還沒有符合這些條件的單字"
- },
- "この棚の名前は、あなたの図鑑だけで変わります。": {
-  "en": "This shelf name changes only in your own collection.",
-  "zh-TW": "這個書架名稱只會在你的圖鑑中變更。"
- },
- "この棚を消しますか？": {
-  "en": "Delete this shelf?",
-  "zh-TW": "要刪除這個書架嗎？"
- },
- "この棚を消す": {
-  "en": "Delete this shelf",
-  "zh-TW": "刪除這個書架"
  },
  "この機能は Pro 限定です。": {
   "en": "This is a Pro feature.",
@@ -711,10 +703,6 @@
   "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
   "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
  },
- "ほかの棚": {
-  "en": "Other shelves",
-  "zh-TW": "其他書架"
- },
  "ほかの言い方": {
   "en": "Other ways to say it",
   "zh-TW": "其他說法"
@@ -751,6 +739,10 @@
   "en": "No wordbooks yet",
   "zh-TW": "還沒有單字本"
  },
+ "まだ見つけていない言葉 {1}": {
+  "en": "Not found yet: {1}",
+  "zh-TW": "還沒找到的詞：{1}"
+ },
  "まだ過去の日記はありません": {
   "en": "No past diary entries yet",
   "zh-TW": "還沒有過去的日記"
@@ -766,6 +758,10 @@
  "もう一度": {
   "en": "Try again",
   "zh-TW": "再試一次"
+ },
+ "もう一度発音を聞く": {
+  "en": "Listen again",
+  "zh-TW": "再聽一次發音"
  },
  "もう一度覚えよう": {
   "en": "Let's learn it again",
@@ -891,6 +887,10 @@
   "en": "Pick from calendar",
   "zh-TW": "從月曆選擇"
  },
+ "カード": {
+  "en": "Cards",
+  "zh-TW": "卡片"
+ },
  "カードが見つかりません": {
   "en": "Card not found.",
   "zh-TW": "找不到卡片。"
@@ -898,6 +898,10 @@
  "カードの形が整いませんでした。もう一度お試しください。": {
   "en": "The card came back incomplete. Please try again.",
   "zh-TW": "卡片內容不完整，請再試一次。"
+ },
+ "カードを動かしてみよう・上にはじいて図鑑へ": {
+  "en": "Move the card · flick it up into your collection",
+  "zh-TW": "動動卡片，往上一撥就收進圖鑑"
  },
  "カード生成に失敗しました": {
   "en": "Couldn't build the card",
@@ -918,6 +922,10 @@
  "キャンセル": {
   "en": "Cancel",
   "zh-TW": "取消"
+ },
+ "ギャラリー": {
+  "en": "Gallery",
+  "zh-TW": "圖鑑牆"
  },
  "グラフを指でなぞると、その日の記憶率が見られます": {
   "en": "Trace the graph with your finger to see your memory on that day",
@@ -999,6 +1007,14 @@
   "en": "Sports",
   "zh-TW": "運動"
  },
+ "スポーツ・遊び": {
+  "en": "Sports & Play",
+  "zh-TW": "運動、遊戲"
+ },
+ "スマホ・パソコン": {
+  "en": "Phones & Computers",
+  "zh-TW": "手機、電腦"
+ },
  "スライド": {
   "en": "Slides",
   "zh-TW": "滑動"
@@ -1006,6 +1022,10 @@
  "ズーム {1}倍": {
   "en": "Zoom {1}×",
   "zh-TW": "縮放 {1} 倍"
+ },
+ "タップして選んでください": {
+  "en": "Tap one to choose it",
+  "zh-TW": "點一下來選擇"
  },
  "タップで切り替え。並べ替えは右の取っ手を使います": {
   "en": "Tap to toggle. Use the handle on the right to reorder",
@@ -1559,10 +1579,6 @@
   "en": "Couldn't load the photo.",
   "zh-TW": "無法讀取照片。"
  },
- "写真を長押ししたまま、別の棚へ動かせます。": {
-  "en": "Press and hold a photo to drag it to another shelf.",
-  "zh-TW": "長按照片，就能拖到別的書架。"
- },
  "切り抜いています": {
   "en": "Cutting out",
   "zh-TW": "正在去背"
@@ -1679,10 +1695,6 @@
   "en": "This photo becomes the cover on the word's page.",
   "zh-TW": "在單字詳細頁用這張照片當封面。"
  },
- "単語の詳細の「棚」から、語をこの棚に移せます。": {
-  "en": "Move words to this shelf from “Shelf” on a word's page.",
-  "zh-TW": "可以從單字詳細頁的「書架」把單字移到這個書架。"
- },
  "単語をひらく": {
   "en": "Open the word",
   "zh-TW": "打開單字"
@@ -1795,10 +1807,6 @@
   "en": "Learning Taiwanese Mandarin",
   "zh-TW": "正在學台灣華語"
  },
- "右に思い出 {1}": {
-  "en": "Memories to the right: {1}",
-  "zh-TW": "右邊還有回憶 {1}"
- },
  "名前": {
   "en": "Name",
   "zh-TW": "名稱"
@@ -1826,6 +1834,10 @@
  "図鑑で見る": {
   "en": "Open in Dex",
   "zh-TW": "在圖鑑查看"
+ },
+ "図鑑に入れる": {
+  "en": "Add to collection",
+  "zh-TW": "放進圖鑑"
  },
  "図鑑に追加": {
   "en": "Add to collection",
@@ -1955,6 +1967,10 @@
   "en": "Furniture",
   "zh-TW": "家具"
  },
+ "家具・インテリア": {
+  "en": "Furniture & Interior",
+  "zh-TW": "家具、室內擺設"
+ },
  "家族": {
   "en": "Family",
   "zh-TW": "家人"
@@ -1971,10 +1987,6 @@
   "en": "Mountains",
   "zh-TW": "山"
  },
- "左に思い出 {1}": {
-  "en": "Memories to the left: {1}",
-  "zh-TW": "左邊還有回憶 {1}"
- },
  "年額 ¥7,800 / 月額 ¥980（予定）": {
   "en": "¥7,800/year · ¥980/month (planned)",
   "zh-TW": "年費 ¥7,800 / 月費 ¥980（預定）"
@@ -1986,6 +1998,10 @@
  "建物": {
   "en": "Buildings",
   "zh-TW": "建築"
+ },
+ "建物・お店": {
+  "en": "Buildings & Shops",
+  "zh-TW": "建築、商店"
  },
  "建物・街": {
   "en": "City & architecture",
@@ -2147,6 +2163,10 @@
   "en": "Capture it. Understand it. Recall it.\nBuild your vocabulary from everyday life.",
   "zh-TW": "拍下來、了解意思、再想起來。\n從生活中累積你的單字。"
  },
+ "撮り直す": {
+  "en": "Retake",
+  "zh-TW": "重拍"
+ },
  "撮影": {
   "en": "Take photo",
   "zh-TW": "拍照"
@@ -2206,6 +2226,14 @@
  "文房具": {
   "en": "Stationery",
   "zh-TW": "文具"
+ },
+ "文房具・本": {
+  "en": "Stationery & Books",
+  "zh-TW": "文具、書"
+ },
+ "料理・屋台": {
+  "en": "Dishes & Street Food",
+  "zh-TW": "料理、小吃"
  },
  "新しい単語をキャッチすると、10分後に最初の復習が出ます。": {
   "en": "Catch a new word and its first review comes up 10 minutes later.",
@@ -2411,6 +2439,10 @@
   "en": "Fruit",
   "zh-TW": "水果"
  },
+ "果物・野菜": {
+  "en": "Fruit & Vegetables",
+  "zh-TW": "水果、蔬菜"
+ },
  "案内に戻る": {
   "en": "Back to the guide",
   "zh-TW": "回到導覽"
@@ -2423,41 +2455,13 @@
   "en": "These are guide settings. When you finish the guide, they carry over to your account.",
   "zh-TW": "這是導覽中的設定。完成導覽後會直接套用到你的帳號。"
  },
- "棚": {
-  "en": "Shelf",
-  "zh-TW": "書架"
- },
- "棚の名前と絵文字": {
-  "en": "Shelf name and emoji",
-  "zh-TW": "書架名稱和表情符號"
- },
- "棚の名前（24文字まで）": {
-  "en": "Shelf name (up to 24 characters)",
-  "zh-TW": "書架名稱（最多 24 個字）"
- },
- "棚を保存できませんでした。もう一度お試しください。": {
-  "en": "Couldn't save the shelf. Please try again.",
-  "zh-TW": "無法儲存書架，請再試一次。"
- },
- "棚を変える。いまは{1}": {
-  "en": "Change shelf. Currently {1}",
-  "zh-TW": "更換書架。目前是{1}"
- },
- "棚を消せませんでした。もう一度お試しください。": {
-  "en": "Couldn't delete the shelf. Please try again.",
-  "zh-TW": "無法刪除書架，請再試一次。"
- },
- "棚を移せませんでした": {
-  "en": "Couldn't move it to that shelf",
-  "zh-TW": "無法移到那個書架"
- },
- "棚を移せませんでした。もう一度お試しください。": {
-  "en": "Couldn't move it to that shelf. Please try again.",
-  "zh-TW": "無法移到那個書架，請再試一次。"
- },
  "植物": {
   "en": "Plants",
   "zh-TW": "植物"
+ },
+ "植物・花": {
+  "en": "Plants & Flowers",
+  "zh-TW": "植物、花"
  },
  "検出に失敗しました": {
   "en": "Detection failed",
@@ -2519,6 +2523,10 @@
   "en": "Zhuyin",
   "zh-TW": "注音"
  },
+ "洗面・日用品": {
+  "en": "Toiletries & Daily Goods",
+  "zh-TW": "盥洗、日用品"
+ },
  "活用": {
   "en": "Word forms",
   "zh-TW": "詞形變化"
@@ -2534,10 +2542,6 @@
  "消す": {
   "en": "Delete",
   "zh-TW": "刪除"
- },
- "消す（語は元の棚に戻ります）": {
-  "en": "Delete (words go back to their original shelf)",
-  "zh-TW": "刪除（單字會回到原本的書架）"
  },
  "消せませんでした": {
   "en": "Couldn't delete it",
@@ -2703,6 +2707,10 @@
   "en": "Sky",
   "zh-TW": "天空"
  },
+ "空・自然": {
+  "en": "Sky & Nature",
+  "zh-TW": "天空、大自然"
+ },
  "答えを確かめたら「次へ」。": {
   "en": "Check the answer, then tap “Next”.",
   "zh-TW": "確認答案後，按「下一步」。"
@@ -2750,10 +2758,6 @@
  "自分の写真を手がかりに4択で思い出す。単語だけの暗記より、出会った場面から思い出せます。": {
   "en": "Use your photo as a clue in a four-choice review. Recall the moment behind the word.",
   "zh-TW": "看自己的照片做四選一，從相遇的場景想起單字，不用死背字表。"
- },
- "自分の棚を作る": {
-  "en": "Create your own shelf",
-  "zh-TW": "建立自己的書架"
  },
  "自動": {
   "en": "Auto",
@@ -2890,6 +2894,10 @@
  "見せる": {
   "en": "Show",
   "zh-TW": "顯示"
+ },
+ "見つかりませんでした": {
+  "en": "Nothing found",
+  "zh-TW": "沒有找到"
  },
  "見つかりませんでした。": {
   "en": "It couldn't be found.",
@@ -3059,6 +3067,10 @@
   "en": "Wear",
   "zh-TW": "穿戴"
  },
+ "身の回り": {
+  "en": "Everyday things",
+  "zh-TW": "生活用品"
+ },
  "辞書と照合しています": {
   "en": "Matching the dictionary…",
   "zh-TW": "正在跟辭典比對"
@@ -3126,6 +3138,10 @@
  "過去形": {
   "en": "Past",
   "zh-TW": "過去式"
+ },
+ "道・街の物": {
+  "en": "Streets & Street Things",
+  "zh-TW": "道路、街上的東西"
  },
  "道具": {
   "en": "Tools",
@@ -3199,6 +3215,10 @@
   "en": "Shoes",
   "zh-TW": "鞋子"
  },
+ "靴・バッグ・小物": {
+  "en": "Shoes, Bags & Accessories",
+  "zh-TW": "鞋子、包包、配件"
+ },
  "音と手ざわり": {
   "en": "Sound & haptics",
   "zh-TW": "聲音與觸感"
@@ -3239,9 +3259,17 @@
   "en": "Food & drink",
   "zh-TW": "美食"
  },
+ "食器・台所": {
+  "en": "Tableware & Kitchen",
+  "zh-TW": "餐具、廚房"
+ },
  "飲み物": {
   "en": "Drinks",
   "zh-TW": "飲料"
+ },
+ "飲み物・食べ物": {
+  "en": "Food & drink",
+  "zh-TW": "飲料與食物"
  },
  "高低アクセント": {
   "en": "Pitch accent",

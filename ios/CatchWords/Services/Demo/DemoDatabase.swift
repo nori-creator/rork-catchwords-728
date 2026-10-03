@@ -5,7 +5,7 @@ import Foundation
 /// learning language given with `-uiDemo` is written on first use. Nothing is kept across launches.
 ///
 /// Tables use the column names the app reads: profiles, stickers, words, reviews, review_history,
-/// journal_entries, wordbooks, wordbook_entries, user_shelves, encounters (photos of re-encounters),
+/// journal_entries, wordbooks, wordbook_entries, encounters (photos of re-encounters),
 /// dictionary_entries (empty). Dates are ISO 8601 strings in `SupabaseDate.string` form, so a plain
 /// string comparison orders them.
 nonisolated final class DemoDatabase: @unchecked Sendable {
@@ -227,7 +227,7 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
             s["lng"] = (DJ.num(place["lng"]) ?? 0) - Double(i) * 0.0011
             s["taken_at"] = DJ.iso(taken)
             s["created_at"] = DJ.iso(taken)
-            s["shelf_key"] = i == 1 ? ("mine-favorites" as Any) : (NSNull() as Any)
+            s["shelf_key"] = NSNull()
             s["hero_role"] = NSNull()
             s["placeholder_credit"] = NSNull()
             s["placeholder_image_url"] = NSNull()
@@ -319,26 +319,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
                 insert("encounters", e)
             }
         }
-
-        // Shelves: one of the learner's own, one renamed built-in shelf.
-        var mine: [String: Any] = [:]
-        mine["key"] = "mine-favorites"
-        mine["label"] = text(common["shelf_favorites"], r)
-        mine["emoji"] = "⭐"
-        mine["room_key"] = "mine"
-        mine["room_label"] = text(common["shelf_favorites"], r)
-        mine["user_id"] = uid
-        mine["created_at"] = DJ.iso(now.addingTimeInterval(-20 * 86_400))
-        insert("user_shelves", mine)
-        var renamed: [String: Any] = [:]
-        renamed["key"] = "fruit"
-        renamed["label"] = text(common["shelf_fruit"], r)
-        renamed["emoji"] = "🍑"
-        renamed["room_key"] = NSNull()
-        renamed["room_label"] = NSNull()
-        renamed["user_id"] = uid
-        renamed["created_at"] = DJ.iso(now.addingTimeInterval(-19 * 86_400))
-        insert("user_shelves", renamed)
 
         // One diary entry with its correction, three days ago.
         let journal = DJ.dict(pack["journal"])
@@ -528,7 +508,7 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
     private func withDefaults(_ table: String, _ item: [String: Any]) -> [String: Any] {
         var row = item
         let now = DJ.now()
-        if DJ.isNull(row["id"]) && table != "user_shelves" { row["id"] = DJ.uuid() }
+        if DJ.isNull(row["id"]) { row["id"] = DJ.uuid() }
         if DJ.isNull(row["created_at"]) { row["created_at"] = now }
         if !["words", "dictionary_entries", "profiles"].contains(table), DJ.isNull(row["user_id"]) { row["user_id"] = Self.userId }
         switch table {

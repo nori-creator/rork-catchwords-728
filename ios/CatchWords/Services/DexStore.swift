@@ -86,7 +86,6 @@ final class DexStore {
         do {
             let data = try await selectStickers { "stickers?select=\($0)&order=taken_at.desc&limit=500" }
             let rows = try SupabaseDate.decoder.decode([Sticker].self, from: data)
-            await loadShelves()
             await loadAlbumHidden()
             await loadAlbumPlacements()
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
@@ -163,7 +162,7 @@ final class DexStore {
     // MARK: - Save a catch
 
     /// Saves a new catch through the web's own `saveSticker` (stickers.functions.ts): the same
-    /// word upsert, extras merge (service role), new-shelf proposal, first-catch event and
+    /// word upsert, extras merge (service role), first-catch event and
     /// duplicate guard as the web. Photos are uploaded first, in parallel; a failed cutout or
     /// selfie never blocks the catch.
     func save(_ draft: CatchDraft) async throws -> SaveOutcome {
@@ -200,7 +199,8 @@ final class DexStore {
         let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
         let data: [String: Any] = [
             "word": word,
-            "new_shelf": orNull(raw?["new_shelf"]?.foundation),
+            // Custom shelves are gone from the app (owner 2026-10-02): never ask the server to make one.
+            "new_shelf": NSNull(),
             "language": NativeAPI.targetLanguage,
             "object_path": orNull(obj),
             "cutout_path": orNull(cut),
@@ -604,18 +604,6 @@ final class DexStore {
         return true
     }
 
-    // MARK: - Shelves (web categories.functions.ts)
-
-    /// The learner's shelves (`user_shelves`, own rows via RLS). Feeds `Category.custom`.
-    var shelves: [UserShelf] = []
-
-    func loadShelves() async {
-        guard let data = try? await client.rest("GET", "user_shelves?select=key,label,emoji,room_key,room_label&order=created_at.asc"),
-              let rows = try? JSONDecoder().decode([UserShelf].self, from: data) else { return }
-        shelves = rows
-        Category.custom = Dictionary(rows.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
-    }
-
     /// Which picture shows this word on its detail page (web setStickerHeroRole; nil = default order).
     func setHeroRole(_ sticker: Sticker, role: String?) async throws {
         struct Saved: Decodable { let saved: Bool }
@@ -628,46 +616,6 @@ final class DexStore {
             s.heroRole = role
             return s
         }
-    }
-
-    /// Moves one word to another shelf (`setStickerCategory`). nil = back to the AI's category.
-    func move(_ sticker: Sticker, to key: String?) async throws {
-        _ = try await NativeAPI.call("setStickerCategory", ["sticker_id": sticker.id, "key": key.map { $0 as Any } ?? NSNull()])
-        replace(sticker.id) { old in
-            var s = old
-            s.shelfKey = key
-            return s
-        }
-    }
-
-    /// Creates a shelf (key nil) or renames one, built-in or the learner's own (`saveMyCategory`).
-    @discardableResult
-    func saveShelf(key: String?, label: String, emoji: String) async throws -> String {
-        struct Saved: Decodable { let key: String }
-        var data: [String: Any] = [
-            "label": label, "emoji": emoji, "room_label": label,
-            "existing": Array(Set(Category.allOrderedKeys)),
-        ]
-        if let key { data["key"] = key }
-        let saved = try await NativeAPI.call("saveMyCategory", data, as: Saved.self)
-        await loadShelves()
-        return saved.key
-    }
-
-    /// Deletes the learner's shelf; its words go back to their AI category (`deleteMyCategory`).
-    /// For a built-in shelf this only removes the rename.
-    func deleteShelf(key: String) async throws {
-        _ = try await NativeAPI.call("deleteMyCategory", ["key": key])
-        if !Category.isBuiltin(key) {
-            for s in stickers where s.shelfKey == key {
-                replace(s.id) { old in
-                    var n = old
-                    n.shelfKey = nil
-                    return n
-                }
-            }
-        }
-        await loadShelves()
     }
 
     /// Re-reads one sticker (and its word) after the server changed it.

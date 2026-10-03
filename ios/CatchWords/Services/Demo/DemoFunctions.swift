@@ -81,11 +81,6 @@ nonisolated extension DemoDatabase {
             let role = DJ.orNull(DJ.str(data["hero_role"]))
             guard updateSticker(sid, { s in s["hero_role"] = role }) else { return notFound() }
             result = ["saved": true]
-        case "setStickerCategory":
-            let sid = DJ.str(data["sticker_id"]) ?? ""
-            let key = DJ.orNull(DJ.str(data["key"]))
-            guard updateSticker(sid, { s in s["shelf_key"] = key }) else { return notFound() }
-            result = ["ok": true]
         case "deleteSticker":
             let sid = DJ.str(data["sticker_id"]) ?? ""
             let gone = remove("stickers") { DJ.str($0["id"]) == sid }
@@ -100,16 +95,6 @@ nonisolated extension DemoDatabase {
             if hidden { albumHidden.append(sid) }
             result = ["saved": true]
         case "saveAlbumLayout": result = saveAlbumLayout(DJ.list(data["items"]))
-
-        // Shelves
-        case "saveMyCategory": result = saveShelf(data)
-        case "deleteMyCategory":
-            let key = DJ.str(data["key"]) ?? ""
-            remove("user_shelves") { DJ.str($0["key"]) == key }
-            if !Category.isBuiltin(key) {
-                update("stickers", where: { DJ.str($0["shelf_key"]) == key }) { s in s["shelf_key"] = NSNull() }
-            }
-            result = ["ok": true]
 
         // Review, stats, journal, account
         case "gradeReview": return gradeReview(data)
@@ -626,30 +611,6 @@ nonisolated extension DemoDatabase {
             if ok { saved += 1 }
         }
         return ["saved": saved]
-    }
-
-    private func saveShelf(_ data: [String: Any]) -> [String: Any] {
-        let key = DJ.str(data["key"]) ?? ("mine-" + String(DJ.uuid().prefix(8)))
-        let label = DJ.str(data["label"]) ?? ""
-        let emoji = DJ.str(data["emoji"]) ?? ""
-        let builtin = Category.isBuiltin(key)
-        let changed = update("user_shelves", where: { DJ.str($0["key"]) == key }) { row in
-            row["label"] = label
-            row["emoji"] = emoji
-            row["room_label"] = builtin ? (NSNull() as Any) : DJ.orNull(DJ.str(data["room_label"]) ?? label)
-        }
-        if changed.isEmpty {
-            var row: [String: Any] = [:]
-            row["key"] = key
-            row["label"] = label
-            row["emoji"] = emoji
-            row["room_key"] = builtin ? (NSNull() as Any) : ("mine" as Any)
-            row["room_label"] = builtin ? (NSNull() as Any) : DJ.orNull(DJ.str(data["room_label"]) ?? label)
-            row["user_id"] = Self.userId
-            row["created_at"] = DJ.now()
-            insert("user_shelves", row)
-        }
-        return ["key": key]
     }
 
     // MARK: - Review and stats

@@ -337,7 +337,8 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
     var word: Word?
     var lat: Double? = nil
     var lng: Double? = nil
-    /// The shelf the learner put this word on (`stickers.shelf_key`); nil = the AI's category.
+    /// `stickers.shelf_key`, read as the server keeps it (the app no longer moves words or makes shelves).
+    /// Only a built-in category key counts (`builtinShelfKey`); anything else falls back to the AI's category.
     var shelfKey: String? = nil
     /// The picture the learner chose for this word (`stickers.hero_role`: object / cutout / selfie).
     var heroRole: String? = nil
@@ -386,9 +387,10 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         default: cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         }
     }
-    var room: Room { Category.room(for: shelfKey ?? word?.categoryKey) }
-    /// Where the word sits in the dex: the learner's shelf first, else the AI's category (web `effectiveShelf`).
-    var categoryKey: String { Category.key(for: shelfKey ?? word?.categoryKey) }
+    var room: Room { Category.room(for: builtinShelfKey ?? word?.categoryKey) }
+    /// The word's category: a built-in key kept in `shelf_key` first, else the AI's category.
+    var categoryKey: String { Category.key(for: builtinShelfKey ?? word?.categoryKey) }
+    private var builtinShelfKey: String? { shelfKey.flatMap { Category.isBuiltin($0) ? $0 : nil } }
 }
 
 /// Row of `reviews` (SM-2 state) — read only here; the web app owns the schedule.
@@ -469,7 +471,7 @@ nonisolated struct Candidate: Codable, Sendable, Identifiable, Hashable {
     var register: String?
     /// Which object in the photo; other names of the same object share it.
     var group: Int?
-    /// Shelf hint passed to `generateCard` as `hintCategory`.
+    /// Category hint passed to `generateCard` as `hintCategory`.
     var categoryKey: String?
 
     enum CodingKeys: String, CodingKey {
@@ -552,7 +554,7 @@ nonisolated struct CardDetails: Codable, Sendable {
     var exampleTranslation: String
     var extras: WordExtras
     /// The whole card exactly as `generateCard` returned it. Saving sends this back
-    /// (word fields, every extras key, new_shelf), so nothing the web generated is lost.
+    /// (word fields, every extras key), so nothing the web generated is lost.
     var raw: JSONValue?
 
     enum CodingKeys: String, CodingKey {
@@ -621,19 +623,4 @@ nonisolated struct OwnedWord: Codable, Sendable, Hashable {
     }
 
     var takenDate: Date? { SupabaseDate.parse(takenAt) }
-}
-
-/// Row of `user_shelves`: a shelf the learner made or renamed (web categories.functions.ts).
-nonisolated struct UserShelf: Codable, Sendable, Hashable {
-    let key: String
-    let label: String
-    let emoji: String
-    let roomKey: String?
-    let roomLabel: String?
-
-    enum CodingKeys: String, CodingKey {
-        case key, label, emoji
-        case roomKey = "room_key"
-        case roomLabel = "room_label"
-    }
 }
