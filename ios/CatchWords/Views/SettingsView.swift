@@ -465,8 +465,10 @@ struct SettingsView: View {
     private func deleteAccount() async {
         isDeleting = true
         deleteError = nil
+        let deletedId = SupabaseClient.shared.userId
         do {
             try await profile.deleteAccount()
+            await AccountCleanup.accountDeleted(userId: deletedId)
             isDeleting = false
             auth.signOut()
         } catch {

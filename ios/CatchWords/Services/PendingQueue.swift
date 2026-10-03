@@ -59,6 +59,14 @@ final class PendingQueue {
         save(all().filter { $0.id != id })
     }
 
+    /// Account deleted: every waiting photo goes with it.
+    func removeAll() {
+        for item in all() {
+            try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(item.id).jpg"))
+        }
+        try? FileManager.default.removeItem(at: indexURL)
+    }
+
     private func save(_ items: [PendingCatch]) {
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: indexURL, options: .atomic)

@@ -675,6 +675,7 @@ final class DexStore {
         readerMeanings = [:]
         signed = [:]
         hasLoaded = false
+        pending = PendingQueue.shared.all()  // emptied when the account was deleted
     }
 
     nonisolated static func enc(_ s: String) -> String {

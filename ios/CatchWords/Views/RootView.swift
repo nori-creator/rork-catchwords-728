@@ -58,6 +58,8 @@ struct RootView: View {
             if phase == .signedOut {
                 dex.reset()
                 diary.reset()
+                plan.reset()
+                Task { await AccountCleanup.signedOut() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
