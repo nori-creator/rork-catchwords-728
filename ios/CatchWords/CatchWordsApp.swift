@@ -63,6 +63,7 @@ struct CatchWordsApp: App {
                 .environment(plan)
                 .environment(profile)
                 .environment(diary)
+                .statusBarRoot()  // status-bar text colour per screen (inside the theme's colour scheme)
                 .preferredColorScheme(scheme)
                 .tint(Theme.primary)
                 .widgetBridge(dex: dex)  // home/lock-screen widgets: snapshot upkeep + catchwords:// links

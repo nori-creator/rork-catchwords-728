@@ -1519,6 +1519,7 @@ struct WordDetailView: View {
                 .fullScreenCover(isPresented: $takingSelfie) {
                     SelfieCamera { image in Task { await addSelfie(image) } }
                         .ignoresSafeArea()
+                        .statusBarTone(.hidden)
                 }
             }
             HStack {

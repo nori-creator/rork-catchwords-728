@@ -143,6 +143,7 @@ struct HomeView: View {
                 openMonth = nil
                 router.detailSticker = s
             }
+            .statusBarTone(.dark)
         }
         .fullScreenCover(item: Binding(get: { memorialOpen.map(MemorialDay.init) }, set: { memorialOpen = $0?.n })) { m in
             MemorialAlbumView(n: m.n, words: dex.stickers.count, picks: Milestone.highlights(dex.stickers)) { s in

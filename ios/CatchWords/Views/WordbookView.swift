@@ -57,6 +57,7 @@ struct WordbookView: View {
                 showCamera = false
                 if let img { Task { await read(img) } }
             }
+            .statusBarTone(.light)
         }
         .sheet(item: Binding(get: { draft.map { DraftBox(draft: $0) } }, set: { if $0 == nil { draft = nil } })) { box in
             WordbookConfirmView(draft: box.draft, store: store) { added in
