@@ -131,6 +131,28 @@ final class CardCatchModel {
         releaseMotion()
     }
 
+    /// Whether anything on the stage changes with time at `now`; false lets the view pause its per-frame
+    /// redraws (any observed change wakes it again). Always true from the light onwards: the card follows the
+    /// device's tilt (motion updates are not observed), and particles, bokeh and the halo move on their own.
+    /// Before that, the endless loops (outline pulse, tag rings, the pill's spark, the AI glow, the category
+    /// colour turning) count only without Reduce Motion, and every transition counts until it has settled.
+    func needsFrames(_ now: Double) -> Bool {
+        if phase == .card || phase == .sending || cardVisible || star != nil || piece != nil || !particles.isEmpty {
+            return true
+        }
+        if !motion.calm, outlinePulseStart != nil || pickUI || pillOpacity.to > 0 || aiGlow.to > 0 || catOn.to > 0
+            || haloOn.to > 0 || bokehOn.to > 0 {
+            return true
+        }
+        let transitions = [photoDim, photoScale, pillOpacity, pillShift, aiGlow, sheetT, catOn, haloOn, bokehOn]
+            + outlineOpacity + tagScale + tagOpacity
+        if transitions.contains(where: { now < $0.start + $0.duration }) { return true }
+        let anims = [bracketRect, bracketOpacity, bracketPulse, flashAnim, cardSpin, cardLift, wrapAnim, uiAnim]
+        if anims.contains(where: { $0.map { !$0.finished(at: now) } ?? false }) { return true }
+        // The word rows rise in one by one after the sheet opens (up to ~0.8 s).
+        return sheetObj != nil && now < sheetOpenedAt + 1
+    }
+
     private func wait(_ seconds: Double) async {
         guard seconds > 0 else { return }
         try? await Task.sleep(for: .seconds(seconds))

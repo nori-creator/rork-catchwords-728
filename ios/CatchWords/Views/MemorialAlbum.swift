@@ -230,7 +230,7 @@ struct MemorialReveal: View {
         ZStack {
             RadialGradient(colors: [Color(hex: 0x1E2B55), Color(hex: 0x070B18)], center: .center, startRadius: 20, endRadius: 520)
                 .ignoresSafeArea()
-            Rays()
+            Rays(turning: phase != .count && !reduceMotion)
                 .opacity(phase == .count ? 0 : 0.55)
                 .scaleEffect(phase == .count ? 0.6 : 1)
                 .animation(.easeOut(duration: 0.9), value: phase)
@@ -364,8 +364,11 @@ struct MemorialReveal: View {
 
 /// Slowly turning light rays behind the number.
 private struct Rays: View {
+    /// False while the rays are hidden or Reduce Motion is on: the timeline stops redrawing every frame.
+    var turning: Bool = true
+
     var body: some View {
-        TimelineView(.animation) { tl in
+        TimelineView(.animation(minimumInterval: nil, paused: !turning)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
                 let c = CGPoint(x: size.width / 2, y: size.height * 0.38)
