@@ -467,8 +467,14 @@ struct SettingsView: View {
         isDeleting = true
         deleteError = nil
         do {
+            let uid = SupabaseClient.shared.userId
             try await profile.deleteAccount()
             isDeleting = false
+            // Nothing of the deleted account stays on this device (waiting photos, unsent diary drafts).
+            if let uid {
+                PendingQueue.shared.removeAll(ownerId: uid)
+                DiaryStore.removeDrafts(userId: uid)
+            }
             auth.signOut()
         } catch {
             isDeleting = false

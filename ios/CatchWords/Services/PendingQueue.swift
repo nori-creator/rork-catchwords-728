@@ -107,6 +107,16 @@ final class PendingQueue {
         save(readIndex().filter { $0.id != id })
     }
 
+    /// The account was deleted: its waiting photos go too (nobody can ever open them again).
+    func removeAll(ownerId: String) {
+        let all = readIndex()
+        for item in all where item.ownerId == ownerId {
+            try? FileManager.default.removeItem(at: fileURL(item.id))
+            thumbs.removeObject(forKey: item.id as NSString)
+        }
+        save(all.filter { $0.ownerId != ownerId })
+    }
+
     private func fileURL(_ id: String) -> URL { dir.appendingPathComponent("\(id).jpg") }
 
     private func save(_ all: [PendingCatch]) {

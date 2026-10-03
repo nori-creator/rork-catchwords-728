@@ -135,7 +135,9 @@ final class CameraService: NSObject {
     }
 
     func capture() async -> UIImage? {
-        guard state == .running else { return nil }
+        // A second tap while a shot is still being processed would replace the first continuation,
+        // which then never resumes (that caller waits forever).
+        guard state == .running, photoContinuation == nil else { return nil }
         return await withCheckedContinuation { cont in
             photoContinuation = cont
             let settings = AVCapturePhotoSettings()
