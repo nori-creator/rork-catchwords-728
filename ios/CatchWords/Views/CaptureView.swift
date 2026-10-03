@@ -96,7 +96,9 @@ struct CaptureView: View {
             switch step {
             case .camera:
                 if old == .selfie || camera.position != positionBeforeSelfie { camera.switchTo(positionBeforeSelfie) }
-                Task { await camera.start() }
+                // After a card catch the dex is already open while this screen fades out (vm.reset 700 ms later):
+                // never turn the camera back on behind another tab.
+                if router.tab == .camera { Task { await camera.start() } }
             case .selfie:
                 positionBeforeSelfie = camera.position
                 camera.switchTo(.front)
@@ -482,9 +484,14 @@ struct CaptureView: View {
         if vm.mode == .photo {
             // Card catch `shoot()`: the shutter sound, the white flash, the shutter and viewfinder hide.
             SoundService.shared.playLayered(.ccShutter)
-            shotFlash = CCClock.now
-            shooting = true
             let shotAt = CCClock.now
+            shotFlash = shotAt
+            shooting = true
+            Task {
+                // The flash is over after 480 ms: drop it so its TimelineView stops redrawing.
+                try? await Task.sleep(for: .milliseconds(600))
+                if shotFlash == shotAt { shotFlash = nil }
+            }
             Task {
                 if let img = await camera.capture() {
                     beginAnalyze(img, askSelfie: selfieMode)
