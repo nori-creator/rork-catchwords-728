@@ -21,14 +21,16 @@
 
 ## 2. どのファイルを使うか
 
-作業中に GitHub の `main` が進みました（`11ff3f0` → `3fd364f`「Safari操作ブロックとフラップ修正」）。
+作業中に GitHub の `main` が進みました（`11ff3f0` → `3fd364f`）。このフォルダの物は **`3fd364f` を土台に作り直した版** です。
 
-| ファイル | 使う時 |
+| ファイル（このリポジトリの `docs/web-changes/` の中） | 中身 |
 |---|---|
-| **`rebased-onto-3fd364f/web-changes.patch`**（1つにまとめた物）<br>`rebased-onto-3fd364f/series/0001〜0005`（コミットごと） | **こちらを使ってください。** 今の `main`（`3fd364f`）にそのまま当たることを確かめてあります |
-| `web-changes.patch` / `series/` | 依頼どおり `11ff3f0` を土台に作った版（記録用） |
+| **`series/0001〜0005`**（コミットごと） | **これを使ってください。** `3fd364f` に `git am` でそのまま当たることを確かめてあります |
+| `web-changes-onto-3fd364f.patch`（1つにまとめた物） | 上の5つを1つにした物（中身は同じ）。Lovable に添付する時に使います |
 
-`main` がさらに進んでいたら、当たらない所が出ることがあります（その時は Claude に「このパッチを今の main に合わせて作り直して」と頼んでください）。
+**注意（2026-10-03 時点）:** Web の `main` はその後さらに `3bf12d2` まで進み、そのままの `git am` は
+`FirstCatchFlow.tsx` の1か所で止まります。**`git am -3`（3-way）なら衝突なく当たる** ことを確かめてあります。
+これより先に `main` が進んで当たらない所が出たら、Claude に「このパッチを今の main に合わせて作り直して」と頼んでください。
 
 ---
 
@@ -42,7 +44,7 @@
 cd Lovable-catch-words-app
 git checkout main && git pull
 git checkout -b legal-and-compliance-2026-10-03
-git am path/to/web2-out/rebased-onto-3fd364f/series/*.patch
+git am -3 path/to/rork-catchwords-728/docs/web-changes/series/*.patch
 git push -u origin legal-and-compliance-2026-10-03
 ```
 
@@ -56,7 +58,7 @@ git push -u origin legal-and-compliance-2026-10-03
 
 **Lovable に貼る文（そのまま使えます）:**
 
-> 添付の `web-changes.patch` は、このプロジェクトの main（3fd364f）に対する unified diff です。
+> 添付の `web-changes-onto-3fd364f.patch` は、このプロジェクトの main（3fd364f を土台）に対する unified diff です。
 > **内容を変えずに、そのまま全部当ててください。** ファイルの削除（Object3DHero.tsx・object3d*.ts・
 > api.object3d-model.ts など）も含みます。勝手な書き直し・整形・追加の改善はしないでください。
 > 当てた後、`src/routeTree.gen.ts` は自動生成のままにし、次の2つの Supabase の移行を実行してください:

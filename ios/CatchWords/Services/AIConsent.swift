@@ -213,10 +213,19 @@ final class AIConsent {
         return false
     }
 
+    /// Answers go to the server one at a time, in the order given: each send waits for the one before it and
+    /// then sends whatever is the newest answer by then (`sendPending` reads it at send time), so an agreement
+    /// can never overtake a withdrawal made right after it.
+    @ObservationIgnored private var sendChain: Task<Void, Never>?
+
     /// Right after 「同意して始める」 / 「同意しない」 / withdrawing: the answer goes to the server in the background.
     private func sendAnswer() {
         guard let uid = userId else { return }
-        Task { _ = await self.sendPending(for: uid) }
+        let previous = sendChain
+        sendChain = Task {
+            await previous?.value
+            _ = await self.sendPending(for: uid)
+        }
     }
 
     private static func outcome(of sent: ServerRecord?) -> SyncOutcome {
@@ -226,7 +235,9 @@ final class AIConsent {
 
     private func reconcile(_ uid: String) async -> SyncOutcome {
         // 1. An answer given on this device that has not reached the server goes first; while it cannot be
-        //    sent, it is the one that counts (the server's record is older than it).
+        //    sent, it is the one that counts (the server's record is older than it). Sends already queued
+        //    finish first, so this never races them.
+        await sendChain?.value
         if let sent = await sendPending(for: uid) { return Self.outcome(of: sent) }
         if Self.isPending(uid) { return .unknown }
 
@@ -282,15 +293,19 @@ final class AIConsent {
             return nil
         }
         guard let sent = await send(agreed: state == "granted", version: version, for: uid) else { return nil }
-        markSent(uid, state: state, date: date)
+        markSent(uid, state: state, date: date, server: sent)
         return sent
     }
 
     /// The unsent mark comes off, unless the answer changed meanwhile (that one is sent by its own call).
-    private func markSent(_ uid: String, state: String, date: Double?) {
+    /// The date kept becomes the server's own time for this answer, so later syncs compare the server's
+    /// clock with the server's clock, never with this phone's.
+    private func markSent(_ uid: String, state: String, date: Double?, server: ServerRecord? = nil) {
         guard var record = Self.storedRecord(for: uid),
               record["status"] as? String == state, record["date"] as? Double == date else { return }
         record.removeValue(forKey: "pending")
+        let serverTime = (state == "granted" ? server?.agreedAt : server?.revokedAt).flatMap(SupabaseDate.parse)
+        if let serverTime { record["date"] = serverTime.timeIntervalSince1970 }
         UserDefaults.standard.set(record, forKey: Self.key(for: uid))
     }
 
