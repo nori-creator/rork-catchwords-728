@@ -120,17 +120,20 @@ enum AppFont {
         }
     }
 
-    static func hand(_ size: CGFloat) -> Font {
-        resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size) ?? .system(size: size, design: .rounded)
+    /// Follows Dynamic Type like the nearest text style (`fixed: true` inside fixed-size frames).
+    static func hand(_ size: CGFloat, fixed: Bool = false) -> Font {
+        resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size, relativeTo: fixed ? nil : AppTypeScale.fontTextStyle(for: size))
+            ?? .system(size: size, design: .rounded)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
 
-    private static func resolve(_ names: [String], _ size: CGFloat) -> Font? {
+    private static func resolve(_ names: [String], _ size: CGFloat, relativeTo style: Font.TextStyle?) -> Font? {
         for name in names where UIFont(name: name, size: size) != nil {
-            return .custom(name, size: size)
+            if let style { return .custom(name, size: size, relativeTo: style) }
+            return .custom(name, fixedSize: size)
         }
         return nil
     }

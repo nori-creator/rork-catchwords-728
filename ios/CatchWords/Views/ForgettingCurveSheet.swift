@@ -46,7 +46,7 @@ struct ForgettingCurveSheet: View {
     private func sheetContent(pct: Int, lv: Int) -> some View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text(sticker.word?.headword ?? "").font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(sticker.word?.headword ?? "").scaledFont(size: 26, weight: .heavy).foregroundStyle(Theme.foreground)
                     Spacer()
                     Button { close() } label: {
                         Image(systemName: "xmark").font(.system(size: 18, weight: .medium)).foregroundStyle(Theme.muted)
@@ -57,14 +57,14 @@ struct ForgettingCurveSheet: View {
                 HStack(spacing: 12) {
                     HStack(spacing: 5) {
                         Circle().fill(Theme.memoryLevels[lv]).frame(width: 8, height: 8)
-                        Text("\(MemoryBadge.labels[lv]) · \(pct)%").font(.system(size: 15, weight: .bold))
+                        Text("\(MemoryBadge.labels[lv]) · \(pct)%").scaledFont(size: 15, weight: .bold)
                     }
                     .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                    Text(LocalizedStringKey(L("復習 **\(history.count)** 回"))).font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    Text(LocalizedStringKey(L("復習 **\(history.count)** 回"))).scaledFont(size: 15).foregroundStyle(Theme.muted)
                 }
-                Text(L("縦軸＝いま思い出せる確率（写真の右上の%と同じ）")).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                Text(L("縦軸＝いま思い出せる確率（写真の右上の%と同じ）")).scaledFont(size: 13).foregroundStyle(Theme.muted)
                 HStack(spacing: 14) {
                     legend(color: Theme.ok, dashed: false, text: L("これまで"))
                     legend(color: Color(hex: 0xF59E0B), dashed: true, text: L("復習しなかったら"))
@@ -73,14 +73,14 @@ struct ForgettingCurveSheet: View {
                         Text(L("復習した日"))
                     }
                 }
-                .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 13).foregroundStyle(Theme.muted)
 
                 chart.frame(height: 260)
                     .onAppear {
                         if reduceMotion { reveal = 1 } else { withAnimation(.easeOut(duration: 0.9).delay(0.1)) { reveal = 1 } }
                     }
                 Text(L("グラフを指でなぞると、その日の記憶率が見られます"))
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
 
                 callout(pct: pct)
             }
@@ -168,8 +168,8 @@ struct ForgettingCurveSheet: View {
                     .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                         VStack(spacing: 1) {
                             Text(Calendar.current.isDateInToday(picked.date) ? L("今日") : JPDate.monthDay(picked.date))
-                                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
-                            Text("\(Int(picked.value))%").font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                                .scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
+                            Text("\(Int(picked.value))%").scaledFont(size: 17, weight: .heavy, monospacedDigit: true)
                                 .foregroundStyle(Theme.memoryLevels[MemoryBadge.level(Int(picked.value))].mix(with: Theme.foreground, by: 0.3))
                         }
                         .padding(.horizontal, 10).padding(.vertical, 5)
@@ -180,7 +180,7 @@ struct ForgettingCurveSheet: View {
             PointMark(x: .value("date", d.today.date), y: .value("%", d.today.value))
                 .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(d.today.value))]).overlay(Circle().stroke(.white, lineWidth: 2.5)).frame(width: 18, height: 18) }
                 .annotation(position: .topTrailing, spacing: 2) {
-                    Text(L("今日 \(Int(d.today.value))%")).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(L("今日 \(Int(d.today.value))%")).scaledFont(size: 13, weight: .bold).foregroundStyle(Theme.foreground)
                 }
         }
         .chartXSelection(value: $scrubDate)
@@ -199,14 +199,14 @@ struct ForgettingCurveSheet: View {
         .chartYAxis {
             AxisMarks(position: .leading, values: [0, 25, 50, 75, 100]) { v in
                 AxisGridLine().foregroundStyle(Theme.border)
-                AxisValueLabel { Text("\(v.as(Int.self) ?? 0)%").font(.system(size: 12)).foregroundStyle(Theme.muted) }
+                AxisValueLabel { Text("\(v.as(Int.self) ?? 0)%").scaledFont(size: 12).foregroundStyle(Theme.muted) }
             }
         }
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 4)) { v in
                 AxisValueLabel {
                     if let date = v.as(Date.self) {
-                        Text(Calendar.current.isDateInToday(date) ? L("今日") : JPDate.slash(date)).font(.system(size: 12))
+                        Text(Calendar.current.isDateInToday(date) ? L("今日") : JPDate.slash(date)).scaledFont(size: 12)
                     }
                 }
             }
@@ -225,18 +225,18 @@ struct ForgettingCurveSheet: View {
         let daysLeft = max(0, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: dropDate)).day ?? 0)
         let isTime = pct < 95
         VStack(alignment: .leading, spacing: 10) {
-            Text(isTime ? L("今が復習どき") : L("まだしっかり覚えています")).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+            Text(isTime ? L("今が復習どき") : L("まだしっかり覚えています")).scaledFont(size: 18, weight: .bold).foregroundStyle(Theme.foreground)
             if pct >= 70 {
                 Text(L("復習しないと \(JPDate.slash(dropDate))（\(daysLeft)日後）に「うろ覚え」になります"))
-                    .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
+                    .scaledFont(size: 16, weight: .medium).foregroundStyle(Theme.foreground)
             }
-            Text(L("いま思い出すと、次に忘れるまでの期間が伸びます。")).font(.system(size: 14)).foregroundStyle(Theme.muted)
+            Text(L("いま思い出すと、次に忘れるまでの期間が伸びます。")).scaledFont(size: 14).foregroundStyle(Theme.muted)
             if isTime {
                 Button {
                     close()
                     onReviewNow()
                 } label: {
-                    Text(L("いま復習する")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text(L("いま復習する")).scaledFont(size: 17, weight: .bold).foregroundStyle(.white)
                         .padding(.horizontal, 26).frame(minHeight: 50)
                         .background(Theme.primary, in: Capsule())
                 }

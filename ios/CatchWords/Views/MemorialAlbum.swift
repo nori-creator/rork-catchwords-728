@@ -124,10 +124,10 @@ struct MemorialBanner: View {
                     .shadow(color: Theme.gold.opacity(0.45), radius: 8, y: 3)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(L("使い始めて\(n)日の記念アルバム"))
-                            .font(.system(size: 15, weight: .bold))
+                            .scaledFont(size: 15, weight: .bold)
                             .foregroundStyle(Color(hex: 0x33291F))
                         Text(L("\(n)日間で\(words)語。思い出の\(photos)枚をまとめました"))
-                            .font(.system(size: 12))
+                            .scaledFont(size: 12)
                             .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     }
                     Spacer(minLength: 0)
@@ -171,11 +171,11 @@ struct MemorialAlbumView: View {
             ScrollView {
                 VStack(spacing: 6) {
                     Text(L("使い始めて\(n)日の記念アルバム"))
-                        .font(.system(size: 24, weight: .heavy))
+                        .scaledFont(size: 24, weight: .heavy)
                         .foregroundStyle(Color(hex: 0x33291F))
                         .multilineTextAlignment(.center)
                     Text(L("\(n)日間で\(words)語。思い出の\(picks.count)枚をまとめました"))
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13)
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     CollageBoard(items: picks, editable: false, onOpen: onOpen, autoOnly: true)
                         .padding(.top, 14)

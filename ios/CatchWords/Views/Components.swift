@@ -34,9 +34,9 @@ struct PrimaryButton: View {
                 if isLoading {
                     ProgressView().tint(.white)
                 } else if let icon {
-                    Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+                    Image(systemName: icon).scaledFont(size: 17, weight: .semibold)
                 }
-                Text(title).font(.system(size: 17, weight: .semibold))
+                Text(title).scaledFont(size: 17, weight: .semibold)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 54)
@@ -115,8 +115,7 @@ struct MemoryBadge: View {
         HStack(spacing: 4) {
             Circle().fill(c).frame(width: 6, height: 6)
             Text("\(percent)%")
-                .font(.system(size: 11, weight: .semibold))
-                .monospacedDigit()
+                .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(c.mix(with: Theme.foreground, by: 0.4))
         }
         .padding(.horizontal, 7)

@@ -9,14 +9,14 @@ struct SectionsPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(L("表示する項目と順番"))
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .foregroundStyle(Theme.muted)
                 Spacer()
                 Button(L("既定に戻す")) {
                     Haptics.selection()
                     withAnimation(.snappy) { prefs.reset() }
                 }
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
                 .foregroundStyle(Theme.primaryInk)
                 .frame(minHeight: 44)
             }
@@ -62,12 +62,12 @@ struct SectionsPanel: View {
                     .frame(width: 26, height: 26)
                     .background(on ? Theme.primary : Theme.muted.opacity(0.4), in: Circle())
                 Text(section.title(for: prefs.target))
-                    .font(.system(size: 15, weight: on ? .semibold : .regular))
+                    .scaledFont(size: 15, weight: on ? .semibold : .regular)
                     .foregroundStyle(on ? Theme.foreground : Theme.muted)
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 Image(systemName: on ? "eye" : "eye.slash")
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14)
                     .foregroundStyle(on ? Theme.primaryInk : Theme.muted)
             }
             .frame(minHeight: 44)
