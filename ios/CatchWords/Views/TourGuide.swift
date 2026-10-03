@@ -31,7 +31,7 @@ enum TourStep: String, Equatable {
         case .tapCamera, .shoot: L("1枚撮ってみましょう")
         case .pick: L("覚えたいことばを選ぶ")
         case .detail, .word: L("発音と意味")
-        case .peel: L("図鑑に入れよう")
+        case .peel: L("はがして図鑑へ")
         case .added: L("図鑑に追加しました！")
         case .dexTypes, .dexOpen: L("図鑑")
         case .review: L("復習")
@@ -46,7 +46,7 @@ enum TourStep: String, Equatable {
         case .shoot: L("知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。")
         case .pick: L("写真から見つけた候補です。残したいことばを選んでください。")
         case .detail: L("スピーカーを押すと、発音を聞けます。")
-        case .peel: L("カードを上にはじくか、「図鑑に入れる」を押します。")
+        case .peel: L("写真を指で好きな方向にめくります。")
         case .added: L("集めたことばが、撮った写真と一緒に並びます。")
         case .dexTypes: L("上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。")
         case .dexOpen: L("追加した単語を開いて、意味や使い方を見てみましょう。")
@@ -127,17 +127,13 @@ struct TourLayer: View {
             let dim = holePath(full: full, hole: hole)
             // 押す所が画面に無い（表示を切り替えた等）ときは暗くせず、札だけ出して操作を妨げない。
             let shouldDim = hole != nil || !step.isInteractive
-            // The peel step needs the whole card (flick it anywhere) and the button under it: the dim is
-            // only a picture there and the card sits above, never over the button.
-            let passThrough = step == .peel
-            let showsCard = shouldDim || step.nextLabel != nil || passThrough
+            let showsCard = shouldDim || step.nextLabel != nil
             ZStack {
                 if shouldDim {
                     dim
                         .fill(Color(hex: 0x0B1020, opacity: 0.58), style: FillStyle(eoFill: true))
                         .contentShape(step.isInteractive && hole != nil ? dim : Path(full), eoFill: true)
                         .onTapGesture {}
-                        .allowsHitTesting(!passThrough)
                         .transition(.opacity)
                 }
                 if let hole {
@@ -149,7 +145,7 @@ struct TourLayer: View {
                         .position(x: hole.midX, y: hole.midY)
                         .allowsHitTesting(false)
                 }
-                let cardOnTop = passThrough || (hole?.midY ?? geo.size.height) > geo.size.height * 0.5
+                let cardOnTop = (hole?.midY ?? geo.size.height) > geo.size.height * 0.5
                 if showsCard {
                     VStack {
                         if !cardOnTop { Spacer(minLength: 0) }
