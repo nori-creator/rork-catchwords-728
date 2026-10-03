@@ -101,7 +101,10 @@ nonisolated extension DemoDatabase {
         case "listJournal": result = listJournal()
         case "getJournalPrompts": result = journalPrompts(r)
         case "correctMyJournal": result = correctJournal(DJ.str(data["draft"]) ?? "", reader: r)
+        case "recordAiConsent": return recordAiConsent(data)
+        case "getAiConsent": result = aiConsentResult(recorded: true)
         case "deleteMyAccount":
+            aiConsent = [:]
             tables = [:]
             explanations = [:]
             albumHidden = []
@@ -117,6 +120,47 @@ nonisolated extension DemoDatabase {
 
     private func notFound() -> DemoResponse {
         .error(404, "not found")
+    }
+
+    // MARK: - AI consent (web patch docs/web-changes/, docs/ios-spec/23-ai-consent.md)
+
+    /// The server's current consent version (web `AI_CONSENT_VERSION`).
+    private static let aiConsentVersion = 1
+
+    /// `recordAiConsent` {version, agreed}: the same answers and refusals as the web server.
+    private func recordAiConsent(_ data: [String: Any]) -> DemoResponse {
+        guard let version = DJ.int(data["version"]), (1...1000).contains(version),
+              let agreed = data["agreed"] as? Bool else {
+            return .error(400, "送った内容の形が違います。アプリを最新にしてください。")  // l10n-ignore (server text)
+        }
+        let now = DJ.now()
+        if agreed {
+            guard version >= Self.aiConsentVersion else {
+                return .error(403, "AI_CONSENT_REQUIRED: 同意の内容が新しくなりました。")  // l10n-ignore (server text)
+            }
+            aiConsent = ["version": version, "agreedAt": now, "revokedAt": NSNull()]
+        } else if !aiConsent.isEmpty {
+            // Withdrawn: the agreement stays on record with the time it was withdrawn.
+            aiConsent["revokedAt"] = now
+        }
+        // Never agreed and declining: nothing is written.
+        return .json(["result": aiConsentResult(recorded: nil)])
+    }
+
+    /// `getAiConsent` (and what `recordAiConsent` answers, without `recorded`).
+    private func aiConsentResult(recorded: Bool?) -> [String: Any] {
+        let version = DJ.int(aiConsent["version"])
+        let revoked = !DJ.isNull(aiConsent["revokedAt"])
+        let agreed = !revoked && (version ?? 0) >= Self.aiConsentVersion
+        var result: [String: Any] = [
+            "agreed": agreed,
+            "version": DJ.orNull(version),
+            "agreedAt": DJ.orNull(aiConsent["agreedAt"]),
+            "revokedAt": revoked ? DJ.orNull(aiConsent["revokedAt"]) : NSNull(),
+            "currentVersion": Self.aiConsentVersion,
+        ]
+        if let recorded { result["recorded"] = recorded }
+        return result
     }
 
     /// `__fail__` → 500, `__limit__` → 429, in any text value (also one level down, e.g. word.headword).

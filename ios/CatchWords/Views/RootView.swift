@@ -63,6 +63,10 @@ struct RootView: View {
                         async let p: Void = profile.load()
                         await dex.load()
                         await p
+                        // This device's answer and the server's record are made to agree (an unsent answer is
+                        // sent, an agreement or withdrawal made elsewhere is taken). Never awaited: a server
+                        // without these functions yet, or no network, changes nothing and blocks nothing.
+                        Task { await AIConsent.shared.syncWithServer() }
                         // The album was read for the language remembered on this device; another account
                         // (or a change made on the web) can have a different one.
                         if NativeAPI.targetLanguage != guessed { await dex.load() }
