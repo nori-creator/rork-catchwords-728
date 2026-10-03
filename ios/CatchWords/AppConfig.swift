@@ -21,6 +21,8 @@ enum AppConfig {
     /// 設定 › お問い合わせ・サポート. The same page goes into App Store Connect's support URL.
     // オーナー: サポートページを公開する（docs/legal/checklist.ja.md 8章 W5。連絡先のメールアドレスが分かるページ）
     nonisolated static let supportURL = webBaseURL.appendingPathComponent("support")
+    /// Apple's page for the subscriptions of the signed-in Apple ID (cancel there).
+    nonisolated static let manageSubscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
     /// Where the web's `/native-auth` bridge hands a Google / Apple login back to the app
     /// (`catchwords://auth-callback#…`, see `WebAuthSession`).
