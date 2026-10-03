@@ -78,6 +78,19 @@ struct AppBackground: View {
     }
 }
 
+extension View {
+    /// Scrolled content must not run under the clock and battery: a strip of material over the status bar
+    /// (a zero-height inset whose background reaches up into the safe area). Nothing moves at rest.
+    func statusBarScrim() -> some View {
+        safeAreaInset(edge: .top, spacing: 0) {
+            Color.clear
+                .frame(height: 0)
+                .background(.regularMaterial)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
 /// memory-badge.ts: colour + number only (the level name lives in the accessibility label).
 struct MemoryBadge: View {
     let percent: Int

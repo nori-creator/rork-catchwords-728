@@ -143,6 +143,7 @@ struct AuthView: View {
             .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
+        .statusBarScrim()
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.85).delay(0.05)) { appeared = true }
         }

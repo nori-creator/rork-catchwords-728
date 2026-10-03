@@ -36,6 +36,7 @@ struct ReviewView: View {
                 .padding(.bottom, answer == nil ? 120 : 420)
             }
             .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+            .statusBarScrim()
         }
         .overlay(alignment: .bottom) {
             if let answer, let card = router.tour.isReview ? practiceCards[safe: practiceIndex] : store.current {
