@@ -322,6 +322,7 @@ button{font:inherit;color:inherit}
 .slot.caught{cursor:pointer}
 .slot .sart{position:relative;width:100%;aspect-ratio:1;border-radius:16px;background:#EEF2F7;display:grid;place-items:center}
 .slot .sil{width:72%;height:72%;background:#C5CFDC;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+.slot .sil.ph{-webkit-mask:none;mask:none;width:52%;height:52%;border-radius:22%}
 .slot svg.sil{background:none;color:#C5CFDC}
 .slot .pic{position:absolute;inset:7%;width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,30,70,.25))}
 .slot .pic.sq{object-fit:cover;border-radius:11px;inset:9%;width:82%;height:82%;box-shadow:0 0 0 2.5px #fff,0 3px 8px rgba(0,30,70,.25)}
@@ -784,7 +785,7 @@ function zyHTML(zh,zy){ const syl=S.read!=="py"?zySyl(zh,zy):null; if(!syl) retu
 /* ---------- card ---------- */
 const ART={d1:{x:19,y:56,w:242,h:156},d2:{x:0,y:0,w:280,h:392},d3:{x:18,y:42,w:244,h:194}};
 function artLayers(e,design){ const a=e.arts[design], m=e.mode;
-  const studio=CATS[e.cat]||CATS.thing;
+  const studio=catOf(e);
   let bg;
   if(m==="cut") bg=`<div class="studio" style="background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.95),rgba(255,255,255,0) 52%),radial-gradient(circle at 18% 85%,${studio.b1},transparent 55%),radial-gradient(circle at 85% 20%,rgba(255,255,255,.6),transparent 40%),linear-gradient(165deg,${studio.b1},${studio.b2})"></div>`;
   else if(m==="blur") bg=`<img class="bg blur" src="${a.url}" alt="">`;
@@ -793,7 +794,7 @@ function artLayers(e,design){ const a=e.arts[design], m=e.mode;
 function popHTML(e,design){ if(e.mode==="orig"||!e.cutURL) return ""; const r=e.pops[design]; if(!r) return "";
   return `<div class="pop" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--ps:${r.ps.toFixed(3)};clip-path:inset(-60% -30% ${r.clipB}px -30%)"><img src="${e.cutURL}" alt=""></div>`; }
 function cardHTML(e,design){
-  const c=CATS[e.cat]||CATS.thing, w=e.word, no=String(e.no).padStart(3,"0"); const place=e.place||"台北市 大安區", date=e.date||"10月2日";
+  const c=catOf(e), w=e.word, no=String(e.no).padStart(3,"0"); const place=e.place||"台北市 大安區", date=e.date||"10月2日";
   const shell=inner=>`<div class="tc ${design}" style="--b1:${c.b1};--b2:${c.b2};--glit:${GLIT}"><div class="shadow"></div><div class="edge e3"></div><div class="edge e2"></div><div class="edge e1"></div>${inner}${popHTML(e,design)}</div>`;
   if(design==="d2") return shell(`<div class="face">
     <div class="art" style="left:0;top:0;width:280px;height:392px">${artLayers(e,design)}</div>${starsHTML(w.zh+"2",14,{x:6,y:8,w:88,h:66})}
@@ -850,7 +851,7 @@ function makeEntry(o,w,img,quiet){
       const minTop={d1:46,d2:9999,d3:34}[d]; const ps=Math.max(1,Math.min(1.14,(y+hh-minTop)/hh));
       pops[d]={x,y,w:ww,h:hh,clipB:Math.max(0,(y+hh)-bottomArt),ps}; if(d==="d2"&&o.cutImg){ const bp=bigPop(o.cutImg,[...w.zh].length); if(bp) pops[d]=bp; } } }
   const ex=quiet?-1:S.dex.findIndex(d=>d.word?.zh===w.zh);
-  const no=ex>=0?S.dex[ex].no:(S.dex.reduce((m,d)=>Math.max(m,d.no||0),0)+1);
+  const no=ex>=0?S.dex[ex].no:(BASENO[w.zh]||Math.max(100,S.dex.reduce((m,d)=>BASENO[d.word.zh]?m:Math.max(m,d.no||0),0))+1);
   return {id:w.zh+"-"+Date.now(),word:w,cat:o.cat,mode,arts,pops,cutURL:o.cutImg?o.cutImg.src:null,no,count:ex>=0?(S.dex[ex].count||1)+1:1,
     photo:cropFrom(img,o.bbox,1,.6,320).url,thumb:(o.cutImg&&!o.photoCard)?o.cutImg.src:cropFrom(img,o.bbox,1,.82,360).url,thumbIsPhoto:!o.cutImg||!!o.photoCard,place:S.custom?"カメラロール":"台北市 大安區",date:"10月2日"};
 }
@@ -1020,7 +1021,7 @@ async function chooseWord(o,w){ if(S.phase!=="word") return; const my=++runId; S
   const design=S.design, R=ART[design]; const src=toScreen(img,entry.arts[design].frac);
   const cw=makeCardEl(entry,design,CL,CT); cw.style.visibility="hidden"; stagec.appendChild(cw); stagec.style.pointerEvents="auto";
   const card=cw.querySelector(".tc"); const dst={x:CL+R.x,y:CT+R.y,w:R.w,h:R.h};
-  Music.set("reveal"); { const cb=$("#catbg"), cc=CATS[o.cat]||CATS.thing; cb.style.setProperty("--b1",cc.b1); cb.style.setProperty("--b2",cc.b2); cb.classList.add("on"); }
+  Music.set("reveal"); { const cb=$("#catbg"), cc=DEXBYNO[catNo(w.zh,o.cat)]; cb.style.setProperty("--b1",cc.b1); cb.style.setProperty("--b2",cc.b2); cb.classList.add("on"); }
   if(S.form==="light") await formLight(my,cw,card,toScreen(img,o.bbox),o.cutImg?o.cutImg.src:cropFrom(img,o.bbox,(o.bbox[2]-o.bbox[0])*img.naturalWidth/((o.bbox[3]-o.bbox[1])*img.naturalHeight),1,500).url);
   else if(S.form==="flip") await formFlip(my,cw,card,src,entry.arts[design].url);
   else await formLift(my,cw,card,src,entry.arts[design].url,dst);
@@ -1165,7 +1166,7 @@ async function sendToDex(my,cw,entry,ui){ if(S.phase!=="card") return; S.phase="
   await sleep(460); if(my!==runId) return; cw.remove();
   $("#halo").classList.remove("on"); $("#catbg").classList.remove("on"); bokeh(false);
   // open the dex page; the silhouette waits for the light
-  if(S.view!=="grid"){ S.view="grid"; save(); applyUI(); } const grid=true; $("#status").classList.add("dark"); $("#dex").classList.add("show"); S.focus=null; renderDex();
+  if(S.view!=="grid"){ S.view="grid"; save(); applyUI(); } const grid=true; $("#status").classList.add("dark"); $("#dex").classList.add("show"); S.focus=null; S.pending=entry; renderDex();
   let tEl=null; if(grid){ const id=slotOf(entry)||null; tEl=id?$("#dexBody").querySelector(`.slot[data-id="${id}"]`):null; if(tEl){ const body=$("#dexBody"); body.scrollTop=Math.max(0,tEl.offsetTop-body.clientHeight/2+tEl.offsetHeight/2); } }
   await sleep(600); if(my!==runId) return;
   const tr=tEl?localRect(tEl.querySelector(".sart")):{x:W0/2-40,y:grid?560:260,w:80,h:80}; const tx=tr.x+tr.w/2, ty=tr.y+tr.h/2;
@@ -1175,7 +1176,7 @@ async function sendToDex(my,cw,entry,ui){ if(S.phase!=="card") return; S.phase="
   // pon! — it lands and the cut-out appears in the silhouette
   star.animate([{transform:`translate(${tx-cx}px,${ty-cy}px) scale(.85)`,opacity:1},{transform:`translate(${tx-cx}px,${ty-cy}px) scale(1.6)`,opacity:0}],{duration:D(260),fill:"forwards"}).finished.then(()=>star.remove());
   const lp=document.createElement("div"); lp.className="landpop"; lp.style.left=tx+"px"; lp.style.top=ty+"px"; screen.appendChild(lp); setTimeout(()=>lp.remove(),700);
-  SFX.pop(); addEntry(entry); S.focus=entry.id; S.focusNow=true; S.arrive=true; S.phase="dex"; renderDex(); }
+  SFX.pop(); S.pending=null; addEntry(entry); S.focus=entry.id; S.focusNow=true; S.arrive=true; S.phase="dex"; renderDex(); }
 function addEntry(e){ const i=S.dex.findIndex(d=>d.word.zh===e.word.zh); if(i>=0) S.dex.splice(i,1); S.dex.unshift(e); save(); updateCount(); }
 
 /* ---------- dex: categories with pre-made silhouettes ---------- */
@@ -1202,30 +1203,37 @@ const DEXCATS=[
   {label:"🏙️ 街・建物",items:[{id:"t101",keys:["t101","dalou"],cut:"cat_101"},{id:"temple"},{id:"scooter"},{id:"bus"}]},
   {label:"🏠 身の回り",items:[{id:"vase",keys:["huaping","boli"],cut:"flower_vase"},{id:"umbrella"},{id:"book"},{id:"phone"}]},
 ];
+const OLD2NEW={food:2,plant:17,animal:16,city:14,thing:10};
+const DEXBYNO={}; DEX20.forEach(c=>DEXBYNO[c.no]=c);
+const BASENO={}; DEX20.forEach(c=>c.base.forEach((it,i)=>BASENO[it.zh]=(c.no-1)*5+i+1));
+function catNo(zh,old){ return ZH2CAT[zh]||OLD2NEW[old]||10; }
+function catOf(e){ return DEXBYNO[catNo(e.word.zh,e.cat)]; }
 const KEY2SLOT={}; let NSLOT=0; DEXCATS.forEach(c=>c.items.forEach(it=>{ it.no=++NSLOT; (it.keys||[]).forEach(k=>KEY2SLOT[k]=it.id); }));
-const slotOf=e=>e?.src?KEY2SLOT[e.src.wk]||null:null;
+const slotOf=e=>e?"z:"+e.word.zh:null;
 function silHTML(it){ if(it.cut) return `<div class="sil" style="-webkit-mask-image:url(${A.cuts[it.cut].img});mask-image:url(${A.cuts[it.cut].img})"></div>`; return SIL[it.id]?`<svg class="sil" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">${SIL[it.id]}</svg>`:""; }
 function slotHTML(id,no,e,sil){ return `<button class="slot${e?" caught":""}" data-id="${id}" ${e?"":"disabled"}><span class="sart">${e?`<img class="pic${e.thumbIsPhoto?" sq":""}" src="${e.thumb}" alt="">`:sil}</span><span class="no">No.${String(no).padStart(3,"0")}</span><span class="nm${e?"":" q"}">${e?zyHTML(e.word.zh,e.word.zy):"？？？"}</span></button>`; }
 
 /* ---------- dex ---------- */
 function openDex(focusId,arrive){ S.phase="dex"; clearStage(); $("#dex").classList.add("show"); $("#status").classList.add("dark"); S.focus=focusId; S.arrive=!!arrive; Music.set("dex"); SFX.pageOpen(); renderDex(); }
 function renderDex(){ const dex=$("#dex"), body=$("#dexBody"), car=$("#carousel"); const list=S.dex;
-  const got=DEXCATS.reduce((a,c)=>a+c.items.filter(it=>list.some(e=>slotOf(e)===it.id)).length,0), extra=list.filter(e=>!slotOf(e));
-  $("#dexProg").textContent=`${list.length}枚・影 ${got} / ${NSLOT}`;
+  const got=list.filter(e=>BASENO[e.word.zh]).length;
+  $("#dexProg").textContent=`${list.length}枚・影 ${got} / 100`;
   dex.classList.toggle("slide",S.view==="slide"); stopCarousel();
   if(S.view==="slide"){ body.hidden=true; car.hidden=false; if(!list.length){ car.innerHTML=`<div class="empty">まだカードがありません。<br>カメラで撮って、写っている物をタップしてみよう。</div>`; return; } startCarousel(); return; }
   if(S.view==="map"||S.view==="list"){ body.hidden=false; car.hidden=true;
     if(!list.length){ body.innerHTML=`<div class="empty">まだカードがありません。</div>`; return; }
-    if(S.view==="list") body.innerHTML=`<div class="dlist">${list.map((e,i)=>`<button class="drow" data-i="${i}"><span class="dth"><img class="${e.thumbIsPhoto?"sq":""}" src="${e.thumb}" alt=""></span><span class="dtx"><b>${zyHTML(e.word.zh,e.word.zy)}</b><small>${zyOn(e.word)?"":e.word.py+"・"}${e.word.ja}</small></span><span class="dmeta">${(CATS[e.cat]||CATS.thing).label}<br>${e.date}</span></button>`).join("")}</div>`;
+    if(S.view==="list") body.innerHTML=`<div class="dlist">${list.map((e,i)=>`<button class="drow" data-i="${i}"><span class="dth"><img class="${e.thumbIsPhoto?"sq":""}" src="${e.thumb}" alt=""></span><span class="dtx"><b>${zyHTML(e.word.zh,e.word.zy)}</b><small>${zyOn(e.word)?"":e.word.py+"・"}${e.word.ja}</small></span><span class="dmeta">${catOf(e).label}<br>${e.date}</span></button>`).join("")}</div>`;
     else body.innerHTML=`<div class="dmap"><div class="mapbg"><i class="rd r1"></i><i class="rd r2"></i><i class="rd r3"></i><i class="pk p1"></i><i class="pk p2"></i><i class="wt"></i><span class="area">台北市 大安區</span></div>${list.map((e,i)=>{ const h=hash(e.word.zh); const x=14+(h%72), y=18+((h>>>8)%66); return `<button class="pin" data-i="${i}" style="left:${x}%;top:${y}%"><img class="${e.thumbIsPhoto?"sq":""}" src="${e.thumb}" alt=""><b>${e.word.zh}</b></button>`; }).join("")}</div><p class="empty-new" style="margin-top:8px">撮った場所に置いています（試作では位置は仮）。</p>`;
     body.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>openDetail(list[+b.dataset.i])); return; }
   body.hidden=false; car.hidden=true; let h="";
-  for(const c of DEXCATS){ const n=c.items.filter(it=>list.some(e=>slotOf(e)===it.id)).length;
-    h+=`<section class="dcat"><div class="cat-t"><span>${c.label}</span><small>${n} / ${c.items.length}</small></div><div class="dexgrid">${c.items.map(it=>slotHTML(it.id,it.no,list.find(x=>slotOf(x)===it.id),silHTML(it))).join("")}</div></section>`; }
-  h+=`<section class="dcat"><div class="cat-t"><span>✨ 新しく見つけた言葉</span><small>${extra.length}</small></div>${extra.length?`<div class="dexgrid">${extra.map((e,i)=>slotHTML("n:"+e.word.zh,NSLOT+i+1,e,"")).join("")}</div>`:`<p class="empty-new">影に当てはまらない言葉（カメラロールの写真など）は、ここに増えていきます。</p>`}</section>`;
+  const shadow=(it)=>`<button class="slot" data-id="z:${it.zh}" disabled><span class="sart">${it.sil?`<div class="sil" style="-webkit-mask-image:url(${it.sil});mask-image:url(${it.sil})"></div>`:`<div class="sil ph"></div>`}</span><span class="no">No.${BASENO[it.zh]?String(BASENO[it.zh]).padStart(3,"0"):"---"}</span><span class="nm q">${it.zh}</span></button>`;
+  for(const c of DEX20){ const mine=list.filter(e=>catOf(e).no===c.no).sort((x,y)=>(x.no||0)-(y.no||0)), got=new Set(mine.map(e=>e.word.zh));
+    const pend=S.pending&&catNo(S.pending.word.zh,S.pending.cat)===c.no&&!got.has(S.pending.word.zh)?S.pending:null;
+    const sh=[...c.base,...c.extra].filter(it=>!got.has(it.zh)).slice(0,5); const pendIsShadow=pend&&sh.some(it=>it.zh===pend.word.zh);
+    h+=`<section class="dcat"><div class="cat-t"><span>${c.emoji} ${c.label}</span><small>${mine.length} / ${mine.length+sh.length+(pend&&!pendIsShadow?1:0)}</small></div><div class="dexgrid">${mine.map(e=>slotHTML("z:"+e.word.zh,e.no,e,"")).join("")}${pend&&!pendIsShadow?`<button class="slot" data-id="z:${pend.word.zh}" disabled><span class="sart"></span><span class="no">No.${String(pend.no).padStart(3,"0")}</span><span class="nm q">&nbsp;</span></button>`:""}${sh.map(shadow).join("")}</div></section>`; }
   body.innerHTML=h;
-  body.querySelectorAll(".slot.caught").forEach(el=>el.onclick=()=>{ const id=el.dataset.id; const e=id.startsWith("n:")?list.find(x=>x.word.zh===id.slice(2)):list.find(x=>slotOf(x)===id); if(e) openDetail(e); });
-  if(S.focus){ const e=list.find(x=>x.id===S.focus); S.focus=null; const id=e?(slotOf(e)||"n:"+e.word.zh):null; const el=id&&body.querySelector(`.slot[data-id="${CSS.escape(id)}"]`);
+  body.querySelectorAll(".slot.caught").forEach(el=>el.onclick=()=>{ const id=el.dataset.id; const e=list.find(x=>slotOf(x)===id); if(e) openDetail(e); });
+  if(S.focus){ const e=list.find(x=>x.id===S.focus); S.focus=null; const id=e?slotOf(e):null; const el=id&&body.querySelector(`.slot[data-id="${CSS.escape(id)}"]`);
     if(el){ el.classList.add("fill"); body.scrollTop=Math.max(0,el.offsetTop-body.clientHeight/2+el.offsetHeight/2);
       const now=S.focusNow; S.focusNow=false; setTimeout(()=>{ const rr=localRect(el.querySelector(".sart")); burst(rr.x+rr.w/2,rr.y+rr.h/2,{n:44,speed:6,up:3}); glints(rr,8); SFX.land(); },now||CALM()?20:560); } } }
 let car=null;
