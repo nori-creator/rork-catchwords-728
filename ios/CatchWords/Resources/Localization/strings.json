@@ -447,6 +447,10 @@
   "en": "Toys",
   "zh-TW": "玩具"
  },
+ "お問い合わせ・サポート": {
+  "en": "Contact & Support",
+  "zh-TW": "聯絡與支援"
+ },
  "お店": {
   "en": "Shops",
   "zh-TW": "店家"
@@ -2618,6 +2622,10 @@
  "無制限": {
   "en": "Unlimited",
   "zh-TW": "無限制"
+ },
+ "特定商取引法に基づく表記": {
+  "en": "Specified Commercial Transactions Act Notice",
+  "zh-TW": "特定商業交易法標示"
  },
  "状態動詞": {
   "en": "Stative verb",

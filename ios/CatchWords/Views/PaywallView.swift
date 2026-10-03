@@ -108,10 +108,15 @@ struct PaywallView: View {
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.muted)
+                    Link(L("特定商取引法に基づく表記"), destination: AppConfig.tokushohoURL)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                    // Auto-renewal terms (Guideline 3.1.2): readable size and full contrast, not fine print.
                     Text(L("お支払いは購入の確定時にApple IDに請求されます。サブスクリプションは期間終了の24時間前までに解約しない限り、同じ期間・同じ価格で自動更新されます。解約はApp Storeのアカウント設定からいつでも行えます。"))
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.muted.opacity(0.8))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.muted)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 22)
                 .padding(.bottom, 30)

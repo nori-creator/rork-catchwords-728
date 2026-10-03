@@ -243,16 +243,41 @@ struct SettingsView: View {
         }
     }
 
-    /// Free-only release: just the legal links (the Pro card has them too).
+    /// Free-only release: support and the legal links (the Pro card has them too).
     private var legalSection: some View {
         SettingsCard(title: L("このアプリについて")) {
-            HStack(spacing: 18) {
-                Link(L("利用規約"), destination: AppConfig.termsURL)
-                Link(L("プライバシー"), destination: AppConfig.privacyURL)
+            VStack(alignment: .leading, spacing: 6) {
+                supportRow
+                Divider().overlay(Theme.border)
+                HStack(spacing: 18) {
+                    Link(L("利用規約"), destination: AppConfig.termsURL)
+                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
+                }
+                .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                tokushohoLink
             }
+        }
+    }
+
+    /// お問い合わせ・サポート: the support page on the web app (App Review asks for a way to reach us).
+    private var supportRow: some View {
+        Link(destination: AppConfig.supportURL) {
+            HStack(spacing: 12) {
+                Image(systemName: "questionmark.bubble").font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.primary)
+                Text(L("お問い合わせ・サポート")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
+            }
+            .frame(minHeight: 44).contentShape(Rectangle())
+        }
+        .accessibilityIdentifier("settings.support")
+    }
+
+    private var tokushohoLink: some View {
+        Link(L("特定商取引法に基づく表記"), destination: AppConfig.tokushohoURL)
             .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
             .frame(minHeight: 44)
-        }
     }
 
     private var proSection: some View {
@@ -279,6 +304,9 @@ struct SettingsView: View {
                 }
                 .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
                 .frame(minHeight: 44)
+                tokushohoLink
+                Divider().overlay(Theme.border)
+                supportRow
                 if let msg = plan.message { Text(msg).font(.footnote).foregroundStyle(Theme.muted) }
             }
         }

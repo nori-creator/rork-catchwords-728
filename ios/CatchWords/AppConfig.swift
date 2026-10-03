@@ -16,6 +16,11 @@ enum AppConfig {
     /// app (sign-in, settings, paywall, AI consent) moves with it.
     nonisolated static let termsURL = webBaseURL.appendingPathComponent("terms")
     nonisolated static let privacyURL = webBaseURL.appendingPathComponent("privacy")
+    /// 特定商取引法に基づく表記 (docs/legal/web/tokushoho.tsx; the owner publishes it on the web app).
+    nonisolated static let tokushohoURL = webBaseURL.appendingPathComponent("tokushoho")
+    /// 設定 › お問い合わせ・サポート. The same page goes into App Store Connect's support URL.
+    // オーナー: サポートページを公開する（docs/legal/checklist.ja.md 8章 W5。連絡先のメールアドレスが分かるページ）
+    nonisolated static let supportURL = webBaseURL.appendingPathComponent("support")
 
     /// Where the web's `/native-auth` bridge hands a Google / Apple login back to the app
     /// (`catchwords://auth-callback#…`, see `WebAuthSession`).
