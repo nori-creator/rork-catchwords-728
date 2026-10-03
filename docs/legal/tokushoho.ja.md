@@ -2,14 +2,14 @@
   オーナー向けメモ（Web 版の頁には出ない）
   - 公開する頁は Web 版にもうある: https://catchwords.lovable.app/legal/tokushoho
     （src/components/legal/TokushohoDocument.tsx。日本語が正式、英語・繁體中文の訳も同じ頁に出る）。
-    この頁は legal.patch で変えていない。下の表は、その頁が出す内容を書き写したもの。
+    この頁は docs/web-changes/ のパッチ（0001 = 旧 legal.patch）で変えていない。下の表は、その頁が出す内容を書き写したもの。
   - 〔 〕の所は、Web 版が設定（Lovable の Secrets の LEGAL_*、Stripe の価格、STRIPE_TRIAL_DAYS）から差し込む値。
     LEGAL_SELLER_NAME・LEGAL_ADDRESS・LEGAL_PHONE・LEGAL_EMAIL の4つがそろうまでは、表の代わりに
     「この表記は準備中です。…販売は行っていません。」と出て、本番の Stripe の購入口も止まる（legal-config.ts の
     checkoutAllowedByLegal）。
   - 事業者の氏名（名称）は省略できない。個人なら戸籍上の氏名（または登記した商号）。住所・電話は ON_REQUEST にすると
     「請求があれば遅滞なく開示します」と出る（特定商取引法 第11条ただし書き。実際に請求が来たら遅滞なく出せる準備が要る）。
-  - 古い URL /tokushoho は、legal.patch を当てると /legal/tokushoho へ転送される（iPhone アプリの初期のビルドが開く）。
+  - 古い URL /tokushoho は、docs/web-changes/ の 0001（旧 legal.patch）を当てると /legal/tokushoho へ転送される（iPhone アプリの初期のビルドが開く）。
   - 末尾の「付録」は、iPhone アプリでアプリ内課金を始めるときに Web の表へ足す行の文案。今は公開しない。
 -->
 

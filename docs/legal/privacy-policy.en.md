@@ -1,7 +1,7 @@
 <!--
   オーナー向けメモ（Web 版の頁には出ない）
-  - 本文は、Web 版 main（11ff3f0）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
-    docs/legal/web/legal.patch を当てた後の文言と同じです（TSX から機械的に書き出した）。
+  - 本文は、Web 版 main（3fd364f）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
+    docs/web-changes/ のパッチ（0001 が前の legal.patch、0002 が MiniMax・Tripo3D と 3D の機能の削除）を当てた後の文言と同じです（TSX から機械的に書き出した）。
     公開されるのは Web 版の頁（https://catchwords.lovable.app/privacy）で、表示言語に合わせて3言語のどれかが出ます。
     直すときは TSX（patch）とこのファイルを同じ日に、3言語とも直す。
   - 〔 〕の所は、Web 版が表示するときに設定（Lovable の Secrets の LEGAL_* など。src/lib/legal-config.ts）
@@ -54,8 +54,8 @@ Which providers are used depends on the feature and on the operator's settings. 
 
 - **Hosting, database and sign-in**: Lovable (publishing and running the app, relaying AI and map requests), Supabase (database, authentication, photo storage), Cloudflare (the infrastructure the app runs on), and Google or Apple (if you sign in with that account). All information in the Service is stored or processed here
 - **AI analysis and generation**: photos, words, native and study languages, diary text and review results are sent to one of the following, chosen by the operator: Lovable AI Gateway (and, through it, Google Gemini, OpenAI and others), Google (Gemini), OpenAI, Anthropic, DeepSeek, Moonshot AI (Kimi), OpenRouter (including the AI providers behind it), or a provider of an OpenAI-compatible API. Words, example sentences, candidate words and review results are also sent to TypeSafe (Jev) for judgements and memory predictions
-- **Pronunciation audio**: only the text to be read aloud (words and example sentences) is sent: Microsoft (Azure AI Speech), Google (Gemini speech, Cloud Text-to-Speech), ElevenLabs, MiniMax, Lovable AI Gateway or an OpenAI-compatible API. The audio is stored as shared audio that is not linked to you
-- **Images**: only the word (search term) is sent: Unsplash, Wikimedia Commons, Higgsfield and Lovable AI Gateway (image generation). If you use the feature that turns a photo into 3D, that photo is sent to a 3D generation provider (such as Tripo3D)
+- **Pronunciation audio**: only the text to be read aloud (words and example sentences) is sent: Microsoft (Azure AI Speech), Google (Gemini speech, Cloud Text-to-Speech), ElevenLabs, Lovable AI Gateway or an OpenAI-compatible API. The audio is stored as shared audio that is not linked to you
+- **Images**: only the word (search term) is sent: Unsplash, Wikimedia Commons, Higgsfield and Lovable AI Gateway (image generation)
 - **Maps**: Google (Google Maps). When a map is shown on the web version, your device loads it from Google. To look up a place name on the web version, the photo's coordinates are sent to Google through Lovable's relay. In the iPhone app, place names are looked up by sending the coordinates from your device to Apple's geocoding service (not through the operator's servers)
 - **Apple (iPhone app)**: sign-in with Apple, speech recognition for search by voice (audio, when it cannot be recognised on the device), place-name lookup (coordinates), and in-app purchases (the purchase record, once they start)
 - **Payments**: Stripe (payments, invoices, and the subscription management page). Your email address, user ID and payment details are provided to Stripe
@@ -69,7 +69,7 @@ Many of these providers are located outside Japan, and your information may be p
 
 - United States: Supabase, Cloudflare, Google, Apple, OpenAI, Anthropic, OpenRouter, Microsoft, ElevenLabs, Stripe
 - Sweden (EU) and the United States: Lovable
-- China: DeepSeek, Moonshot AI, MiniMax, Tripo3D (only if the settings use them)
+- China: DeepSeek, Moonshot AI (only if the settings use them)
 
 Their systems: the United States has no comprehensive federal privacy law, but has sector-specific federal laws and state laws such as the California Consumer Privacy Act (CCPA). The EU has the General Data Protection Regulation (GDPR), and Japan's Personal Information Protection Commission recognises the EU as providing an equivalent level of protection. China has a Personal Information Protection Law, but also laws that broadly allow government access to data (such as the National Intelligence Law). For details, see the survey of foreign systems published by Japan's Personal Information Protection Commission.
 

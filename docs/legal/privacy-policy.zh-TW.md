@@ -1,7 +1,7 @@
 <!--
   オーナー向けメモ（Web 版の頁には出ない）
-  - 本文は、Web 版 main（11ff3f0）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
-    docs/legal/web/legal.patch を当てた後の文言と同じです（TSX から機械的に書き出した）。
+  - 本文は、Web 版 main（3fd364f）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
+    docs/web-changes/ のパッチ（0001 が前の legal.patch、0002 が MiniMax・Tripo3D と 3D の機能の削除）を当てた後の文言と同じです（TSX から機械的に書き出した）。
     公開されるのは Web 版の頁（https://catchwords.lovable.app/privacy）で、表示言語に合わせて3言語のどれかが出ます。
     直すときは TSX（patch）とこのファイルを同じ日に、3言語とも直す。
   - 〔 〕の所は、Web 版が表示するときに設定（Lovable の Secrets の LEGAL_* など。src/lib/legal-config.ts）
@@ -54,8 +54,8 @@
 
 - **主機、資料庫與登入**：Lovable（App 的發布與執行環境、AI 與地圖請求的中繼）、Supabase（資料庫、身分驗證、照片儲存）、Cloudflare（App 的執行基礎設施），以及 Google 或 Apple（以該帳號登入時的身分驗證）。本服務的所有資料都在此儲存或處理
 - **AI 分析與產生**：照片、單字、母語與學習語言、日記內容、複習結果，會送到經營者選擇的下列其中之一：Lovable AI Gateway（以及透過它的 Google Gemini、OpenAI 等）、Google（Gemini）、OpenAI、Anthropic、DeepSeek、Moonshot AI（Kimi）、OpenRouter（包含其背後的 AI 業者），或提供 OpenAI 相容 API 的業者。另外，單字、例句、候選詞與複習結果也會送到 TypeSafe（Jev），用於判斷與記憶的預測
-- **朗讀語音**：只送出要朗讀的文字（單字與例句）：Microsoft（Azure AI Speech）、Google（Gemini 語音、Cloud Text-to-Speech）、ElevenLabs、MiniMax、Lovable AI Gateway 或 OpenAI 相容 API。產生的語音會以與你無關聯的共用語音儲存
-- **圖片**：只送出單字（搜尋字詞）：Unsplash、Wikimedia Commons、Higgsfield、Lovable AI Gateway（產生圖片）。使用將照片轉為 3D 的功能時，該照片會送到 3D 產生業者（例如 Tripo3D）
+- **朗讀語音**：只送出要朗讀的文字（單字與例句）：Microsoft（Azure AI Speech）、Google（Gemini 語音、Cloud Text-to-Speech）、ElevenLabs、Lovable AI Gateway 或 OpenAI 相容 API。產生的語音會以與你無關聯的共用語音儲存
+- **圖片**：只送出單字（搜尋字詞）：Unsplash、Wikimedia Commons、Higgsfield、Lovable AI Gateway（產生圖片）
 - **地圖**：Google（Google 地圖）。在網頁版顯示地圖時，你的裝置會從 Google 載入地圖。在網頁版以拍照地點的緯度、經度查詢地點名稱時，該緯度、經度會透過 Lovable 的中繼送到 Google。iPhone App 則是由裝置把緯度、經度送到 Apple 的地名查詢服務來查詢地點名稱（不經過經營者的伺服器）
 - **Apple（iPhone App）**：以 Apple 登入時的身分驗證、用語音查詢時的語音辨識（無法在裝置上辨識時的聲音）、地點名稱查詢（緯度、經度）、App 內購買（開始提供後的購買紀錄）
 - **付款**：Stripe（付款、帳單、訂閱管理頁面）。電子郵件地址、使用者 ID 與付款資料會提供給 Stripe
@@ -69,7 +69,7 @@
 
 - 美國：Supabase、Cloudflare、Google、Apple、OpenAI、Anthropic、OpenRouter、Microsoft、ElevenLabs、Stripe
 - 瑞典（歐盟）與美國：Lovable
-- 中國：DeepSeek、Moonshot AI、MiniMax、Tripo3D（僅在設定使用這些業者時）
+- 中國：DeepSeek、Moonshot AI（僅在設定使用這些業者時）
 
 各國制度：美國沒有聯邦層級的綜合性個人資料保護法，而有各領域的聯邦法與《加州消費者隱私法》（CCPA）等州法。歐盟有《一般資料保護規則》（GDPR），日本個人情報保護委員會認定歐盟具有與日本同等的保護水準。中國有《個人信息保護法》，但也有廣泛允許政府取得資料的法律（如《國家情報法》）。詳情可參考日本個人情報保護委員會公布的外國制度調查資料。
 

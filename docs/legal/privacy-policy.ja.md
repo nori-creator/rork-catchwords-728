@@ -1,7 +1,7 @@
 <!--
   オーナー向けメモ（Web 版の頁には出ない）
-  - 本文は、Web 版 main（11ff3f0）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
-    docs/legal/web/legal.patch を当てた後の文言と同じです（TSX から機械的に書き出した）。
+  - 本文は、Web 版 main（3fd364f）の src/components/legal/privacy-{ja,en,zh-tw}.tsx に
+    docs/web-changes/ のパッチ（0001 が前の legal.patch、0002 が MiniMax・Tripo3D と 3D の機能の削除）を当てた後の文言と同じです（TSX から機械的に書き出した）。
     公開されるのは Web 版の頁（https://catchwords.lovable.app/privacy）で、表示言語に合わせて3言語のどれかが出ます。
     直すときは TSX（patch）とこのファイルを同じ日に、3言語とも直す。
   - 〔 〕の所は、Web 版が表示するときに設定（Lovable の Secrets の LEGAL_* など。src/lib/legal-config.ts）
@@ -54,8 +54,8 @@
 
 - **ホスティング・データベース・認証**: Lovable（アプリの公開と実行環境、AI と地図の中継）、Supabase（データベース、認証、写真の保存）、Cloudflare（アプリの実行基盤）。Google または Apple（そのアカウントでログインした場合の認証）。本サービスのすべての情報が保存・処理されます
 - **AI による解析と生成**: 写真、単語、母語・学習言語、日記の本文、復習の結果を送ります。送り先は運営者が選ぶ次のいずれかです: Lovable AI Gateway（その先の Google Gemini、OpenAI など）、Google（Gemini）、OpenAI、Anthropic、DeepSeek、Moonshot AI（Kimi）、OpenRouter（その先の AI 事業者を含む）、OpenAI 互換の API を提供する事業者。また、TypeSafe（Jev）に単語・例文・候補の語・復習の結果を送り、判定と記憶の予測に使います
-- **読み上げ音声**: 読み上げる文字（単語・例文）だけを送ります。Microsoft（Azure AI Speech）、Google（Gemini の読み上げ、Cloud Text-to-Speech）、ElevenLabs、MiniMax、Lovable AI Gateway または OpenAI 互換の API。作った音声は、利用者と結びつかない共有の音声として保存します
-- **画像**: 単語（検索の言葉）だけを送ります。Unsplash、Wikimedia Commons、Higgsfield、Lovable AI Gateway（画像の生成）。写真から 3D を作る機能を使った場合は、その写真を 3D 生成の事業者（Tripo3D など）へ送ります
+- **読み上げ音声**: 読み上げる文字（単語・例文）だけを送ります。Microsoft（Azure AI Speech）、Google（Gemini の読み上げ、Cloud Text-to-Speech）、ElevenLabs、Lovable AI Gateway または OpenAI 互換の API。作った音声は、利用者と結びつかない共有の音声として保存します
+- **画像**: 単語（検索の言葉）だけを送ります。Unsplash、Wikimedia Commons、Higgsfield、Lovable AI Gateway（画像の生成）
 - **地図**: Google（Google マップ）。Web 版で地図を表示するとき、端末は Google の地図を読み込みます。Web 版で撮影位置の緯度・経度から場所の名前を調べるとき、その緯度・経度を Lovable の中継を通して Google へ送ります。iPhone アプリでは、場所の名前は端末から Apple の地名検索へ緯度・経度を送って調べます（運営者のサーバーを通りません）
 - **Apple（iPhone アプリ）**: Apple でログインした場合の認証、声で調べるときの音声認識（端末の中で認識できない場合の音声）、場所の名前の検索（緯度・経度）、アプリ内課金（始めた場合の購入の記録）
 - **決済**: Stripe（決済、請求、定期購入の管理画面）。メールアドレス、利用者 ID、お支払いの情報が Stripe に渡ります
@@ -69,7 +69,7 @@
 
 - 米国: Supabase、Cloudflare、Google、Apple、OpenAI、Anthropic、OpenRouter、Microsoft、ElevenLabs、Stripe
 - スウェーデン（EU）と米国: Lovable
-- 中国: DeepSeek、Moonshot AI、MiniMax、Tripo3D（設定でこれらを使う場合だけ）
+- 中国: DeepSeek、Moonshot AI（設定でこれらを使う場合だけ）
 
 各国の制度: 米国には連邦の包括的な個人情報保護法はなく、分野ごとの連邦法とカリフォルニア州消費者プライバシー法（CCPA）などの州法があります。EU には一般データ保護規則（GDPR）があり、個人情報保護委員会は EU を日本と同等の水準にあると認めています。中国には個人情報保護法がありますが、政府による情報の取得を広く認める法律（国家情報法など）もあります。詳しくは、個人情報保護委員会が公表している「外国における個人情報の保護に関する制度等の調査」で確認できます。
 

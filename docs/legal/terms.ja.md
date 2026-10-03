@@ -1,7 +1,7 @@
 <!--
   オーナー向けメモ（Web 版の頁には出ない）
-  - 本文は、Web 版 main（11ff3f0）の src/components/legal/terms-{ja,en,zh-tw}.tsx に
-    docs/legal/web/legal.patch を当てた後の文言と同じです（TSX から機械的に書き出した）。
+  - 本文は、Web 版 main（3fd364f）の src/components/legal/terms-{ja,en,zh-tw}.tsx に
+    docs/web-changes/ のパッチ（0001 が前の legal.patch。規約は他のパッチでは変わらない）を当てた後の文言と同じです（TSX から機械的に書き出した）。
     公開されるのは Web 版の頁（https://catchwords.lovable.app/terms）。直すときは TSX と同じ日に、3言語とも直す。
   - 〔 〕の所は、Web 版が表示するときに設定（LEGAL_* と STRIPE_TRIAL_DAYS。src/lib/legal-config.ts）から
     差し込む値・出し分けです。本文に手で書き込まないでください。
