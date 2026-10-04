@@ -1528,7 +1528,7 @@ struct WordDetailView: View {
                 .font(AppFont.hand(16))
                 .foregroundStyle(Theme.muted)
             // No selfie yet: offer to take one now (web PhotoAddButtons).
-            if current.selfieImageUrl == nil && current.hasOwnPhoto {
+            if current.selfieImageUrl == nil && current.hasOwnPhoto && SelfieCamera.isAvailable {
                 Button { takingSelfie = true } label: {
                     Label(isAddingSelfie ? L("保存しています…") : L("いま自撮りを撮る"), systemImage: "camera")
                         .scaledFont(size: 15, weight: .semibold)

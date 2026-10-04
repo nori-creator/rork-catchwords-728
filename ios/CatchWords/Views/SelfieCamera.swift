@@ -1,19 +1,18 @@
 import SwiftUI
 import UIKit
 
-/// The front camera for one selfie (the photo library where there is no camera, e.g. the simulator).
+/// The front camera for one selfie. Camera only: callers hide the entry when `isAvailable` is false, so the
+/// photo library is never used for selfies (its permission text does not cover that purpose).
 struct SelfieCamera: UIViewControllerRepresentable {
+    static var isAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
+
     let onPicked: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            picker.sourceType = .camera
-            if UIImagePickerController.isCameraDeviceAvailable(.front) { picker.cameraDevice = .front }
-        } else {
-            picker.sourceType = .photoLibrary
-        }
+        picker.sourceType = .camera
+        if UIImagePickerController.isCameraDeviceAvailable(.front) { picker.cameraDevice = .front }
         picker.delegate = context.coordinator
         return picker
     }
