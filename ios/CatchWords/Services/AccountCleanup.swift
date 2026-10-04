@@ -4,20 +4,31 @@ import WidgetKit
 
 /// What stays on the device after a sign-out or an account deletion.
 ///
-/// - Sign-out: the next person on this phone must not get the previous account's place reminders
-///   (they carry its words and place names). Photos waiting in 「解析待ち」 stay — a photo that cannot be
-///   retaken is never thrown away just for signing out.
+/// - Sign-out: the next person on this phone must not get any notification planned for the previous
+///   account — review and place reminders (they carry its words and place names), the milestone album
+///   ("◯日目の記念アルバム", counted from its sign-up day) and finished-analysis notices. Photos waiting in
+///   「解析待ち」 stay — a photo that cannot be retaken is never thrown away just for signing out.
 /// - Account deletion (App Store Review Guideline 5.1.1(v)): the server erased the account; the copies on
 ///   this phone go too — waiting photos, reminders, widget words and thumbnails, diary drafts, cached images.
 enum AccountCleanup {
     /// After any sign-out (button, expired login, account deleted).
     static func signedOut() async {
         let center = UNUserNotificationCenter.current()
-        let place = ReminderService.placeIdentifierPrefix
         let pending = await center.pendingNotificationRequests()
-        center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter { $0.hasPrefix(place) })
+        center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter(isAccountNotification))
         center.removeAllDeliveredNotifications()
         UserDefaults.standard.set(false, forKey: ReminderService.placeKey)
+        // Photos fetched through signed URLs may sit in the shared HTTP cache.
+        URLCache.shared.removeAllCachedResponses()
+    }
+
+    /// Every notification the app plans belongs to the signed-in account (R6-03). The next sign-in plans
+    /// its own again (reminders at sign-in, the milestone album when Home opens).
+    static func isAccountNotification(_ id: String) -> Bool {
+        id.hasPrefix(ReminderService.reviewIdentifierPrefix)
+            || id.hasPrefix(ReminderService.placeIdentifierPrefix)
+            || id.hasPrefix(PendingRetry.notificationPrefix)
+            || id == Milestone.notificationId
     }
 
     /// After `deleteMyAccount` succeeded. `userId` is the deleted account (read before signing out).
@@ -30,6 +41,11 @@ enum AccountCleanup {
         if let userId { PendingQueue.shared.removeAll(ownerId: userId) }
         // That account's answer to the AI consent.
         if let userId { AIConsent.removeRecord(userId: userId) }
+
+        // What that account closed or left half-way on this device: the milestone albums it dismissed and
+        // the first tour still to continue.
+        Milestone.removeRecord(userId: userId)
+        TourStep.removePending(userId: userId)
 
         // Diary drafts kept on this device for that account (DiaryStore `draftPrefix`).
         if let userId {
@@ -46,8 +62,5 @@ enum AccountCleanup {
             try? FileManager.default.removeItem(at: thumbs)
         }
         WidgetCenter.shared.reloadAllTimelines()
-
-        // Photos fetched through signed URLs may sit in the shared HTTP cache.
-        URLCache.shared.removeAllCachedResponses()
     }
 }

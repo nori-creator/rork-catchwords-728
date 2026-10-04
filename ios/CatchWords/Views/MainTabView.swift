@@ -69,10 +69,15 @@ final class AppRouter {
 struct MainTabView: View {
     @State private var router = AppRouter()
     @Environment(DexStore.self) private var dex
-    @AppStorage(TourStep.pendingKey) private var tourPending: Bool = false
+    /// This account's "first tour still to run" (`TourStep.pendingStorageKey`, kept per account).
+    @AppStorage private var tourPending: Bool
     @Environment(\.appReduceMotion) private var reduceMotion
     @Namespace private var detailZoom
     @State private var flightToken = 0
+
+    init() {
+        _tourPending = AppStorage(wrappedValue: false, TourStep.pendingStorageKey(for: SupabaseClient.shared.userId))
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {

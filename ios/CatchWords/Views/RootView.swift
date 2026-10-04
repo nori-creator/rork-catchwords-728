@@ -58,6 +58,7 @@ struct RootView: View {
                         // Before the profile arrives (`needsOnboarding` waits for it): the account that just
                         // signed in, not the previous one.
                         onboardingDone = OnboardingState.isDone(userId: SupabaseClient.shared.userId)
+                        TourStep.adoptDevicePending(userId: SupabaseClient.shared.userId)
                         AIConsent.shared.load(userId: SupabaseClient.shared.userId)
                         let guessed = NativeAPI.targetLanguage
                         async let p: Void = profile.load()
@@ -111,10 +112,8 @@ struct RootView: View {
                 StickerPhoto.invalidateAll()
                 ReviewActivityController.end()
                 WidgetBridge.clear()
-                Task {
-                    await ReminderService.clearAll()
-                    await AccountCleanup.signedOut()
-                }
+                // Every notification planned for it (reminders, the milestone album) goes in AccountCleanup.
+                Task { await AccountCleanup.signedOut() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in auth.sessionExpired() }
