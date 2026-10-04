@@ -443,6 +443,28 @@ final class SupabaseClient {
         }
     }
 
+    /// Deletes one object (`DELETE /storage/v1/object/<bucket>/<path>`). Storage's RLS lets an account delete
+    /// only inside its own folder (`avatars_delete_own`: the first folder is its uid). An object that is
+    /// already gone counts as deleted (404, or 400 "not found").
+    func removeObject(path: String, bucket: String) async throws {
+        try await refreshForRequest()
+        guard let baseURL, let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        let (body, response) = try await withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: 20)
+            req.httpMethod = "DELETE"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            return try await perform(req)
+        }
+        let status = response.statusCode
+        if (200..<300).contains(status) || status == 404 { return }
+        let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+        let detail = (json?["message"] as? String) ?? (json?["error"] as? String) ?? ""
+        if status == 400, detail.lowercased().contains("not found") { return }
+        throw APIError.server(status, detail)
+    }
 
     /// Public bucket URL (avatars).
     func publicURL(bucket: String, path: String) -> String? {
