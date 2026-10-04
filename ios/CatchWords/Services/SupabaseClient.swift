@@ -123,6 +123,31 @@ final class SupabaseClient {
         guard (200..<300).contains(response.statusCode) else { throw APIError.server(response.statusCode, "") }
     }
 
+    /// After `deleteMyAccount`: asks Supabase Auth itself whether the login still exists, with the session
+    /// this device still holds. `GET auth/v1/user` answers 200 only while the auth user exists (deleted →
+    /// 401/403/404 "user not found"), and the refresh token stops working once its sessions are gone.
+    /// `true` = the login is proven gone; `false` = Auth still knows this user; `nil` = could not ask (offline).
+    func verifyLoginDeleted() async -> Bool? {
+        guard let baseURL, let s = session,
+              let userURL = URL(string: "auth/v1/user", relativeTo: baseURL),
+              let refreshURL = URL(string: "auth/v1/token?grant_type=refresh_token", relativeTo: baseURL) else { return nil }
+        var userReq = URLRequest(url: userURL, timeoutInterval: 15)
+        userReq.setValue(anonKey, forHTTPHeaderField: "apikey")
+        userReq.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        guard let (_, userRes) = try? await urlSession.data(for: userReq),
+              let userCode = (userRes as? HTTPURLResponse)?.statusCode else { return nil }
+        if (200..<300).contains(userCode) { return false }
+        guard [401, 403, 404].contains(userCode) else { return nil }
+        var refreshReq = URLRequest(url: refreshURL, timeoutInterval: 15)
+        refreshReq.httpMethod = "POST"
+        refreshReq.setValue(anonKey, forHTTPHeaderField: "apikey")
+        refreshReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        refreshReq.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh_token": s.refreshToken])
+        guard let (_, refreshRes) = try? await urlSession.data(for: refreshReq),
+              let refreshCode = (refreshRes as? HTTPURLResponse)?.statusCode else { return nil }
+        return !(200..<300).contains(refreshCode)
+    }
+
     /// The signed-in user's `user_metadata` (notification_preferences, learning_preferences…).
     func userMetadata() async throws -> [String: Any] {
         try await refreshForRequest()

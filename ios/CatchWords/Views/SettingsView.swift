@@ -569,6 +569,9 @@ struct SettingsView: View {
                 DiaryStore.removeDrafts(userId: uid)
             }
             auth.signOut()
+        } catch APIError.message(let text) {
+            isDeleting = false
+            deleteError = text
         } catch {
             isDeleting = false
             deleteError = L("削除できませんでした。通信を確かめて、もう一度お試しください。")

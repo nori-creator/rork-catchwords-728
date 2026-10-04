@@ -133,8 +133,14 @@ final class ProfileStore {
     /// (children first), and the **login itself** (`auth.admin.deleteUser`, service role).
     /// Deleting only the rows left a live login behind (App Store Review Guideline 5.1.1(v)).
     /// The user has typed 「削除」 on the settings screen; that is the confirmation the server requires.
+    /// The server's answer alone is not taken as proof: Supabase Auth is then asked directly whether the
+    /// login still exists (`verifyLoginDeleted`). If Auth still knows this user, the deletion is reported as
+    /// failed and the user stays signed in to retry (the server's steps are safe to run again).
     func deleteAccount() async throws {
         _ = try await NativeAPI.call("deleteMyAccount", ["confirm": "削除"], timeout: 60)  // l10n-ignore (server keyword)
+        if await client.verifyLoginDeleted() == false {
+            throw APIError.message(L("アカウントのログイン情報を削除できませんでした。もう一度お試しください。"))
+        }
     }
 
     func clearAvatar() async {
