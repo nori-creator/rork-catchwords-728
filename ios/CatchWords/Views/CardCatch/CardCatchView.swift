@@ -162,12 +162,12 @@ struct CardCatchView: View {
     private func pickLayer(now: Double) -> some View {
         ZStack(alignment: .topLeading) {
             if model.pickUI {
-                ForEach(Array(model.objs.enumerated()), id: \.element.id) { i, o in
-                    Color.clear
-                        .contentShape(RoundedRectangle(cornerRadius: 18, style: .circular))
-                        .onTapGesture { model.pickObject(i) }
-                        .ccPlace(o.rect)
-                }
+                // Tapping the thing itself opens its words (the smallest box under the finger wins).
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { p in model.pickObject(at: p) }
+                    .frame(width: CCSpace.w, height: CCSpace.h)
+                    .accessibilityHidden(true)
             }
             pill(now: now)
                 .frame(width: CCSpace.w, alignment: .center)
@@ -180,8 +180,9 @@ struct CardCatchView: View {
                             .tourAnchor(.pick, if: i == 0 && model.phase == .pick)
                             .scaleEffect(0.5 + 0.5 * model.tagScale[i].value(now))
                             .opacity(model.tagOpacity[i].value(now))
-                            .visualEffect { content, proxy in content.offset(y: -proxy.size.height / 2) }
-                            .position(x: max(60, min(CCSpace.w - 60, o.rect.midX)), y: max(170, o.rect.minY + 6))
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                            .position(o.tagCenter)
                     }
                 }
             }

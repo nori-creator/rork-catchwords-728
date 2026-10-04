@@ -15,6 +15,10 @@ final class CardCatchModel {
         let rect: CGRect
         let outline: UIImage
         let name: String
+        /// Where the AI said the object is (its `point`), in design points.
+        let anchor: CGPoint
+        /// The tag's centre after `layoutTags` moved it off the others.
+        var tagCenter: CGPoint
         /// formLight's piece when there is no cut-out (`cropFrom`), drawn off the main thread from the start.
         let piece: Task<UIImage, Never>?
     }
@@ -235,12 +239,73 @@ final class CardCatchModel {
             let box = o.box
             return Task.detached(priority: .userInitiated) { CCImages.cropFrom(photo: photo, box: box) }
         }
-        objs = list.indices.map { i -> Obj in
+        let built = list.indices.map { i -> Obj in
             let o = list[i]
             let shown = ReaderLanguage.shown(o.words[0].meaningJa)
-            return Obj(id: o.id, source: o, rect: rects[i], outline: outlines[i],
-                       name: shown.isEmpty ? o.words[0].headword : shown, piece: pieces[i])
+            let real = CGPoint(x: ox + o.point.x * pw * s, y: oy + o.point.y * ph * s)
+            let d = space.toDesign(CGRect(origin: real, size: .zero)).origin
+            // The tag sits on the object itself: its AI point, kept inside its box.
+            let r = rects[i]
+            let a = CGPoint(x: min(max(d.x, r.minX), r.maxX), y: min(max(d.y, r.minY), r.maxY))
+            return Obj(id: o.id, source: o, rect: r, outline: outlines[i],
+                       name: shown.isEmpty ? o.words[0].headword : shown,
+                       anchor: a, tagCenter: a, piece: pieces[i])
         }
+        objs = Self.layoutTags(built)
+    }
+
+    /// Rough tag size (13 pt heavy text, the dot, the padding) in design points.
+    static func tagSize(_ name: String) -> CGSize {
+        let chars = name.reduce(CGFloat(0)) { w, c in w + (c.isASCII ? 8 : 13.5) }
+        return CGSize(width: min(300, chars + 38), height: 32)
+    }
+
+    /// Places every tag on its own object, then nudges any that would cover an earlier one (nearest free
+    /// spot first: below, above, then sideways), kept inside the area between the pill and 撮り直す.
+    static func layoutTags(_ list: [Obj]) -> [Obj] {
+        let minY: CGFloat = 170, maxY: CGFloat = CCSpace.h - 120
+        var placed: [CGRect] = []
+        var out = list
+        for i in out.indices {
+            let size = tagSize(out[i].name)
+            func frame(_ c: CGPoint) -> CGRect {
+                let x = min(max(c.x, size.width / 2 + 8), CCSpace.w - size.width / 2 - 8)
+                let y = min(max(c.y, minY), maxY)
+                return CGRect(x: x - size.width / 2, y: y - size.height / 2, width: size.width, height: size.height)
+            }
+            let a = out[i].anchor
+            let step = size.height + 8
+            var tries: [CGPoint] = [a]
+            for n in 1...8 {
+                let d = CGFloat(n) * step
+                tries += [CGPoint(x: a.x, y: a.y + d), CGPoint(x: a.x, y: a.y - d),
+                          CGPoint(x: a.x + d * 2, y: a.y), CGPoint(x: a.x - d * 2, y: a.y)]
+            }
+            let pad: CGFloat = 4
+            let best = tries.map(frame).first { f in !placed.contains { $0.insetBy(dx: -pad, dy: -pad).intersects(f) } }
+                ?? frame(a)
+            placed.append(best)
+            out[i].tagCenter = CGPoint(x: best.midX, y: best.midY)
+        }
+        return out
+    }
+
+    /// A tap on the photo (design points): the smallest object box under it, else the nearest object
+    /// point within reach.
+    func pickObject(at p: CGPoint) {
+        guard phase == .pick, !objs.isEmpty else { return }
+        let inside = objs.indices.filter { objs[$0].rect.insetBy(dx: -8, dy: -8).contains(p) }
+        func area(_ i: Int) -> CGFloat { objs[i].rect.width * objs[i].rect.height }
+        func dist(_ i: Int) -> CGFloat { hypot(objs[i].anchor.x - p.x, objs[i].anchor.y - p.y) }
+        if !inside.isEmpty {
+            // Nested boxes: the smaller one is the thing actually touched; equal ones go by distance.
+            let pick = inside.min { a, b in
+                abs(area(a) - area(b)) < 0.15 * max(area(a), area(b)) ? dist(a) < dist(b) : area(a) < area(b)
+            }
+            if let pick { pickObject(pick) }
+            return
+        }
+        if let near = objs.indices.min(by: { dist($0) < dist($1) }), dist(near) < 90 { pickObject(near) }
     }
 
     private func analyze(_ my: Int, objects list: [Obj], waiting: Bool) async {

@@ -35,11 +35,15 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
 
     /// Heavy (renders masks): call off the main thread.
     static func build(candidates: [Candidate], masks: InstanceMasks?, photoSize: CGSize) -> [CatchObject] {
-        groups(candidates).enumerated().map { (i, words) -> CatchObject in
+        // Vision often merges several things into one foreground instance: the first object under it keeps
+        // the cut-out; the others get their own box around their own point, so no two objects share a place.
+        var used: Set<Int> = []
+        return groups(candidates).enumerated().map { (i, words) -> CatchObject in
             let raw = words[0].point
             let p = CGPoint(x: min(1, max(0, (raw.first ?? 500) / 1000)),
                             y: min(1, max(0, (raw.count > 1 ? raw[1] : 500) / 1000)))
-            if let masks, let label = masks.instance(near: p), let cut = masks.cut(instance: label) {
+            if let masks, let label = masks.instance(near: p), !used.contains(label), let cut = masks.cut(instance: label) {
+                used.insert(label)
                 return CatchObject(id: i, words: words, point: p, box: cut.box, cut: cut.image)
             }
             return CatchObject(id: i, words: words, point: p, box: fallbackBox(at: p, photoSize: photoSize), cut: nil)
