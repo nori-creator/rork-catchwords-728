@@ -162,7 +162,12 @@ struct SettingsView: View {
                 label(L("表示するタイプ"))
                 // Web photo-pref: which picture shows on home, dex and review when a word has no choice of its own.
                 // iOS keeps 切り抜き (cut-out mode is iOS's own).
-                ChoicePills(options: [("object", L("元の写真")), ("cutout", L("切り抜き")), ("selfie", L("自撮り"))], selection: $photoPref)
+                // The default "auto" (never chosen) shows exactly what 切り抜き shows (Sticker.heroPath: cut-out,
+                // else the photo), so it lights 切り抜き instead of leaving no pill selected (R6-10). The web
+                // has no おまかせ button either (removed by the owner 2026-08-26); the stored value is kept until
+                // a pill is tapped.
+                ChoicePills(options: [("object", L("元の写真")), ("cutout", L("切り抜き")), ("selfie", L("自撮り"))],
+                            selection: Binding(get: { photoPref == "auto" ? "cutout" : photoPref }, set: { photoPref = $0 }))
                 label(L("1日の復習枚数")).padding(.top, 6)
                 ChoicePills(
                     options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", L("無制限"))],

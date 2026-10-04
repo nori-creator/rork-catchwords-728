@@ -186,7 +186,7 @@ struct MonthBookView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ScrollView(.vertical, showsIndicators: false) {
+                    PageScroll {
                         CollageBoard(items: d.items, editable: isToday, onOpen: onOpen, onEditingChange: { on in
                             editingPhotos = on
                         })
@@ -398,7 +398,7 @@ private struct RightDiaryPage<Foot: View>: View {
                     }
                     .buttonStyle(PressableStyle())
                 }
-                ScrollView(.vertical, showsIndicators: false) {
+                PageScroll {
                     Group {
                         if text.isEmpty {
                             Button { onWrite(day.day) } label: {
@@ -511,5 +511,28 @@ struct MonthBookSheet: View {
         .sheet(item: $writingDay) { d in
             DiaryComposer(day: d.date).presentationDetents([.large])
         }
+    }
+}
+
+/// A page's own vertical scroll that takes a vertical swipe only when what it holds is taller than the page
+/// (R6-09). The book sits inside the home screen's scroll; an inner scroll that always took the swipe left
+/// the home screen barely moving under a finger on the album. Horizontal swipes still turn the pages.
+struct PageScroll<Content: View>: View {
+    private let content: Content
+    @State private var contentHeight: CGFloat = 0
+    @State private var boxHeight: CGFloat = 0
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            content
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { boxHeight = $0 }
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .scrollDisabled(contentHeight <= boxHeight + 1)
     }
 }

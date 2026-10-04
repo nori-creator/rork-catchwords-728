@@ -344,6 +344,8 @@ struct QuizCard: View {
 
     /// The question line, scrolled to the top after an answer (ReviewView) so the sheet never hides it.
     static let questionID = "quiz.question"
+    /// Room kept on each side of a choice's word for the speaker button (40 pt, 10 pt from the edge) and the ✓/✗.
+    static let choiceSideInset: CGFloat = 56
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
     /// The meaning as it is now (read in the reader's language after the card was made).
@@ -426,7 +428,12 @@ struct QuizCard: View {
         let fill: Color = revealed && isCorrect ? Theme.ok.opacity(0.08) : (isPicked ? Theme.destructive.opacity(0.07) : Color(light: 0xF7FAFF, dark: 0x132032))
         return ZStack {
             Button { answer(c) } label: {
+                // The speaker (40 pt + 10 trailing) and the ✓/✗ mark sit over the row: the word keeps clear of
+                // both sides, so a long one ("washing machine") wraps or shrinks instead of running under them.
                 ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 34, weight: .bold)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Self.choiceSideInset)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, minHeight: 76)
                     .contentShape(Rectangle())
             }
