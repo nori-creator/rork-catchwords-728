@@ -118,7 +118,14 @@ final class FullTourTests: XCTestCase {
         snap("search")
         field.tap()
         field.typeText(sampleWord)
-        tap("search.submit")
+        // A Japanese keyboard can hold the word as unconfirmed input: the field's text (and so the enabled
+        // state of 「〜で調べる」) only updates once it is confirmed, like a person pressing the keyboard's key.
+        let submit = app.buttons["search.submit"]
+        if !submit.isEnabled {
+            field.typeText("\n")
+            settle(0.5)
+        }
+        if submit.exists && submit.isEnabled { submit.tap() }
         let first = app.buttons["candidate.0"].firstMatch
         if first.waitForExistence(timeout: 20) {
             settle(1)
