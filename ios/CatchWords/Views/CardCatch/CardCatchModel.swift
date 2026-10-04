@@ -395,6 +395,8 @@ final class CardCatchModel {
     func pickObject(_ i: Int) {
         guard phase == .pick, objs.indices.contains(i) else { return }
         play(.ccTick)
+        // The card starts generating now, while the words are read (most picks are the first word).
+        if let first = objs[i].source.words.first { vm?.prefetchDetails(for: first) }
         sheetObj = i
         phase = .word
         sheetOpenedAt = CCClock.now
@@ -531,7 +533,6 @@ final class CardCatchModel {
         cardSpin = CCAnim([[720, 0.2, 0], [360, 1.08, 1], [0, 1, 1]], offsets: [0, 0.7, 1], duration: motion.d(1000),
                           easing: CCBezier(0.2, 0.8, 0.2, 1))
         await wait(motion.d(1000))
-        await wait(motion.sleep(200))
         guard my == runId else { return }
 
         // chooseWord, after formLight: say(w.zh) — silent when the sound is off (`if (S.sfx !== "on") return`)

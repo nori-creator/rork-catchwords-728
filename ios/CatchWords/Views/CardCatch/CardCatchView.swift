@@ -42,7 +42,11 @@ struct CardCatchView: View {
                                          uid: SupabaseClient.shared.userId)
                 }
                 model.onHandoff = { [router] star in router.catchStar = star }
-                model.onCardShown = { [router] in router.advanceTour(from: .pick, to: .detail) }
+                model.onCardShown = { [router, dex, vm] in
+                    router.advanceTour(from: .pick, to: .detail)
+                    // The photos go up while the card is admired: 図鑑に入れる then only saves the row.
+                    vm.startUploads(using: dex)
+                }
                 model.begin()
             }
             .onChange(of: geo.size) { _, s in

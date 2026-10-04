@@ -13,6 +13,15 @@ struct CatchDraft {
     let location: CLLocation?
     let placeName: String?
     let captureType: String
+    /// Photos already uploaded while the card was on screen (card catch); nil = upload while saving.
+    var uploads: Task<CatchUploads, Error>? = nil
+}
+
+/// Storage paths of a catch's photos.
+struct CatchUploads: Sendable {
+    let object: String?
+    let cutout: String?
+    let selfie: String?
 }
 
 enum SaveOutcome {
@@ -197,14 +206,15 @@ final class DexStore {
     func save(_ draft: CatchDraft) async throws -> SaveOutcome {
         guard let uid = client.userId else { throw APIError.unauthorized }
         guard let card = draft.details else { throw APIError.message(L("カード生成に失敗しました")) }
-        let ts = Int(Date().timeIntervalSince1970 * 1000)
-
-        async let objectPath: String? = uploadJPEG(draft.photo, uid: uid, ts: ts, kind: "object")
-        async let cutoutPath: String? = uploadPNG(draft.cutout, uid: uid, ts: ts, kind: "cutout")
-        async let selfiePath: String? = try? uploadJPEG(draft.selfie, uid: uid, ts: ts, kind: "selfie")
-        let obj = try await objectPath
-        let cut = await cutoutPath
-        let selfieRef: String? = await selfiePath
+        let paths: CatchUploads
+        if let early = draft.uploads, let done = try? await early.value {
+            paths = done
+        } else {
+            paths = try await upload(photo: draft.photo, cutout: draft.cutout, selfie: draft.selfie, uid: uid)
+        }
+        let obj = paths.object
+        let cut = paths.cutout
+        let selfieRef = paths.selfie
 
         let c = draft.candidate
         let raw = card.raw
@@ -272,9 +282,31 @@ final class DexStore {
         }
         stickers.removeAll { $0.id == sticker.id }
         stickers.insert(sticker, at: 0)
-        await signPaths(for: [sticker])
+        // The photos are already in the local cache under these paths: signing never holds the landing.
+        Task { await signPaths(for: [sticker]) }
         saveToPhotosIfEnabled(draft.photo)
         return .created(sticker)
+    }
+
+    /// Starts uploading a catch's photos now (the card catch, while the card is on screen).
+    func preupload(photo: UIImage, cutout: UIImage?, selfie: UIImage?) -> Task<CatchUploads, Error> {
+        let uid = client.userId
+        return Task {
+            guard let uid else { throw APIError.unauthorized }
+            return try await upload(photo: photo, cutout: cutout, selfie: selfie, uid: uid)
+        }
+    }
+
+    /// Photo, cut-out and selfie in parallel; a failed cut-out or selfie never blocks the catch.
+    private func upload(photo: UIImage, cutout: UIImage?, selfie: UIImage?, uid: String) async throws -> CatchUploads {
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        async let objectPath: String? = uploadJPEG(photo, uid: uid, ts: ts, kind: "object")
+        async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "cutout")
+        async let selfiePath: String? = try? uploadJPEG(selfie, uid: uid, ts: ts, kind: "selfie")
+        let obj = try await objectPath
+        let cut = await cutoutPath
+        let sel: String? = await selfiePath
+        return CatchUploads(object: obj, cutout: cut, selfie: sel)
     }
 
     private func fetchSticker(id: String) async throws -> Sticker {

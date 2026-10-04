@@ -84,6 +84,10 @@ final class CaptureViewModel {
     private var runToken: Int = 0
     private var cutoutTask: Task<Void, Never>?
     private var detailsTask: Task<CardDetails?, Never>?
+    /// Cards already being generated for this photo (prefetched when an object is tapped), by headword.
+    private var detailsCache: [String: Task<CardDetails?, Never>] = [:]
+    /// The card catch's photos, uploaded while the card is on screen (`DexStore.preupload`).
+    private(set) var uploads: Task<CatchUploads, Error>?
     /// Detection may finish while the user is still taking the selfie.
     private var detectOutcome: Result<[Candidate], Error>?
     /// The photo is kept in "解析待ち" from the shutter on (capture.tsx enqueueCapture), and
@@ -109,6 +113,8 @@ final class CaptureViewModel {
         picked = nil
         details = nil
         detailsTask = nil
+        detailsCache = [:]
+        uploads = nil
         cutout = nil
         cutoutLift = nil
         cutoutFailed = false
@@ -322,7 +328,10 @@ final class CaptureViewModel {
         isCutting = false
         cutoutLift = nil
         cutout = Self.cutoutMode ? object.cut : nil
+        uploads = nil
         isCheckingOwned = true
+        // The card is generated alongside the owned-word check (a re-encounter simply drops it).
+        loadDetails(for: word)
         Task {
             let found = try? await NativeAPI.call(
                 "checkOwnedWord",
@@ -340,7 +349,7 @@ final class CaptureViewModel {
             } else {
                 // Fail open: a broken check must never block a new catch.
                 step = .card
-                loadDetails(for: word)
+                if details == nil, !isLoadingDetails { loadDetails(for: word) }   // it failed during the check: once more
             }
         }
     }
@@ -383,12 +392,15 @@ final class CaptureViewModel {
     private func loadDetails(for candidate: Candidate) {
         let token = runToken
         isLoadingDetails = true
-        let task = Task<CardDetails?, Never> {
+        let key = Self.detailsKey(candidate)
+        let task = detailsCache[key] ?? Task<CardDetails?, Never> {
             try? await AIService.shared.cardDetails(for: candidate)
         }
+        detailsCache[key] = task
         detailsTask = task
         Task {
             let d = await task.value
+            if d == nil, detailsCache[key] == task { detailsCache[key] = nil }   // a failure is never reused
             guard token == runToken, picked == candidate else { return }
             isLoadingDetails = false
             if let d {
@@ -406,6 +418,21 @@ final class CaptureViewModel {
         }
     }
 
+    private static func detailsKey(_ c: Candidate) -> String { c.headword + "|" + (c.categoryKey ?? "") }
+
+    /// Card catch: an object was tapped — its first word's card starts generating before a word is chosen.
+    func prefetchDetails(for candidate: Candidate) {
+        let key = Self.detailsKey(candidate)
+        guard detailsCache[key] == nil else { return }
+        detailsCache[key] = Task<CardDetails?, Never> { try? await AIService.shared.cardDetails(for: candidate) }
+    }
+
+    /// Card catch: the photos go up while the card is being looked at, so 図鑑に入れる only saves the row.
+    func startUploads(using dex: DexStore) {
+        guard let photo, uploads == nil else { return }
+        uploads = dex.preupload(photo: photo, cutout: cutout, selfie: selfie)
+    }
+
     /// Saving needs the real card (level, category, extras). Never save placeholder values:
     /// wait for the card that is already being generated.
     func awaitDetails() async -> CardDetails? {
@@ -418,7 +445,8 @@ final class CaptureViewModel {
         let base = photo ?? Self.textCard(for: picked.headword)
         return CatchDraft(
             candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
-            caption: caption, location: location, placeName: placeName, captureType: captureType
+            caption: caption, location: location, placeName: placeName, captureType: captureType,
+            uploads: uploads
         )
     }
 
@@ -482,6 +510,8 @@ final class CaptureViewModel {
         picked = nil
         details = nil
         detailsTask = nil
+        detailsCache = [:]
+        uploads = nil
         cutout = nil
         cutoutLift = nil
         caption = ""

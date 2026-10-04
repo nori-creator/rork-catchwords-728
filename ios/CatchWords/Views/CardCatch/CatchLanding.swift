@@ -66,7 +66,8 @@ final class CatchLandingController {
 
     func run() async {
         // The dex page is open and scrolled to the slot (DexView); the silhouette waits for the light.
-        await wait(motion.sleep(600))
+        // The dex page rises in .55 s; the star leaves as it settles.
+        await wait(motion.sleep(380))
         let k = Double(star.k)
         let cx = Double(star.center.x), cy = Double(star.center.y)
         // `tr = tEl ? rect(.sart) : {x: W0/2 − 40, y: 560, w: 80, h: 80}`
