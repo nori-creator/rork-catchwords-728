@@ -195,7 +195,8 @@ struct CaptureView: View {
                 topBar
                 ZStack(alignment: .bottom) {
                     previewLayer
-                    zoomPills.padding(.bottom, 12)
+                    // Zoom only means something on a live camera: not over 「許可されていません」/「起動できませんでした」.
+                    if cameraLive { zoomPills.padding(.bottom, 12).transition(.opacity) }
                 }
                 .clipShape(.rect(cornerRadius: 24, style: .continuous))
                 .padding(.horizontal, 10)
@@ -325,6 +326,11 @@ struct CaptureView: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
+    /// The camera is on (zoom and 切替 work).
+    private var cameraLive: Bool { camera.state == .running }
+    /// The camera was refused or could not start (its message and button fill the viewfinder).
+    private var cameraFailed: Bool { camera.state == .denied || camera.state == .unavailable }
+
     /// 1× 2× 3× 5× (CameraZoomMeter): the lit stop follows pinch zoom too.
     private var zoomPills: some View {
         let stops: [CGFloat] = [1, 2, 3, 5]
@@ -405,13 +411,20 @@ struct CaptureView: View {
                           arriving: router.shutterFlying) { shoot() }
                 .opacity(shooting ? 0 : 1)
                 .allowsHitTesting(!shooting)
-                .tourAnchor(.shutter)
+                // The first tour's 撮る step lights the shutter and dims the rest. With the camera denied or
+                // broken there is nothing to shoot, and the dim would cover 「設定を開く」/「もう一度試す」:
+                // no spotlight then (TourLayer leaves the screen undimmed without its anchor). Outside the
+                // tour the anchor stays: the camera tab's icon still flies into the shutter.
+                .tourAnchor(.shutter, if: !(cameraFailed && router.tour == .shoot))
                 .accessibilityIdentifier("camera.shutter")
             Spacer()
             Button { camera.toggle() } label: {
                 sideButton(icon: "arrow.triangle.2.circlepath.camera", label: L("切替"))
             }
             .buttonStyle(PressableStyle(scale: 0.9))
+            // Like the shutter: switching needs a running camera.
+            .disabled(!cameraLive)
+            .opacity(cameraLive ? 1 : 0.4)
         }
         .padding(.horizontal, 44)
     }
