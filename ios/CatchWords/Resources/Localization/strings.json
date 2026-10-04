@@ -2159,6 +2159,10 @@
   "en": "Review streak",
   "zh-TW": "連續複習"
  },
+ "次の画面で通知を許可するか選べます。あとから設定で変更できます。": {
+  "en": "On the next screen you can choose whether to allow notifications. You can change this later in Settings.",
+  "zh-TW": "下一個畫面可以選擇是否允許通知，之後也能在設定中更改。"
+ },
  "必要なものだけ選べます。あとから変更できます。": {
   "en": "Choose what feels useful. You can change this later.",
   "zh-TW": "只選需要的，之後隨時可以更改。"

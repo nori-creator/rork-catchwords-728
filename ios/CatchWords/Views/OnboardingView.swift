@@ -222,19 +222,21 @@ struct OnboardingView: View {
             Text(L("学習の通知を\n設定しますか？"))
                 .scaledFont(size: 28, weight: .heavy)
                 .padding(.horizontal, 24).padding(.top, 20)
-            Text(L("必要なものだけ選べます。あとから変更できます。"))
+            Text(L("次の画面で通知を許可するか選べます。あとから設定で変更できます。"))
                 .scaledFont(size: 14).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 24).padding(.top, 8)
             VStack(spacing: 10) {
                 ChoiceRow(leading: .icon("sparkles"), title: L("おまかせ"), sub: L("忘れかける頃に1日1回お知らせ"), isOn: reminderMode == "ai") { reminderMode = "ai" }
                 ChoiceRow(leading: .icon("clock"), title: L("朝と夜"), sub: L("8:00 と 20:00"), isOn: reminderMode == "custom") { reminderMode = "custom" }
-                ChoiceRow(leading: .icon("bell.slash"), title: L("通知しない"), sub: nil, isOn: reminderMode == "off") { reminderMode = "off" }
             }
             .padding(20)
             Spacer()
             PrimaryButton(title: L("次へ"), icon: "arrow.right") {
                 Task {
-                    if reminderMode != "off" { _ = await ReminderService.requestPermission() }
+                    // Always hands over to the system sheet (no in-app way to skip it, Guideline 5.1.1);
+                    // "Don't Allow" there turns the reminders off.
+                    if reminderMode == "off" { reminderMode = "ai" }
+                    if await !ReminderService.requestPermission() { reminderMode = "off" }
                     go(.ready, step: 0)
                 }
             }
