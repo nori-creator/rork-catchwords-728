@@ -128,7 +128,17 @@ struct ZhuyinWordView: View {
         }
     }
 
+    /// The ruby cannot wrap, so a long word (珍珠奶茶 at 38 pt beside the edit and sound buttons) steps down
+    /// in size instead of pushing its row — and the whole word page — wider than the screen.
     @ViewBuilder private var mandarinWord: some View {
+        ViewThatFits(in: .horizontal) {
+            mandarinRuby(size: size)
+            mandarinRuby(size: size * 0.82)
+            mandarinRuby(size: size * 0.68)
+        }
+    }
+
+    @ViewBuilder private func mandarinRuby(size: CGFloat) -> some View {
         if readingPref == "pinyin", let p = pinyin?.trimmingCharacters(in: .whitespaces), !p.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(p)
@@ -148,7 +158,7 @@ struct ZhuyinWordView: View {
                         Text(u.char)
                             .font(.system(size: size, weight: weight))
                             .foregroundStyle(color)
-                        if u.hasReading { column(u) }
+                        if u.hasReading { column(u, size: size) }
                     }
                 }
             }
@@ -167,7 +177,7 @@ struct ZhuyinWordView: View {
         }
     }
 
-    private func column(_ u: ZhuyinUnit) -> some View {
+    private func column(_ u: ZhuyinUnit, size: CGFloat) -> some View {
         let s = max(7, size * 0.3)
         return HStack(alignment: .bottom, spacing: 0) {
             VStack(spacing: 0) {

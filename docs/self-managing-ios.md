@@ -181,8 +181,10 @@ App Store Connect で「審査へ提出」
 | 撮影 → 単語を選ぶ → 保存 | 図鑑に着地する。機内モードなら「保存に失敗しました」と出て写真は「解析待ち」に残る |
 | 復習で答える（機内モード） | 「採点を保存できませんでした」と出て、もう一度答えられる |
 | 設定 | 「Pro にアップグレード」「購入を復元」が出ない。末尾に `1.0.0 (ビルド番号)` が出る |
-| 設定 → アカウント削除 | 削除後にログイン画面に戻り、同じメールで再ログインできない |
+| 設定 → アカウント削除 | 削除後にログイン画面に戻り、同じメールで再ログインできない。ウィジェットの単語・予約した通知・解析待ちの写真も消える |
 | 図鑑（棚） | 上に本棚が出ない。スライド表示でカードが輪になって回り、音が鳴る |
+| 初めてログイン（または「ようこそ」の後） | 「AIへのデータ送信について」が出る。「同意しない」→ カメラのタブは「AIの機能は止まっています」になり、撮影・検索はできないが、図鑑・復習は使える。「内容を確認して同意する」→ 同意するとカメラが使える |
+| 設定 → プライバシー → AIへのデータ送信の同意 | 同意した日が出る。「同意を取り消す」→ カメラのタブがまた止まる。同じアカウントでログインし直しても聞き直さない |
 
 ### 6-2. App Store Connect に入れる情報
 
@@ -221,11 +223,16 @@ App Store Connect で「審査へ提出」
 |---|---|---|
 | 連絡先情報 → メールアドレス | はい | アカウント |
 | ユーザー ID | はい | アカウント |
-| 位置情報 → 正確な位置情報 | はい | 撮った場所の地名を残す（許可した時だけ） |
+| 位置情報 → 正確な位置情報 | はい | 撮った場所の地名を残す・「場所でリマインド」（許可した時だけ） |
 | ユーザーコンテンツ → 写真またはビデオ | はい | 単語の写真・ステッカー |
-| ユーザーコンテンツ → 音声データ | はい | 声で調べる（端末の音声認識。保存しない） |
+| ユーザーコンテンツ → 音声データ | いいえ | 声で調べる の音声は当社のサーバに送らない（下の ※） |
 | ユーザーコンテンツ → その他 | はい | メモ・日記・学習記録 |
-| 購入、診断、使用状況データ | いいえ | 集めていない |
+| 連絡先情報 → 名前 | はい | 表示名（プロフィール） |
+| 検索履歴 | はい | スキャンで見つかった単語と、押した・保存したかの記録（サーバの `scan_events`。位置を許可していればその位置も） |
+| 使用状況データ → 製品の操作 | はい | アプリの機能・分析（サーバが AI の利用回数を `usage_events` に記録し、1日の上限と開発者の利用者画面に使う） |
+| 購入、診断 | いいえ | 集めていない（アプリ内課金を始めたら「購入」を はい にする） |
+
+※ 音声データを「いいえ」にした理由（2026-10-03）: 「声で調べる」（`Services/SpeechService.swift`）は、その言語の認識の仕組みが端末にあれば端末の中だけで文字にし、無ければ Apple の音声認識（Apple のサーバ）が文字にする。当社のサーバや、アプリに組み込んだ他社の部品に音声が渡ることは無く、当社に届くのは文字にした結果だけ（検索履歴・その他のユーザーコンテンツとして答えている）。Apple の App Privacy Details（developer.apple.com/app-store/app-privacy-details/）は「端末の中だけで処理するデータは『収集』に当たらない」「Apple が集めるデータは答えなくてよい」「提携先とは、アプリに入れた分析・広告・他社の SDK などのこと」としているので、音声は答えない。プライバシーポリシー 2-3 と 6 章（提供先の Apple の行）には、音声が Apple に送られることがあると書いてあり、食い違いは無い。音声を当社のサーバや他社の AI に送る機能を足すときは「はい」に戻す。
 
 アプリ内の `PrivacyInfo.xcprivacy` も同じ内容。変えるときは両方そろえる。
 
@@ -238,8 +245,35 @@ App Store Connect で「審査へ提出」
   当社の Web サイト catchwords.lovable.app のログインを行い、アプリに戻ります。
 - アカウント削除は 設定 → アカウント削除 から行え、サーバのアカウントごと消えます。
 - 写真の候補・単語カードの生成は当社サーバ（catchwords.lovable.app）で行います。
+- AI: photos and text are sent to third-party AI (Google Gemini via our server) only after the user
+  agrees on the consent screen shown before the first AI feature (Settings > Privacy to withdraw).
+  Without consent the camera and AI features stay off and nothing is sent.
 - この版は無料のみで、アプリ内課金はありません。
+
+ログインが必要な理由（Guideline 5.1.1(v)）:
+このアプリは Web 版 CatchWords と同じアカウント・同じデータを使います。撮った写真、単語カード、
+復習の記録、日記はアカウントごとに当社サーバに保存され、iPhone と Web のどちらからでも続きを使えます。
+写真から単語を見つける・カードを作る・日記を添削するといった中心の機能は、当社サーバの AI で動き、
+使い過ぎを防ぐためにアカウントごとに1日の利用回数の上限があります。写真もアカウントごとに保存します。
+このため、ログインせずに使える部分はほとんど無く、ログインを必須にしています。
+審査では、上のテスト用アカウント（メール: 【審査用メールアドレス】／パスワード: 【審査用パスワード】）で
+ログイン画面の「メールアドレスで続ける」から入ってください。単語と写真が入った状態で、撮影・図鑑・復習・日記を
+すべて試せます。初回だけ AI への送信の同意画面が出るので「同意して始める」を押してください。
+
+Why sign-in is required (Guideline 5.1.1(v)):
+CatchWords on iPhone shares one account and one set of data with the CatchWords web app. The photos you
+take, your word cards, review history and journal entries are stored per account on our server, so you can
+continue on either iPhone or the web. The core features (finding words in a photo, generating word cards,
+correcting journal entries) run on server-side AI, which has a per-account daily usage limit to prevent
+abuse, and photos are stored per account. Very little of the app works without an account, so sign-in is
+required.
+To review the app, please sign in with the demo account (email: [REVIEW_EMAIL] / password:
+[REVIEW_PASSWORD]) using "Continue with email" on the sign-in screen. The account already has words and
+photos, so the camera, word dex, review and journal can all be tried. On first sign-in a consent screen for
+sending data to AI appears; tap "Agree and start".
 ```
+
+審査メモを書くときは【】と [] の所を、審査用に作ったアカウントの本物のメールとパスワードに置き換える（2か所とも同じもの）。そのアカウントは提出前に Web 版か TestFlight で単語を10語ほど撮って入れ、はじめの設定と AI の同意まで済ませておく（「単語と写真が入った状態」と書いているため）。ボタンの文言はアプリの今の表示に合わせて確かめる。
 
 ### 6-5. 提出後によく返ってくる指摘と対応
 
@@ -249,3 +283,76 @@ App Store Connect で「審査へ提出」
 | Guideline 5.1.1（権限の説明が足りない） | カメラ・マイク・位置・写真の説明文（pbxproj の `INFOPLIST_KEY_*UsageDescription`）を直す |
 | Guideline 4.8（Sign in with Apple） | Google と並べて Apple も出している。指摘があれば Claude に見せる |
 | Guideline 5.1.1(v)（アカウント削除） | 設定 → アカウント削除 の場所を審査メモに書く |
+| Guideline 5.1.2(i)（第三者の AI への送信） | 初回の同意画面（6-6）と、設定の「AIへのデータ送信の同意」を審査メモに書く |
+
+### 6-6. AI への送信の同意（Guideline 5.1.2(i)）
+
+審査ガイドライン 5.1.2(i) は「第三者の AI を含め、個人データを第三者と共有する場所をはっきり示し、共有の前に明示的な許可を得る」ことを求めている。アプリでは次のように入れた（`docs/legal/checklist.ja.md` 8章 A1）。
+
+- **画面**: ログイン（新しい人は「ようこそ」の後）の直後に、アカウントごとに1回「AIへのデータ送信について」を出す（`Views/AIConsentView.swift`）。送るもの（写真・単語・文章・声で調べた言葉の文字）、送り先（当社のサーバを通して外部の AI サービス〈Google など〉）、使い道、同意しない場合、プライバシーポリシーへのリンク。「同意して始める」／「同意しない」。
+- **関所は1か所**: `NativeAPI.call` が、AI に渡る関数（`AIConsent.aiFunctions`: `suggestWords`・`detectScan`・`rankScanCandidates`・`suggestWordCandidates`・`generateCard`・`regenerateCardSection`・`reportAndFixSection`・`getJournalPrompts`・`correctMyJournal`）を、同意が無ければ送る前に `APIError.aiConsentRequired` で止める。画面はそれに合わせて、カメラのタブを止め、単語の「報告」「作り直す」と日記の「AIに添削してもらう」では同意の画面を出す。
+- **保存**: 端末の UserDefaults にアカウントごと（`aiConsent.<ユーザー ID>` に状態・版・日時）。送る内容や送り先を変えたら `AIConsent.currentVersion` を上げると、同意した人にも聞き直す（ポリシー 14章）。アカウントを削除すると消える。
+- **サーバの記録（アプリ側は入れた。Web 側はパッチ待ち）**: Web 側の変更は `docs/web-changes/`（Web の main `3fd364f` に当てる版。3番目のパッチが同意。仕様は Web の `docs/ios-spec/23-ai-consent.md`）。Web 版にも同じ同意の画面が入り、表 `ai_consents` に「誰が・どの版に・いつ同意し・いつ取り消したか」が残り、同意の無い人の AI の関数はサーバで断られる（checklist 8章 W1）。アプリ側で入れたこと:
+  - **見出し**: `/api/native-fn` へのすべての呼び出しに `AI-Consent-Version: 1`（`AIConsent.currentVersion`）を付ける（`NativeAPI.call`）。パッチの入ったサーバは、この見出しが付いた呼び出しだけ同意の記録を確かめる。
+  - **書く**: 「同意して始める」「同意しない」・設定での取り消しのたびに `recordAiConsent`（`{version, agreed}`）を送る。送れなかったら、端末にアカウントごとの「未送信」の印（`aiConsent.<ユーザー ID>` の `pending`）を残し、次の起動（ログインの後）で送り直す。
+  - **読む**: ログインしてプロフィールを読んだ後に `getAiConsent` を読み、端末とそろえる（画面は待たせない）。サーバが同意済み → 端末も同意済み（別の端末・Web で同意した人に聞き直さない）。この版より前に iPhone で同意し、サーバに記録が無い → その同意を送る。サーバで後から取り消されている（Web・別の端末）→ 端末も取り消す。端末とサーバの日時を比べて新しい方を取る。
+  - **断られた時**: AI の関数が 403 `AI_CONSENT_REQUIRED` を返したら `APIError.aiConsentRequired` と同じ扱い。まず端末の同意をサーバに送ってみて、届いたらもう一度だけ呼ぶ。届かなければ端末の同意を外し、同意の画面を出し直す。
+  - **今の本番サーバ（パッチ前）とも動く**: `recordAiConsent` / `getAiConsent` が無い（知らない関数・400・404・通信の失敗など）時は、何も表示せず端末の同意をそのまま使う（今までと同じ動き）。見出しは無視される。
+  - **デモ（UI テスト）**: `Services/Demo/DemoFunctions.swift` が 2つの関数に Web と同じ形で答える。
+  - **`check_native_contract.py`**: 2つの関数は Web の main にまだ無いので、`PENDING_WEB_DEPLOY`（パッチの場所つき）にだけ載せて通している。他の知らない関数は今までどおり落ちる。Web に入ったら警告が出るので、その2行を消す。
+- **オーナーがやること（スイッチ）**: Web のパッチを当てて Supabase の移行（`20261003140000_ai_consents.sql`）を流した後、**全員がこの版以降のアプリに上がってから**、Lovable の Secrets に **`AI_CONSENT_ENFORCE_NATIVE=true`** を入れる。入れると、見出しを付けない古いアプリからの呼び出しも、サーバの同意の記録が無ければ AI の関数が断られる（古いアプリは記録を送らないので、AI が使えなくなる）。入れる前は、古いアプリは今までどおり通る（古いアプリも端末の中で同意を確かめてから送っている）。
+
+---
+
+## 7. アプリ内課金（Pro）を始めるとき（2026-10-03 の確認）
+
+初版は無料のみ（`PlanStore.paywallEnabled = false`）。課金を始める前に、次がそろっている必要があります。
+
+### 7-1. いまの仕組みと「iPhone で買った Pro がサーバに伝わらない」理由
+
+- アプリは StoreKit 2 の購入記録（`Transaction.currentEntitlements`）を端末で確かめ、撮影回数などの**端末で決める制限**はそれで外す（`PlanStore.isPro`）。払った人が締め出されることはない。
+- **サーバが決める Pro の機能**（項目の「作り直す」、Pro 用の AI モデル、報告からの AI 修正）は、サーバの `isProUser` が `profiles.plan = 'pro'`（または管理者）かで決める。`profiles.plan` を書くのは **Stripe の webhook だけ**で、Apple の購入を確かめる処理は**サーバにない**。だから iPhone で買っても、サーバは無料のまま扱う。
+- アプリは「作り直す」を、サーバが Pro と認める時（`PlanStore.serverGrantsPro`）だけ出す（Web と同じ）。課金画面はサーバがまだ認めない機能を約束しない（`PlanStore.serverVerifiesAppStore = false`）。
+- App Store 審査ガイドライン 3.1.3(b) により、Web（Stripe）で買った Pro は、同じ機能をアプリ内課金でも買えるようになるまで iPhone では効かせない。アプリ内課金が出ていない間（`PlanStore.inAppPurchaseAvailable` = `paywallEnabled` がオフ）は、Web で Pro の人もアプリでは無料扱い（「作り直す」が出ない）。課金画面も Web 購入への案内も出さない。
+- 購入時にユーザー ID を `appAccountToken` として付けるようにした。Apple の署名つき購入記録とサーバ通知に入るので、サーバが持ち主を確かめられる。
+
+### 7-2. Web 版（サーバ）に要る変更（このリポジトリからは入れられない）
+
+1. **App Store Server Notifications V2 の受け口** `/api/appstore-notifications`（POST）
+   - 本文 `{ signedPayload }`（JWS）。**Apple のルート証明書（Apple Root CA - G3）までの証明書の鎖と署名を確かめる**（`@apple/app-store-server-library` の `SignedDataVerifier` が使える）。bundleId `com.nori.catchwords`・environment を確かめる。
+   - `data.signedTransactionInfo` から `appAccountToken`（＝ユーザー ID）、`originalTransactionId`、`productId`、`expiresDate`、`revocationDate` を取り出す。
+   - 種類 `SUBSCRIBED / DID_RENEW / DID_CHANGE_RENEWAL_STATUS / EXPIRED / GRACE_PERIOD_EXPIRED / REFUND / REVOKE` で、有効かどうかを決める。
+2. **アプリからすぐ知らせる関数** `syncAppStorePurchase`（`native-fn.ts` の一覧に足す。`requireSupabaseAuth`）
+   - 入力 `{ signedTransaction: string }`（StoreKit 2 の `VerificationResult.jwsRepresentation`）。上と同じく署名を確かめ、`appAccountToken` が呼んだ本人の ID と一致する時だけ反映。戻り値 `{ isPro: boolean }`。
+   - 足したら iOS 側で、購入・復元・`Transaction.updates` の後にこれを呼ぶ（`ios-contract.test.ts` / `check_native_contract.py` の一覧にも足す）。
+3. **持ち主ごとの購入の表** `entitlements(user_id, source 'stripe'|'app_store', original_transaction_id, product_id, expires_at, revoked_at)`。`profiles.plan` は「どれか1つでも有効なら pro」として計算し直す。**今のように Stripe の webhook が `plan` を直接 free に書くと、Apple で払っている人まで無料に戻る**ので、Stripe 側もこの表を通す。
+4. App Store Connect → アプリ → App 情報 → **App Store サーバ通知** に 1 の URL（本番・Sandbox）を入れる。
+
+### 7-3. App Store Connect とアプリでやること
+
+- サブスクリプショングループと商品 `catchwords.pro.yearly` / `catchwords.pro.monthly` を作る（名前・説明・価格・審査用スクリーンショット）。
+- 有料アプリ契約（Paid Apps Agreement）・税・口座を入れる。
+- 利用規約: アプリ説明文の最後に利用規約（EULA）の URL を書くか、App Store Connect の「使用許諾契約」を設定する（課金画面の「利用規約」リンクは https://catchwords.lovable.app/terms）。
+- プライバシーポリシーに Apple のアプリ内課金（Apple が決済し、当社はカード情報を受け取らない）を書き足す。
+- 7-2 が入ったら `PlanStore.serverVerifiesAppStore` と `paywallEnabled`、必要なら `catchLimitEnabled` をオンにする。
+- Pro の中身（課金画面に並べる特典）はオーナーが決める。今の時点で本当に Pro だけなのは「作り直す」（サーバ側）と、オンにした時の撮影回数の上限解除だけ。切り抜きは全員無料。
+
+
+---
+
+## 8. 検定のレベルの使い方（2026-10-03 オーナー決定）
+
+> 「単語の検定のレベルのデータは削除して。設定の検定のレベルは表示する例文やチャンクの難易度を徹底するだけに使う。」
+
+### 8-1. iOS でやったこと
+
+- **単語ごとの級は使わない。** `words.level` も `generateCard` の戻りの `level` も読まない（`Word` / `CardDetails` に持たない）。スキャンの辞書引きも `tocfl_level` を読まない。復習4択の補充語（`Models/QuizPool.swift`）は級を持たず、図鑑の語（同じカテゴリ優先）→ 池の語（同じカテゴリ → 同じ部屋）の順。デモのデータからも単語の級を消した。
+- ただし保存（`saveSticker`）では、`generateCard` が返した `level` をそのまま返す（iOS は中身を見ない）。送らないとサーバが既定の `"TOCFL-2"` を書くため（`SaveStickerInput`）。`updateWordExtras` の `patch` からは外した。
+- **設定の「今のレベル」「目標レベル」**は `profiles.current_level` / `level_goal` に書くだけ。iOS で他に使う所はない。例文とチャンクを作る関数（`generateCard`・`regenerateCardSection`）はサーバが `getUserLevels` → `levelInstruction` で profile から読む。iOS から級を送る項目はサーバの入力にない（作らない）。設定画面に「例文とチャンクを、今のレベルから目標レベルのあいだの難しさで作ります。」と書いた。
+
+### 8-2. 「徹底」にサーバで要ること（このリポジトリからは入れられない）
+
+1. **作った時の級が残っていない。** 例文（`words.example_sentence`）は全員で共有の1行、チャンクや追加の例文は `word_explanations`（表示言語 × 母語 ごとの1行）に入り、どちらも**最初に作った人の級**で書かれたまま。級が違う人や、設定で級を変えた人にも同じ物が出る。級ごとに持つなら、`word_explanations` の鍵に級の段（`parseLevelStep` の 1〜6）を足し、`getWordExplanation` は呼んだ人の段の行を選ぶ（無ければ `ReaderLanguage.needsGeneration` と同じく「作る必要あり」を返す）。共有の `example_sentence` は、その人の段の行に例文があればそちらを出す。
+2. それが入るまでの小さい手: 生成のたびに `extras` に作った時の段（例 `level_step`）を書くだけでも、iOS / Web は「今の設定と違う」と分かり、`regenerateCardSection`（`only_if_empty: false`）で作り直しを勧められる。今は Pro 限定の関数なので、級の違いによる作り直しは無料で通す扱いが要る。
+3. 級を例文・チャンク以外に使っている所: `suggestWords` / `suggestWordCandidates` / `detectScan`（候補語の難しさ）、`getDueReviews`（4択の補充語を `tocfl_level` / `level_step` で選ぶ。iOS は呼ばない）、`correctMyJournal` / `getJournalPrompts`（日記）。オーナー決定に合わせるなら、ここから級を外す。
+4. `words.level` の列や Web 側で単語の級を出す所（`WordCard.tsx` など）は Web とデータベースの話で、iOS からは触らない。

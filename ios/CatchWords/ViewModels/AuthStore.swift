@@ -35,39 +35,22 @@ final class AuthStore {
     private var currentNonce: String?
     private var webAuth: WebAuthSession?
 
-    /// Session check with an 8s timeout — never an endless silent spinner (route.tsx lesson).
+    /// A login saved on this device opens the app at once, without waiting for the network (a slow or
+    /// unanswered connection must not lock the learner out of what works offline); the token is refreshed
+    /// in the background. A login the server no longer accepts ends through the usual path: the refresh
+    /// calls `SupabaseClient.expireSession()`, which posts `.sessionExpired` → `sessionExpired()` → the
+    /// login screen with the reason. No saved login → the login screen (nothing to wait for).
     func bootstrap() async {
         phase = .checking
         guard client.session != nil else {
             if Self.devSkipLogin { await enterAsGuest() } else { phase = .signedOut }
             return
         }
-        let result = await withTaskGroup(of: Bool?.self) { group -> Bool? in
-            group.addTask { [client] in
-                do {
-                    try await client.refreshIfNeeded()
-                    return true
-                } catch APIError.unauthorized {
-                    return false
-                } catch {
-                    return true
-                }
-            }
-            group.addTask {
-                try? await Task.sleep(for: .seconds(8))
-                return nil
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
-        }
-        switch result {
-        case .some(true): phase = .signedIn
-        case .some(false):
-            client.signOut()
-            phase = .signedOut
-        case .none:
-            phase = .failed(L("サーバーに接続できませんでした（8秒）。電波の良い場所でもう一度お試しください。"))
+        phase = .signedIn
+        Task { [client] in
+            // Network errors keep the saved login (offline use); a rejected refresh token has already
+            // expired the session inside `refreshIfNeeded`.
+            try? await client.refreshIfNeeded()
         }
     }
 
@@ -170,9 +153,12 @@ final class AuthStore {
         phase = .signedIn
     }
 
-    func signOut() {
-        client.signOut()
+    /// The display language goes back to the iPhone's (fresh-install default) unless `keepLanguage`
+    /// (onboarding's 「ログイン」, where the learner has just picked it on screen).
+    func signOut(keepLanguage: Bool = false) {
+        client.signOutRevokingSession()
         isGuest = false
+        if !keepLanguage { L10n.resetToDevice() }
         phase = .signedOut
     }
 

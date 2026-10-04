@@ -34,6 +34,8 @@ struct SettingsView: View {
     @State private var isDeleting: Bool = false
     @State private var deleteError: String?
     @State private var confirmSignOut: Bool = false
+    @State private var showAIConsent: Bool = false
+    @State private var confirmWithdrawAI: Bool = false
 
     var body: some View {
         ScrollView {
@@ -44,6 +46,7 @@ struct SettingsView: View {
                 notifySection
                 appearanceSection
                 feelSection
+                aiConsentSection
                 if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
@@ -52,6 +55,7 @@ struct SettingsView: View {
             .padding(.bottom, 130)
         }
         .scrollDismissesKeyboard(.interactively)
+        .statusBarScrim()
         .background(AppBackground())
         .overlay {
             if let wheel {
@@ -65,7 +69,8 @@ struct SettingsView: View {
         .onChange(of: avatarItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = await ImageTools.downsampledInBackground(data, maxSide: 1024) {
                     await profile.uploadAvatar(img)
                 } else {
                     profile.message = L("写真を読み込めませんでした。")
@@ -90,7 +95,7 @@ struct SettingsView: View {
                         .overlay { if profile.isSavingAvatar { ProgressView() } }
                     PhotosPicker(selection: $avatarItem, matching: .images) {
                         Text(profile.avatarURL == nil ? L("選ぶ") : L("変更"))
-                            .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.foreground)
+                            .scaledFont(size: 16, weight: .medium).foregroundStyle(Theme.foreground)
                             .padding(.horizontal, 18).frame(minHeight: 46)
                             .background(Theme.secondary, in: Capsule())
                             .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
@@ -98,13 +103,13 @@ struct SettingsView: View {
                     .buttonStyle(PressableStyle())
                     if profile.avatarURL != nil {
                         Button(L("外す")) { Task { await profile.clearAvatar() } }
-                            .font(.system(size: 16)).foregroundStyle(Theme.muted)
+                            .scaledFont(size: 16).foregroundStyle(Theme.muted)
                             .frame(minWidth: 44, minHeight: 44)
                     }
                 }
                 label(L("表示名")).padding(.top, 4)
                 TextField(L("名前"), text: $nameDraft)
-                    .font(.system(size: 17))
+                    .scaledFont(size: 17)
                     .focused($nameFocused)
                     .submitLabel(.done)
                     .padding(.horizontal, 14).frame(minHeight: 48)
@@ -134,6 +139,10 @@ struct SettingsView: View {
                 label(L("目標レベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.levelGoal }?.label ?? profile.levelGoal) { openWheel(.goal) }
                     .accessibilityIdentifier("settings.wheel.goal")
+                // The learner's level has one use (owner 2026-10-03): the difficulty of the example sentences and
+                // chunks. The server reads both values from the profile when it writes them.
+                Text(L("例文とチャンクを、今のレベルから目標レベルのあいだの難しさで作ります。"))
+                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 if !isEnglish { label(L("発音表記")).padding(.top, 6) }
                 if profile.targetLanguage == "ja" {
                     ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
@@ -210,7 +219,7 @@ struct SettingsView: View {
                     })
                 )
                 Text(L("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。"))
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 label(L("アニメーション")).padding(.top, 6)
                 ChoicePills(options: [("system", L("自動")), ("full", L("見せる")), ("reduce", L("減らす"))], selection: $motionPref)
             }
@@ -237,29 +246,101 @@ struct SettingsView: View {
         }
     }
 
-    /// Free-only release: just the legal links (the Pro card has them too).
+    /// AIへのデータ送信の同意 (AIConsent): its state, reading it again, agreeing later or withdrawing it.
+    private var aiConsentSection: some View {
+        let consent = AIConsent.shared
+        return SettingsCard(title: L("プライバシー")) {
+            VStack(alignment: .leading, spacing: 8) {
+                label(L("AIへのデータ送信の同意"))
+                Text(aiConsentStatus)
+                    .scaledFont(size: 13).foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("settings.aiConsent.status")
+                HStack(spacing: 18) {
+                    Button(consent.isGranted ? L("内容を見る") : L("内容を確認して同意する")) { showAIConsent = true }
+                        .foregroundStyle(Theme.primaryInk)
+                        .accessibilityIdentifier("settings.aiConsent.review")
+                    if consent.isGranted {
+                        Button(L("同意を取り消す")) { confirmWithdrawAI = true }
+                            .foregroundStyle(Theme.destructive)
+                            .accessibilityIdentifier("settings.aiConsent.withdraw")
+                    }
+                }
+                .scaledFont(size: 14, weight: .semibold)
+                .frame(minHeight: 44)
+            }
+        }
+        .confirmationDialog(L("AIへのデータ送信の同意を取り消しますか？"), isPresented: $confirmWithdrawAI, titleVisibility: .visible) {
+            Button(L("同意を取り消す"), role: .destructive) {
+                AIConsent.shared.decline()
+                Haptics.warning()
+            }
+        } message: {
+            Text(L("取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
+        }
+        .aiConsentSheet(isPresented: $showAIConsent)
+    }
+
+    private var aiConsentStatus: String {
+        switch AIConsent.shared.status {
+        case .granted(let date):
+            let day = date.formatted(.dateTime.year().month().day().locale(L10n.locale))
+            return L("同意しています（\(day)）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。")
+        case .declined:
+            return L("同意していません。カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません。")
+        case .undecided:
+            return L("まだ選んでいません。AI を使う機能を使う前に確認します。")
+        }
+    }
+
+    /// Free-only release: support and the legal links (the Pro card has them too).
     private var legalSection: some View {
         SettingsCard(title: L("このアプリについて")) {
-            HStack(spacing: 18) {
-                Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+            VStack(alignment: .leading, spacing: 6) {
+                supportRow
+                Divider().overlay(Theme.border)
+                HStack(spacing: 18) {
+                    Link(L("利用規約"), destination: AppConfig.termsURL)
+                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
+                }
+                .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                tokushohoLink
             }
-            .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
-            .frame(minHeight: 44)
         }
+    }
+
+    /// お問い合わせ・サポート: the support page on the web app (App Review asks for a way to reach us).
+    private var supportRow: some View {
+        Link(destination: AppConfig.supportURL) {
+            HStack(spacing: 12) {
+                Image(systemName: "questionmark.bubble").scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.primary)
+                Text(L("お問い合わせ・サポート")).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
+                Spacer()
+                Image(systemName: "arrow.up.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
+            }
+            .frame(minHeight: 44).contentShape(Rectangle())
+        }
+        .accessibilityIdentifier("settings.support")
+    }
+
+    private var tokushohoLink: some View {
+        Link(L("特定商取引法に基づく表記"), destination: AppConfig.tokushohoURL)
+            .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
+            .frame(minHeight: 44)
     }
 
     private var proSection: some View {
         SettingsCard(title: "CatchWords Pro") {
             VStack(alignment: .leading, spacing: 10) {
                 if plan.isPro {
-                    Text(L("Pro をご利用中です")).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.foreground)
-                    Text(L("撮影は無制限です")).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    Text(L("Pro をご利用中です")).scaledFont(size: 17, weight: .bold).foregroundStyle(Theme.foreground)
+                    Text(L("撮影は無制限です")).scaledFont(size: 13).foregroundStyle(Theme.muted)
                 } else {
                     Text(PlanStore.catchLimitEnabled ? L("今日あと\(plan.remainingToday)回撮れます") : L("ベータ期間中は撮影回数の制限はありません"))
-                        .font(.system(size: 15)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 15).foregroundStyle(Theme.muted)
                     Button { router.showPaywall = true } label: {
-                        Text(L("Proにアップグレード")).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                        Text(L("Proにアップグレード")).scaledFont(size: 17, weight: .semibold).foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(pillFill, in: Capsule())
                             .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
@@ -268,11 +349,14 @@ struct SettingsView: View {
                 }
                 HStack(spacing: 18) {
                     Button(L("購入を復元")) { Task { await plan.restore() } }
-                    Link(L("利用規約"), destination: URL(string: "https://catchwords.lovable.app/terms")!)
-                    Link(L("プライバシー"), destination: URL(string: "https://catchwords.lovable.app/privacy")!)
+                    Link(L("利用規約"), destination: AppConfig.termsURL)
+                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
                 }
-                .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.primaryInk)
+                .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
                 .frame(minHeight: 44)
+                tokushohoLink
+                Divider().overlay(Theme.border)
+                supportRow
                 if let msg = plan.message { Text(msg).font(.footnote).foregroundStyle(Theme.muted) }
             }
         }
@@ -282,7 +366,7 @@ struct SettingsView: View {
         VStack(spacing: 20) {
             Button { confirmSignOut = true } label: {
                 Label(L("サインアウト"), systemImage: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    .scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .background(Theme.card, in: Capsule())
                     .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
@@ -294,7 +378,7 @@ struct SettingsView: View {
             deleteZone
 
             Text("CatchWords for iPhone \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
-                .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                .scaledFont(size: 12).foregroundStyle(Theme.muted)
         }
     }
 
@@ -306,10 +390,10 @@ struct SettingsView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { deleteOpen.toggle() }
             } label: {
                 HStack {
-                    Text(L("アカウントを削除")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(hex: 0xB42329))
+                    Text(L("アカウントを削除")).scaledFont(size: 17, weight: .semibold).foregroundStyle(Color(light: 0xB42329, dark: 0xF87171))
                     Spacer()
-                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xB42329).opacity(0.7))
+                    Image(systemName: "chevron.down").scaledFont(size: 13, weight: .semibold)
+                        .foregroundStyle(Color(light: 0xB42329, dark: 0xF87171).opacity(0.7))
                         .rotationEffect(.degrees(deleteOpen ? 180 : 0))
                 }
                 .frame(minHeight: 44).contentShape(Rectangle())
@@ -317,8 +401,16 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             if deleteOpen {
                 Text(L("撮った写真・図鑑・復習の記録がすべて消え、元に戻せません。Web版のデータも同じく消えます。"))
-                    .font(.system(size: 13)).foregroundStyle(Theme.muted)
-                Text(L("確認のため「削除」と入力してください")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    .scaledFont(size: 13).foregroundStyle(Theme.muted)
+                // Apple's account-deletion guidance: an App Store subscription keeps billing until it is cancelled
+                // in the Apple ID settings. Always shown (whether this person has one is not known here).
+                Text(L("App Store で購入したサブスクリプションは、アカウントを削除しても自動では解約されません。先に iPhone の「設定」→ Apple ID →「サブスクリプション」から解約してください。"))
+                    .scaledFont(size: 13).foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Link(L("サブスクリプションを管理"), destination: AppConfig.manageSubscriptionsURL)
+                    .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
+                    .frame(minHeight: 44)
+                Text(L("確認のため「削除」と入力してください")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
                 TextField(L10n.lang == "en" ? "DELETE" : L("削除"), text: $deleteText)  // the confirm word itself
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(minHeight: 46)
@@ -329,7 +421,7 @@ struct SettingsView: View {
                         if isDeleting { ProgressView().tint(.white) } else { Image(systemName: "trash") }
                         Text(isDeleting ? L("削除しています…") : L("完全に削除する"))
                     }
-                    .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                    .scaledFont(size: 16, weight: .semibold).foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .background(Theme.destructive.opacity(armed ? 1 : 0.4), in: Capsule())
                 }
@@ -369,7 +461,7 @@ struct SettingsView: View {
             }
             if times.count < 3 {
                 Button { saveTimes(times + [ReminderService.defaultTime]) } label: {
-                    Label(L("時刻を追加"), systemImage: "plus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primary)
+                    Label(L("時刻を追加"), systemImage: "plus").scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.primary)
                         .frame(minHeight: 44)
                 }
             }
@@ -383,11 +475,11 @@ struct SettingsView: View {
     }
 
     private func label(_ t: String) -> some View {
-        Text(t).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+        Text(t).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
     }
 
     private func notice(_ t: String) -> some View {
-        Text(t).font(.system(size: 12)).foregroundStyle(Color(light: 0x7A4B00, dark: 0xFCD34D))
+        Text(t).scaledFont(size: 12).foregroundStyle(Color(light: 0x7A4B00, dark: 0xFCD34D))
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(light: 0xFFF5DB, dark: 0x2A2210), in: .rect(cornerRadius: 12))
     }
@@ -395,9 +487,9 @@ struct SettingsView: View {
     private func wheelRow(_ value: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(value).font(.system(size: 18)).foregroundStyle(Theme.foreground)
+                Text(value).scaledFont(size: 18).foregroundStyle(Theme.foreground)
                 Spacer()
-                Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted)
+                Image(systemName: "chevron.down").scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 20).frame(minHeight: 56)
             .background(LinearGradient(colors: [Theme.card, Color(light: 0xEEF5FF, dark: 0x132032)], startPoint: .topLeading, endPoint: .bottomTrailing),
@@ -465,9 +557,17 @@ struct SettingsView: View {
     private func deleteAccount() async {
         isDeleting = true
         deleteError = nil
+        let deletedId = SupabaseClient.shared.userId
         do {
+            let uid = SupabaseClient.shared.userId
             try await profile.deleteAccount()
+            await AccountCleanup.accountDeleted(userId: deletedId)
             isDeleting = false
+            // Nothing of the deleted account stays on this device (waiting photos, unsent diary drafts).
+            if let uid {
+                PendingQueue.shared.removeAll(ownerId: uid)
+                DiaryStore.removeDrafts(userId: uid)
+            }
             auth.signOut()
         } catch {
             isDeleting = false
@@ -495,7 +595,7 @@ struct SettingsCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.muted).padding(.leading, 6)
+            Text(title).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.muted).padding(.leading, 6)
             content
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -522,7 +622,7 @@ struct ChoicePills: View {
                     withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.72)) { selection = o.value }
                 } label: {
                     Text(o.label)
-                        .font(.system(size: 16, weight: on ? .bold : .regular))
+                        .scaledFont(size: 16, weight: on ? .bold : .regular)
                         .foregroundStyle(on ? .white : Theme.foreground)
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, minHeight: 48)
@@ -556,9 +656,9 @@ struct SettingsToggle: View {
     var body: some View {
         Toggle(isOn: Binding(get: { isOn }, set: { v in Haptics.selection(); isOn = v })) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.foreground)
+                Text(title).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
                 if let detail {
-                    Text(detail).font(.system(size: 13)).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
+                    Text(detail).scaledFont(size: 13).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -613,7 +713,7 @@ struct WheelCard: View {
                 .onTapGesture(perform: close)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(field.title).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.foreground)
+                    Text(field.title).scaledFont(size: 18, weight: .bold).foregroundStyle(Theme.foreground)
                     Spacer()
                     Button(action: close) {
                         Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.foreground)
@@ -628,7 +728,7 @@ struct WheelCard: View {
                 .frame(height: 150)
                 .onChange(of: value) { _, _ in Haptics.selection() }
                 Button(action: close) {
-                    Text(L("閉じる")).font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text(L("閉じる")).scaledFont(size: 17, weight: .bold).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(Theme.primary, in: Capsule())
                 }

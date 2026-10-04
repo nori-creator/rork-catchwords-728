@@ -90,6 +90,15 @@ final class DiaryStore {
         message = nil
     }
 
+    /// The account was deleted: its unsent diary drafts are removed from this device too.
+    static func removeDrafts(userId: String) {
+        let defaults = UserDefaults.standard
+        let prefix = "diary-draft-\(userId)-"
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(prefix) {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
     /// Moves drafts saved under the old device-wide keys to the signed-in account (once).
     private func adoptLegacyDrafts() {
         guard client.userId != nil else { return }
@@ -151,7 +160,8 @@ final class DiaryStore {
     func loadScaffold() async {
         // Once a day per learning language (the prompts are written in it).
         let today = Self.key(Date()) + "|" + NativeAPI.targetLanguage
-        guard scaffoldDay != today else { return }
+        // Without the AI consent there are none; asked again once it is given (the day is not used up).
+        guard AIConsent.shared.isGranted, scaffoldDay != today else { return }
         scaffoldDay = today
         scaffold = try? await NativeAPI.call("getJournalPrompts", [:], as: JournalScaffold?.self, timeout: 45)
     }

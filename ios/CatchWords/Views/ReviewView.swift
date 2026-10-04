@@ -10,32 +10,45 @@ struct ReviewView: View {
     @State private var curveSticker: Sticker?
     /// Verdict for the current card (nil until a choice is picked).
     @State private var answer: Bool?
-    @State private var showWordbooks: Bool = false
     @State private var practiceIndex: Int = 0
     /// How far the answer sheet has been dragged sideways (swipe left = next card, like the web's SwipeCard).
     @State private var swipeX: CGFloat = 0
+    /// The answer sheet's real height (it grows with the explanation): the question scrolls clear of it.
+    @State private var panelHeight: CGFloat = 420
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             AppBackground()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    header
-                    MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
-                    if legendOpen {
-                        MemoryOverviewPanel(store: store) { s in
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        header
+                        MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
+                        if legendOpen {
+                            MemoryOverviewPanel(store: store) { s in
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        content
                     }
-                    content
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    // Room under the last choice for the whole sheet, however tall its explanation is.
+                    .padding(.bottom, answer == nil ? 120 : panelHeight + 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, answer == nil ? 120 : 420)
+                .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+                .statusBarScrim()
+                // A long question (English meanings especially) sat under the sheet that slides up: once
+                // answered, bring the question to the top so all of it stays readable above the sheet.
+                .onChange(of: answer != nil) { _, answered in
+                    guard answered else { return }
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.9)) {
+                        proxy.scrollTo(QuizCard.questionID, anchor: .top)
+                    }
+                }
             }
-            .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
         }
         .overlay(alignment: .bottom) {
             if let answer, let card = router.tour.isReview ? practiceCards[safe: practiceIndex] : store.current {
@@ -70,6 +83,7 @@ struct ReviewView: View {
                 .accessibilityAction(named: L("次へ")) { goNext() }
                 .tourAnchor(.reviewNext, if: router.tour == .reviewNext)
                 .padding(.bottom, 66)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { panelHeight = $0 }
                 .background(alignment: .bottom) { Theme.card.frame(height: 80) }
                 .ignoresSafeArea(edges: .bottom)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -109,9 +123,6 @@ struct ReviewView: View {
                 await store.load(dex: dex, limit: profile.effectiveReviewLimit)
             }
         }
-        .fullScreenCover(isPresented: $showWordbooks) {
-            WordbookView()
-        }
         .reviewLiveActivity(store: store, dex: dex, answered: answer != nil, enabled: !router.tour.isReview)
     }
 
@@ -148,34 +159,16 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L("きょうの復習")).font(.system(size: 30, weight: .heavy)).foregroundStyle(Theme.foreground)
+                    Text(L("きょうの復習")).scaledFont(size: 30, weight: .heavy).foregroundStyle(Theme.foreground)
                     Text(store.streak > 0 ? L("復習が\(store.streak)日続いています") : L("今日から復習を始めましょう"))
-                        .font(.system(size: 14)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 14).foregroundStyle(Theme.muted)
                 }
                 Spacer()
                 if !store.queue.isEmpty {
                     Text("\(min(store.index + 1, store.queue.count)) / \(store.queue.count)")
-                        .font(.system(size: 15)).monospacedDigit().foregroundStyle(Theme.muted)
+                        .scaledFont(size: 15, monospacedDigit: true).foregroundStyle(Theme.muted)
                 }
             }
-            Button {
-                Haptics.selection()
-                showWordbooks = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "books.vertical")
-                    Text(L("単語帳で復習する"))
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.primaryInk)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Theme.primary.opacity(0.08), in: .rect(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(PressableStyle(scale: 0.98))
-            .accessibilityIdentifier("review.wordbooks")
             GeometryReader { geo in
                 let p = store.queue.isEmpty ? 0 : CGFloat(store.index) / CGFloat(store.queue.count)
                 ZStack(alignment: .leading) {
@@ -225,7 +218,7 @@ struct ReviewView: View {
             .overlay(alignment: .bottom) {
                 if let err = store.gradeError {
                     Label(err, systemImage: "wifi.exclamationmark")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.leading)
                         .padding(.horizontal, 16).padding(.vertical, 10)
@@ -280,7 +273,7 @@ struct MemoryBar: View {
                     }
                     .frame(height: 12)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(Theme.muted)
                         .rotationEffect(.degrees(isOpen ? 180 : 0))
                 }
@@ -299,7 +292,7 @@ struct MemoryBar: View {
                                 Text(MemoryBadge.labels[i]).foregroundStyle(Theme.memoryLevels[i].mix(with: Theme.foreground, by: 0.35))
                                 Text("\(counts[i])").fontWeight(.bold).foregroundStyle(Theme.memoryLevels[i].mix(with: Theme.foreground, by: 0.35))
                             }
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14)
                         }
                     }
                 }
@@ -349,6 +342,9 @@ struct QuizCard: View {
     @State private var started: Date = Date()
     @State private var shake: CGFloat = 0
 
+    /// The question line, scrolled to the top after an answer (ReviewView) so the sheet never hides it.
+    static let questionID = "quiz.question"
+
     private var correctHead: String { card.sticker.word?.headword ?? "" }
     /// The meaning as it is now (read in the reader's language after the card was made).
     private var liveMeaning: String { (dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "" }
@@ -362,7 +358,7 @@ struct QuizCard: View {
                         .foregroundStyle(.white)
                         .frame(width: 26, height: 26)
                         .background(Theme.primary, in: Circle())
-                    Text(L("4択クイズ")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.foreground)
+                    Text(L("4択クイズ")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
                 }
                 .padding(.leading, 4).padding(.trailing, 12).padding(.vertical, 4)
                 .background(Theme.secondary, in: Capsule())
@@ -372,7 +368,7 @@ struct QuizCard: View {
                         let lv = MemoryBadge.level(percent)
                         HStack(spacing: 5) {
                             Circle().fill(Theme.memoryLevels[lv]).frame(width: 7, height: 7)
-                            Text("\(percent)%").font(.system(size: 14, weight: .semibold)).monospacedDigit()
+                            Text("\(percent)%").scaledFont(size: 14, weight: .semibold, monospacedDigit: true)
                                 .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.35))
                         }
                         .padding(.horizontal, 10).frame(minHeight: 30)
@@ -397,9 +393,11 @@ struct QuizCard: View {
             }
 
             Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
-                .font(.system(size: 17, weight: .bold))
+                .scaledFont(size: 17, weight: .bold)
                 .foregroundStyle(Theme.foreground)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
+                .id(Self.questionID)
 
             VStack(spacing: 10) {
                 ForEach(choices) { c in choiceRow(c) }
@@ -438,7 +436,7 @@ struct QuizCard: View {
             HStack {
                 if revealed && (isCorrect || isPicked) {
                     Image(systemName: isCorrect ? "checkmark" : "xmark")
-                        .font(.system(size: 18, weight: .bold))
+                        .scaledFont(size: 18, weight: .bold)
                         .foregroundStyle(isCorrect ? Theme.ok : Theme.destructive)
                         .padding(.leading, 18)
                         .transition(.scale.combined(with: .opacity))
@@ -513,12 +511,11 @@ struct ReviewDone: View {
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 0) {
                         Text("\(shownCorrect)")
-                            .font(.system(size: 44, weight: .heavy, design: .rounded))
-                            .monospacedDigit()
+                            .scaledFont(size: 44, weight: .heavy, design: .rounded, monospacedDigit: true)
                             .contentTransition(.numericText(value: Double(shownCorrect)))
                             .foregroundStyle(Theme.foreground)
                         Text("/ \(total)")
-                            .font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                            .scaledFont(size: 15, weight: .semibold, monospacedDigit: true)
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -529,11 +526,11 @@ struct ReviewDone: View {
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 22, weight: .bold))
+                    .scaledFont(size: 22, weight: .bold)
                     .foregroundStyle(Theme.foreground)
                     .multilineTextAlignment(.center)
                 Text(subtitle)
-                    .font(.system(size: 15)).foregroundStyle(Theme.muted)
+                    .scaledFont(size: 15).foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
             }
 
@@ -541,18 +538,18 @@ struct ReviewDone: View {
                 if missed > 0 {
                     Button(action: onRetry) {
                         Label(L("まちがえた\(missed)語をもう一度"), systemImage: "arrow.counterclockwise")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.primary.opacity(0.1), in: Capsule())
                     }
                     .buttonStyle(PressableStyle())
                     Text(L("練習なので、記憶の記録は変わりません。"))
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 }
                 if capped {
                     Button(action: onSettings) {
                         Label(L("設定で枚数を変える"), systemImage: "slider.horizontal.3")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.primary.opacity(0.1), in: Capsule())
                     }
@@ -561,7 +558,7 @@ struct ReviewDone: View {
                 if canLoadMore {
                     Button(action: onMore) {
                         Label(capped ? L("もっと復習する") : L("続ける"), systemImage: "plus.circle")
-                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.primaryInk)
+                            .scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.primaryInk)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Theme.card, in: Capsule())
                             .overlay(Capsule().stroke(Theme.primary.opacity(0.35), lineWidth: 1.2))
@@ -570,7 +567,7 @@ struct ReviewDone: View {
                 }
                 Button(action: onCamera) {
                     Label(L("単語を撮りに行く"), systemImage: "camera.fill")
-                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                        .scaledFont(size: 16, weight: .semibold).foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(Theme.primary, in: Capsule())
                 }

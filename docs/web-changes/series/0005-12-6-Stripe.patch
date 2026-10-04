@@ -1,0 +1,923 @@
+From f9689f0c7cf57db77882f4d0094845bec5f2bab5 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sat, 3 Oct 2026 13:54:35 +0000
+Subject: [PATCH 5/5] =?UTF-8?q?=E7=89=B9=E5=AE=9A=E5=95=86=E5=8F=96?=
+ =?UTF-8?q?=E5=BC=95=E6=B3=9512=E6=9D=A1=E3=81=AE6:=20Stripe=20=E3=81=AE?=
+ =?UTF-8?q?=E6=94=AF=E6=89=95=E3=81=84=E7=94=BB=E9=9D=A2=E3=81=B8=E9=80=B2?=
+ =?UTF-8?q?=E3=82=80=E5=89=8D=E3=81=AB=E7=94=B3=E8=BE=BC=E3=81=BF=E3=81=AE?=
+ =?UTF-8?q?=E6=9C=80=E7=B5=82=E7=A2=BA=E8=AA=8D=E3=82=92=E5=87=BA=E3=81=99?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 「月ごと / 年ごとで始める」の後に最終確認（ProCheckoutConfirm）。分量・価格（2回目以降も）・無料期間と初回の請求日・支払の時期と方法・提供時期・自動更新・申込期間・解約の方法・撤回と返金・規約/特商法/プライバシーへのリンク、3言語
+- ボタンは「規約に同意して購入する（定期購入）」
+- 無料期間は、その人が実際に受けられる日数（getBillingStatus の trialEligibleDays）を出す
+- createCheckoutSession は確認の印と、見せた金額・通貨・無料期間を確かめ、違えば BILLING_TERMS_CHANGED で確認を出し直させる
+- Stripe Checkout にも言語（locale）と、申込みボタンの上の注意書き（定期購入・自動更新・解約の方法）を渡す
+- UI ハーネス（?scene=pro-plan）に最終確認の2つの状態を追加
+---
+ ARCHITECTURE.md                           |   4 +
+ scripts/ui-harness/scenes/legal.tsx       |  44 +++++++-
+ src/components/ProCheckoutConfirm.tsx     | 102 +++++++++++++++++
+ src/components/screens/SettingsScreen.tsx |  46 ++++++--
+ src/lib/billing.functions.ts              |  63 +++++++++--
+ src/lib/checkout-terms.test.ts            | 127 ++++++++++++++++++++++
+ src/lib/checkout-terms.ts                 |  86 +++++++++++++++
+ src/lib/errors.ts                         |   1 +
+ src/lib/i18n.test.ts                      |   2 +-
+ src/lib/i18n.tsx                          | 118 ++++++++++++++++++++
+ src/lib/stripe-billing.ts                 |  52 +++++++++
+ src/lib/stripe-catalog.ts                 |   2 +
+ 12 files changed, 630 insertions(+), 17 deletions(-)
+ create mode 100644 src/components/ProCheckoutConfirm.tsx
+ create mode 100644 src/lib/checkout-terms.test.ts
+ create mode 100644 src/lib/checkout-terms.ts
+
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+index 89bf3cb..bed24c9 100644
+--- a/ARCHITECTURE.md
++++ b/ARCHITECTURE.md
+@@ -257,3 +257,7 @@ Guideline 5.1.2(i) / APPI §28. Every server function that sends photos, words o
+ ## Sign in with Apple revocation on account deletion (2026-10-03)
+ 
+ Apple's account-deletion rule (TN3194): `deleteMyAccount` calls `revokeAppleForUser` (`src/lib/apple-revoke.server.ts`) after the data is deleted and before the auth user is deleted. It posts the stored token to `https://appleid.apple.com/auth/revoke` with an ES256 `client_secret` signed by Web Crypto (`src/lib/apple-revoke.ts`; env `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_SERVICES_ID`). It never throws: no token / missing secrets / Apple errors are logged and the deletion continues. The token comes from `session.provider_refresh_token`, which supabase-js emits once right after an Apple OAuth sign-in; `apple-token-capture.ts` (installed at the top of `__root.tsx`) sends it to `saveAppleToken`, which stores it in `apple_tokens` (migration `20261003150000`, service role only). `/native-auth` waits up to 3 s for that upload before handing the session to iOS. Whether the Lovable OAuth broker forwards `provider_refresh_token` must be checked after deploy (README.ja.md); if it does not, revocation is skipped and logged.
++
++## Final confirmation before Stripe Checkout (特商法 12条の6, 2026-10-03)
++
++Settings → CatchWords Pro: the buy buttons no longer go straight to Stripe. They open `ProCheckoutConfirm`, which shows (from `getBillingStatus`: Stripe prices and `trialEligibleDays`, i.e. the trial this user would actually get) the service and quantity, price and later payments, trial end date and first charge, payment timing and method, start of service, auto-renewal, order period, how to cancel (Billing Portal via 「サブスクリプションを管理」), withdrawal/refunds, and links to terms / 特商法 / privacy, with the button 「規約に同意して購入する（定期購入）」. Rows come from `src/lib/checkout-terms.ts`. `createCheckoutSession` requires `confirmed: true` plus the shown amount, currency and trial days and refuses with `BILLING_TERMS_CHANGED` if they differ from what it would charge. The Stripe Checkout page gets `locale` and a `custom_text.submit` note (subscription, auto-renewal, how to cancel) in the user's language.
+diff --git a/scripts/ui-harness/scenes/legal.tsx b/scripts/ui-harness/scenes/legal.tsx
+index 215fbba..a7dffb1 100644
+--- a/scripts/ui-harness/scenes/legal.tsx
++++ b/scripts/ui-harness/scenes/legal.tsx
+@@ -12,6 +12,7 @@ import { LegalShell } from "@/components/legal/LegalShell";
+ import { PrivacyDocument, TermsDocument } from "@/components/legal/LegalDocuments";
+ import { TokushohoDocument } from "@/components/legal/TokushohoDocument";
+ import { ProPlanCardView } from "@/components/ProPlanCardView";
++import { ProCheckoutConfirm } from "@/components/ProCheckoutConfirm";
+ import { SettingsCard } from "@/components/screens/SettingsScreen";
+ import type { BillingStatus } from "@/lib/billing.functions";
+ import { getUiLang, tStatic as t } from "@/lib/i18n";
+@@ -102,6 +103,7 @@ const BASE: BillingStatus = {
+   legalReady: true,
+   checkoutAllowed: true,
+   trialDays: 0,
++  trialEligibleDays: 0,
+   adminIssues: [],
+ };
+ 
+@@ -110,7 +112,7 @@ const PRO_STATES: Array<{ id: string; label: string; status: BillingStatus }> =
+   {
+     id: "trial",
+     label: "無料体験あり（STRIPE_TRIAL_DAYS=7 のとき）",
+-    status: { ...BASE, trialDays: 7 },
++    status: { ...BASE, trialDays: 7, trialEligibleDays: 7 },
+   },
+   { id: "pro", label: "Pro の人（管理ボタン）", status: { ...BASE, isPro: true, paidPro: true } },
+   {
+@@ -136,11 +138,51 @@ const PRO_STATES: Array<{ id: string; label: string; status: BillingStatus }> =
+   },
+ ];
+ 
++/** 申込みの最終確認（特商法 12 条の6）。見本の日付は固定（絵が日ごとに変わらないように）。 */
++const CONFIRM_STATES: Array<{
++  id: string;
++  label: string;
++  status: BillingStatus;
++  period: "monthly" | "yearly";
++}> = [
++  {
++    id: "confirm-monthly",
++    label: "最終確認: 月ごと（無料体験なし）",
++    status: BASE,
++    period: "monthly",
++  },
++  {
++    id: "confirm-yearly-trial",
++    label: "最終確認: 年ごと・無料体験 7 日",
++    status: { ...BASE, trialDays: 7, trialEligibleDays: 7 },
++    period: "yearly",
++  },
++];
++const SAMPLE_NOW = new Date("2026-10-03T03:00:00Z");
++
+ export function ProPlanScene({ q }: { q: URLSearchParams }) {
+   const only = q.get("state");
+   const list = only ? PRO_STATES.filter((s) => s.id === only) : PRO_STATES;
++  const confirms = only ? CONFIRM_STATES.filter((s) => s.id === only) : CONFIRM_STATES;
+   return (
+     <div style={{ display: "grid", gap: 20, padding: "12px 0 96px" }}>
++      {confirms.map((c) => (
++        <section key={c.id} data-pro-state={c.id}>
++          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#5b6472" }}>
++            {c.label}
++          </p>
++          <SettingsCard title={t("pro.title")}>
++            <ProCheckoutConfirm
++              status={c.status}
++              period={c.period}
++              busy={false}
++              onConfirm={() => {}}
++              onBack={() => {}}
++              now={SAMPLE_NOW}
++            />
++          </SettingsCard>
++        </section>
++      ))}
+       {list.map((c) => (
+         <section key={c.id} data-pro-state={c.id}>
+           <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#5b6472" }}>
+diff --git a/src/components/ProCheckoutConfirm.tsx b/src/components/ProCheckoutConfirm.tsx
+new file mode 100644
+index 0000000..94e4151
+--- /dev/null
++++ b/src/components/ProCheckoutConfirm.tsx
+@@ -0,0 +1,102 @@
++import { Loader2 } from "lucide-react";
++import { Button } from "@/components/ui/button";
++import type { BillingStatus } from "@/lib/billing.functions";
++import { checkoutTerms } from "@/lib/checkout-terms";
++import { useT, useUiLang } from "@/lib/i18n";
++
++/**
++ * **申込みの最終確認**（特定商取引法 12 条の6。中身の決まりは `lib/checkout-terms.ts`）。
++ * 「月ごと / 年ごとで始める」を押すとこれが出て、ここで**有料の定期購入の申込み**であることを
++ * はっきり示したボタンを押した時だけ支払いの画面（Stripe）へ進む。
++ *
++ * 通信はしない（ハーネスでも同じ絵を描くため）。押した時の動きは `SettingsScreen` の
++ * `ProPlanCard` が渡す。
++ */
++export function ProCheckoutConfirm({
++  status: s,
++  period,
++  busy,
++  onConfirm,
++  onBack,
++  now = new Date(),
++}: {
++  status: BillingStatus;
++  period: "monthly" | "yearly";
++  busy: boolean;
++  onConfirm: () => void;
++  onBack: () => void;
++  now?: Date;
++}) {
++  const t = useT();
++  const lang = useUiLang();
++  const price = period === "yearly" ? s.prices.yearly : s.prices.monthly;
++  if (!price) return null;
++  const rows = checkoutTerms({ period, price, trialDays: s.trialEligibleDays, now, lang, t });
++  return (
++    <section
++      className="grid gap-3"
++      aria-labelledby="checkout-confirm-title"
++      data-testid="pro-checkout-confirm"
++    >
++      <div>
++        <h4 id="checkout-confirm-title" className="text-body font-bold">
++          {t("checkout.title")}
++        </h4>
++        <p className="mt-0.5 text-caption text-muted-foreground">{t("checkout.lead")}</p>
++      </div>
++      <dl className="grid gap-0 overflow-hidden rounded-xl border border-border">
++        {rows.map((r, i) => (
++          <div
++            key={r.key}
++            data-term={r.key}
++            className={`grid gap-0.5 px-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}
++          >
++            <dt className="text-caption font-semibold text-muted-foreground">{r.label}</dt>
++            <dd className="text-footnote leading-relaxed">{r.value}</dd>
++          </div>
++        ))}
++      </dl>
++      <p className="text-caption text-muted-foreground">
++        {t("checkout.readTerms")}{" "}
++        <a
++          href="/terms"
++          target="_blank"
++          rel="noopener noreferrer"
++          className="font-semibold text-primary underline underline-offset-2"
++        >
++          {t("auth.terms")}
++        </a>
++        {" · "}
++        <a
++          href="/legal/tokushoho"
++          target="_blank"
++          rel="noopener noreferrer"
++          className="font-semibold text-primary underline underline-offset-2"
++        >
++          {t("legal.tokushoho")}
++        </a>
++        {" · "}
++        <a
++          href="/privacy"
++          target="_blank"
++          rel="noopener noreferrer"
++          className="font-semibold text-primary underline underline-offset-2"
++        >
++          {t("auth.privacy")}
++        </a>
++      </p>
++      <Button
++        onClick={onConfirm}
++        disabled={busy}
++        className="h-auto min-h-14 whitespace-normal py-2"
++        data-testid="pro-checkout-submit"
++      >
++        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("checkout.submit")}
++      </Button>
++      <p className="text-caption text-muted-foreground">{t("checkout.nextStep")}</p>
++      <Button variant="ghost" onClick={onBack} disabled={busy} className="h-11">
++        {t("checkout.back")}
++      </Button>
++    </section>
++  );
++}
+diff --git a/src/components/screens/SettingsScreen.tsx b/src/components/screens/SettingsScreen.tsx
+index ff9040c..06c116c 100644
+--- a/src/components/screens/SettingsScreen.tsx
++++ b/src/components/screens/SettingsScreen.tsx
+@@ -86,6 +86,7 @@ import {
+   getBillingStatus,
+ } from "@/lib/billing.functions";
+ import { ProPlanCardView, type ProPlanBusy } from "@/components/ProPlanCardView";
++import { ProCheckoutConfirm } from "@/components/ProCheckoutConfirm";
+ import { LegalLinks } from "@/components/legal/LegalShell";
+ import { billingSurface } from "@/lib/stripe-billing";
+ import { normalizePublisherId, normalizeSlotId, type AdConfig } from "@/lib/ad-policy";
+@@ -1940,12 +1941,16 @@ function ProPlanCard() {
+   const statusFn = useServerFn(getBillingStatus);
+   const checkoutFn = useServerFn(createCheckoutSession);
+   const portalFn = useServerFn(createBillingPortalSession);
++  const qc = useQueryClient();
+   const { data: s } = useQuery({
+     queryKey: ["billing-status"],
+     queryFn: () => statusFn(),
+     staleTime: 60_000,
+   });
+   const [busy, setBusy] = useState<ProPlanBusy>(null);
++  /** 申込みの最終確認を出している周期（特商法 12 条の6、`ProCheckoutConfirm`）。 */
++  const [confirming, setConfirming] = useState<"monthly" | "yearly" | null>(null);
++  const lang = useUiLang();
+   // ベータの計測（2026-10-03）: 買える状態の案内を見た・支払いへ進んだ。種類と時刻だけ。
+   const track = useFunnelEvent();
+   const offered =
+@@ -1960,15 +1965,32 @@ function ProPlanCard() {
+   if (!s || billingSurface(Capacitor.isNativePlatform()) === "none") return null;
+   // スイッチがオフでも、**実際に払っている人には解約の口を出す**（請求だけ続く、を作らない）。
+   if (!s.enabled && !s.paidPro) return null;
++  // 最終確認で見せた値段・無料期間をそのまま送る（サーバが今の物と同じか確かめ直す）。
+   const go = async (period: "monthly" | "yearly") => {
++    const price = period === "yearly" ? s.prices.yearly : s.prices.monthly;
++    if (!price) return;
+     setBusy(period);
+     track("checkout_started");
+     try {
+-      const { url } = await checkoutFn({ data: { period } });
++      const { url } = await checkoutFn({
++        data: {
++          period,
++          confirmed: true,
++          shownUnitAmount: price.unitAmount,
++          shownCurrency: price.currency,
++          shownTrialDays: s.trialEligibleDays,
++          lang,
++        },
++      });
+       window.location.assign(url);
+     } catch (e) {
+       toast.error(readable(e, t("pro.failed")));
+       setBusy(null);
++      // 値段・無料期間が変わっていたら、新しい中身で確認を出し直す。
++      if (e instanceof Error && e.message.includes("BILLING_TERMS_CHANGED")) {
++        setConfirming(null);
++        void qc.invalidateQueries({ queryKey: ["billing-status"] });
++      }
+     }
+   };
+   const manage = async () => {
+@@ -1983,12 +2005,22 @@ function ProPlanCard() {
+   };
+   return (
+     <SettingsCard title={t("pro.title")}>
+-      <ProPlanCardView
+-        status={s}
+-        busy={busy}
+-        onBuy={(p) => void go(p)}
+-        onManage={() => void manage()}
+-      />
++      {confirming && !s.isPro ? (
++        <ProCheckoutConfirm
++          status={s}
++          period={confirming}
++          busy={busy !== null}
++          onConfirm={() => void go(confirming)}
++          onBack={() => setConfirming(null)}
++        />
++      ) : (
++        <ProPlanCardView
++          status={s}
++          busy={busy}
++          onBuy={(p) => setConfirming(p)}
++          onManage={() => void manage()}
++        />
++      )}
+     </SettingsCard>
+   );
+ }
+diff --git a/src/lib/billing.functions.ts b/src/lib/billing.functions.ts
+index fe82096..81344e2 100644
+--- a/src/lib/billing.functions.ts
++++ b/src/lib/billing.functions.ts
+@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
+ import { z } from "zod";
+ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+ import { siteUrlFor } from "@/lib/site-url";
++import { UI_LANGS } from "@/lib/i18n";
+ import { checkoutForm } from "@/lib/stripe-billing";
+ import { checkoutAllowedByLegal, readLegalConfig } from "@/lib/legal-config";
+ import {
+@@ -78,8 +79,13 @@ export type BillingStatus = {
+   legalReady: boolean;
+   /** 購入ボタンを押してよいか（表記がそろう、またはテスト用の鍵で開発者）。 */
+   checkoutAllowed: boolean;
+-  /** 無料体験の日数（0 は無し）。 */
++  /** 無料体験の日数（0 は無し）。設定の値（特商法の頁・規約と同じ）。 */
+   trialDays: number;
++  /**
++   * **この人が今申し込んだら付く**無料体験の日数（前に定期購入がある人は 0）。申込みの最終確認
++   * （`ProCheckoutConfirm`）はこれを出し、購入口（`createCheckoutSession`）も同じ値を確かめる。
++   */
++  trialEligibleDays: number;
+   /** 開発者にだけ返す: 足りない設定の名前。 */
+   adminIssues: string[];
+ };
+@@ -112,21 +118,36 @@ export const getBillingStatus = createServerFn({ method: "GET" })
+       if (prices.error) adminIssues.push("STRIPE_PRICE_* (Stripe price not readable)");
+       adminIssues.push(...legal.missing);
+     }
++    const checkoutAllowed = checkoutAllowedByLegal({
++      legalReady: legal.ready,
++      isAdmin: Boolean(isAdmin),
++      secretKey: env.STRIPE_SECRET_KEY,
++    });
++    const isPro = await isProUser(context.userId);
++    // 無料体験は1人1回だけ。買える人に出す時だけ Stripe に聞く（購入口と同じ決め方）。
++    const trialEligibleDays =
++      legal.trialDays > 0 &&
++      configured &&
++      enabled &&
++      checkoutAllowed &&
++      !isPro &&
++      env.STRIPE_SECRET_KEY
++        ? (await hadSubscriptionBefore(context.userId, env.STRIPE_SECRET_KEY))
++          ? 0
++          : legal.trialDays
++        : 0;
+     return {
+       enabled,
+       configured,
+-      isPro: await isProUser(context.userId),
++      isPro,
+       paidPro,
+       isAdmin: Boolean(isAdmin),
+       prices: { monthly: prices.monthly, yearly: prices.yearly },
+       priceError: prices.error,
+       legalReady: legal.ready,
+-      checkoutAllowed: checkoutAllowedByLegal({
+-        legalReady: legal.ready,
+-        isAdmin: Boolean(isAdmin),
+-        secretKey: env.STRIPE_SECRET_KEY,
+-      }),
++      checkoutAllowed,
+       trialDays: legal.trialDays,
++      trialEligibleDays,
+       adminIssues,
+     };
+   });
+@@ -134,7 +155,21 @@ export const getBillingStatus = createServerFn({ method: "GET" })
+ export const createCheckoutSession = createServerFn({ method: "POST" })
+   .middleware([requireSupabaseAuth])
+   .inputValidator((input: unknown) =>
+-    z.object({ period: z.enum(["monthly", "yearly"]) }).parse(input),
++    z
++      .object({
++        period: z.enum(["monthly", "yearly"]),
++        /**
++         * 申込みの最終確認（特商法 12 条の6、`ProCheckoutConfirm`）で見せて、押してもらった中身。
++         * 確認を通らない呼び出し（古い画面）は受けない。見せた値段・無料期間が今の物と違えば
++         * `BILLING_TERMS_CHANGED` で断り、確認を出し直す。
++         */
++        confirmed: z.literal(true),
++        shownUnitAmount: z.number().int().min(0),
++        shownCurrency: z.string().min(3).max(3),
++        shownTrialDays: z.number().int().min(0).max(365),
++        lang: z.enum(UI_LANGS).optional(),
++      })
++      .parse(input),
+   )
+   .handler(async ({ context, data }) => {
+     const key = process.env.STRIPE_SECRET_KEY;
+@@ -162,6 +197,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
+       legal.trialDays > 0 && (await hadSubscriptionBefore(context.userId, key))
+         ? 0
+         : legal.trialDays;
++    // 最終確認で見せた値段・無料期間と、今から実際に使う物が同じか（違えば確認を出し直す）。
++    const prices = await readPlanPrices(process.env);
++    const actual = data.period === "yearly" ? prices.yearly : prices.monthly;
++    if (
++      !actual ||
++      actual.unitAmount !== data.shownUnitAmount ||
++      actual.currency.toLowerCase() !== data.shownCurrency.toLowerCase() ||
++      trialDays !== data.shownTrialDays
++    )
++      throw new Error(BILLING_ERRORS.termsChanged);
+     const form = checkoutForm({
+       priceId: price,
+       userId: context.userId,
+@@ -169,6 +214,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
+       successUrl: siteUrlFor("/settings?pro=ok"),
+       cancelUrl: siteUrlFor("/settings?pro=cancel"),
+       trialDays,
++      lang: data.lang ?? null,
++      interval: actual.interval,
+     });
+     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+       method: "POST",
+diff --git a/src/lib/checkout-terms.test.ts b/src/lib/checkout-terms.test.ts
+new file mode 100644
+index 0000000..e95af36
+--- /dev/null
++++ b/src/lib/checkout-terms.test.ts
+@@ -0,0 +1,127 @@
++import fs from "node:fs";
++import path from "node:path";
++import { describe, expect, it } from "vitest";
++import { checkoutTerms } from "./checkout-terms";
++import { DICT } from "./i18n";
++import { checkoutForm, submitMessage } from "./stripe-billing";
++import type { PriceInfo } from "./stripe-catalog";
++
++/** 辞書の日本語で引く（`{n}` などは埋める）。 */
++const t = (key: string, vars: Record<string, string | number> = {}) =>
++  (DICT[key]?.ja ?? key).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
++
++const MONTHLY: PriceInfo = {
++  id: "price_m",
++  unitAmount: 480,
++  currency: "jpy",
++  interval: "month",
++  intervalCount: 1,
++  taxBehavior: "inclusive",
++};
++const NOW = new Date("2026-10-03T03:00:00Z");
++
++describe("申込みの最終確認（特商法 12 条の6）", () => {
++  it("ガイドラインの6つ（分量・価格・支払の時期と方法・提供時期・申込期間・撤回と解除）を全部出す", () => {
++    const rows = checkoutTerms({
++      period: "monthly",
++      price: MONTHLY,
++      trialDays: 0,
++      now: NOW,
++      lang: "ja",
++      t,
++    });
++    expect(rows.map((r) => r.key)).toEqual([
++      "item",
++      "price",
++      "payment",
++      "method",
++      "start",
++      "renew",
++      "period",
++      "cancel",
++      "refund",
++    ]);
++    const v = Object.fromEntries(rows.map((r) => [r.key, r.value]));
++    expect(v.item).toContain("定期購入");
++    expect(v.price).toMatch(/[¥￥]480／月（税込）/);
++    expect(v.payment).toContain("お申込みの時");
++    expect(v.renew).toContain("自動で更新");
++    expect(v.cancel).toContain("サブスクリプションを管理");
++    expect(rows.every((r) => !/\{\w+\}/.test(r.value))).toBe(true);
++  });
++
++  it("無料期間があれば、初めて請求される日と金額を出す", () => {
++    const rows = checkoutTerms({
++      period: "monthly",
++      price: MONTHLY,
++      trialDays: 7,
++      now: NOW,
++      lang: "ja",
++      t,
++    });
++    const v = Object.fromEntries(rows.map((r) => [r.key, r.value]));
++    expect(v.trial).toContain("7日間は無料");
++    expect(v.trial).toContain("2026年10月10日");
++    expect(v.trial).toMatch(/[¥￥]480/);
++    expect(v.payment).toContain("2026年10月10日");
++    expect(v.cancel).toContain("無料期間中に解約");
++  });
++
++  it("税別の値段は、合計が次の画面に出ることを添える（税込と偽らない）", () => {
++    const rows = checkoutTerms({
++      period: "monthly",
++      price: { ...MONTHLY, taxBehavior: "exclusive" },
++      trialDays: 0,
++      now: NOW,
++      lang: "ja",
++      t,
++    });
++    expect(rows.find((r) => r.key === "price")!.value).toContain("税別");
++  });
++
++  it("3言語とも文がある", () => {
++    for (const key of Object.keys(DICT).filter((k) => k.startsWith("checkout.")))
++      for (const lang of ["ja", "en", "zh-TW"] as const)
++        expect([key, lang, Boolean(DICT[key][lang])]).toEqual([key, lang, true]);
++    expect(DICT["checkout.submit"].ja).toBe("規約に同意して購入する（定期購入）");
++  });
++});
++
++describe("支払いの画面（Stripe Checkout）", () => {
++  it("言語を合わせ、申込みボタンの上に定期購入・解約の方法を出す", () => {
++    const f = checkoutForm({
++      priceId: "p",
++      userId: "u",
++      successUrl: "https://x/ok",
++      cancelUrl: "https://x/no",
++      trialDays: 7,
++      lang: "zh-TW",
++      interval: "year",
++    });
++    expect(f.get("locale")).toBe("zh-TW");
++    expect(f.get("custom_text[submit][message]")).toContain("7 天免費期");
++    expect(submitMessage("ja", "month", 0)).toContain("毎月自動で料金");
++    for (const lang of ["ja", "en", "zh-TW"] as const)
++      expect(submitMessage(lang, "month", 30).length).toBeLessThanOrEqual(1200);
++  });
++});
++
++describe("購入口は確認を通った物だけ受ける", () => {
++  const billing = fs.readFileSync(path.join(__dirname, "billing.functions.ts"), "utf8");
++  const checkout = billing.slice(billing.indexOf("export const createCheckoutSession"));
++  it("確認の印と、見せた値段・無料期間を確かめてから Stripe を呼ぶ", () => {
++    expect(checkout).toMatch(/confirmed: z\.literal\(true\)/);
++    const check = checkout.indexOf("BILLING_ERRORS.termsChanged");
++    const call = checkout.indexOf("api.stripe.com/v1/checkout/sessions");
++    expect(check).toBeGreaterThan(-1);
++    expect(check).toBeLessThan(call);
++  });
++  it("設定の画面は確認の画面を挟む（購入ボタンから直に Stripe へ行かない）", () => {
++    const settings = fs.readFileSync(
++      path.join(__dirname, "../components/screens/SettingsScreen.tsx"),
++      "utf8",
++    );
++    expect(settings).toMatch(/onBuy=\{\(p\) => setConfirming\(p\)\}/);
++    expect(settings).toMatch(/<ProCheckoutConfirm/);
++  });
++});
+diff --git a/src/lib/checkout-terms.ts b/src/lib/checkout-terms.ts
+new file mode 100644
+index 0000000..0f23d67
+--- /dev/null
++++ b/src/lib/checkout-terms.ts
+@@ -0,0 +1,86 @@
++/**
++ * **申込みの最終確認の中身**（特定商取引法 12 条の6・消費者庁「通信販売の申込み段階における
++ * 表示についてのガイドライン」。2026-10-03）。
++ *
++ * 支払いの画面（Stripe）へ進むボタンの直前に、次を**その画面の中で**見せる:
++ * 1. 分量（役務の内容と数・定期購入であること・1回の期間）
++ * 2. 販売価格（税込かどうかは Stripe の Price の設定どおり。推測しない）と、2回目以降の代金
++ * 3. 支払の時期・方法（無料期間があれば、終わって初めて請求される日と金額）
++ * 4. 役務の提供時期
++ * 5. 申込期間（無い）
++ * 6. 申込みの撤回・解除（解約の方法・いつから請求が止まるか・自動更新・返金）
++ *
++ * ここは純粋な計算だけ（画面は `components/ProCheckoutConfirm.tsx`、試験は
++ * `checkout-terms.test.ts`）。値段・無料期間は**サーバが実際に使う物**（`getBillingStatus` の
++ * `prices` と `trialEligibleDays`）から作り、購入口でも同じ値を確かめ直す（`createCheckoutSession`）。
++ */
++import { localeOf, type UiLang } from "./i18n";
++import { priceLabel } from "./price-label";
++import type { PriceInfo } from "./stripe-catalog";
++
++type T = (key: string, vars?: Record<string, string | number>) => string;
++
++export type CheckoutTermRow = { key: string; label: string; value: string };
++
++/** 今日から `days` 日後の日付（表示言語の書式）。 */
++export function dateAfterDays(days: number, now: Date, lang: UiLang): string {
++  const d = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
++  return d.toLocaleDateString(localeOf(lang), { year: "numeric", month: "long", day: "numeric" });
++}
++
++export function checkoutTerms(input: {
++  period: "monthly" | "yearly";
++  price: PriceInfo;
++  trialDays: number;
++  now: Date;
++  lang: UiLang;
++  t: T;
++}): CheckoutTermRow[] {
++  const { period, price, trialDays, now, lang, t } = input;
++  const amount = priceLabel(price, lang, t);
++  const plan = t(period === "yearly" ? "checkout.planYearly" : "checkout.planMonthly");
++  const cycle = t(period === "yearly" ? "checkout.cycleYear" : "checkout.cycleMonth");
++  const rows: CheckoutTermRow[] = [
++    { key: "item", label: t("checkout.item"), value: t("checkout.itemValue", { plan, cycle }) },
++    {
++      key: "price",
++      label: t("checkout.price"),
++      value:
++        price.taxBehavior === "exclusive"
++          ? `${amount} ${t("checkout.priceExclNote")}`
++          : t("checkout.priceValue", { price: amount }),
++    },
++  ];
++  if (trialDays > 0) {
++    const first = dateAfterDays(trialDays, now, lang);
++    rows.push({
++      key: "trial",
++      label: t("checkout.trial"),
++      value: t("checkout.trialValue", { n: trialDays, date: first, price: amount }),
++    });
++    rows.push({
++      key: "payment",
++      label: t("checkout.payment"),
++      value: t("checkout.paymentTrial", { date: first, cycle }),
++    });
++  } else {
++    rows.push({
++      key: "payment",
++      label: t("checkout.payment"),
++      value: t("checkout.paymentNow", { cycle }),
++    });
++  }
++  rows.push(
++    { key: "method", label: t("checkout.method"), value: t("checkout.methodValue") },
++    { key: "start", label: t("checkout.start"), value: t("checkout.startValue") },
++    { key: "renew", label: t("checkout.renew"), value: t("checkout.renewValue", { cycle }) },
++    { key: "period", label: t("checkout.applyPeriod"), value: t("checkout.applyPeriodValue") },
++    {
++      key: "cancel",
++      label: t("checkout.cancel"),
++      value: t(trialDays > 0 ? "checkout.cancelValueTrial" : "checkout.cancelValue"),
++    },
++    { key: "refund", label: t("checkout.refund"), value: t("checkout.refundValue") },
++  );
++  return rows;
++}
+diff --git a/src/lib/errors.ts b/src/lib/errors.ts
+index 3957abb..9b1b361 100644
+--- a/src/lib/errors.ts
++++ b/src/lib/errors.ts
+@@ -57,6 +57,7 @@ const KNOWN_CODES: Array<[string, string]> = [
+   ["BILLING_LEGAL_NOT_READY", "pro.err.legalNotReady"],
+   ["BILLING_NOT_CONFIGURED", "pro.err.notConfigured"],
+   ["BILLING_DISABLED", "pro.err.disabled"],
++  ["BILLING_TERMS_CHANGED", "pro.err.termsChanged"],
+ ];
+ 
+ export function readableError(
+diff --git a/src/lib/i18n.test.ts b/src/lib/i18n.test.ts
+index 557dabe..10d0d54 100644
+--- a/src/lib/i18n.test.ts
++++ b/src/lib/i18n.test.ts
+@@ -114,7 +114,7 @@ describe("辞書が3言語ぶんそろっている", () => {
+   const keys = Object.keys(DICT);
+ 
+   it("表示文言の登録数を把握する", () => {
+-    expect(keys.length).toBe(1296);
++    expect(keys.length).toBe(1330);
+   });
+ 
+   /**
+diff --git a/src/lib/i18n.tsx b/src/lib/i18n.tsx
+index 14f6bd3..a228265 100644
+--- a/src/lib/i18n.tsx
++++ b/src/lib/i18n.tsx
+@@ -3624,6 +3624,124 @@ export const DICT: Record<string, Record<UiLang, string>> = {
+     en: "Payments aren't set up yet",
+     "zh-TW": "付款尚未設定",
+   },
++  "pro.err.termsChanged": {
++    ja: "料金または無料期間が変わりました。新しい内容をご確認ください。",
++    en: "The price or free trial has changed. Please review the new details.",
++    "zh-TW": "價格或免費期已變更，請確認新的內容。",
++  },
++  // 申込みの最終確認（特定商取引法 12 条の6。`checkout-terms.ts`・`ProCheckoutConfirm`）。
++  "checkout.title": { ja: "お申込み内容の確認", en: "Review your order", "zh-TW": "確認申請內容" },
++  "checkout.lead": {
++    ja: "有料の定期購入のお申込みです。内容をご確認のうえ、下のボタンで支払いの画面へ進んでください。",
++    en: "This is an order for a paid subscription. Please review the details, then continue to payment with the button below.",
++    "zh-TW": "這是付費定期訂閱的申請。請確認內容後，按下方按鈕前往付款頁面。",
++  },
++  "checkout.item": {
++    ja: "商品（サービスの内容・数量）",
++    en: "Service and quantity",
++    "zh-TW": "商品（服務內容與數量）",
++  },
++  "checkout.itemValue": {
++    ja: "{plan}：CatchWords Pro（有料プラン）の利用権 1件（このアカウント1つ分）。{cycle}ごとの定期購入です。",
++    en: "{plan}: one CatchWords Pro (paid plan) subscription for this account. Billed every {cycle}.",
++    "zh-TW": "{plan}：CatchWords Pro（付費方案）使用權 1 份（限本帳號）。每 {cycle} 的定期訂閱。",
++  },
++  "checkout.planMonthly": { ja: "月ごとプラン", en: "Monthly plan", "zh-TW": "按月方案" },
++  "checkout.planYearly": { ja: "年ごとプラン", en: "Yearly plan", "zh-TW": "按年方案" },
++  "checkout.cycleMonth": { ja: "1か月", en: "month", "zh-TW": "1 個月" },
++  "checkout.cycleYear": { ja: "1年", en: "year", "zh-TW": "1 年" },
++  "checkout.price": { ja: "価格", en: "Price", "zh-TW": "價格" },
++  "checkout.priceValue": {
++    ja: "{price}（2回目以降も同じ金額）",
++    en: "{price} (the same amount for every renewal)",
++    "zh-TW": "{price}（第 2 次起金額相同）",
++  },
++  "checkout.priceExclNote": {
++    ja: "（税別。税を含む合計は次の支払いの画面に表示されます）",
++    en: "(excl. tax; the total including tax is shown on the next payment screen)",
++    "zh-TW": "（未稅；含稅總額會顯示在下一個付款頁面）",
++  },
++  "checkout.trial": { ja: "無料期間", en: "Free trial", "zh-TW": "免費期" },
++  "checkout.trialValue": {
++    ja: "最初の{n}日間は無料です。{date}に初回の料金 {price} がかかります（それまでに解約すれば料金はかかりません）。",
++    en: "The first {n} {n|day|days} are free. The first charge of {price} is on {date} (cancel before then and you pay nothing).",
++    "zh-TW": "前 {n} 天免費。{date} 將收取首次費用 {price}（在此之前取消則不收費）。",
++  },
++  "checkout.payment": { ja: "支払いの時期", en: "When you pay", "zh-TW": "付款時間" },
++  "checkout.paymentTrial": {
++    ja: "初回は {date}（無料期間の終わり）。以後 {cycle}ごとに自動で請求されます。",
++    en: "First charge on {date} (end of the free trial), then automatically every {cycle}.",
++    "zh-TW": "首次於 {date}（免費期結束時），之後每 {cycle} 自動收費。",
++  },
++  "checkout.paymentNow": {
++    ja: "初回はお申込みの時。以後 {cycle}ごとに自動で請求されます。",
++    en: "First charge when you subscribe, then automatically every {cycle}.",
++    "zh-TW": "首次於申請時，之後每 {cycle} 自動收費。",
++  },
++  "checkout.method": { ja: "支払い方法", en: "Payment method", "zh-TW": "付款方式" },
++  "checkout.methodValue": {
++    ja: "クレジットカードなど、次の支払いの画面（Stripe）で選べる方法。",
++    en: "Credit card or another method offered on the next payment screen (Stripe).",
++    "zh-TW": "信用卡等，可在下一個付款頁面（Stripe）選擇的方式。",
++  },
++  "checkout.start": { ja: "利用開始", en: "When it starts", "zh-TW": "開始使用" },
++  "checkout.startValue": {
++    ja: "お申込みの手続きが終わり次第、すぐに使えます。",
++    en: "Immediately after the order is completed.",
++    "zh-TW": "申請手續完成後即可使用。",
++  },
++  "checkout.renew": {
++    ja: "契約期間・自動更新",
++    en: "Term and auto-renewal",
++    "zh-TW": "合約期間與自動續訂",
++  },
++  "checkout.renewValue": {
++    ja: "{cycle}ごとに自動で更新されます。解約しない限り続きます。",
++    en: "Renews automatically every {cycle} until you cancel.",
++    "zh-TW": "每 {cycle} 自動續訂，除非取消將持續。",
++  },
++  "checkout.applyPeriod": { ja: "申込みの期間", en: "Order period", "zh-TW": "申請期間" },
++  "checkout.applyPeriodValue": {
++    ja: "期間の定めはありません（いつでも申し込めます）。",
++    en: "No limited order period (you can subscribe at any time).",
++    "zh-TW": "沒有期間限制（隨時可申請）。",
++  },
++  "checkout.cancel": { ja: "解約", en: "Cancelling", "zh-TW": "取消訂閱" },
++  "checkout.cancelValue": {
++    ja: "いつでも 設定 › CatchWords Pro ›「サブスクリプションを管理」から解約できます。次の更新日より前に解約すれば、それ以降の請求はありません。解約しても、支払い済みの期間の終わりまで使えます。",
++    en: "Cancel any time in Settings › CatchWords Pro › “Manage subscription”. Cancel before the next renewal date and you won't be charged again. You keep Pro until the end of the period you paid for.",
++    "zh-TW":
++      "可隨時在「設定 › CatchWords Pro ›『管理訂閱』」取消。在下一個續訂日前取消，之後不再收費。取消後仍可使用到已付款期間結束。",
++  },
++  "checkout.cancelValueTrial": {
++    ja: "いつでも 設定 › CatchWords Pro ›「サブスクリプションを管理」から解約できます。無料期間中に解約すれば、料金は一切かかりません。その後も、次の更新日より前に解約すれば以後の請求はありません。",
++    en: "Cancel any time in Settings › CatchWords Pro › “Manage subscription”. Cancel during the free trial and you pay nothing. After that, cancel before the next renewal date and you won't be charged again.",
++    "zh-TW":
++      "可隨時在「設定 › CatchWords Pro ›『管理訂閱』」取消。在免費期內取消則完全不收費。之後在下一個續訂日前取消，就不會再收費。",
++  },
++  "checkout.refund": {
++    ja: "申込みの撤回・返金",
++    en: "Withdrawal and refunds",
++    "zh-TW": "撤回申請與退款",
++  },
++  "checkout.refundValue": {
++    ja: "通信販売にはクーリング・オフはありません。デジタルサービスのため、お申込み後の撤回・支払い済みの料金の返金はできません（法令で必要な場合を除く）。",
++    en: "There is no cooling-off period for online purchases. Because this is a digital service, orders cannot be withdrawn and payments are not refunded after you subscribe, except where required by law.",
++    "zh-TW":
++      "網路購物沒有冷靜期（日本法）。由於是數位服務，申請後無法撤回，已支付的費用亦不退還（法令另有規定者除外）。",
++  },
++  "checkout.readTerms": { ja: "詳しい条件:", en: "Full terms:", "zh-TW": "詳細條件：" },
++  "checkout.submit": {
++    ja: "規約に同意して購入する（定期購入）",
++    en: "Agree to the Terms and buy (subscription)",
++    "zh-TW": "同意條款並購買（定期訂閱）",
++  },
++  "checkout.nextStep": {
++    ja: "次の支払いの画面（Stripe）でお支払い情報を入れて、お申込みが確定します。",
++    en: "Enter your payment details on the next screen (Stripe) to complete the order.",
++    "zh-TW": "在下一個付款頁面（Stripe）輸入付款資訊後，申請即完成。",
++  },
++  "checkout.back": { ja: "戻る", en: "Back", "zh-TW": "返回" },
+   "pro.err.disabled": {
+     ja: "いまは Pro を購入できません",
+     en: "Pro can't be purchased right now",
+diff --git a/src/lib/stripe-billing.ts b/src/lib/stripe-billing.ts
+index 7d8dd3f..421ab24 100644
+--- a/src/lib/stripe-billing.ts
++++ b/src/lib/stripe-billing.ts
+@@ -17,6 +17,7 @@
+  * **Apple の課金と並べて出すことが条件**（Apple の発表）。なので、Stripe の購入口は
+  * **Web 版でだけ**出す（`billingSurface`）。アプリ版は、ストアの課金を入れてから開く。
+  */
++import { UI_LANGS, type UiLang } from "./i18n";
+ 
+ export type Plan = "pro" | "free";
+ 
+@@ -207,6 +208,10 @@ export function checkoutForm(p: {
+   cancelUrl: string;
+   email?: string | null;
+   trialDays?: number;
++  /** 支払いの画面（Stripe Checkout）の言語と、申込みボタンの上に出す注意書きの言語。 */
++  lang?: string | null;
++  /** 更新の周期（注意書きに使う）。 */
++  interval?: "day" | "week" | "month" | "year";
+ }): URLSearchParams {
+   const f = new URLSearchParams();
+   f.set("mode", "subscription");
+@@ -221,9 +226,56 @@ export function checkoutForm(p: {
+   if (p.email) f.set("customer_email", p.email);
+   if (p.trialDays && p.trialDays > 0)
+     f.set("subscription_data[trial_period_days]", String(Math.floor(p.trialDays)));
++  // 支払いの画面でも、申込みボタンのすぐ上に「定期購入・自動更新・解約の方法」を出す
++  // （特商法 12 条の6。こちらの最終確認の画面で全部を見せた上で、念のため）。
++  const lang = checkoutLang(p.lang);
++  f.set("locale", STRIPE_LOCALE[lang]);
++  f.set(
++    "custom_text[submit][message]",
++    submitMessage(lang, p.interval ?? "month", p.trialDays ?? 0),
++  );
+   return f;
+ }
+ 
++type CheckoutLang = UiLang;
++type Interval = "day" | "week" | "month" | "year";
++
++/** 支払いの画面の言語（Stripe の `locale`）。表示言語の鍵と同じ綴り。 */
++const STRIPE_LOCALE: Record<CheckoutLang, string> = {
++  ja: "ja",
++  en: "en",
++  "zh-TW": "zh-TW",
++};
++
++function checkoutLang(lang: string | null | undefined): CheckoutLang {
++  return (UI_LANGS as readonly string[]).includes(lang ?? "") ? (lang as CheckoutLang) : "ja";
++}
++
++/**
++ * 支払いの画面の申込みボタンの上の注意書き（Stripe の `custom_text.submit`、1200 字まで）。
++ * サーバで組み立てるので、ここに3言語で持つ。
++ */
++const SUBMIT_MESSAGES: Record<CheckoutLang, (unit: string, trialDays: number) => string> = {
++  ja: (unit, trialDays) =>
++    `有料の定期購入です。${trialDays > 0 ? `${trialDays}日間の無料期間の後、` : ""}解約しない限り${unit}自動で料金がかかります。` +
++    "解約は CatchWords の「設定 › CatchWords Pro › サブスクリプションを管理」からいつでもできます。法令で必要な場合を除き返金はありません。",
++  en: (unit, trialDays) =>
++    `This is a paid subscription. ${trialDays > 0 ? `After the ${trialDays}-day free trial, you` : "You"} will be charged automatically ${unit} until you cancel. ` +
++    "Cancel any time in CatchWords: Settings › CatchWords Pro › Manage subscription. Payments are not refunded except where required by law.",
++  "zh-TW": (unit, trialDays) =>
++    `這是付費的定期訂閱。${trialDays > 0 ? `${trialDays} 天免費期結束後，` : ""}除非取消，將${unit}自動收費。` +
++    "可隨時在 CatchWords 的「設定 › CatchWords Pro › 管理訂閱」取消。除法令另有規定外，已支付的費用不予退還。",
++};
++const SUBMIT_UNITS: Record<CheckoutLang, Record<Interval, string>> = {
++  ja: { day: "毎日", week: "毎週", month: "毎月", year: "毎年" },
++  en: { day: "every day", week: "every week", month: "every month", year: "every year" },
++  "zh-TW": { day: "每天", week: "每週", month: "每月", year: "每年" },
++};
++
++export function submitMessage(lang: CheckoutLang, interval: Interval, trialDays: number): string {
++  return SUBMIT_MESSAGES[lang](SUBMIT_UNITS[lang][interval], trialDays);
++}
++
+ /** 購入口を出せる所。アプリ版は、ストアの課金が入るまで出さない（上の注）。 */
+ export function billingSurface(isNativeApp: boolean): "stripe" | "none" {
+   return isNativeApp ? "none" : "stripe";
+diff --git a/src/lib/stripe-catalog.ts b/src/lib/stripe-catalog.ts
+index b4f300b..3a72117 100644
+--- a/src/lib/stripe-catalog.ts
++++ b/src/lib/stripe-catalog.ts
+@@ -38,6 +38,8 @@ export const BILLING_ERRORS = {
+   noCustomer: "BILLING_NO_CUSTOMER",
+   portalNotConfigured: "BILLING_PORTAL_NOT_CONFIGURED",
+   portalFailed: "BILLING_PORTAL_FAILED",
++  /** 最終確認で見せた値段・無料期間が、今の物と違う（確認を出し直す）。 */
++  termsChanged: "BILLING_TERMS_CHANGED",
+ } as const;
+ 
+ const API = "https://api.stripe.com";
+-- 
+2.43.0
+

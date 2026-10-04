@@ -78,14 +78,17 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch router.tab {
-                case .home: HomeView().environment(\.colorScheme, .light)  // the paper album stays paper
+                case .home: HomeView().environment(\.colorScheme, .light).statusBarTone(.dark)  // the paper album stays paper
                 case .dex:
                     // A card-catch landing: the dex page rises over the camera screen (#dex translateY(102%) → none).
                     DexView()
                         .transition(router.landing != nil ? AnyTransition.move(edge: .bottom) : AnyTransition.opacity)
                         .zIndex(router.landing != nil ? 1 : 0)
                 case .camera:
-                    CaptureView()
+                    // Without the AI consent the camera stays off: its photos would go to AI (AIConsentGateView).
+                    Group {
+                        if AIConsent.shared.isGranted { CaptureView() } else { AIConsentGateView() }
+                    }
                         .transition(router.landing != nil
                                     ? AnyTransition.asymmetric(insertion: .opacity,
                                                                removal: AnyTransition.opacity.animation(.linear(duration: 0.01).delay(0.6)))
@@ -176,6 +179,7 @@ struct MainTabView: View {
         }
         .fullScreenCover(isPresented: $router.showPaywall) {
             PaywallView()
+                .statusBarTone(.automatic)
         }
     }
 
@@ -210,6 +214,11 @@ struct MainTabView: View {
             } else {
                 router.tab = .review
             }
+        case .pendingPhotos:
+            // Like the home banner: the camera opens its 「解析待ち」 list.
+            router.detailSticker = nil
+            router.openPending = true
+            router.tab = .camera
         }
     }
 

@@ -5,7 +5,7 @@ import Foundation
 /// learning language given with `-uiDemo` is written on first use. Nothing is kept across launches.
 ///
 /// Tables use the column names the app reads: profiles, stickers, words, reviews, review_history,
-/// journal_entries, wordbooks, wordbook_entries, encounters (photos of re-encounters),
+/// journal_entries, encounters (photos of re-encounters),
 /// dictionary_entries (empty). Dates are ISO 8601 strings in `SupabaseDate.string` form, so a plain
 /// string comparison orders them.
 nonisolated final class DemoDatabase: @unchecked Sendable {
@@ -29,6 +29,8 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
     var albumHidden: [String] = []
     var scanTapped: [String] = []
     var userMetadata: [String: Any] = [:]
+    /// The account's AI consent record (web `ai_consents`): version, agreedAt, revokedAt. Empty: never agreed.
+    var aiConsent: [String: Any] = [:]
     var email: String?
     var tokenCounter = 0
 
@@ -46,6 +48,7 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         albumHidden = []
         scanTapped = []
         userMetadata = [:]
+        aiConsent = [:]
         email = nil
         tokenCounter = 0
     }
@@ -149,7 +152,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         row["meaning_ja"] = DJ.str(e["meaning"]) ?? ""
         row["part_of_speech"] = DJ.orNull(DJ.str(fixture["part_of_speech"]))
         row["category_key"] = DJ.orNull(DJ.str(fixture["category_key"]))
-        row["level"] = DJ.orNull(DJ.str(fixture["level"]))
         row["example_sentence"] = DJ.orNull(DJ.str(fixture["example_sentence"]))
         row["example_translation"] = DJ.orNull(DJ.str(e["example_translation"]))
         row["extras"] = DJ.dict(e["extras"])
@@ -336,47 +338,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         entry["created_at"] = DJ.iso(jDay)
         entry["updated_at"] = DJ.iso(jDay)
         insert("journal_entries", entry)
-
-        // One wordbook with six entries: three new, one reviewed and due, two learned.
-        let wordbook = DJ.dict(pack["wordbook"])
-        let bookId = "demo-wordbook-1"
-        var book: [String: Any] = [:]
-        book["id"] = bookId
-        book["user_id"] = uid
-        book["title"] = text(wordbook["title"], r)
-        book["created_at"] = DJ.iso(now.addingTimeInterval(-6 * 86_400))
-        insert("wordbooks", book)
-        for (n, e) in DJ.list(wordbook["entries"]).enumerated() {
-            var row: [String: Any] = [:]
-            row["id"] = "demo-wordbook-entry-\(n + 1)"
-            row["wordbook_id"] = bookId
-            row["user_id"] = uid
-            row["headword"] = DJ.str(e["headword"]) ?? ""
-            row["reading_zhuyin"] = DJ.orNull(DJ.str(e["reading_zhuyin"]))
-            row["pinyin"] = DJ.orNull(DJ.str(e["pinyin"]))
-            row["meaning_ja"] = text(e["meaning"], r)
-            row["created_at"] = DJ.iso(now.addingTimeInterval(-6 * 86_400))
-            if n < 3 {
-                row["ease"] = 2.5
-                row["interval_days"] = 0
-                row["repetitions"] = 0
-                row["due_at"] = DJ.iso(now.addingTimeInterval(-3_600))
-                row["last_reviewed_at"] = NSNull()
-            } else if n == 3 {
-                row["ease"] = 2.5
-                row["interval_days"] = 1
-                row["repetitions"] = 1
-                row["due_at"] = DJ.iso(now.addingTimeInterval(-3_600))
-                row["last_reviewed_at"] = DJ.iso(now.addingTimeInterval(-86_400))
-            } else {
-                row["ease"] = 2.7
-                row["interval_days"] = 6
-                row["repetitions"] = 3
-                row["due_at"] = DJ.iso(now.addingTimeInterval(3 * 86_400))
-                row["last_reviewed_at"] = DJ.iso(now.addingTimeInterval(-3 * 86_400))
-            }
-            insert("wordbook_entries", row)
-        }
     }
 
     func profileRow(onboarded: Bool, plan: String, displayName: String, created: Date) -> [String: Any] {
@@ -512,7 +473,7 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         if DJ.isNull(row["created_at"]) { row["created_at"] = now }
         if !["words", "dictionary_entries", "profiles"].contains(table), DJ.isNull(row["user_id"]) { row["user_id"] = Self.userId }
         switch table {
-        case "wordbook_entries", "reviews":
+        case "reviews":
             if row["ease"] == nil { row["ease"] = 2.5 }
             if row["interval_days"] == nil { row["interval_days"] = 0 }
             if row["repetitions"] == nil { row["repetitions"] = 0 }
@@ -528,13 +489,11 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         return row
     }
 
-    /// Children go with their parent (wordbooks → entries, stickers → reviews, history, encounters).
+    /// Children go with their parent (stickers → reviews, history, encounters).
     func cascade(_ table: String, ids: [String]) {
         guard !ids.isEmpty else { return }
         let idSet = Set(ids)
         switch table {
-        case "wordbooks":
-            remove("wordbook_entries") { idSet.contains(DJ.str($0["wordbook_id"]) ?? "") }
         case "stickers":
             for child in ["reviews", "review_history", "encounters"] {
                 remove(child) { idSet.contains(DJ.str($0["sticker_id"]) ?? "") }

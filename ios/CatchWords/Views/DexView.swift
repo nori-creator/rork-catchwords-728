@@ -50,18 +50,17 @@ struct DexDropdownRow: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon ?? "checkmark")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .foregroundStyle(icon == nil ? Theme.primary : Theme.muted)
                     .opacity(isSelected || icon != nil ? 1 : 0)
                     .frame(width: 18)
                 Text(title)
-                    .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
-                    .monospacedDigit()
+                    .scaledFont(size: 15, weight: isSelected ? .semibold : .regular, monospacedDigit: true)
                     .foregroundStyle(Theme.foreground)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if let count {
-                    Text("\(count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                    Text("\(count)").scaledFont(size: 13, monospacedDigit: true).foregroundStyle(Theme.muted)
                 }
             }
             .padding(.horizontal, 12)
@@ -87,8 +86,8 @@ struct DexView: View {
     @State private var openMenu: DexFilterMenu?
     /// The header's height (the content starts under it).
     @State private var headerHeight: CGFloat = 120
-    /// A landing word kept in its slot until the gallery is redrawn (the prototype's `.slot.fill` stays until
-    /// the next `renderDex`).
+    /// The landing word while its light is on the way (drawn as its shadow / an empty square). Cleared the
+    /// moment it lands, so the gallery is redrawn with the word in the caught group (prototype `renderDex`).
     @State private var galleryHold: DexBook.Hold?
     /// The gallery slot being landed on / pointed at (frame reporting, fillIn, blue ring).
     @State private var focus: DexGalleryFocus?
@@ -173,9 +172,8 @@ struct DexView: View {
         .onChange(of: router.landing?.stickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: router.landingStickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: mode) { _, _ in
-            // Switching views redraws the gallery (`renderDex`): the landed slot settles into its place.
+            // Switching views redraws the gallery (`renderDex`): the `.slot.fill` ring goes.
             guard router.landing == nil else { return }
-            galleryHold = nil
             focus = nil
         }
     }
@@ -197,13 +195,17 @@ struct DexView: View {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L("図鑑"))
-                        .font(.system(size: 24, weight: .black))
+                        .scaledFont(size: 24, weight: .black)
                         .foregroundStyle(Theme.foreground)
-                    Text(L("\(dex.stickers.count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
-                        .font(.system(size: 12, weight: .semibold))
+                    // N枚 counts words (one per headword, like the prototype's S.dex), not stickers.
+                    Text(L("\(DexBook.words(dex.stickers, lang: lang).count)枚・影 \(DexBook.baseCaught(dex.stickers, lang: lang)) / 100"))
+                        .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
+                        // Large text on a small iPhone: wrap instead of cutting the counts off.
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .layoutPriority(1)
                 Spacer(minLength: 0)
                 DexModeSegment(mode: $mode) { m in
                     Haptics.selection()
@@ -226,8 +228,13 @@ struct DexView: View {
         .padding(.top, 4)
         .padding(.bottom, 10)
         .background {
+            // Solid behind the title and progress line, fading out only in a strip below the header — scrolled
+            // category cards must not show through 「図鑑」 (the prototype's head sits outside the scroll).
             Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(colors: [.black, .black, .black.opacity(0)], startPoint: .top, endPoint: .bottom))
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.86),
+                                             .init(color: .black.opacity(0), location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
+                .padding(.bottom, -18)
                 .ignoresSafeArea(edges: .top)
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
@@ -263,14 +270,17 @@ struct DexView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
             TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
-                .font(.system(size: 16))
+                .scaledFont(size: 16)
                 .foregroundStyle(Theme.foreground)
                 .submitLabel(.search)
             if !query.isEmpty {
                 Button { query = "" } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
+                        .frame(width: 44, height: 44)  // HIG: 44pt to tap
+                        .contentShape(Rectangle())
                 }
-                .frame(width: 32, height: 32)
+                .padding(.horizontal, -6)  // same look as the old 32pt frame; only the hit area grows
+                .accessibilityLabel(L("検索を消す"))
             }
         }
         .padding(.horizontal, 14)
@@ -333,10 +343,10 @@ struct DexView: View {
     private func pill(_ text: String, active: Bool, open: Bool) -> some View {
         HStack(spacing: 4) {
             Text(text).lineLimit(1)
-            Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+            Image(systemName: "chevron.down").scaledFont(size: 10, weight: .semibold)
                 .rotationEffect(.degrees(open ? 180 : 0))
         }
-        .font(.system(size: 14, weight: .medium))
+        .scaledFont(size: 14, weight: .medium)
         .foregroundStyle(active ? .white : Theme.foreground)
         .padding(.horizontal, 12)
         .frame(minHeight: 44)
@@ -359,7 +369,15 @@ struct DexView: View {
             // The gallery always shows its shadows, even before the first catch (prototype renderDex grid).
             gallery
         } else if dex.hasLoaded && filtered.isEmpty {
-            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty) { router.tab = .camera }
+            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty,
+                         onCamera: { router.tab = .camera },
+                         onClearFilters: {
+                             withAnimation(.snappy) {
+                                 categoryFilter = nil
+                                 dayFilter = nil
+                                 query = ""
+                             }
+                         })
                 .padding(.top, headerHeight + 12)
         } else {
             switch mode {
@@ -392,10 +410,17 @@ struct DexView: View {
             .onChange(of: router.landing?.stickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landingStickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landing?.fillStart) { _, start in
-                // pon! — the slot fills with the cut-out (`.slot.fill`)
-                guard let start, let l = router.landing, galleryHold?.stickerId == l.stickerId else { return }
-                galleryHold?.filled = true
+                // pon! — addEntry + renderDex: the gallery is redrawn at once (the word joins the caught group by
+                // No., a new shadow refills to 5), and its new slot fills (`.slot.fill`) and is scrolled to.
+                guard let start, let l = router.landing else { return }
+                galleryHold = nil
                 focus = DexGalleryFocus(id: l.stickerId, fillStart: start)
+                Task {
+                    await scroll(to: l.stickerId, proxy: proxy)
+                    // one more frame so the slot reports its new frame before the burst
+                    try? await Task.sleep(for: .milliseconds(16))
+                    l.settled = true
+                }
             }
         }
     }
@@ -404,8 +429,8 @@ struct DexView: View {
     /// prototype sets `scrollTop` at once); CatchLandingController flies the star there. Any other landing
     /// (re-encounter, a catch from search or scan): centre the word and light its slot.
     private func takeLanding(_ proxy: ScrollViewProxy) {
-        if let l = router.landing, galleryHold?.stickerId != l.stickerId {
-            galleryHold = DexBook.Hold(stickerId: l.stickerId, filled: false)
+        if let l = router.landing, l.fillStart == nil, galleryHold?.stickerId != l.stickerId {
+            galleryHold = DexBook.Hold(stickerId: l.stickerId)
             focus = DexGalleryFocus(id: l.stickerId, fillStart: nil)
             Task { await scroll(to: l.stickerId, proxy: proxy) }
         } else if router.landing == nil, let id = router.landingStickerId {
@@ -441,10 +466,10 @@ struct DexView: View {
                     let items = filtered.filter { DexBook.category(of: $0, lang: lang) == cat.no }
                     if !items.isEmpty {
                         HStack(spacing: 6) {
-                            Text(cat.emoji).font(.system(size: 17))
-                            Text(cat.label).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.foreground)
+                            Text(cat.emoji).scaledFont(size: 17)
+                            Text(cat.label).scaledFont(size: 16, weight: .semibold).foregroundStyle(Theme.foreground)
                             Spacer()
-                            Text("\(items.count)").font(.system(size: 13)).monospacedDigit().foregroundStyle(Theme.muted)
+                            Text("\(items.count)").scaledFont(size: 13, monospacedDigit: true).foregroundStyle(Theme.muted)
                         }
                         .padding(.top, 6)
                         VStack(spacing: 0) {
@@ -481,7 +506,7 @@ struct DexListRow: View {
                         .detailZoomSource(sticker.id)
                     VStack(alignment: .leading, spacing: 4) {
                         ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
-                        Text(sticker.word?.meaningJa ?? "").font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
+                        Text(sticker.word?.meaningJa ?? "").scaledFont(size: 14).foregroundStyle(Theme.muted).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -553,7 +578,7 @@ struct DexMapView: View {
             VStack(spacing: 10) {
                 if located.isEmpty && !dayItems.isEmpty {
                     Text(L("この日は場所の記録がありません"))
-                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.foreground)
+                        .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.foreground)
                         .padding(.horizontal, 16).frame(minHeight: 40)
                         .background(.regularMaterial, in: Capsule())
                 }
@@ -570,6 +595,11 @@ struct DexMapView: View {
         .onChange(of: day) { _, _ in
             selectedId = dayItems.first?.id
             focus()
+        }
+        // A search or filter can leave the shown day with no words: move to the newest day that has some.
+        .onChange(of: days) { _, list in
+            if let d = day, list.contains(d) { return }
+            day = list.first
         }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
@@ -650,7 +680,7 @@ struct DexMapView: View {
                     .overlay(alignment: .topTrailing) {
                         if v.items.count > 1 {
                             Text("\(v.items.count)")
-                                .font(.system(size: 12, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                                .scaledFont(size: 12, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
                                 .frame(minWidth: 22, minHeight: 22)
                                 .background(Theme.primary, in: Circle())
                                 .overlay(Circle().stroke(.white, lineWidth: 2))
@@ -660,7 +690,7 @@ struct DexMapView: View {
                     .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
                 if isOn {
                     Text(JPDate.time(v.start))
-                        .font(.system(size: 13, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                        .scaledFont(size: 13, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Theme.primary, in: Capsule())
                 }
@@ -685,7 +715,7 @@ struct DexMapView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 8) {
                                     Text(v.timeLabel)
-                                        .font(.system(size: 17, weight: .bold)).monospacedDigit()
+                                        .scaledFont(size: 17, weight: .bold, monospacedDigit: true)
                                         .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
                                     if v.coordinate != nil || v.placeName != nil {
                                         Label {
@@ -693,7 +723,7 @@ struct DexMapView: View {
                                         } icon: {
                                             Image(systemName: "mappin")
                                         }
-                                        .font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1)
+                                        .scaledFont(size: 12).foregroundStyle(Theme.muted).lineLimit(1)
                                     }
                                 }
                                 ForEach(v.items) { s in
@@ -733,11 +763,11 @@ struct DexMapView: View {
                                             .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
                                             .clipShape(.rect(cornerRadius: 16, style: .continuous))
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(s.word?.headword ?? "").font(.system(size: 17, weight: .medium)).foregroundStyle(Theme.foreground)
+                                            Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
                                             if let cap = s.caption, !cap.isEmpty {
                                                 Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
                                             } else {
-                                                Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Theme.muted).lineLimit(1)
+                                                Text(s.word?.meaningJa ?? "").scaledFont(size: 15).foregroundStyle(Theme.muted).lineLimit(1)
                                             }
                                         }
                                         Spacer(minLength: 0)
@@ -757,7 +787,7 @@ struct DexMapView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { panelOpen.toggle() }
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    .font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.background)  // not white: the disc is light in dark mode
                     .rotationEffect(.degrees(panelOpen ? 0 : 180))
                     .frame(width: 48, height: 48)
                     .background(Theme.foreground, in: Circle())
@@ -765,7 +795,7 @@ struct DexMapView: View {
             .buttonStyle(PressableStyle(scale: 0.9))
             .accessibilityLabel(panelOpen ? L("一覧を閉じる") : L("一覧を開く"))
             Text(day.map { JPDate.monthDayWeek($0) } ?? "—")
-                .font(.system(size: 19, weight: .bold)).foregroundStyle(Theme.foreground)
+                .scaledFont(size: 19, weight: .bold).foregroundStyle(Theme.foreground)
             Spacer()
             circleButton("calendar") { showDatePicker = true }.accessibilityLabel(L("日付を選ぶ"))
             circleButton("chevron.left") {
@@ -833,6 +863,8 @@ struct MapVisit: Identifiable {
 struct EmptyDexView: View {
     let isFiltered: Bool
     let onCamera: () -> Void
+    /// Filtered to nothing: one tap back to every word.
+    var onClearFilters: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 14) {
@@ -845,6 +877,11 @@ struct EmptyDexView: View {
             if !isFiltered {
                 PrimaryButton(title: L("最初の1枚を撮る"), icon: "camera.fill", sheen: true, action: onCamera)
                     .frame(maxWidth: 260)
+            } else if let onClearFilters {
+                Button(L("条件を外す"), action: onClearFilters)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(Theme.primaryInk)
+                    .frame(minHeight: 44)
             }
         }
         .frame(maxWidth: .infinity)

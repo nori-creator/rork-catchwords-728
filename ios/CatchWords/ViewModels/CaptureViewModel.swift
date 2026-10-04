@@ -90,10 +90,19 @@ final class CaptureViewModel {
     /// released only when its job is done: saved, re-encountered, or the user starts over.
     private(set) var pendingId: String?
 
+    init() {
+        // The automatic retry of 「解析待ち」 leaves alone the photo this screen is working on.
+        PendingRetry.shared.register(self)
+    }
+
     /// Starts analysis immediately; the selfie prompt covers the wait (web: "ものと一緒に、もう一枚").
     func analyze(_ image: UIImage, askSelfie: Bool = false) {
         runToken += 1
         let token = runToken
+        // A word check still running belongs to the old run: its result is dropped, so its flag must not
+        // keep blocking taps on the new run's words.
+        isCheckingOwned = false
+        isLoadingDetails = false
         photo = image
         selfie = nil
         candidates = []
@@ -126,13 +135,21 @@ final class CaptureViewModel {
         } else if pendingId == nil {
             pendingId = PendingQueue.shared.add(image: image, reason: L("解析中"), lat: nil, lng: nil)?.id
         }
+        // A photo opened from the queue goes through the automatic retry's path: the words it already
+        // found are used as they are, and an analysis of this photo running there is joined, not repeated.
+        let restoredId = restoredPendingId
 
         Task {
             async let loc = LocationService.shared.current()
             do {
-                let found = textOnly
-                    ? try await AIService.shared.detectScan(image: image)
-                    : try await AIService.shared.suggest(image: image)
+                let found: [Candidate]
+                if textOnly {
+                    found = try await AIService.shared.detectScan(image: image)
+                } else if let restoredId {
+                    found = try await PendingRetry.shared.suggest(for: restoredId, image: image)
+                } else {
+                    found = try await AIService.shared.suggest(image: image)
+                }
                 guard token == runToken else { return }
                 if !textOnly {
                     let masks = await masksTask?.value
@@ -209,6 +226,7 @@ final class CaptureViewModel {
     func search(text: String, keepPhoto: Bool = false) {
         runToken += 1
         let token = runToken
+        isCheckingOwned = false
         searchError = nil
         if !keepPhoto {
             step = .processing
@@ -406,7 +424,10 @@ final class CaptureViewModel {
 
     /// The catch was saved (or re-encountered): the queued photo's job is done.
     func releasePending() {
-        if let pid = pendingId { PendingQueue.shared.remove(id: pid) }
+        if let pid = pendingId {
+            PendingQueue.shared.remove(id: pid)
+            PendingRetry.shared.forget(pid)
+        }
         pendingId = nil
         restoredPendingId = nil
     }
@@ -450,7 +471,10 @@ final class CaptureViewModel {
         masksTask = nil
         objects = []
         shotAt = nil
-        if let pid = pendingId { PendingQueue.shared.remove(id: pid) }
+        if let pid = pendingId {
+            PendingQueue.shared.remove(id: pid)
+            PendingRetry.shared.forget(pid)
+        }
         pendingId = nil
         photo = nil
         selfie = nil

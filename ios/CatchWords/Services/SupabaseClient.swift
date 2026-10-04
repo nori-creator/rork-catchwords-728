@@ -10,6 +10,8 @@ nonisolated enum APIError: LocalizedError {
     case message(String)
     /// The server's rolling-24h cap (`assertWithinDailyCap`). Waiting a few minutes does not help.
     case limit(String)
+    /// An AI function was refused before sending: this account has not agreed to send data to AI (`AIConsent`).
+    case aiConsentRequired
 
     /// err.dailyCap (web i18n).
     static var dailyCapMessage: String { L("1日の利用上限に達しました。24時間以内に自動で回復します。") }
@@ -24,6 +26,7 @@ nonisolated enum APIError: LocalizedError {
         case .decoding: L("データの読み込みに失敗しました。")
         case .message(let m): L10n.readerSafe(m, fallback: L("うまくいきませんでした。もう一度お試しください。"))
         case .limit(let m): L10n.readerSafe(m, fallback: Self.dailyCapMessage)
+        case .aiConsentRequired: L("AIを使う機能は、AIへのデータ送信に同意すると使えます。")
         }
     }
 
@@ -206,6 +209,44 @@ final class SupabaseClient {
         KeychainStore.delete(account: sessionAccount)
     }
 
+    /// A sign-out the user asked for: the local session goes at once, and the server is told to revoke
+    /// this device's session (`POST auth/v1/logout?scope=local`, so the web stays signed in) in the
+    /// background. Best effort: offline or a server error never holds the sign-out up.
+    func signOutRevokingSession() {
+        guard let ended = session else { signOut(); return }
+        signOut()
+        guard let baseURL else { return }
+        let key = anonKey
+        let http = urlSession
+        Task.detached {
+            await SupabaseClient.revoke(ended, baseURL: baseURL, anonKey: key, urlSession: http)
+        }
+    }
+
+    /// `/logout` needs a live access token: an expired one is swapped for a fresh one first (with the
+    /// refresh token the device still holds), so the refresh token is revoked too.
+    nonisolated private static func revoke(_ s: AuthSession, baseURL: URL, anonKey: String, urlSession: URLSession) async {
+        var access = s.accessToken
+        if s.expiresAt.timeIntervalSinceNow < 30,
+           let url = URL(string: "auth/v1/token?grant_type=refresh_token", relativeTo: baseURL) {
+            var req = URLRequest(url: url, timeoutInterval: 10)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh_token": s.refreshToken])
+            guard let answer = try? await urlSession.data(for: req),
+                  let json = (try? JSONSerialization.jsonObject(with: answer.0)) as? [String: Any],
+                  let fresh = json["access_token"] as? String else { return }
+            access = fresh
+        }
+        guard let url = URL(string: "auth/v1/logout?scope=local", relativeTo: baseURL) else { return }
+        var req = URLRequest(url: url, timeoutInterval: 10)
+        req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(access)", forHTTPHeaderField: "Authorization")
+        _ = try? await urlSession.data(for: req)
+    }
+
     private func authRequest(path: String, body: [String: String]) async throws -> [String: Any] {
         guard let baseURL, let url = URL(string: "auth/v1/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
         var req = URLRequest(url: url)
@@ -323,6 +364,21 @@ final class SupabaseClient {
         return data
     }
 
+    /// Every row of a GET, a page at a time. The server returns at most 1000 rows per request whatever
+    /// `limit` says, so a single big `limit` silently dropped the rest. `path` must have a stable,
+    /// unique `order` (end it with the primary key) and no `limit` / `offset` of its own.
+    func restAll<T: Decodable>(_ path: String, as: T.Type, decoder: JSONDecoder,
+                               pageSize: Int = 1000, maxPages: Int = 20) async throws -> [T] {
+        var out: [T] = []
+        for page in 0..<maxPages {
+            let data = try await rest("GET", "\(path)&limit=\(pageSize)&offset=\(page * pageSize)")
+            let chunk = try decoder.decode([T].self, from: data)
+            out += chunk
+            if chunk.count < pageSize { break }
+        }
+        return out
+    }
+
     /// Before a request: refresh an expiring token, but never fail the request for a network hiccup
     /// during the refresh — the current token may still work (or the request reports offline itself).
     /// A dead refresh token (`.unauthorized`) does fail it: the user has to log in again.
@@ -341,31 +397,46 @@ final class SupabaseClient {
     func withTokenRetry(_ send: (String) async throws -> (Data, HTTPURLResponse)) async throws -> (Data, HTTPURLResponse) {
         guard let token = session?.accessToken else { throw APIError.unauthorized }
         let first = try await send(token)
-        guard first.1.statusCode == 401 else { return first }
+        guard Self.isExpiredToken(first) else { return first }
         try await refreshIfNeeded(force: true)
         guard let fresh = session?.accessToken else { throw APIError.unauthorized }
         let second = try await send(fresh)
-        if second.1.statusCode == 401 {
+        if Self.isExpiredToken(second) {
             expireSession()
             throw APIError.unauthorized
         }
         return second
     }
 
+    /// 401, or Storage's way of saying the same: HTTP 400 (sometimes 403) with `jwt expired`,
+    /// `"exp" claim timestamp check failed` or `InvalidJWT` in the body.
+    nonisolated static func isExpiredToken(_ answer: (Data, HTTPURLResponse)) -> Bool {
+        let status = answer.1.statusCode
+        if status == 401 { return true }
+        guard status == 400 || status == 403, answer.0.count < 4096 else { return false }
+        let body = String(decoding: answer.0, as: UTF8.self).lowercased()
+        return body.contains("jwt expired") || body.contains("\"exp\" claim") || body.contains("exp claim")
+            || body.contains("invalidjwt") || body.contains("token is expired")
+    }
+
     // MARK: - Storage (private bucket "stickers": {uuid}/{ts}-{kind}.jpg)
 
     func upload(_ data: Data, path: String, contentType: String = "image/jpeg", bucket: String = "stickers", upsert: Bool = false) async throws {
         try await refreshForRequest()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url, timeoutInterval: 60)
-        req.httpMethod = "POST"
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
-        req.httpBody = data
-        let (body, response) = try await perform(req)
+        guard let baseURL, let url = URL(string: "storage/v1/object/\(bucket)/\(path)", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        // A token that expired on the way (clock skew, a long upload queue) gets one refresh and a retry.
+        let (body, response) = try await withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: 60)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue(contentType, forHTTPHeaderField: "Content-Type")
+            req.setValue(upsert ? "true" : "false", forHTTPHeaderField: "x-upsert")
+            req.httpBody = data
+            return try await perform(req)
+        }
         guard (200..<300).contains(response.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
             throw APIError.server(response.statusCode, (json?["message"] as? String) ?? L("写真の保存に失敗しました。"))
@@ -382,15 +453,19 @@ final class SupabaseClient {
     func signedURLs(for paths: [String], expiresIn: Int = 60 * 60 * 6) async throws -> [String: URL] {
         guard !paths.isEmpty else { return [:] }
         try await refreshForRequest()
-        guard let baseURL, let token = session?.accessToken,
-              let url = URL(string: "storage/v1/object/sign/stickers", relativeTo: baseURL) else { throw APIError.notConfigured }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["expiresIn": expiresIn, "paths": paths])
-        let (data, response) = try await perform(req)
+        guard let baseURL, let url = URL(string: "storage/v1/object/sign/stickers", relativeTo: baseURL) else {
+            throw APIError.notConfigured
+        }
+        let payload = try JSONSerialization.data(withJSONObject: ["expiresIn": expiresIn, "paths": paths])
+        let (data, response) = try await withTokenRetry { token in
+            var req = URLRequest(url: url, timeoutInterval: 20)
+            req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = payload
+            return try await perform(req)
+        }
         guard (200..<300).contains(response.statusCode),
               let arr = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else { return [:] }
         var out: [String: URL] = [:]
@@ -409,11 +484,25 @@ final class SupabaseClient {
             guard let http = response as? HTTPURLResponse else { throw APIError.decoding }
             return (data, http)
         } catch let error as URLError {
-            switch error.code {
-            case .timedOut: throw APIError.timeout
-            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost: throw APIError.offline
-            default: throw APIError.message(error.localizedDescription)
-            }
+            throw APIError.from(error)
+        }
+    }
+}
+
+extension APIError {
+    /// One mapping for every request: no connection (airplane mode, no signal, a captive Wi-Fi that
+    /// breaks TLS, cellular data off for the app) reads as offline with a retry, never as a raw system
+    /// string; a cancelled request (the screen went away) is a cancellation, not an error to show.
+    nonisolated static func from(_ error: URLError) -> Error {
+        switch error.code {
+        case .timedOut: return APIError.timeout
+        case .cancelled: return CancellationError()
+        case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost,
+             .dnsLookupFailed, .dataNotAllowed, .internationalRoamingOff, .callIsActive,
+             .secureConnectionFailed, .cannotLoadFromNetwork, .resourceUnavailable:
+            return APIError.offline
+        default:
+            return APIError.message("")
         }
     }
 }
@@ -433,16 +522,25 @@ nonisolated enum SupabaseDate {
             s.removeSubrange(dot..<tzStart)
         }
         if !(s.hasSuffix("Z") || s.contains("+") || s.dropFirst(10).contains("-")) { s += "Z" }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
+        return parser.date(from: s)
     }
 
     static func string(_ date: Date) -> String {
+        writer.string(from: date)
+    }
+
+    // One formatter each, made once: a new ISO8601DateFormatter per field cost ~1 ms × every date of a
+    // 5000-row history read, on the main thread. ISO8601DateFormatter is thread-safe.
+    nonisolated(unsafe) private static let parser: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    nonisolated(unsafe) private static let writer: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f.string(from: date)
-    }
+        return f
+    }()
 
     static var decoder: JSONDecoder {
         let d = JSONDecoder()

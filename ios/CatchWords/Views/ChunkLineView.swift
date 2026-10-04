@@ -43,7 +43,7 @@ struct ChunkLineView: View {
                         HStack(spacing: 4) {
                             if i > 0 {
                                 Text("+")
-                                    .font(.system(size: size == .large ? 15 : 12, weight: .bold))
+                                    .scaledFont(size: size == .large ? 15 : 12, weight: .bold)
                                     .foregroundStyle(Theme.muted.opacity(0.45))
                                     .accessibilityHidden(true)
                             }
@@ -53,7 +53,7 @@ struct ChunkLineView: View {
                 }
                 if !translation.isEmpty {
                     Text(translation)
-                        .font(.system(size: size == .large ? 16 : 13))
+                        .scaledFont(size: size == .large ? 16 : 13)
                         .foregroundStyle(Theme.muted)
                         .lineSpacing(3)
                         .contentTransition(.opacity)
@@ -87,11 +87,11 @@ struct ChunkLineView: View {
         } label: {
             HStack(spacing: 3) {
                 Text(part.text)
-                    .font(.system(size: big ? 20 : 15, weight: .bold))
+                    .scaledFont(size: big ? 20 : 15, weight: .bold)
                     .contentTransition(.opacity)
                 if swappable {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: big ? 11 : 9, weight: .bold))
+                        .scaledFont(size: big ? 11 : 9, weight: .bold)
                         .rotationEffect(.degrees(isOpen ? 180 : 0))
                 }
             }
@@ -130,9 +130,9 @@ struct ChunkLineView: View {
             Picker(L("ほかの語"), selection: selection) {
                 ForEach(choices, id: \.text) { c in
                     HStack(spacing: 10) {
-                        Text(c.text).font(.system(size: 18, weight: .semibold)).foregroundStyle(Theme.foreground)
+                        Text(c.text).scaledFont(size: 18, weight: .semibold).foregroundStyle(Theme.foreground)
                         if !c.ja.isEmpty {
-                            Text(c.ja).font(.system(size: 14)).foregroundStyle(Theme.muted)  // lang-ok: filtered in ReaderLanguage.resolve (alts) or ChunkRules.degreeGloss (reader's own)
+                            Text(c.ja).scaledFont(size: 14).foregroundStyle(Theme.muted)  // lang-ok: filtered in ReaderLanguage.resolve (alts) or ChunkRules.degreeGloss (reader's own)
                         }
                     }
                     .tag(c.text)

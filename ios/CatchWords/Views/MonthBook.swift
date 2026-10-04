@@ -54,6 +54,7 @@ struct MonthBookView: View {
                 }
             }
         }
+        .denseTypeSizeCap()  // two fixed paper pages
         .onAppear {
             guard !didStart else { return }
             didStart = true
@@ -151,10 +152,10 @@ struct MonthBookView: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(JPDate.weekday(d.day))
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold)
                             .foregroundStyle(Theme.primaryInk.opacity(0.85))
                         Text(JPDate.monthDay(d.day))
-                            .font(.system(size: 30, weight: .heavy))
+                            .scaledFont(size: 30, weight: .heavy)
                             .foregroundStyle(Color(hex: 0x33291F))
                             .monospacedDigit()
                     }
@@ -173,7 +174,7 @@ struct MonthBookView: View {
                         if isToday, let onCamera {
                             Button(action: onCamera) {
                                 Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold)
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 20)
                                     .frame(minHeight: 46)
@@ -207,7 +208,7 @@ struct MonthBookView: View {
         HStack {
             Spacer()
             Text(text)
-                .font(.system(size: 11, weight: .medium))
+                .scaledFont(size: 11, weight: .medium)
                 .foregroundStyle(Color(hex: 0x33291F, opacity: 0.4))
         }
     }
@@ -383,12 +384,12 @@ private struct RightDiaryPage<Foot: View>: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(L("日記"))
-                        .font(.system(size: 13, weight: .bold))
+                        .scaledFont(size: 13, weight: .bold)
                         .foregroundStyle(Color(hex: 0x33291F, opacity: 0.6))
                     Spacer()
                     Button { onWrite(day.day) } label: {
                         Label(text.isEmpty ? L("書く") : L("書き直す"), systemImage: "pencil.line")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold)
                             .foregroundStyle(Theme.primaryInk)
                             .padding(.horizontal, 12)
                             .frame(minHeight: 36)
@@ -427,7 +428,7 @@ private struct RightDiaryPage<Foot: View>: View {
                             ForEach(day.items) { s in
                                 Button { onOpen(s) } label: {
                                     Text(s.word?.headword ?? "")
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .scaledFont(size: 14, weight: .semibold)
                                         .foregroundStyle(Color(hex: 0x33291F))
                                         .padding(.horizontal, 10)
                                         .frame(minHeight: 32)
@@ -480,9 +481,9 @@ struct MonthBookSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(String(Calendar.current.component(.year, from: month)))
-                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
+                        .scaledFont(size: 12, weight: .semibold).foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
                     Text(L("\(JPDate.month(month))のアルバム"))
-                        .font(.system(size: 24, weight: .heavy)).foregroundStyle(Color(hex: 0x33291F))
+                        .scaledFont(size: 24, weight: .heavy).foregroundStyle(Color(hex: 0x33291F))
                 }
                 Spacer()
                 Button { dismiss() } label: {

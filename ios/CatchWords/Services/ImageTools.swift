@@ -1,4 +1,5 @@
 import UIKit
+import ImageIO
 import Vision
 import CoreImage
 import CoreImage.CIFilterBuiltins
@@ -7,6 +8,11 @@ nonisolated enum ImageTools {
     /// Same budget as the web (1600px / q0.9) so payloads stay far below the 8MB cap.
     static func jpegForUpload(_ image: UIImage, maxSide: CGFloat = 1600, quality: CGFloat = 0.88) -> Data? {
         resized(image, maxSide: maxSide).jpegData(compressionQuality: quality)
+    }
+
+    /// `jpegForUpload` off the main thread (a full-size photo takes 100–200 ms to resize and encode).
+    static func jpegForUploadInBackground(_ image: UIImage, maxSide: CGFloat = 1600, quality: CGFloat = 0.88) async -> Data? {
+        await Task.detached(priority: .userInitiated) { jpegForUpload(image, maxSide: maxSide, quality: quality) }.value
     }
 
     static func resized(_ image: UIImage, maxSide: CGFloat) -> UIImage {
@@ -18,6 +24,35 @@ nonisolated enum ImageTools {
         return UIGraphicsImageRenderer(size: target, format: format).image { _ in
             image.draw(in: CGRect(origin: .zero, size: target))
         }
+    }
+
+    /// Decodes an image file at most `maxSide` px on its long side, already upright (EXIF orientation
+    /// applied), without ever holding the full-resolution bitmap. A 48 MP library photo decoded with
+    /// `UIImage(data:)` and then redrawn costs ~200 MB and a long main-thread stall.
+    static func downsampled(data: Data, maxSide: CGFloat) -> UIImage? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        return downsampled(source: src, maxSide: maxSide)
+    }
+
+    static func downsampled(url: URL, maxSide: CGFloat) -> UIImage? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        return downsampled(source: src, maxSide: maxSide)
+    }
+
+    private static func downsampled(source: CGImageSource, maxSide: CGFloat) -> UIImage? {
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(maxSide)),
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, opts as CFDictionary) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+
+    /// `downsampled(data:maxSide:)` off the main thread (photos picked from the library).
+    static func downsampledInBackground(_ data: Data, maxSide: CGFloat = 2400) async -> UIImage? {
+        await Task.detached(priority: .userInitiated) { downsampled(data: data, maxSide: maxSide) }.value
     }
 }
 

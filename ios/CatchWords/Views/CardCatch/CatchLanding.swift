@@ -12,7 +12,8 @@ struct CatchStar: Equatable {
 /// opens in ギャラリー (forced, like `S.view = "grid"`), scrolled so the word's slot is centred; 600 ms later the
 /// star flies there on an arc (720 ms, cubic-bezier(.5,0,.25,1), ±90 / −120 at the middle, a full turn, scale
 /// 1 → 1.15 → .85, a trail of sparkles), lands with `.landpop` + SFX.pop + the pon tap, and the slot fills with
-/// the cut-out (`.slot.fill`); 20 ms later `renderDex`'s focus burst, glints and SFX.land.
+/// the cut-out (`.slot.fill`) at its new place — the gallery is redrawn at once, the word in the caught group by
+/// No. — scrolled to; 20 ms later `renderDex`'s focus burst, glints and SFX.land there.
 @MainActor @Observable
 final class CatchLandingController {
     enum Phase { case opening, flying, landed }
@@ -34,8 +35,11 @@ final class CatchLandingController {
     /// When the slot filled (`.slot.fill` → fillIn .9 s).
     var fillStart: Double?
 
-    /// The target slot's `.sart`, in global coordinates (reported by the gallery as it lays out).
+    /// The target slot's `.sart`, in global coordinates (reported by the gallery as it lays out). After the
+    /// landing it is the word's new slot in the caught group.
     @ObservationIgnored var target: CGRect?
+    /// Set by the gallery once it has been redrawn after the landing and scrolled to the word's new slot.
+    @ObservationIgnored var settled = false
     let particles = CCParticles()
     @ObservationIgnored private var trailing = false
 
@@ -93,11 +97,20 @@ final class CatchLandingController {
         play(.ccPop)
         Haptics.pon(open: true)
         phase = .landed
+        // addEntry + renderDex: the gallery is redrawn now (the word moves into the caught group by No., a new
+        // shadow refills), its new slot gets `.slot.fill` and is scrolled to (DexView); the slot keeps reporting
+        // its frame into `target` as it moves.
         fillStart = CCClock.now
-        // renderDex focus (focusNow): 20 ms later the burst, glints and SFX.land on the slot
+        var waited = 0.0
+        while !settled && waited < 0.5 {
+            await wait(0.016)
+            waited += 0.016
+        }
+        // renderDex focus (focusNow): 20 ms later the burst, glints and SFX.land on the new slot
         await wait(0.02)
-        particles.burst(tx, ty, n: 44, speed: 6, up: 3)
-        particles.glints(tr, n: 8)
+        let fr = target ?? tr
+        particles.burst(Double(fr.midX), Double(fr.midY), n: 44, speed: 6, up: 3)
+        particles.glints(fr, n: 8)
         play(.ccLand)
         await wait(2.6)   // the sparkles die down, then the overlay goes
     }

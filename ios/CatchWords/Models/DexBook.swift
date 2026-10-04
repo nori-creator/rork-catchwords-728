@@ -86,22 +86,28 @@ enum DexBook {
         return DexCatalog.category(forKey: s.categoryKey)
     }
 
-    /// The landing word, while its light is on the way (`filled` false: drawn as its shadow / an empty square)
-    /// and after it filled the slot (`filled` true: caught, in the same place until the gallery is redrawn).
+    /// The landing word while its light is on the way: drawn as its shadow (or an empty square). Once it lands
+    /// the gallery is redrawn at once (prototype `addEntry` + `renderDex`): the word joins the caught group by
+    /// No. and a new shadow refills the category (owner decision 2026-10-03).
     struct Hold: Equatable {
         let stickerId: String
-        var filled: Bool
     }
 
-    static func sections(stickers: [Sticker], numbers: [String: Int], lang: String, hold: Hold?) -> [DexSection] {
-        // One square per word (the prototype's addEntry keeps one entry per word): the newest sticker wins.
+    /// One sticker per word, newest first (the prototype's `addEntry` keeps one entry per word: `S.dex`).
+    static func words(_ stickers: [Sticker], lang: String) -> [Sticker] {
         var seen = Set<String>()
-        var words: [Sticker] = []
+        var out: [Sticker] = []
         for s in stickers.sorted(by: { $0.takenAt > $1.takenAt }) {
             let h = DexCatalog.norm(s.word?.headword ?? "", lang: lang)
             let k = h.isEmpty ? "id:\(s.id)" : h
-            if seen.insert(k).inserted { words.append(s) }
+            if seen.insert(k).inserted { out.append(s) }
         }
+        return out
+    }
+
+    static func sections(stickers: [Sticker], numbers: [String: Int], lang: String, hold: Hold?) -> [DexSection] {
+        // One square per word: the newest sticker wins.
+        var words = Self.words(stickers, lang: lang)
         let held = hold.flatMap { h in words.first { $0.id == h.stickerId } }
         if let held { words.removeAll { $0.id == held.id } }
 
@@ -123,20 +129,16 @@ enum DexBook {
             var shadows = c.items.filter { !caughtItems.contains($0.id) }.prefix(shadowCount).map {
                 DexSlot(id: "i:\($0.id)", no: $0.baseNo, kind: .shadow($0))
             }
-            var count = caught.count
-            if let held, heldCategory == c.no, let hold {
-                let kind: DexSlot.Kind
+            if let held, heldCategory == c.no {
                 if let it = heldItem, let i = shadows.firstIndex(where: { $0.id == "i:\(it.id)" }) {
-                    kind = hold.filled ? .caught(held) : .shadow(it)
-                    shadows[i] = DexSlot(id: held.id, no: numbers[held.id] ?? it.baseNo, kind: kind)
+                    shadows[i] = DexSlot(id: held.id, no: numbers[held.id] ?? it.baseNo, kind: .shadow(it))
                 } else {
-                    kind = hold.filled ? .caught(held) : .pending
-                    slots.append(DexSlot(id: held.id, no: numbers[held.id], kind: kind))
+                    slots.append(DexSlot(id: held.id, no: numbers[held.id], kind: .pending))
                 }
-                if hold.filled { count += 1 }
             }
             slots += shadows
-            return DexSection(category: c, slots: slots, caughtCount: count)
+            // "n / m" counts words: one caught slot per word (`mine.length / mine.length + shadows (+ pending)`).
+            return DexSection(category: c, slots: slots, caughtCount: caught.count)
         }
     }
 

@@ -15,6 +15,8 @@ final class CardCatchModel {
         let rect: CGRect
         let outline: UIImage
         let name: String
+        /// formLight's piece when there is no cut-out (`cropFrom`), drawn off the main thread from the start.
+        let piece: Task<UIImage, Never>?
     }
 
     struct Piece {
@@ -129,6 +131,28 @@ final class CardCatchModel {
         releaseMotion()
     }
 
+    /// Whether anything on the stage changes with time at `now`; false lets the view pause its per-frame
+    /// redraws (any observed change wakes it again). Always true from the light onwards: the card follows the
+    /// device's tilt (motion updates are not observed), and particles, bokeh and the halo move on their own.
+    /// Before that, the endless loops (outline pulse, tag rings, the pill's spark, the AI glow, the category
+    /// colour turning) count only without Reduce Motion, and every transition counts until it has settled.
+    func needsFrames(_ now: Double) -> Bool {
+        if phase == .card || phase == .sending || cardVisible || star != nil || piece != nil || !particles.isEmpty {
+            return true
+        }
+        if !motion.calm, outlinePulseStart != nil || pickUI || pillOpacity.to > 0 || aiGlow.to > 0 || catOn.to > 0
+            || haloOn.to > 0 || bokehOn.to > 0 {
+            return true
+        }
+        let transitions = [photoDim, photoScale, pillOpacity, pillShift, aiGlow, sheetT, catOn, haloOn, bokehOn]
+            + outlineOpacity + tagScale + tagOpacity
+        if transitions.contains(where: { now < $0.start + $0.duration }) { return true }
+        let anims = [bracketRect, bracketOpacity, bracketPulse, flashAnim, cardSpin, cardLift, wrapAnim, uiAnim]
+        if anims.contains(where: { $0.map { !$0.finished(at: now) } ?? false }) { return true }
+        // The word rows rise in one by one after the sheet opens (up to ~0.8 s).
+        return sheetObj != nil && now < sheetOpenedAt + 1
+    }
+
     private func wait(_ seconds: Double) async {
         guard seconds > 0 else { return }
         try? await Task.sleep(for: .seconds(seconds))
@@ -204,11 +228,18 @@ final class CardCatchModel {
         let outlines = await Task.detached(priority: .userInitiated) {
             jobs.map { CCImages.outline(cut: $0.0, size: $0.1) }
         }.value
+        // formLight's piece without a cut-out redraws the photo: started off the main thread now, long before
+        // a word is chosen, so it is ready when the light forms (not awaited here: the timing stays the same).
+        let pieces: [Task<UIImage, Never>?] = list.map { o in
+            guard o.cut == nil else { return nil }
+            let box = o.box
+            return Task.detached(priority: .userInitiated) { CCImages.cropFrom(photo: photo, box: box) }
+        }
         objs = list.indices.map { i -> Obj in
             let o = list[i]
             let shown = ReaderLanguage.shown(o.words[0].meaningJa)
             return Obj(id: o.id, source: o, rect: rects[i], outline: outlines[i],
-                       name: shown.isEmpty ? o.words[0].headword : shown)
+                       name: shown.isEmpty ? o.words[0].headword : shown, piece: pieces[i])
         }
     }
 
@@ -362,8 +393,16 @@ final class CardCatchModel {
 
     private func formLight(_ my: Int, _ o: Obj, _ w: Candidate) async {
         guard let vm, let photo = vm.photo else { return }
+        // The card's photo window (`cropAt`, up to 9 draws of the whole photo) is drawn off the main thread
+        // while the light flies (at least 1.3 s), and picked up when the card is made.
+        let box = o.source.box
+        let photoArt: Task<UIImage, Never>? = o.source.cut != nil && CaptureViewModel.cutoutMode ? nil
+            : Task.detached(priority: .userInitiated) { CCImages.cropAt(photo: photo, box: box) }
+        var pieceImage = o.source.cut
+        if pieceImage == nil { pieceImage = await o.piece?.value }
+        guard my == runId else { return }
         let src = o.rect
-        let img = o.source.cut ?? CCImages.cropFrom(photo: photo, box: o.source.box)
+        let img = pieceImage ?? CCImages.cropFrom(photo: photo, box: box)
         piece = Piece(image: img, rect: src,
                       anim: CCAnim([[1, 1, 1], [0.08, 0, 3]], duration: motion.d(700), easing: CCBezier(0.6, 0, 0.4, 1), fill: .forwards))
         photoDim.set(1, duration: motion.transition(900), easing: CCBezier(0.2, 0.8, 0.2, 1))
@@ -413,7 +452,9 @@ final class CardCatchModel {
             await wait(0.05)
         }
         guard my == runId, let details = vm.details else { return }
-        let e = makeEntry(o, w, details)
+        let cropped = await photoArt?.value
+        guard my == runId else { return }
+        let e = makeEntry(o, w, details, cropped: cropped)
         entry = e
         if category != e.category || catOn.to == 0 { showCategory(e.category) }
 
@@ -467,7 +508,8 @@ final class CardCatchModel {
         showPick()
     }
 
-    private func makeEntry(_ o: Obj, _ w: Candidate, _ d: CardDetails) -> CCCardEntry {
+    /// `cropped`: the photo window already drawn off the main thread (`formLight`); nil = draw it here.
+    private func makeEntry(_ o: Obj, _ w: Candidate, _ d: CardDetails, cropped: UIImage? = nil) -> CCCardEntry {
         func raw(_ key: String) -> String? {
             let v = d.raw?[key]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return v.isEmpty ? nil : v
@@ -487,7 +529,7 @@ final class CardCatchModel {
                                         o.source.box.height * (vm?.photo?.size.height ?? 1))
             art = .cut(cut, pop: pop)
         } else if let photo = vm?.photo {
-            art = .orig(CCImages.cropAt(photo: photo, box: o.source.box))
+            art = .orig(cropped ?? CCImages.cropAt(photo: photo, box: o.source.box))
         } else {
             art = .orig(CaptureViewModel.textCard(for: w.headword))
         }

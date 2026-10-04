@@ -2,7 +2,8 @@ import SwiftUI
 import StoreKit
 
 /// Freemium: free users get 3 catches per day (Tokyo-day boundary like the server's `startOfTokyoDay`).
-/// Pro = StoreKit subscription OR `profiles.plan == "pro"` (so web Stripe subscribers stay Pro on iPhone).
+/// Pro = StoreKit subscription OR `profiles.plan == "pro"` (so web Stripe subscribers stay Pro on iPhone),
+/// but only once in-app purchase is offered too (`inAppPurchaseAvailable`, App Review Guideline 3.1.3(b)).
 @Observable
 final class PlanStore {
     static let freeCatchesPerDay = 3
@@ -13,6 +14,18 @@ final class PlanStore {
     /// (the products are not set up in App Store Connect and the server does not check Apple purchases
     /// yet). Flip together with `catchLimitEnabled` when Pro launches; the StoreKit code stays as is.
     static let paywallEnabled = false
+    /// The web server verifies App Store purchases and writes `profiles.plan` for them (needed for the
+    /// server-decided Pro features such as 「作り直す」). Not built yet: see docs/self-managing-ios.md §7.
+    /// Until then the paywall does not promise those features.
+    static let serverVerifiesAppStore = false
+    /// App Review Guideline 3.1.3(b) (multiplatform services): a subscription bought outside the app (web
+    /// Stripe) may unlock features in the iOS app only if those same features can also be bought here with
+    /// in-app purchase. While IAP is not offered (`paywallEnabled` off), the app treats every account as
+    /// free for Pro-only features — web Pro included — and never shows a paywall or points to buying on the
+    /// web. This is the one switch for that: it turns on with the paywall, once the server verifies App
+    /// Store purchases (docs/self-managing-ios.md §7-2) so the in-app Pro unlocks the same features.
+    /// Server calls are unchanged; only what the app offers follows this.
+    static let inAppPurchaseAvailable = paywallEnabled
     static let productIDs = ["catchwords.pro.yearly", "catchwords.pro.monthly"]
 
     var products: [Product] = []
@@ -22,7 +35,15 @@ final class PlanStore {
     var isPurchasing: Bool = false
     var message: String?
 
-    var isPro: Bool { isStorePro || isServerPro }
+    /// Pro for what the APP gates on the device (catch limit, paywall): an active App Store subscription is
+    /// trusted locally, so a paying user is never locked out while the server does not know the purchase yet.
+    /// Off entirely while in-app purchase is unavailable (`inAppPurchaseAvailable`, Guideline 3.1.3(b)).
+    var isPro: Bool { Self.inAppPurchaseAvailable && (isStorePro || isServerPro) }
+    /// Pro for features the SERVER decides (`isProUser`: `profiles.plan == "pro"` or admin), e.g. section
+    /// 「作り直す」. The server does not verify App Store purchases yet (only web Stripe writes
+    /// `profiles.plan`), so a StoreKit-only Pro does NOT count here — offering those buttons would only fail.
+    /// Also off while in-app purchase is unavailable: web Pro alone must not unlock them here (3.1.3(b)).
+    var serverGrantsPro: Bool { Self.inAppPurchaseAvailable && isServerPro }
     var remainingToday: Int { max(0, Self.freeCatchesPerDay - usedToday) }
     var canCatch: Bool { !Self.catchLimitEnabled || isPro || remainingToday > 0 }
 
@@ -65,25 +86,37 @@ final class PlanStore {
     }
 
     func refreshServerPlan() async {
-        guard let uid = SupabaseClient.shared.userId,
-              let data = try? await SupabaseClient.shared.rest("GET", "profiles?id=eq.\(uid)&select=plan"),
+        guard let uid = SupabaseClient.shared.userId else { isServerPro = false; return }
+        guard let data = try? await SupabaseClient.shared.rest("GET", "profiles?id=eq.\(uid)&select=plan"),
               let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
         let plan = (rows.first?["plan"] as? String) ?? "free"
         isServerPro = plan == "pro" || plan == "premium"
     }
+
+    /// Signing out: the web plan belonged to that account (App Store entitlements follow the Apple ID).
 
     func purchase(_ product: Product) async {
         isPurchasing = true
         message = nil
         defer { isPurchasing = false }
         do {
-            let result = try await product.purchase()
+            // The account's id travels with the purchase (`appAccountToken`): Apple puts it in the signed
+            // transaction and in App Store Server Notifications, so the server can tell whose Pro it is
+            // without trusting anything the app says. Supabase user ids are UUIDs.
+            var options: Set<Product.PurchaseOption> = []
+            if let uid = SupabaseClient.shared.userId, let token = UUID(uuidString: uid) {
+                options.insert(.appAccountToken(token))
+            }
+            let result = try await product.purchase(options: options)
             switch result {
             case .success(let verification):
-                if case .verified(let t) = verification {
+                switch verification {
+                case .verified(let t):
                     await t.finish()
                     await refreshEntitlements()
                     Haptics.success()
+                case .unverified:
+                    message = L("購入を確認できませんでした。しばらくしてから「購入を復元」をお試しください。")
                 }
             case .pending:
                 message = L("購入の承認待ちです。")
@@ -104,6 +137,13 @@ final class PlanStore {
         await refreshEntitlements()
         await refreshServerPlan()
         message = isPro ? L("Proを復元しました。") : L("復元できる購入が見つかりませんでした。")
+    }
+
+    /// Signing out / account deleted: the next account starts from its own plan, never the previous one's
+    /// web Pro (StoreKit entitlements belong to the Apple ID and are read again).
+    func reset() {
+        isServerPro = false
+        message = nil
     }
 
     func recordCatch() {
