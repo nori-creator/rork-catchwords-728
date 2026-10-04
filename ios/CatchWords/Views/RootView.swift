@@ -138,6 +138,7 @@ struct RootView: View {
 }
 
 struct SplashView: View {
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var breathe: Bool = false
 
     var body: some View {
@@ -147,6 +148,7 @@ struct SplashView: View {
             ProgressView().tint(Theme.muted)
         }
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) { breathe = true }
         }
     }

@@ -9,7 +9,7 @@ struct AnalyzingView: View {
     var previewTargets: [CGRect]? = nil
     let onCancel: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var start: Date = Date()
     /// On-device Vision (objectness saliency): where the things are, found in ~0.2 s while the
     /// server AI is still naming them. Normalized, top-left origin.
@@ -122,7 +122,7 @@ struct AnalyzingView: View {
 struct FocusBrackets: View {
     let active: Bool
     @State private var breathe = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { g in

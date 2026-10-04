@@ -107,7 +107,7 @@ struct MemorialBanner: View {
     let onOpen: () -> Void
     let onDismiss: () -> Void
     @State private var shimmer = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 12) {
@@ -162,7 +162,7 @@ struct MemorialAlbumView: View {
     let onClose: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var revealed = false
 
     var body: some View {
@@ -216,7 +216,7 @@ struct MemorialReveal: View {
     let onDone: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     private enum Phase { case count, burst, fan, ready, leaving }
     @State private var phase: Phase = .count
     @State private var day = 1

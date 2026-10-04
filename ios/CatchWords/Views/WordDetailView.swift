@@ -53,7 +53,7 @@ struct WordDetailView: View {
     @State private var webLoading: Bool = false
     @State private var applyingWeb: String?
     @State private var confirmWeb: WebImageCandidate?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
     private var word: Word? { current.word }
@@ -1718,7 +1718,7 @@ struct SectionSkeleton: View {
     let title: String
     let icon: String
     @State private var phase: CGFloat = -1
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         SectionCard(title: title, icon: icon) {

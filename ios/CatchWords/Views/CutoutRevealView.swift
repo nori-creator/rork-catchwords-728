@@ -14,7 +14,7 @@ struct CutoutRevealView: View {
     let lift: CutoutService.Lift
     let onDone: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var scan: CGFloat = -0.2
     @State private var scanOpacity: Double = 0
     @State private var trace: Double = 0

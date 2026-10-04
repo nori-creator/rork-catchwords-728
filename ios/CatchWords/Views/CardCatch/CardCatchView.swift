@@ -12,7 +12,7 @@ struct CardCatchView: View {
 
     @Environment(DexStore.self) private var dex
     @Environment(AppRouter.self) private var router
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var model = CardCatchModel()
     /// True while nothing on the stage moves: the timeline stops redrawing the whole screen every frame.
     @State private var framesPaused = false

@@ -9,7 +9,7 @@ struct OnboardingView: View {
 
     @Environment(ProfileStore.self) private var profile
     @Environment(AuthStore.self) private var auth
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     enum Stage: Int { case intro, questions, notifications, ready }
 
@@ -573,7 +573,7 @@ enum OnboardingImage {
 private struct IntroBouquet: View {
     let labels: [String]
     @State private var appeared: Bool = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in

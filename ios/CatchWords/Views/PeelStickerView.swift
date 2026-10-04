@@ -60,7 +60,7 @@ struct PeelStickerView: View {
     let onPeel: () -> Void
     var onTap: (() -> Void)?
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var progress: Double = 0
     @State private var angle: Double = .pi / 4
     @State private var dragAngle: Double?

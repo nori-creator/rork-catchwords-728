@@ -9,7 +9,7 @@ struct AnswerPanel: View {
     let onNext: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     /// Drives the entrance: the verdict colour spreads across the band, then the word and buttons rise in.
     @State private var spread: CGFloat = 0
     @State private var settled = false

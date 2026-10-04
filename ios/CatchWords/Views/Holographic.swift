@@ -108,7 +108,7 @@ struct HoloCardModifier: ViewModifier {
     let allowsDragTilt: Bool
     let extraTilt: CGPoint
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var acquired = false
     @State private var drag: CGPoint = .zero
 

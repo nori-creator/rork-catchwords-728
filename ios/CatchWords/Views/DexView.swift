@@ -91,7 +91,7 @@ struct DexView: View {
     @State private var galleryHold: DexBook.Hold?
     /// The gallery slot being landed on / pointed at (frame reporting, fillIn, blue ring).
     @State private var focus: DexGalleryFocus?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     private var lang: String { NativeAPI.targetLanguage }
 

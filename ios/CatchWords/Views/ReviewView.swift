@@ -15,7 +15,7 @@ struct ReviewView: View {
     @State private var swipeX: CGFloat = 0
     /// The answer sheet's real height (it grows with the explanation): the question scrolls clear of it.
     @State private var panelHeight: CGFloat = 420
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -487,7 +487,7 @@ struct ReviewDone: View {
     var onMore: () -> Void = {}
     let onCamera: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var shownCorrect = 0
     @State private var ring: CGFloat = 0
     @State private var appeared = false

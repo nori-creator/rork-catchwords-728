@@ -70,7 +70,7 @@ struct MainTabView: View {
     @State private var router = AppRouter()
     @Environment(DexStore.self) private var dex
     @AppStorage(TourStep.pendingKey) private var tourPending: Bool = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @Namespace private var detailZoom
     @State private var flightToken = 0
 

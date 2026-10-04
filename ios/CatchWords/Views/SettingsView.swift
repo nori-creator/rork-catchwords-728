@@ -19,7 +19,7 @@ struct SettingsView: View {
     @AppStorage("selfie.mode") private var selfieMode: Bool = false
     @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
-    @AppStorage("motion.pref") private var motionPref: String = "full"
+    @AppStorage(MotionPreference.key) private var motionPref: String = MotionPreference.defaultValue
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
     @AppStorage(ReminderService.timesKey) private var reminderTimes: String = ReminderService.defaultTime
     @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
@@ -221,7 +221,9 @@ struct SettingsView: View {
                 Text(L("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。"))
                     .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 label(L("アニメーション")).padding(.top, 6)
-                ChoicePills(options: [("system", L("自動")), ("full", L("見せる")), ("reduce", L("減らす"))], selection: $motionPref)
+                // 自動 follows the iPhone's Reduce Motion, 見せる always moves, 減らす always moves less (MotionPreference).
+                ChoicePills(options: [(MotionPreference.system, L("自動")), (MotionPreference.full, L("見せる")),
+                                      (MotionPreference.reduce, L("減らす"))], selection: $motionPref)
             }
         }
     }
@@ -610,7 +612,7 @@ struct ChoicePills: View {
     let options: [(value: String, label: String)]
     @Binding var selection: String
     @Namespace private var ns
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 8) {

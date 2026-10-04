@@ -26,7 +26,7 @@ struct MonthBookView: View {
 
     private enum Side { case left, right }
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var index = 0
     @State private var side: Side = .left
     /// Horizontal finger travel while sliding between the two pages of a day.

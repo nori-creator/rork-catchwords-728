@@ -117,7 +117,7 @@ struct TourLayer: View {
     let onNext: () -> Void
     let onSkip: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var pulse: Bool = false
 
     var body: some View {
@@ -236,7 +236,7 @@ struct TourCompleteView: View {
     let onDone: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var burst: Bool = false
 
     private static let confetti: [Color] = [Theme.primary, Color(hex: 0xF5B83D), Color(hex: 0xFF7A8A), Color(hex: 0x4FC3A1)]

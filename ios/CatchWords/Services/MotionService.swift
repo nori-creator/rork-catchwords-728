@@ -7,7 +7,7 @@ import UIKit
 /// toward/away from you).
 ///
 /// It only runs while a holo card is on screen: views call `acquire()` / `release()` and the sensor stops
-/// shortly after the last one goes. With Reduce Motion on, or where there is no device motion (the
+/// shortly after the last one goes. With reduced motion (設定 › アニメーション, `MotionPreference`), or where there is no device motion (the
 /// simulator), it never starts and `tilt` stays zero — the cards then fall back to finger-drag tilt.
 @MainActor @Observable
 final class MotionService {
@@ -67,7 +67,7 @@ final class MotionService {
 
     private func startIfNeeded() {
         guard users > 0, !manager.isDeviceMotionActive,
-              manager.isDeviceMotionAvailable, !UIAccessibility.isReduceMotionEnabled else { return }
+              manager.isDeviceMotionAvailable, !MotionPreference.reducesNow else { return }
         reference = nil
         smoothed = (0, 0)
         manager.deviceMotionUpdateInterval = 1.0 / 60
@@ -87,7 +87,7 @@ final class MotionService {
     }
 
     private func reduceMotionChanged() {
-        if UIAccessibility.isReduceMotionEnabled { stopNow() } else { startIfNeeded() }
+        if MotionPreference.reducesNow { stopNow() } else { startIfNeeded() }
     }
 
     /// Pitch / roll from gravity (steady whether the phone is flat or upright, unlike Euler angles), measured

@@ -35,7 +35,7 @@ struct UserStatsPanel: View {
     let onReview: () -> Void
 
     @Environment(ProfileStore.self) private var profile
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var stats: UserStats?
     @State private var failed = false
     @State private var ringShown: Double = 0
