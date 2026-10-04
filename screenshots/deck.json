@@ -1,0 +1,75 @@
+{
+  "appContext": {
+    "appName": "CatchWords",
+    "category": "中国語（台湾華語）の単語学習・写真単語帳",
+    "summary": "身の回りの物をカメラで撮ると、AIがその物の中国語（台湾華語）の単語・注音/ピンイン・意味・使い方を判定し、被写体を切り抜いたステッカーとして図鑑に追加する。図鑑・3D本のアルバム・日記で集めた単語を眺め、復習画面（4択・スピーク・オート）で間隔反復しながら覚える。日本語話者向け。",
+    "domainKeywords": [
+      "中国語",
+      "台湾華語",
+      "単語帳",
+      "カメラ",
+      "図鑑",
+      "ステッカー",
+      "復習",
+      "注音",
+      "発音"
+    ],
+    "forbiddenInterpretations": [
+      "ポケモンなどのゲーム",
+      "SNS",
+      "写真編集アプリ",
+      "英語学習アプリ"
+    ]
+  },
+  "theme": {
+    "style": "温かいクリーム色の紙の質感と、落ち着いた淡いネイビーを基調にした、やさしく知的な学習の世界。柔らかな午後の自然光、和紙のような繊細な繊維テクスチャ、透明感のあるブルーの光のにじみが、身の回りの発見を静かに楽しむ気分を演出する。背景は穏やかで上品、派手すぎずスクリーンショットのステッカーやUIが主役として映える落ち着いたトーン。",
+    "headlineFont": "font-family: 'Zen Kaku Gothic New', sans-serif; weight 900. Import: @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700;900&display=swap');",
+    "headlineFontSize": 112,
+    "mockupIds": {
+      "iphone": "silver",
+      "ipad": "silver"
+    },
+    "palette": {
+      "primary": "#1F2F57",
+      "secondary": "#F6EFE2",
+      "accent": "#3D8BFF"
+    },
+    "layoutId": "hero-clipped"
+  },
+  "slides": [
+    {
+      "label": "ホーム",
+      "backgroundPrompt": "Soft abstract digital art of warm cream paper texture with delicate fibers, gently blending downward into a pale dusty navy gradient, with a few translucent rounded shapes floating near the lower half. Colors of warm ivory cream, soft sand beige, and muted pale navy blue, lit by diffused warm afternoon light from the upper left, the upper 30% calm and evenly creamy for text. Subtle paper grain and shallow depth of field blur on edges, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/e2cc3670-39f9-40c2-bed2-910a433d7836.png"
+    },
+    {
+      "label": "カメラ",
+      "backgroundPrompt": "Cinematic abstract scene of deep midnight navy with a large soft circular bloom of warm cream light glowing from the lower center, faint bokeh orbs in bright azure blue drifting around it. Colors of deep navy, indigo, warm ivory glow, and electric azure accents, soft volumetric light rising upward, the upper 30% dark and calm for text readability. Fine film grain and dreamy depth of field, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/fbae6058-a91a-4b6f-994f-0beeda7a8545.png"
+    },
+    {
+      "label": "図鑑",
+      "backgroundPrompt": "Abstract 3D render of layered rounded paper cutout shapes in warm cream and soft ivory, stacked with gentle shadows, accented by a few glossy bright azure blue pebbles scattered in the lower right. Colors of cream, light sand, pale navy shadows, and vivid azure blue highlights, soft studio lighting from the top right casting long gentle shadows, upper 30% clean flat cream for text. Tactile matte paper texture with soft depth of field, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/2aed9883-b7a1-422d-9e2a-162dabe72152.png"
+    },
+    {
+      "label": "復習",
+      "backgroundPrompt": "Abstract digital art of flowing translucent silk ribbons in light sky blue and soft azure sweeping in gentle waves across the lower two thirds, over a pale airy blue to white gradient. Colors of powder blue, bright azure, misty white, and a hint of soft navy at the edges, luminous diffused light from the right side, the upper 30% bright, calm, and open for text. Glass-like sheen on the ribbons with soft blur at the edges, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/f436cedb-4014-43fc-b4c2-47a4ce67b1fc.png"
+    },
+    {
+      "label": "設定",
+      "backgroundPrompt": "Minimal abstract composition of clean white space with soft frosted glass circles overlapping in the lower area, tinted pale navy and faint azure, with a warm cream glow pooling at the bottom like gentle morning light. Colors of pure white, pale navy, soft azure, and warm cream, calm diffused morning lighting from below left, the upper 30% serene white for text. Frosted glass morphism layers with subtle grain and depth, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/a66bb4cc-6448-49b6-97fb-f83b89d4b6f8.png"
+    }
+  ],
+  "headlines": {
+    "ja": {
+      "ホーム": "撮るだけで<br>単語帳ができる",
+      "カメラ": "気になる物を<br>パシャっと撮影",
+      "図鑑": "集めた単語が<br>図鑑になる",
+      "復習": "忘れる前に<br>ちょうどよく復習",
+      "設定": "毎日の学習を<br>やさしく後押し"
+    }
+  }
+}
