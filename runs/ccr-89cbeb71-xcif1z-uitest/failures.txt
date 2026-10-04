@@ -1,5 +1,1 @@
-CatchWords / test_1_ja_zh(): FullTourTests.swift:146: failed - [ja/zh-TW] the word card did not open after searching
-CatchWords / test_1_ja_zh(): FullTourTests.swift:187: failed - [ja/zh-TW] settings.wheel.native missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:187: failed - [ja/zh-TW] settings.wheel.target missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:187: failed - [ja/zh-TW] settings.wheel.current missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:187: failed - [ja/zh-TW] settings.wheel.goal missing
+
