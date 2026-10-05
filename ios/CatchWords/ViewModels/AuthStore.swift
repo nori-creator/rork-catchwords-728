@@ -133,10 +133,25 @@ final class AuthStore {
                 errorMessage = L("Appleでのログインに失敗しました。")
                 return
             }
+            // Kept so the server can revoke this Apple grant when the account is deleted (Guideline 5.1.1(v)).
+            let authCode = cred.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
             await run {
                 try await self.client.signInWithApple(idToken: token, nonce: nonce)
                 self.phase = .signedIn
+                if let authCode, let uid = self.client.userId {
+                    Self.storeAppleAuthCode(authCode, for: uid)
+                }
             }
+        }
+    }
+
+    /// Hands Apple's one-time `authorizationCode` to the server (`storeAppleAuthCode`), which exchanges it
+    /// for a refresh token so deleting the account can revoke Sign in with Apple. Fire-and-forget in the
+    /// background: sign-in never waits for it, and any failure (no network, a server without the function,
+    /// missing Apple keys, a different account signed in meanwhile) is ignored.
+    private static func storeAppleAuthCode(_ code: String, for uid: String) {
+        Task {
+            _ = try? await NativeAPI.call("storeAppleAuthCode", ["code": code], timeout: 20, asUser: uid)
         }
     }
 
