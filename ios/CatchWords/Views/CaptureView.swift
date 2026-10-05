@@ -609,6 +609,11 @@ struct CaptureView: View {
                 router.detailAfterSave = nil
                 router.openDetail(outcome.sticker, zoom: false)
             }
+        } catch let error where DexStore.isAccountChanged(error) {
+            // Signed out (or into another account) during the save: the provisional entry and the plan count
+            // were cleared with the old account; the new one is told nothing about it.
+            dex.discardProvisional(provisional)
+            if let pid = pendingId { PendingQueue.shared.setSaving(pid, false) }
         } catch {
             dex.discardProvisional(provisional)
             plan.undoCatch()

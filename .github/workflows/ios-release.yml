@@ -18,7 +18,9 @@
 # 自動署名のアーカイブは一度「開発用」で署名し、送る時に配布用で署名し直す。開発用の
 # プロファイルを作るため、Apple Developer に端末が1台以上登録されている必要がある
 # （無いと「Your team has no devices」で止まる。手順書の「端末を1台登録する」）。
-# その開発用の証明書は実行ごとに 1 枚増えるので、最後に scripts/asc_dev_certs.py で消す。
+# その開発用の証明書は実行ごとに 1 枚増えるので、scripts/asc_dev_certs.py で前の実行の残りと
+# この実行で増えた分を消す（API キーで作られたものだけ）。API キーの役割は Admin にすること
+# （Admin でないと証明書を消せず、配布用の証明書も毎回増えることがある）。
 name: iOS release（App Store Connect へ送る）
 
 on:
@@ -29,7 +31,7 @@ on:
         required: false
         default: "1000"
       revoke_old_dev_certs:
-        description: "前の実行が残した「開発用」証明書をすべて消してから始める（「証明書の上限」で止まった時だけ選ぶ。配布用の証明書には触らない）"
+        description: "開発用証明書を、人が Mac で作ったものも含めてすべて消してから始める（通常は不要。自動の後片付けでも「証明書の上限」で止まった時だけ選ぶ。配布用には触らない）"
         type: boolean
         required: false
         default: false
@@ -81,7 +83,7 @@ jobs:
 
       # 自動署名は毎回まっさらな Mac で「開発用」証明書を 1 枚作る。数えておき、最後に消す
       # （消さないと Apple の上限に達してアーカイブが止まる）。
-      - name: 開発用証明書を数える（必要なら古いものを消す）
+      - name: 開発用証明書を数え、前の実行の残りを消す
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -90,6 +92,8 @@ jobs:
           export ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
           if [ "$REVOKE_OLD" = "true" ]; then
             python3 scripts/asc_dev_certs.py delete-all
+          else
+            python3 scripts/asc_dev_certs.py delete-ci
           fi
           python3 scripts/asc_dev_certs.py snapshot "$RUNNER_TEMP/dev-certs-before.txt"
 
@@ -134,7 +138,8 @@ jobs:
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" || true
           fi
-          if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log"; then
+          if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log" \
+            && ! grep -q "maximum number of certificates" "$RUNNER_TEMP/archive.log"; then
             echo "::warning::ウィジェット（com.nori.catchwords.widgets）か App Group（group.com.nori.catchwords）の署名で止まった可能性があります。Apple Developer → Identifiers で App Group を作り、2 つの App ID で App Groups を有効にしてから、もう一度実行してください"
           fi
           if [ ! -d "$RUNNER_TEMP/CatchWords.xcarchive" ]; then
@@ -142,7 +147,7 @@ jobs:
             grep -E "error:|Provisioning|provisioning|entitlement|agreement|Agreement" "$RUNNER_TEMP/archive.log" | sort -u | head -8 \
               | while IFS= read -r line; do echo "::error title=archive.log::${line:0:900}"; done
             if grep -q "maximum number of certificates" "$RUNNER_TEMP/archive.log"; then
-              echo "::error::Apple の「開発用」証明書が上限です。Run workflow の画面で「前の実行が残した開発用証明書をすべて消してから始める」にチェックを入れて、もう一度実行してください"
+              echo "::error::Apple の「開発用」証明書が上限です（前の実行の残りを消しても足りませんでした）。Run workflow の画面で「開発用証明書を…すべて消してから始める」にチェックを入れて、もう一度実行してください"
             fi
             echo "::error::アーカイブに失敗しました（archive.log を見てください）"
             exit 1

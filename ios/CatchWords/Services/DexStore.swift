@@ -239,6 +239,9 @@ final class DexStore {
             let ts = draft.uploads == nil ? (given ?? Self.uploadStamp()) : Self.uploadStamp()
             paths = try await upload(photo: draft.photo, cutout: draft.cutout, selfie: draft.selfie, uid: uid, ts: ts)
         }
+        // The save runs behind the dex (card catch): someone may have signed out, or into another account,
+        // meanwhile. The row then must never be written to the account now signed in.
+        guard client.userId == uid else { throw Self.accountChanged }
         let obj = paths.object
         let cut = paths.cutout
         let selfieRef = paths.selfie
@@ -263,13 +266,15 @@ final class DexStore {
             let wordId: String?
             enum CodingKeys: String, CodingKey { case id, wordId = "word_id" }
         }
-        let saved = try await NativeAPI.call("saveSticker", data, as: Saved.self, timeout: 45)
+        let saved = try await NativeAPI.call("saveSticker", data, as: Saved.self, timeout: 45, asUser: uid)
+        // Saved to the account that caught it; only this phone's list may now belong to someone else.
+        guard client.userId == uid else { throw Self.accountChanged }
 
         cacheLocal(path: obj, image: draft.photo)
         cacheLocal(path: cut, image: draft.cutout)
         cacheLocal(path: selfieRef, image: draft.selfie)
         let sticker: Sticker
-        if let fresh = try? await fetchSticker(id: saved.id) {
+        if let fresh = try? await fetchSticker(id: saved.id), client.userId == uid {
             sticker = fresh
         } else {
             // The catch IS saved — only reading it back failed (the connection dropped right after).
@@ -282,6 +287,7 @@ final class DexStore {
                 lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude
             )])[0]
         }
+        guard client.userId == uid else { throw Self.accountChanged }
         stickers.removeAll { $0.id == sticker.id }
         if let provisionalId, let i = stickers.firstIndex(where: { $0.id == provisionalId }) {
             stickers[i] = sticker
@@ -294,6 +300,14 @@ final class DexStore {
         Task { await signPaths(for: [sticker]) }
         saveToPhotosIfEnabled(draft.photo)
         return .created(sticker)
+    }
+
+    /// A save that finished (or stopped) after its account was left. Nothing is shown to whoever is signed in now.
+    static let accountChanged = APIError.server(409, "account changed")
+
+    static func isAccountChanged(_ error: Error) -> Bool {
+        if case .server(409, "account changed")? = error as? APIError { return true }
+        return false
     }
 
     // MARK: - Uploads ahead (card catch: the photos go up while the card is on screen)

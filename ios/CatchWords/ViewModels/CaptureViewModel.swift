@@ -350,6 +350,12 @@ final class CaptureViewModel {
                 reencCount = nil
                 reencFailed = false
                 reencPhotoSaved = false
+                // An owned word gets no card: stop generating it (the request is cancelled with its task).
+                let key = Self.detailsKey(word)
+                detailsCache[key]?.cancel()
+                detailsCache[key] = nil
+                detailsTask = nil
+                isLoadingDetails = false
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { step = .reencounter }
             } else {
                 // Fail open: a broken check must never block a new catch.

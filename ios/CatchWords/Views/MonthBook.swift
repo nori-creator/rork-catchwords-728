@@ -521,6 +521,7 @@ struct PageScroll<Content: View>: View {
     private let content: Content
     @State private var contentHeight: CGFloat = 0
     @State private var boxHeight: CGFloat = 0
+    private static var slack: CGFloat { 16 }
 
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -533,6 +534,8 @@ struct PageScroll<Content: View>: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { boxHeight = $0 }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .scrollDisabled(contentHeight <= boxHeight + 1)
+        // A few points over (the album's bottom padding) is not worth scrolling for: the inner scroll then took
+        // the swipe and moved the album ~7 pt while the home screen stayed put (R6-09, CI shots 02→03).
+        .scrollDisabled(contentHeight <= boxHeight + Self.slack)
     }
 }

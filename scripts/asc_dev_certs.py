@@ -6,11 +6,17 @@
 「Your account has reached the maximum number of certificates」でアーカイブが止まる。
 配布用（Apple Distribution）の証明書には触らない。
 
+消すのは、API キーで作られた開発用証明書（名前に「Created via API」が入るもの。Xcode を API キーで
+動かした時にできる）だけ。Mac の Xcode で人が作った証明書には触らない。
+
 使い方（環境変数 ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH が必要）:
   asc_dev_certs.py list                  開発用証明書の一覧を出す
   asc_dev_certs.py snapshot FILE         今ある開発用証明書の ID を FILE に書く
-  asc_dev_certs.py delete-new FILE       FILE に無い（この実行で増えた）開発用証明書を消す
-  asc_dev_certs.py delete-all            開発用証明書をすべて消す（オーナーが選んだ時だけ）
+  asc_dev_certs.py delete-ci             API キーで作られた開発用証明書をすべて消す（前の実行の残り）
+  asc_dev_certs.py delete-new FILE       FILE に無い（この実行で増えた）、API キーで作られた開発用証明書を消す
+  asc_dev_certs.py delete-all            開発用証明書をすべて消す（人が作ったものも。オーナーが選んだ時だけ）
+
+どんな失敗でも警告を出して 0 で終わる（配信そのものは止めない）。
 
 外部のライブラリは使わない（署名は openssl コマンド）。
 """
@@ -25,6 +31,7 @@ import urllib.request
 
 API = "https://api.appstoreconnect.apple.com/v1"
 DEV_TYPES = "DEVELOPMENT,IOS_DEVELOPMENT"
+CI_MARK = "Created via API"
 
 
 def b64url(data: bytes) -> str:
@@ -79,6 +86,11 @@ def show(c):
     return f"{c['id']}  {a.get('certificateType')}  {a.get('displayName') or a.get('name')}  期限 {a.get('expirationDate', '')[:10]}"
 
 
+def made_by_ci(c):
+    a = c["attributes"]
+    return CI_MARK in (a.get("displayName") or "") or CI_MARK in (a.get("name") or "")
+
+
 def delete(certs):
     failed = 0
     for c in certs:
@@ -91,30 +103,41 @@ def delete(certs):
     return failed
 
 
-def main():
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "list"
-    try:
-        certs = dev_certs()
-    except urllib.error.HTTPError as e:
-        # 権限が足りない API キー（Admin 以外）など。配信そのものは止めない。
-        print(f"::warning::開発用証明書の一覧を取れませんでした（{e.code}）。API キーの役割が Admin か確かめてください")
-        return 0
-    print(f"開発用証明書: {len(certs)} 枚")
+def run(cmd):
+    certs = dev_certs()
+    print(f"開発用証明書: {len(certs)} 枚（うち API キーで作られたもの {sum(map(made_by_ci, certs))} 枚）")
     for c in certs:
-        print("  " + show(c))
+        print("  " + show(c) + ("  [API]" if made_by_ci(c) else ""))
     if cmd == "snapshot":
         with open(sys.argv[2], "w") as f:
             f.write("\n".join(c["id"] for c in certs))
+    elif cmd == "delete-ci":
+        delete([c for c in certs if made_by_ci(c)])
     elif cmd == "delete-new":
         try:
             with open(sys.argv[2]) as f:
                 before = set(f.read().split())
         except FileNotFoundError:
             print("::warning::実行前の一覧が無いので、後片付けをしません")
-            return 0
-        delete([c for c in certs if c["id"] not in before])
+            return
+        new = [c for c in certs if c["id"] not in before]
+        for c in new:
+            if not made_by_ci(c):
+                print(f"人が作ったとみられるので残します: {show(c)}")
+        delete([c for c in new if made_by_ci(c)])
     elif cmd == "delete-all":
         delete(certs)
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "list"
+    try:
+        run(cmd)
+    except urllib.error.HTTPError as e:
+        # 権限が足りない API キー（Admin 以外）など。
+        print(f"::warning::開発用証明書を扱えませんでした（{e.code}）。API キーの役割が Admin か確かめてください")
+    except Exception as e:  # 通信切れ・時間切れ・openssl の失敗・環境変数の不足など。配信そのものは止めない。
+        print(f"::warning::開発用証明書を扱えませんでした（{type(e).__name__}: {e}）")
     return 0
 
 
