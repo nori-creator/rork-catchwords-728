@@ -153,6 +153,14 @@ final class PlanStore {
         UserDefaults.standard.set(Self.dayKey(), forKey: "plan.day")
     }
 
+    /// A catch counted at the flick whose background save then failed: it does not use up a catch.
+    func undoCatch() {
+        loadUsage()
+        usedToday = max(0, usedToday - 1)
+        UserDefaults.standard.set(usedToday, forKey: "plan.used")
+        UserDefaults.standard.set(Self.dayKey(), forKey: "plan.day")
+    }
+
     private func loadUsage() {
         let day = UserDefaults.standard.string(forKey: "plan.day")
         usedToday = day == Self.dayKey() ? UserDefaults.standard.integer(forKey: "plan.used") : 0

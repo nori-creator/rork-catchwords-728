@@ -55,7 +55,7 @@ struct ReencounterView: View {
                 Spacer()
                 PronounceCircle(text: owned.headword, size: 44)
             }
-            Text(ReaderLanguage.shown(owned.meaningJa))
+            Text(ReaderLanguage.gloss(ReaderLanguage.shown(owned.meaningJa)))
                 .scaledFont(size: 20, weight: .medium)
                 .foregroundStyle(Theme.foreground)
             Text(metLine(owned))

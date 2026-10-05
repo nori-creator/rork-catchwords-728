@@ -24,10 +24,20 @@ final class AIService {
             "imageBase64": "data:image/jpeg;base64,\(jpeg.base64EncodedString())",
             "targetLanguage": NativeAPI.targetLanguage,
         ], as: Suggestions.self, timeout: 25)
+        // A repeated name is dropped only within one object: two different objects with the same name (two cups
+        // in one photo) stay two objects, each with its own point (card catch groups by `group`).
         var out: [Candidate] = []
-        for c in res.suggestions where !out.contains(where: { $0.headword == c.headword }) { out.append(c) }
+        for c in res.suggestions where !out.contains(where: { Self.sameSuggestion($0, c) }) { out.append(c) }
         guard !out.isEmpty else { throw APIError.message(L("AIから候補が返りませんでした。もう一度お試しください。")) }
         return out
+    }
+
+    /// The same name for the same object: the same group, or (no group) the same point.
+    nonisolated static func sameSuggestion(_ a: Candidate, _ b: Candidate) -> Bool {
+        guard a.headword == b.headword else { return false }
+        if let ga = a.group, let gb = b.group { return ga == gb }
+        if a.group != nil || b.group != nil { return false }
+        return a.point == b.point
     }
 
     /// The scan screen (web `detectScan`): nouns only, the learner's level, dictionary learning and

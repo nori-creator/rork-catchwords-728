@@ -14,7 +14,23 @@ struct CatchDraft {
     let placeName: String?
     let captureType: String
     /// Photos already uploaded while the card was on screen (card catch); nil = upload while saving.
-    var uploads: Task<CatchUploads, Error>? = nil
+    var uploads: CatchPreupload? = nil
+}
+
+/// A card catch's photos going up while its card is on screen (`DexStore.preupload`). `ts` names the files,
+/// so the provisional dex entry (`addProvisional`) shows them from the cache under the very same paths.
+struct CatchPreupload {
+    let uid: String
+    let ts: Int
+    let photo: UIImage
+    let cutout: UIImage?
+    let selfie: UIImage?
+    let task: Task<CatchUploads, Error>
+
+    /// Still the very images a draft would save (the cut-out may have been replaced since).
+    func matches(photo p: UIImage, cutout c: UIImage?, selfie s: UIImage?) -> Bool {
+        photo === p && cutout === c && selfie === s
+    }
 }
 
 /// Storage paths of a catch's photos.
@@ -113,7 +129,9 @@ final class DexStore {
             await loadAlbumPlacements()
             guard client.userId == uid else { return }
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
-            stickers = present(rows.filter { $0.word?.matches(language) ?? true })
+            // A catch still being saved in the background stays on screen (its save swaps it for the real row).
+            let provisional = stickers.filter { Self.isProvisional($0.id) }
+            stickers = provisional + present(rows.filter { $0.word?.matches(language) ?? true })
             loadError = nil
             hasLoaded = true
             await loadReviews()
@@ -203,41 +221,29 @@ final class DexStore {
     /// word upsert, extras merge (service role), first-catch event and
     /// duplicate guard as the web. Photos are uploaded first, in parallel; a failed cutout or
     /// selfie never blocks the catch.
-    func save(_ draft: CatchDraft) async throws -> SaveOutcome {
+    ///
+    /// `ts` names the uploaded files (a provisional entry made by `addProvisional` already shows the photos
+    /// under those names). `replacing`: that provisional entry is swapped for the saved one in place, and
+    /// `adopted` runs at that very moment (the caller moves anything pointing at the provisional id).
+    func save(_ draft: CatchDraft, ts given: Int? = nil, replacing provisionalId: String? = nil,
+              adopted: ((Sticker) -> Void)? = nil) async throws -> SaveOutcome {
         guard let uid = client.userId else { throw APIError.unauthorized }
         guard let card = draft.details else { throw APIError.message(L("カード生成に失敗しました")) }
         let paths: CatchUploads
-        if let early = draft.uploads, let done = try? await early.value {
+        if let pre = draft.uploads, pre.uid == uid, let done = try? await pre.task.value {
+            // The card catch's photos went up while the card was on screen (`preupload`): only the row is saved.
             paths = done
         } else {
-            paths = try await upload(photo: draft.photo, cutout: draft.cutout, selfie: draft.selfie, uid: uid)
+            // Nothing uploaded ahead (or that upload failed: a fresh stamp then, since uploads never overwrite
+            // a file it may have written).
+            let ts = draft.uploads == nil ? (given ?? Self.uploadStamp()) : Self.uploadStamp()
+            paths = try await upload(photo: draft.photo, cutout: draft.cutout, selfie: draft.selfie, uid: uid, ts: ts)
         }
         let obj = paths.object
         let cut = paths.cutout
         let selfieRef = paths.selfie
 
-        let c = draft.candidate
-        let raw = card.raw
-        func text(_ key: String, _ fallback: String) -> String {
-            let v = raw?[key]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return v.isEmpty ? fallback : v
-        }
-        var word: [String: Any] = [
-            // The picked name is the headword (capture.tsx `selectedHead`), not the card's own guess.
-            "headword": c.headword,
-            "reading_zhuyin": text("reading_zhuyin", c.zhuyin),
-            "pinyin": text("pinyin", c.pinyin),
-            "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
-            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? NativeAPI.defaultPos : c.pos),
-            "category_key": text("category_key", card.categoryKey),
-            "example_sentence": text("example_sentence", card.exampleSentence),
-            "example_translation": text("example_translation", card.exampleTranslation),
-        ]
-        if let extras = raw?["extras"], case .object = extras { word["extras"] = extras.foundation }
-        // The word's exam level is not used on iOS (owner 2026-10-03). The server's own value from `generateCard`
-        // is handed back untouched when there is one: without it saveSticker would store its default "TOCFL-2"
-        // (stickers.functions.ts SaveStickerInput), which is wrong for English and Japanese words.
-        if let lv = raw?["level"]?.string, !lv.isEmpty { word["level"] = lv }
+        let word = Self.wordFields(draft.candidate, card)
         let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
         let data: [String: Any] = [
             "word": word,
@@ -269,37 +275,54 @@ final class DexStore {
             // The catch IS saved — only reading it back failed (the connection dropped right after).
             // Reporting a failure here made the learner save it again; show it from what was sent
             // instead (the next dex load replaces it with the server's row).
-            var w = word
-            w["id"] = saved.wordId ?? ""
-            w["language"] = NativeAPI.targetLanguage
-            let localWord = (try? JSONSerialization.data(withJSONObject: w)).flatMap { try? JSONDecoder().decode(Word.self, from: $0) }
             sticker = present([Sticker(
                 id: saved.id, wordId: saved.wordId ?? "", objectImageUrl: obj, cutoutImageUrl: cut,
                 selfieImageUrl: selfieRef, caption: caption.isEmpty ? nil : caption, locationName: draft.placeName,
-                takenAt: Date(), captureType: draft.captureType, word: localWord,
+                takenAt: Date(), captureType: draft.captureType, word: Self.localWord(word, id: saved.wordId ?? ""),
                 lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude
             )])[0]
         }
         stickers.removeAll { $0.id == sticker.id }
-        stickers.insert(sticker, at: 0)
-        // The photos are already in the local cache under these paths: signing never holds the landing.
+        if let provisionalId, let i = stickers.firstIndex(where: { $0.id == provisionalId }) {
+            stickers[i] = sticker
+        } else {
+            stickers.insert(sticker, at: 0)
+        }
+        adopted?(sticker)
+        // The photos are already in the local cache under these paths (`cacheLocal` above): signing never holds
+        // the landing or the caller.
         Task { await signPaths(for: [sticker]) }
         saveToPhotosIfEnabled(draft.photo)
         return .created(sticker)
     }
 
-    /// Starts uploading a catch's photos now (the card catch, while the card is on screen).
-    func preupload(photo: UIImage, cutout: UIImage?, selfie: UIImage?) -> Task<CatchUploads, Error> {
-        let uid = client.userId
-        return Task {
-            guard let uid else { throw APIError.unauthorized }
-            return try await upload(photo: photo, cutout: cutout, selfie: selfie, uid: uid)
+    // MARK: - Uploads ahead (card catch: the photos go up while the card is on screen)
+
+    /// Starts uploading a catch's photos now, named by a stamp chosen here (a provisional entry made later
+    /// shows them from the cache under the same names). nil when signed out.
+    func preupload(photo: UIImage, cutout: UIImage?, selfie: UIImage?) -> CatchPreupload? {
+        guard let uid = client.userId else { return nil }
+        let ts = Self.uploadStamp()
+        let task = Task<CatchUploads, Error> {
+            try await upload(photo: photo, cutout: cutout, selfie: selfie, uid: uid, ts: ts)
+        }
+        return CatchPreupload(uid: uid, ts: ts, photo: photo, cutout: cutout, selfie: selfie, task: task)
+    }
+
+    /// Photos uploaded ahead for a card that was then left (another word, a new photo, starting over): they
+    /// belong to no catch, so they are deleted again once their upload has finished. Best effort.
+    func discardPreupload(_ pre: CatchPreupload) {
+        let client = client
+        Task {
+            guard let done = try? await pre.task.value else { return }
+            for path in [done.object, done.cutout, done.selfie].compactMap({ $0 }) {
+                try? await client.removeObject(path: path, bucket: "stickers")
+            }
         }
     }
 
     /// Photo, cut-out and selfie in parallel; a failed cut-out or selfie never blocks the catch.
-    private func upload(photo: UIImage, cutout: UIImage?, selfie: UIImage?, uid: String) async throws -> CatchUploads {
-        let ts = Int(Date().timeIntervalSince1970 * 1000)
+    private func upload(photo: UIImage, cutout: UIImage?, selfie: UIImage?, uid: String, ts: Int) async throws -> CatchUploads {
         async let objectPath: String? = uploadJPEG(photo, uid: uid, ts: ts, kind: "object")
         async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "cutout")
         async let selfiePath: String? = try? uploadJPEG(selfie, uid: uid, ts: ts, kind: "selfie")
@@ -307,6 +330,83 @@ final class DexStore {
         let cut = await cutoutPath
         let sel: String? = await selfiePath
         return CatchUploads(object: obj, cutout: cut, selfie: sel)
+    }
+
+    // MARK: - Optimistic catch (card catch: the dex opens at once, the save finishes behind it)
+
+    /// Ids of entries shown before their save has finished. Never sent to the server.
+    static let provisionalPrefix = "local-"
+
+    static func isProvisional(_ id: String) -> Bool { id.hasPrefix(provisionalPrefix) }
+
+    /// Milliseconds, the uploaded files' name stamp.
+    static func uploadStamp() -> Int { Int(Date().timeIntervalSince1970 * 1000) }
+
+    /// Shows the catch in the dex right away, before `save` has run: the same word fields `save` sends, the
+    /// photos put in the image cache under the very names `save(ts:)` uploads them to (so the saved entry
+    /// shows the same pictures with no reload). Returns the entry and the stamp to hand to `save`.
+    /// No row is written: an app kill leaves no entry behind (the photo itself stays in 「解析待ち」; photos
+    /// uploaded ahead by `preupload` may stay in storage, unreferenced).
+    func addProvisional(_ draft: CatchDraft) -> (sticker: Sticker, ts: Int)? {
+        guard let uid = client.userId, let card = draft.details else { return nil }
+        // Photos already going up for this card: their names (the saved entry then shows the same pictures).
+        let ts = draft.uploads.flatMap { $0.uid == uid ? $0.ts : nil } ?? Self.uploadStamp()
+        let obj = "\(uid)/\(ts)-object.jpg"
+        let cut: String? = draft.cutout == nil ? nil : "\(uid)/\(ts)-cutout.png"
+        let selfie: String? = draft.selfie == nil ? nil : "\(uid)/\(ts)-selfie.jpg"
+        cacheLocal(path: obj, image: draft.photo)
+        cacheLocal(path: cut, image: draft.cutout)
+        cacheLocal(path: selfie, image: draft.selfie)
+        let caption = draft.caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sticker = Sticker(
+            id: Self.provisionalPrefix + UUID().uuidString, wordId: "", objectImageUrl: obj, cutoutImageUrl: cut,
+            selfieImageUrl: selfie, caption: caption.isEmpty ? nil : caption, locationName: draft.placeName,
+            takenAt: Date(), captureType: draft.captureType,
+            word: Self.localWord(Self.wordFields(draft.candidate, card), id: ""),
+            lat: draft.location?.coordinate.latitude, lng: draft.location?.coordinate.longitude
+        )
+        stickers.insert(sticker, at: 0)
+        return (sticker, ts)
+    }
+
+    /// The background save failed: the provisional entry goes (the photo is back in 「解析待ち」).
+    func discardProvisional(_ id: String) {
+        guard Self.isProvisional(id) else { return }
+        stickers.removeAll { $0.id == id }
+    }
+
+    /// The `words` fields `saveSticker` gets for a catch.
+    private static func wordFields(_ c: Candidate, _ card: CardDetails) -> [String: Any] {
+        let raw = card.raw
+        func text(_ key: String, _ fallback: String) -> String {
+            let v = raw?[key]?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return v.isEmpty ? fallback : v
+        }
+        var word: [String: Any] = [
+            // The picked name is the headword (capture.tsx `selectedHead`), not the card's own guess.
+            "headword": c.headword,
+            "reading_zhuyin": text("reading_zhuyin", c.zhuyin),
+            "pinyin": text("pinyin", c.pinyin),
+            "meaning_ja": text("meaning_ja", c.meaningJa.isEmpty ? c.headword : c.meaningJa),
+            "part_of_speech": text("part_of_speech", c.pos.isEmpty ? NativeAPI.defaultPos : c.pos),
+            "category_key": text("category_key", card.categoryKey),
+            "example_sentence": text("example_sentence", card.exampleSentence),
+            "example_translation": text("example_translation", card.exampleTranslation),
+        ]
+        if let extras = raw?["extras"], case .object = extras { word["extras"] = extras.foundation }
+        // The word's exam level is not used on iOS (owner 2026-10-03). The server's own value from `generateCard`
+        // is handed back untouched when there is one: without it saveSticker would store its default "TOCFL-2"
+        // (stickers.functions.ts SaveStickerInput), which is wrong for English and Japanese words.
+        if let lv = raw?["level"]?.string, !lv.isEmpty { word["level"] = lv }
+        return word
+    }
+
+    /// A `Word` made from the fields sent to `saveSticker` (shown until the server's row is read).
+    private static func localWord(_ fields: [String: Any], id: String) -> Word? {
+        var w = fields
+        w["id"] = id
+        w["language"] = NativeAPI.targetLanguage
+        return (try? JSONSerialization.data(withJSONObject: w)).flatMap { try? JSONDecoder().decode(Word.self, from: $0) }
     }
 
     private func fetchSticker(id: String) async throws -> Sticker {
@@ -677,7 +777,8 @@ final class DexStore {
 
     /// Saves one day's arrangement (web `saveAlbumLayout`). Returns false if nothing was saved.
     func saveAlbumLayout(_ items: [(id: String, order: Int, size: AlbumSize, place: AlbumPlacement)]) async -> Bool {
-        let payload: [[String: Any]] = items.map { i in
+        // A catch still being saved has no server id yet: it is left out (it keeps its automatic place).
+        let payload: [[String: Any]] = items.filter { !Self.isProvisional($0.id) }.map { i in
             ["sticker_id": i.id, "order": i.order, "size": i.size.rawValue,
              "x": AlbumLayout.clamp(i.place.x, 0, 1), "y": AlbumLayout.clamp(i.place.y, 0, 8),
              "scale": AlbumLayout.clamp(i.place.scale, 0.45, 2.6), "rot": AlbumLayout.clamp(i.place.rot, -180, 180)]

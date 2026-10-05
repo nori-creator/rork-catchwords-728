@@ -298,6 +298,7 @@ final class SoundService {
                 return first ?? nil
             }
             guard token == speakToken else { return }
+            ensurePlayback()
             if let data, let player = try? AVAudioPlayer(data: data) {
                 voicePlayer = player
                 player.volume = 1
@@ -306,6 +307,18 @@ final class SoundService {
                 speakOnDevice(text)
             }
         }
+    }
+
+    /// A pronunciation is always heard (it ignores 効果音オフ and the silent switch): the session is put back to
+    /// playback if something left it elsewhere, and reactivated after an interruption (a call, Siri, another
+    /// app) deactivated it. A recording in progress (play-and-record) is left alone.
+    private func ensurePlayback() {
+        let session = AVAudioSession.sharedInstance()
+        if session.category == .playAndRecord { return }
+        if session.category != .playback {
+            try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        }
+        try? session.setActive(true)
     }
 
     /// Device voice fallback: always the text's own language's voice (never a "close" language).

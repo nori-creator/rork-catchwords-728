@@ -86,8 +86,10 @@ final class CaptureViewModel {
     private var detailsTask: Task<CardDetails?, Never>?
     /// Cards already being generated for this photo (prefetched when an object is tapped), by headword.
     private var detailsCache: [String: Task<CardDetails?, Never>] = [:]
-    /// The card catch's photos, uploaded while the card is on screen (`DexStore.preupload`).
-    private(set) var uploads: Task<CatchUploads, Error>?
+    /// The card catch's photos, uploaded while the card is on screen (`DexStore.preupload`). Handed to the save
+    /// (`handOffUploads`); dropped ones are deleted again (`dropUploads`).
+    private(set) var uploads: CatchPreupload?
+    @ObservationIgnored private weak var uploadsStore: DexStore?
     /// Detection may finish while the user is still taking the selfie.
     private var detectOutcome: Result<[Candidate], Error>?
     /// The photo is kept in "解析待ち" from the shutter on (capture.tsx enqueueCapture), and
@@ -114,7 +116,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         detailsCache = [:]
-        uploads = nil
+        dropUploads()
         cutout = nil
         cutoutLift = nil
         cutoutFailed = false
@@ -286,6 +288,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         searchError = nil
+        dropUploads()   // the picker's sticker card uploads while saving (only the card catch uploads ahead)
         Haptics.impact(.light)
         SoundService.shared.speak(candidate.headword)
         isCheckingOwned = true
@@ -328,9 +331,11 @@ final class CaptureViewModel {
         isCutting = false
         cutoutLift = nil
         cutout = Self.cutoutMode ? object.cut : nil
-        uploads = nil
+        dropUploads()
         isCheckingOwned = true
-        // The card is generated alongside the owned-word check (a re-encounter simply drops it).
+        // The card's details are generated from the moment the word is chosen, alongside the owned-word check
+        // and the light (they used to start only after the check). A word that turns out to be owned just
+        // drops them.
         loadDetails(for: word)
         Task {
             let found = try? await NativeAPI.call(
@@ -349,7 +354,8 @@ final class CaptureViewModel {
             } else {
                 // Fail open: a broken check must never block a new catch.
                 step = .card
-                if details == nil, !isLoadingDetails { loadDetails(for: word) }   // it failed during the check: once more
+                // Started at the choice; one that already failed (silently, before the card) is tried once more.
+                if details == nil, !isLoadingDetails { loadDetails(for: word) }
             }
         }
     }
@@ -429,8 +435,21 @@ final class CaptureViewModel {
 
     /// Card catch: the photos go up while the card is being looked at, so 図鑑に入れる only saves the row.
     func startUploads(using dex: DexStore) {
-        guard let photo, uploads == nil else { return }
+        guard usesCardCatch, let photo, uploads == nil else { return }
+        uploadsStore = dex
         uploads = dex.preupload(photo: photo, cutout: cutout, selfie: selfie)
+    }
+
+    /// The catch is being saved from `draft`: uploads it carries now belong to that save (never deleted here);
+    /// ones it did not take (the images changed since) belong to no catch.
+    func handOffUploads(to draft: CatchDraft) {
+        if draft.uploads != nil { uploads = nil } else { dropUploads() }
+    }
+
+    /// The card they were uploaded for was left before it was saved: the files belong to no catch.
+    private func dropUploads() {
+        if let pre = uploads { uploadsStore?.discardPreupload(pre) }
+        uploads = nil
     }
 
     /// Saving needs the real card (level, category, extras). Never save placeholder values:
@@ -446,7 +465,8 @@ final class CaptureViewModel {
         return CatchDraft(
             candidate: picked, details: d, photo: base, cutout: cutout, selfie: selfie,
             caption: caption, location: location, placeName: placeName, captureType: captureType,
-            uploads: uploads
+            // Only while they are still the very images being saved (else `save` uploads these ones).
+            uploads: usesCardCatch ? uploads.flatMap { $0.matches(photo: base, cutout: cutout, selfie: selfie) ? $0 : nil } : nil
         )
     }
 
@@ -458,6 +478,17 @@ final class CaptureViewModel {
         }
         pendingId = nil
         restoredPendingId = nil
+    }
+
+    /// Card catch: the dex opens before the save has finished. The queued photo is handed to that background
+    /// save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」 meanwhile; the
+    /// save removes it when done, or shows it again when it fails.
+    func detachPendingForSave() -> String? {
+        let pid = pendingId
+        pendingId = nil
+        restoredPendingId = nil
+        if let pid { PendingQueue.shared.setSaving(pid, true) }
+        return pid
     }
 
     /// "もう一枚撮る" from the failure panel keeps the photo in "解析待ち" (that is what it promised).
@@ -511,7 +542,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         detailsCache = [:]
-        uploads = nil
+        dropUploads()
         cutout = nil
         cutoutLift = nil
         caption = ""

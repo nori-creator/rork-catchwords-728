@@ -2159,6 +2159,10 @@
   "en": "Review streak",
   "zh-TW": "連續複習"
  },
+ "アカウントのログイン情報を削除できませんでした。もう一度お試しください。": {
+  "en": "Couldn't delete your account's sign-in. Please try again.",
+  "zh-TW": "無法刪除帳號的登入資料，請再試一次。"
+ },
  "次の画面で通知を許可するか選べます。あとから設定で変更できます。": {
   "en": "On the next screen you can choose whether to allow notifications. You can change this later in Settings.",
   "zh-TW": "下一個畫面可以選擇是否允許通知，之後也能在設定中更改。"
