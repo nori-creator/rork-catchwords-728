@@ -16,7 +16,7 @@ struct CollageBoard: View {
     var onEditingChange: ((Bool) -> Void)? = nil
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var boardW: CGFloat = 0
     @State private var editing = false
     @State private var saving = false

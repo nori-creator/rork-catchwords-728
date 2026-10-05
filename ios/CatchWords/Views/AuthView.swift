@@ -11,7 +11,7 @@ struct AuthView: View {
     @State private var appeared: Bool = false
     /// Nudges the form sideways when sign-in fails, like a head shake.
     @State private var shake: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @FocusState private var focused: Field?
 

@@ -11,7 +11,7 @@ struct HeroPhotoPickerSheet: View {
 
     @Environment(DexStore.self) private var dex
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var saving: String?
     @State private var chosen: String?
     @State private var failure: String?

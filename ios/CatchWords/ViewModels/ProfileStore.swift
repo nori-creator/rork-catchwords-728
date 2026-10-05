@@ -120,8 +120,12 @@ final class ProfileStore {
         do {
             try await client.upload(jpeg, path: path, bucket: "avatars")
             guard let url = client.publicURL(bucket: "avatars", path: path) else { return }
+            let previous = avatarURL
             await update(["avatar_url": url])
+            let saved = message == nil
             avatarURL = url
+            // The photo it replaced leaves the public bucket too (once the profile points at the new one).
+            if saved { await removeAvatarFile(previous) }
         } catch {
             message = L("写真を保存できませんでした。")
         }
@@ -143,9 +147,32 @@ final class ProfileStore {
         }
     }
 
+    /// 「外す」: the profile goes back to the default mark, and the photo is deleted from the public
+    /// `avatars` bucket (R6-08) — it could otherwise still be opened by anyone with its URL. The field is
+    /// cleared first; a deletion that fails leaves only the file. When the field could not be saved the
+    /// file stays, since the profile still points at it.
     func clearAvatar() async {
+        let previous = avatarURL
         await update(["avatar_url": NSNull()])
+        let saved = message == nil
         avatarURL = nil
+        if saved { await removeAvatarFile(previous) }
+    }
+
+    /// Best effort: deletes a photo this account put in `avatars` (`<uid>/avatar-….jpg`, from its public URL).
+    private func removeAvatarFile(_ url: String?) async {
+        guard let path = ownAvatarPath(url) else { return }
+        try? await client.removeObject(path: path, bucket: "avatars")
+    }
+
+    /// The storage path inside `avatars` of a public URL in this account's own folder; nil for anything else
+    /// (a URL from elsewhere, another folder), which is never touched.
+    private func ownAvatarPath(_ url: String?) -> String? {
+        guard let url, let uid = client.userId, let path = URL(string: url)?.path else { return nil }
+        guard let r = path.range(of: "/storage/v1/object/public/avatars/") else { return nil }
+        let object = String(path[r.upperBound...])
+        guard object.hasPrefix(uid + "/"), object.count > uid.count + 1, !object.contains("..") else { return nil }
+        return object
     }
 }
 

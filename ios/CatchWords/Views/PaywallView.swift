@@ -5,6 +5,7 @@ import StoreKit
 struct PaywallView: View {
     @Environment(PlanStore.self) private var plan
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     @State private var selectedID: String = PlanStore.productIDs[0]
     @State private var appeared: Bool = false
@@ -125,6 +126,7 @@ struct PaywallView: View {
         .task { await plan.loadProducts() }
         .onAppear {
             appeared = true
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { float = true }
         }
     }

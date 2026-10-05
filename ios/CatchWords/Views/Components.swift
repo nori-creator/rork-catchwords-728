@@ -24,7 +24,7 @@ struct PrimaryButton: View {
     let action: () -> Void
 
     @State private var sheenPhase: CGFloat = -1
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     /// `.disabled(...)` from the caller (an empty search, nothing to import): the button greys out.
     @Environment(\.isEnabled) private var isEnabled
 

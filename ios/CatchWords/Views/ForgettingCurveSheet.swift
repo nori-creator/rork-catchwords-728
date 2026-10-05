@@ -13,7 +13,7 @@ struct ForgettingCurveSheet: View {
 
     @State private var history: [ReviewHistoryRow] = []
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     /// The day under the finger while tracing the curve (nil when not touching).
     @State private var scrubDate: Date?
     @State private var lastScrubDay: Int?

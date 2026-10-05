@@ -16,17 +16,12 @@ enum SFX: String, CaseIterable {
     case ponOpen = "pon-bubble-open"
     case ponBack = "pon-bubble-back"
     // The card-catch prototype's synthesized SFX (docs/prototype/cardcatch-src.html `SFX`), rendered offline by
-    // scripts/render_cardcatch_sfx.py. "cands" and "charge"/"fly" are the provisional picks (trio / harp).
+    // scripts/render_cardcatch_sfx.py. The candidate and light sounds reuse the pop and the twinkle (owner 2026-10-04).
     case ccShutter = "cc-shutter"
     case ccTick = "cc-tick"
     case ccScanStart = "cc-scan-start"
     case ccFound = "cc-found"
     case ccPop = "cc-pop"
-    case ccCands1 = "cc-cands-1"
-    case ccCands2 = "cc-cands-2"
-    case ccCands3 = "cc-cands-3"
-    case ccCharge = "cc-charge-harp"
-    case ccFly = "cc-fly-harp"
     case ccReveal = "cc-reveal"
     case ccTwinkle = "cc-twinkle"
     case ccLand = "cc-land"
@@ -49,8 +44,7 @@ enum SFX: String, CaseIterable {
         case .ccShutter: 0.9 * 2.803
         case .ccReveal: 0.9 * 1.640
         case .ccLand: 0.9 * 1.590
-        case .ccTick, .ccScanStart, .ccFound, .ccPop, .ccCands1, .ccCands2, .ccCands3,
-             .ccCharge, .ccFly, .ccTwinkle: 0.9
+        case .ccTick, .ccScanStart, .ccFound, .ccPop, .ccTwinkle: 0.9
         }
     }
 

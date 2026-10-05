@@ -117,7 +117,13 @@ jobs:
           if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log"; then
             echo "::warning::ウィジェット（com.nori.catchwords.widgets）か App Group（group.com.nori.catchwords）の署名で止まった可能性があります。Apple Developer → Identifiers で App Group を作り、2 つの App ID で App Groups を有効にしてから、もう一度実行してください"
           fi
-          test -d "$RUNNER_TEMP/CatchWords.xcarchive" || { echo "::error::アーカイブに失敗しました（archive.log を見てください）"; exit 1; }
+          if [ ! -d "$RUNNER_TEMP/CatchWords.xcarchive" ]; then
+            # 失敗の行そのものを注釈に出す（Actions の画面の一覧と API の両方から読めるように）。
+            grep -E "error:|Provisioning|provisioning|entitlement|agreement|Agreement" "$RUNNER_TEMP/archive.log" | sort -u | head -8 \
+              | while IFS= read -r line; do echo "::error title=archive.log::${line:0:900}"; done
+            echo "::error::アーカイブに失敗しました（archive.log を見てください）"
+            exit 1
+          fi
 
       - name: App Store Connect へ送る
         env:

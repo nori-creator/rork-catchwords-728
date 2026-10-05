@@ -351,7 +351,7 @@ struct BookSpine: View {
 
 private struct Globe: View {
     @State private var spin: Bool = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -446,7 +446,7 @@ struct AlbumHiddenTray: View {
 /// The album's shape while the dex is still loading: a blank page with soft photo frames that shimmer,
 /// so the home screen is never an empty white sheet.
 struct AlbumSkeleton: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var phase: CGFloat = -1
 
     var body: some View {

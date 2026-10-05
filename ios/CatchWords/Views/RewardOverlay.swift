@@ -62,7 +62,7 @@ struct RewardOverlay: View {
     let payload: RewardPayload
     let onFinish: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     @State private var dim: Double = 0
     @State private var scaleX: CGFloat = 1
@@ -292,7 +292,7 @@ struct RewardOverlay: View {
 /// Slowly turning god-rays behind the sticker (reward stage).
 struct LightRays: View {
     let active: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         TimelineView(.animation(paused: reduceMotion || !active)) { tl in

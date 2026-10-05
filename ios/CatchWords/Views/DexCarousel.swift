@@ -14,7 +14,7 @@ import SwiftUI
 /// redraws only when the middle card changes (`CarouselSpring.index`).
 struct DexCoverFlow: View {
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     let stickers: [Sticker]
     let onOpen: (Sticker) -> Void
     /// The card first put in the middle (the simulator preview opens part-way along).
@@ -442,7 +442,7 @@ private struct CarouselCardFace: View {
 
 /// The pale blue room behind the slide view (web `.dex-cf[data-theme="gallery"] .dex-cf__backdrop` and its sparks).
 struct DexGalleryBackdrop: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     /// [left %, top %, delay s] — fixed places, never reshuffled.
     private static let sparks: [(Double, Double, Double)] = [

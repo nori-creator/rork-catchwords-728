@@ -26,7 +26,7 @@ struct DiaryComposer: View {
     @Environment(DiaryStore.self) private var diary
     @Environment(DexStore.self) private var dex
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var text: String = ""
     @State private var justCorrected = false
     /// 「AIに添削してもらう」 without the AI consent: the consent sheet instead (nothing is sent).

@@ -1,0 +1,159 @@
+diff --git a/.github/workflows/android-apk.yml b/.github/workflows/android-apk.yml
+index f33289e..1d6f6d1 100644
+--- a/.github/workflows/android-apk.yml
++++ b/.github/workflows/android-apk.yml
+@@ -29,6 +29,11 @@ on:
+     paths:
+       - "android/**"
+       - "capacitor.config.ts"
++      # 依存（Capacitor のプラグインを含む）が変わった時も作り直す。
++      # 2026-09-13〜09-29 の失敗（npm ci: lock と package.json の不一致）は
++      # 4cde207 で lock が直ったが、この一覧に無いため一度も再実行されていなかった。
++      - "package.json"
++      - "package-lock.json"
+       - ".github/workflows/android-apk.yml"
+ 
+ jobs:
+@@ -43,13 +48,13 @@ jobs:
+           cache: npm
+ 
+       # Android のビルドには Java が要る。
+-      - uses: actions/setup-java@v4
++      - uses: actions/setup-java@v5
+         with:
+           distribution: temurin
+           java-version: "21"
+ 
+       - name: 依存パッケージを入れる
+-        run: npm ci
++        run: npm ci --no-audit --no-fund
+ 
+       - name: Webアプリをビルドする
+         run: npm run build
+@@ -70,3 +75,40 @@ jobs:
+           name: catchwords-debug-apk
+           path: android/app/build/outputs/apk/debug/*.apk
+           if-no-files-found: error
++
++      # ── ストア提出用（署名付き AAB）──────────────────────────────
++      # 秘密（Settings → Secrets → Actions）が4つそろっている時だけ作る:
++      #   ANDROID_KEYSTORE_BASE64 … アップロード鍵（.jks）を base64 にした文字列
++      #   ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD
++      # versionCode は実行番号を使う（Play は同じ番号を二度受け付けない）。
++      - name: 署名鍵を置く
++        id: keystore
++        env:
++          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
++        run: |
++          if [ -z "$KS_B64" ]; then
++            echo "署名鍵の秘密が無いので AAB は作らない（APK だけ）"
++            echo "ready=false" >> "$GITHUB_OUTPUT"
++          else
++            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
++            echo "ready=true" >> "$GITHUB_OUTPUT"
++          fi
++
++      - name: 署名付き AAB を作る
++        if: steps.keystore.outputs.ready == 'true'
++        working-directory: android
++        env:
++          CW_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
++          CW_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
++          CW_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
++          CW_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
++          CW_VERSION_CODE: ${{ github.run_number }}
++        run: ./gradlew bundleRelease --no-daemon
++
++      - name: AAB を成果物として上げる
++        if: steps.keystore.outputs.ready == 'true'
++        uses: actions/upload-artifact@v4
++        with:
++          name: catchwords-release-aab
++          path: android/app/build/outputs/bundle/release/*.aab
++          if-no-files-found: error
+diff --git a/android/app/build.gradle b/android/app/build.gradle
+index 785661f..f90d851 100644
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -7,7 +7,8 @@ android {
+         applicationId "app.catchwords.taiwan"
+         minSdkVersion rootProject.ext.minSdkVersion
+         targetSdkVersion rootProject.ext.targetSdkVersion
+-        versionCode 1
++        // CI が実行番号を渡す（Play は同じ versionCode を二度受け付けない）。
++        versionCode((System.getenv("CW_VERSION_CODE") ?: "1").toInteger())
+         versionName "1.0"
+         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+         aaptOptions {
+@@ -16,8 +17,23 @@ android {
+             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+         }
+     }
++    signingConfigs {
++        release {
++            // 鍵はリポジトリに置かない。CI の秘密から環境変数で渡す（android-apk.yml）。
++            def ks = System.getenv("CW_KEYSTORE_FILE")
++            if (ks) {
++                storeFile file(ks)
++                storePassword System.getenv("CW_KEYSTORE_PASSWORD")
++                keyAlias System.getenv("CW_KEY_ALIAS")
++                keyPassword System.getenv("CW_KEY_PASSWORD")
++            }
++        }
++    }
+     buildTypes {
+         release {
++            if (System.getenv("CW_KEYSTORE_FILE")) {
++                signingConfig signingConfigs.release
++            }
+             minifyEnabled false
+             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+         }
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 1fbf06d..3f1defd 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -2,7 +2,7 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ 
+     <application
+-        android:allowBackup="true"
++        android:allowBackup="false"
+         android:icon="@mipmap/ic_launcher"
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher_round"
+@@ -22,6 +22,19 @@
+                 <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
+ 
++            <!--
++              catchwords:// で開かれたらこのアプリへ（deep-link.ts の DEEP_LINK_SCHEME）。
++              これが無いと App.addListener("appUrlOpen") は一度も呼ばれず、
++              外のブラウザ（Custom Tabs）でのログインから戻る口
++              （native-auth.ts の catchwords://auth-callback）も作れない。
++            -->
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <category android:name="android.intent.category.BROWSABLE" />
++                <data android:scheme="catchwords" />
++            </intent-filter>
++
+         </activity>
+ 
+         <provider
+@@ -49,9 +62,11 @@
+     <!-- Android 9以前で、撮影画像を共有フォト領域へ追加するため。 -->
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+ 
+-    <!-- 復習の発話チェック(話した内容を文字にする)。 -->
+-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
++    <!--
++      マイク(RECORD_AUDIO)は外した(2026-10-04 監査)。Web 側に getUserMedia({audio}) も
++      SpeechRecognition も無く、使っていない危険な権限は Play の審査で問われる。
++      発話チェックを入れる時に、使う画面と一緒に戻す。
++    -->
+ 
+     <!--
+       位置情報。「撮った場所」を地図に残すため。

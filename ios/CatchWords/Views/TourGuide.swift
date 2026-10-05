@@ -89,7 +89,32 @@ enum TourStep: String, Equatable {
     var isReview: Bool { self == .review || self == .reviewPick || self == .reviewNext }
     var isCapture: Bool { self == .shoot || self == .pick || self == .detail || self == .peel }
 
+    /// The old device-wide flag "the first tour is still to run". Now only a hand-over: kept per account
+    /// (`tour.pending.<userId>`, R6-05) like `OnboardingState`, so one account's unfinished tour never opens
+    /// for the next account on the same iPhone.
     static let pendingKey = "tour.pending"
+
+    /// This account's flag (a local guest without an account keeps the device-wide one).
+    static func pendingStorageKey(for userId: String?) -> String {
+        guard let userId else { return pendingKey }
+        return pendingKey + "." + userId
+    }
+
+    /// At sign-in: the account takes over a device-wide flag left from before it was kept per account (it
+    /// is only ever set right after that account's onboarding), and clears it so no other account sees it.
+    static func adoptDevicePending(userId: String?) {
+        guard let userId else { return }
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: pendingKey) != nil else { return }
+        if defaults.bool(forKey: pendingKey) { defaults.set(true, forKey: pendingStorageKey(for: userId)) }
+        defaults.removeObject(forKey: pendingKey)
+    }
+
+    /// Account deletion: that account's unfinished tour.
+    static func removePending(userId: String?) {
+        guard let userId else { return }
+        UserDefaults.standard.removeObject(forKey: pendingStorageKey(for: userId))
+    }
 }
 
 enum TourAnchor: Hashable {
@@ -117,7 +142,7 @@ struct TourLayer: View {
     let onNext: () -> Void
     let onSkip: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var pulse: Bool = false
 
     var body: some View {
@@ -236,7 +261,7 @@ struct TourCompleteView: View {
     let onDone: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var burst: Bool = false
 
     private static let confetti: [Color] = [Theme.primary, Color(hex: 0xF5B83D), Color(hex: 0xFF7A8A), Color(hex: 0x4FC3A1)]

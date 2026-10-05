@@ -74,7 +74,7 @@ final class CatchLandingController {
         let tr = target ?? CGRect(x: screen.width / 2 - 40 * star.k, y: 560 * star.k, width: 80 * star.k, height: 80 * star.k)
         let tx = Double(tr.midX), ty = Double(tr.midY)
         phase = .flying
-        play(.ccFly)
+        // No flight sound of its own (owner 2026-10-04): the landing pop and land follow.
         trailing = true
         Task {
             // setInterval(() => trail(star centre), 16)

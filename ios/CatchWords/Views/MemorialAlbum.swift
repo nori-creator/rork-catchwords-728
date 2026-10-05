@@ -9,7 +9,9 @@ enum Milestone {
     static let maxPhotos = 8
     static let hour = 19
     static let minute = 30
-    private static let seenKey = "memorial-seen-v1"
+    /// The milestone albums closed on this device, per account (`memorial-seen-v1.<userId>`, R6-05), like
+    /// `OnboardingState`. The bare key is the old device-wide list: the first account to ask adopts it.
+    private static let legacySeenKey = "memorial-seen-v1"
     static let notificationId = "milestone-album"
 
     /// Day 1 is the day the account was made (local calendar days, no clock time).
@@ -64,14 +66,38 @@ enum Milestone {
         return picked.sorted { $0.takenAt < $1.takenAt }
     }
 
+    private static func seenStorageKey(for userId: String?) -> String {
+        guard let userId else { return legacySeenKey }   // a local guest (no account) keeps the device-wide list
+        return legacySeenKey + "." + userId
+    }
+
+    /// This account's closed albums. The first time an account asks, it takes over the old device-wide
+    /// list (closed before it was kept per account) and clears it, so the next account starts with its own.
+    private static func seenList(userId: String?) -> [Int] {
+        let defaults = UserDefaults.standard
+        let key = seenStorageKey(for: userId)
+        if let list = defaults.array(forKey: key) as? [Int] { return list }
+        guard userId != nil, let legacy = defaults.array(forKey: legacySeenKey) as? [Int] else { return [] }
+        defaults.set(legacy, forKey: key)
+        defaults.removeObject(forKey: legacySeenKey)
+        return legacy
+    }
+
     static func wasDismissed(_ n: Int) -> Bool {
-        (UserDefaults.standard.array(forKey: seenKey) as? [Int] ?? []).contains(n)
+        seenList(userId: SupabaseClient.shared.userId).contains(n)
     }
 
     static func dismiss(_ n: Int) {
-        var list = UserDefaults.standard.array(forKey: seenKey) as? [Int] ?? []
+        let userId = SupabaseClient.shared.userId
+        var list = seenList(userId: userId)
         if !list.contains(n) { list.append(n) }
-        UserDefaults.standard.set(Array(list.suffix(20)), forKey: seenKey)
+        UserDefaults.standard.set(Array(list.suffix(20)), forKey: seenStorageKey(for: userId))
+    }
+
+    /// Account deletion: that account's closed albums.
+    static func removeRecord(userId: String?) {
+        guard let userId else { return }
+        UserDefaults.standard.removeObject(forKey: seenStorageKey(for: userId))
     }
 
     /// One local notification at 19:30 on today's milestone (if still ahead) or the next one.
@@ -107,7 +133,7 @@ struct MemorialBanner: View {
     let onOpen: () -> Void
     let onDismiss: () -> Void
     @State private var shimmer = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 12) {
@@ -162,7 +188,7 @@ struct MemorialAlbumView: View {
     let onClose: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var revealed = false
 
     var body: some View {
@@ -216,7 +242,7 @@ struct MemorialReveal: View {
     let onDone: () -> Void
 
     @Environment(DexStore.self) private var dex
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     private enum Phase { case count, burst, fan, ready, leaving }
     @State private var phase: Phase = .count
     @State private var day = 1

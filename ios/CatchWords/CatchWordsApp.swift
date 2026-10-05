@@ -7,7 +7,6 @@ struct CatchWordsApp: App {
     @State private var plan = PlanStore()
     @State private var profile = ProfileStore()
     @State private var diary = DiaryStore()
-    @AppStorage("motion.pref") private var motionPref: String = "full"
     @AppStorage("theme.pref") private var themePref: String = "light"
 
     /// ライト / ダーク / システム (web settings theme).
@@ -53,6 +52,7 @@ struct CatchWordsApp: App {
                     .environment(profile)
                     .preferredColorScheme(p.dark ? .dark : .light)
                     .appTypeSizeCap()
+                    .appMotionPreference()
             } else {
                 app
             }
@@ -75,6 +75,6 @@ struct CatchWordsApp: App {
                 .tint(Theme.primary)
                 .appTypeSizeCap()  // Dynamic Type up to accessibility 2 (ScaledFont.swift)
                 .widgetBridge(dex: dex)  // home/lock-screen widgets: snapshot upkeep + catchwords:// links
-                .transaction { t in if motionPref == "reduce" { t.disablesAnimations = true } }
+                .appMotionPreference()  // 設定 › アニメーション → \.appReduceMotion for every screen (MotionPreference.swift)
     }
 }

@@ -9,7 +9,7 @@ struct ScanView: View {
     @Environment(PlanStore.self) private var plan
     @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     @State private var camera = CameraService()
     @State private var speech = SpeechService()
@@ -474,7 +474,7 @@ struct ScanTag: View {
     let onTap: () -> Void
     @State private var bob: Bool = false
     @State private var glow: Bool = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: onTap) {
@@ -536,6 +536,7 @@ struct ScanTag: View {
 /// Stage-aware sweep line (sensing → reading → matching).
 struct ScanSweep: View {
     let stage: ScanView.Stage
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var y: CGFloat = 0
 
     var body: some View {
@@ -547,6 +548,8 @@ struct ScanSweep: View {
                     .offset(y: y * (geo.size.height - 90))
             }
             .onAppear {
+                // Reduced motion: the line rests in the middle instead of sweeping.
+                guard !reduceMotion else { y = 0.5; return }
                 withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { y = 1 }
             }
         }

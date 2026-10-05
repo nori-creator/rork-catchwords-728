@@ -408,13 +408,16 @@ final class CardCatchModel {
         }
     }
 
-    /// SFX.cands(n): one note per candidate (1–3), with the light tap (`haptic(8)`).
+    /// SFX.cands(n): one pop per candidate (1–3), 90 ms apart like the rows, with the light tap (`haptic(8)`).
+    /// Owner decision 2026-10-04: no sound of its own — the same pop as the object tags just before.
     private func playCands(_ n: Int) {
         Haptics.pon(open: false)
-        switch max(1, min(3, n)) {
-        case 1: play(.ccCands1)
-        case 2: play(.ccCands2)
-        default: play(.ccCands3)
+        for i in 0..<max(1, min(3, n)) {
+            let dl = motion.d(Double(i) * 90)
+            Task {
+                await wait(dl)
+                play(.ccPop)
+            }
         }
     }
 
@@ -474,7 +477,9 @@ final class CardCatchModel {
                       anim: CCAnim([[1, 1, 1], [0.08, 0, 3]], duration: motion.d(700), easing: CCBezier(0.6, 0, 0.4, 1), fill: .forwards))
         photoDim.set(1, duration: motion.transition(900), easing: CCBezier(0.2, 0.8, 0.2, 1))
         photoScale.set(1.12, duration: motion.transition(1400), easing: CCBezier(0.2, 0.8, 0.2, 1))
-        play(.ccCharge)
+        // Owner decision 2026-10-04: the light uses the sounds around it, nothing new — the sparkle that the
+        // card makes right after, and no sound of its own for the flight (the reveal follows it).
+        play(.ccTwinkle)
         let c = CGPoint(x: src.midX, y: src.midY)
         let cx = Double(src.midX), cy = Double(src.midY), sw = Double(src.width), sh = Double(src.height)
         star = Star(center: c, size: 50,
@@ -494,7 +499,6 @@ final class CardCatchModel {
         guard my == runId else { return }
 
         let tx = 195.0, ty = 346.0
-        play(.ccFly)
         star?.flight = CCAnim([[0, 0, 1, 0], [(tx - cx) * 0.5, (ty - cy) * 0.5 - 70, 1.2, 180], [tx - cx, ty - cy, 0.9, 360]],
                               duration: motion.d(600), easing: CCBezier(0.5, 0, 0.3, 1), fill: .forwards)
         // setInterval(trail at the star, 16)
@@ -663,7 +667,7 @@ final class CardCatchModel {
         tilt.stop()
         let c = Self.cardRect
         let cx = Double(c.midX), cy = Double(c.midY) - 40
-        play(.ccCharge)
+        play(.ccTwinkle)
         Task {
             cardLift = CCAnim([[from.ty, from.rx, from.ry, 1], [-40, 0, 0, 1.04]], duration: motion.d(260),
                               easing: CCBezier(0.2, 0.9, 0.3, 1), fill: .forwards)
