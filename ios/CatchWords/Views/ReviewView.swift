@@ -349,7 +349,8 @@ struct QuizCard: View {
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
     /// The meaning as it is now (read in the reader's language after the card was made).
-    private var liveMeaning: String { (dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "" }
+    /// A short gloss: a sentence-long meaning made the question unreadable (the answer panel keeps it whole).
+    private var liveMeaning: String { ReaderLanguage.gloss((dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "") }
 
     var body: some View {
         VStack(spacing: 14) {

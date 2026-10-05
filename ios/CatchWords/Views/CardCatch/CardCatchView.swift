@@ -310,7 +310,7 @@ struct CardCatchView: View {
                     if !zyOn, CCZhuyinWord.isMandarin, !w.pinyin.isEmpty {
                         Text(w.pinyin).font(.system(size: 12, weight: .bold)).foregroundStyle(Color(hex: 0x0053D4))
                     }
-                    Text(ReaderLanguage.shown(w.meaningJa))
+                    Text(ReaderLanguage.gloss(ReaderLanguage.shown(w.meaningJa)))
                         .font(.system(size: 13))
                         .foregroundStyle(Color(hex: 0x5C646F))
                         .lineLimit(2)

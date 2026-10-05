@@ -29,6 +29,33 @@ nonisolated enum ReaderLanguage {
         LanguageRules.looksWrong(text, reader: reader, source: source, hanOnlyOk: hanOnlyOk)
     }
 
+    /// A meaning as a short gloss, for the places that show it as a name or a question (quiz, card, tags,
+    /// word rows). Some meanings come back as a whole descriptive sentence (owner report 2026-10-04: the quiz
+    /// asked 「<a sentence>」はどれ？). Display only — the stored meaning and the word page keep the full text.
+    /// Short text is returned as it is; longer text is cut at its first clause (。；、/ ( : …, and for Latin
+    /// text ; . ( : — never a comma inside a phrase), else at a word boundary, with "…".
+    static func gloss(_ text: String, limit: Int? = nil) -> String {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let latin = t.unicodeScalars.contains { $0.isASCII && CharacterSet.letters.contains($0) }
+            && !t.unicodeScalars.contains { $0.value >= 0x3000 }
+        let cap = limit ?? (latin ? 40 : 20)
+        guard t.count > cap else { return t }
+        let separators: [String] = latin
+            ? ["; ", ";", ". ", " (", "(", ": ", " - ", " — ", "\n"]
+            : ["。", "；", ";", "、", "，", ",", "／", "/", "（", "(", "：", ":", "\n", "．"]
+        var cut = t.endIndex
+        for sep in separators {
+            if let r = t.range(of: sep), r.lowerBound < cut, r.lowerBound > t.startIndex { cut = r.lowerBound }
+        }
+        let first = String(t[..<cut]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !first.isEmpty, first.count <= cap { return first }
+        var head = String(first.prefix(cap - 1))
+        if latin, let space = head.lastIndex(of: " "), head.distance(from: head.startIndex, to: space) >= cap / 2 {
+            head = String(head[..<space])
+        }
+        return head.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)) + "…"
+    }
+
     /// The first of `texts` written in the display language, or "" (never another language).
     static func shown(_ texts: String?..., source: String? = nil, hanOnlyOk: Bool = true) -> String {
         for t in texts {

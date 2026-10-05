@@ -239,7 +239,7 @@ final class CardCatchModel {
         }
         objs = list.indices.map { i -> Obj in
             let o = list[i]
-            let shown = ReaderLanguage.shown(o.words[0].meaningJa)
+            let shown = ReaderLanguage.gloss(ReaderLanguage.shown(o.words[0].meaningJa))   // a tag is a name, never a sentence
             return Obj(id: o.id, source: o, rect: rects[i], outline: outlines[i],
                        name: shown.isEmpty ? o.words[0].headword : shown, piece: pieces[i])
         }
@@ -550,7 +550,7 @@ final class CardCatchModel {
             headword: w.headword,
             zhuyin: raw("reading_zhuyin") ?? w.zhuyin,
             pinyin: raw("pinyin") ?? w.pinyin,
-            meaning: ReaderLanguage.shown(raw("meaning_ja"), w.meaningJa),
+            meaning: ReaderLanguage.gloss(ReaderLanguage.shown(raw("meaning_ja"), w.meaningJa)),
             example: raw("example_sentence") ?? d.exampleSentence,
             exampleTranslation: ReaderLanguage.shown(raw("example_translation"), d.exampleTranslation),
             categoryLine: pos.isEmpty ? catLabel : catLabel + sep + pos,
