@@ -323,6 +323,10 @@ final class CaptureViewModel {
         cutoutLift = nil
         cutout = Self.cutoutMode ? object.cut : nil
         isCheckingOwned = true
+        // The card's details are generated from the moment the word is chosen, alongside the owned-word check
+        // and the light (they used to start only after the check). A word that turns out to be owned just
+        // drops them.
+        loadDetails(for: word)
         Task {
             let found = try? await NativeAPI.call(
                 "checkOwnedWord",
@@ -340,7 +344,8 @@ final class CaptureViewModel {
             } else {
                 // Fail open: a broken check must never block a new catch.
                 step = .card
-                loadDetails(for: word)
+                // Started at the choice; one that already failed (silently, before the card) is tried once more.
+                if details == nil, !isLoadingDetails { loadDetails(for: word) }
             }
         }
     }
@@ -430,6 +435,17 @@ final class CaptureViewModel {
         }
         pendingId = nil
         restoredPendingId = nil
+    }
+
+    /// Card catch: the dex opens before the save has finished. The queued photo is handed to that background
+    /// save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」 meanwhile; the
+    /// save removes it when done, or shows it again when it fails.
+    func detachPendingForSave() -> String? {
+        let pid = pendingId
+        pendingId = nil
+        restoredPendingId = nil
+        if let pid { PendingQueue.shared.setSaving(pid, true) }
+        return pid
     }
 
     /// "もう一枚撮る" from the failure panel keeps the photo in "解析待ち" (that is what it promised).

@@ -29,6 +29,10 @@ final class PendingQueue {
     /// Photos whose JPEG is still being written in the background (the shutter must not wait for a
     /// 100–200 ms encode on the main thread). Served from memory until the file is on disk.
     @ObservationIgnored private var inFlight: [String: UIImage] = [:]
+    /// Photos whose catch is being saved in the background (card catch: the dex opened before the save
+    /// finished). Kept on disk — an app kill mid-save leaves them in 「解析待ち」 — but left out of `items`, so
+    /// neither the list nor the automatic retry can start a second save of the same photo meanwhile.
+    @ObservationIgnored private var saving: Set<String> = []
 
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -56,7 +60,13 @@ final class PendingQueue {
             for i in everything.indices where everything[i].ownerId == nil { everything[i].ownerId = owner }
             write(everything)
         }
-        return everything.filter { $0.ownerId == owner }.sorted { $0.createdAt > $1.createdAt }
+        return everything.filter { $0.ownerId == owner && !saving.contains($0.id) }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Hides a photo while its catch is saved in the background (`on`), or shows it again (the save failed).
+    func setSaving(_ id: String, _ on: Bool) {
+        if on { saving.insert(id) } else { saving.remove(id) }
+        reload()
     }
 
     /// Re-reads the index for the account signed in now (sign-in, sign-out, account switch).
@@ -129,6 +139,7 @@ final class PendingQueue {
 
     func remove(id: String) {
         inFlight[id] = nil
+        saving.remove(id)
         try? FileManager.default.removeItem(at: fileURL(id))
         thumbs.removeObject(forKey: id as NSString)
         save(readIndex().filter { $0.id != id })
@@ -149,7 +160,7 @@ final class PendingQueue {
 
     private func save(_ all: [PendingCatch]) {
         write(all)
-        items = all.filter { $0.ownerId == currentOwner }.sorted { $0.createdAt > $1.createdAt }
+        items = all.filter { $0.ownerId == currentOwner && !saving.contains($0.id) }.sorted { $0.createdAt > $1.createdAt }
     }
 
     private func write(_ all: [PendingCatch]) {

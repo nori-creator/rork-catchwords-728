@@ -550,35 +550,75 @@ struct CaptureView: View {
         vm.search(text: q)
     }
 
-    /// Card catch: the card has become the star — save through the app's own path (cut-out and card
-    /// details awaited, plan, pending queue), then hand over to the dex (`CatchLanding`). On failure the
-    /// toast says why and the card comes back (the photo stays in 解析待ち).
+    /// Card catch: the card has become the star. The dex opens at once (`CatchLanding`) on a provisional entry
+    /// while the catch is saved behind it through the app's own path (photo and cut-out uploads, saveSticker):
+    /// the learner never waits on the network after the flick (owner report 2026-10-04: the wait between the
+    /// flick and the dex was far too long — every upload and three server round trips ran after the flick).
+    /// The card exists only once its details are generated, so nothing else is awaited here.
+    /// Safety kept: the photo stays in 「解析待ち」 (hidden) until the save is done; a failed save removes the
+    /// provisional entry, gives the catch back to the plan, shows the photo in 「解析待ち」 again and says why.
     private func sendCardCatch() async -> Bool {
         guard vm.picked != nil else { return false }
         guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
             vm.showToast(L("カード生成に失敗しました"))
             return false
         }
-        do {
-            let outcome = try await dex.save(draft)
-            plan.recordCatch()
-            vm.releasePending()
-            dex.refreshPending()
-            if router.tour == .peel || router.tour == .detail {
-                router.tourStickerId = outcome.sticker.id
-                router.tour = .added
-            }
-            // The dex page rises over this screen (the photo stays under it), then the camera is put back.
-            CatchLanding.land(stickerId: outcome.sticker.id, router: router, calm: reduceMotion)
-            Task {
-                try? await Task.sleep(for: .milliseconds(700))
-                vm.reset()
-            }
-            return true
-        } catch {
-            let reason = (error as? LocalizedError)?.errorDescription ?? ""
-            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
+        guard let local = dex.addProvisional(draft) else {
+            vm.showToast(L("保存に失敗しました"))
             return false
+        }
+        plan.recordCatch()
+        let pendingId = vm.detachPendingForSave()
+        if router.tour == .peel || router.tour == .detail {
+            router.tourStickerId = local.sticker.id
+            router.tour = .added
+        }
+        // The dex page rises over this screen (the photo stays under it), then the camera is put back.
+        CatchLanding.land(stickerId: local.sticker.id, router: router, calm: reduceMotion)
+        // This screen goes away with the tab: the background save holds what it needs itself.
+        let model = vm, store = dex, planStore = plan, nav = router
+        Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            model.reset()
+        }
+        Task {
+            await Self.finishCardCatchSave(draft, provisional: local.sticker.id, ts: local.ts, pendingId: pendingId,
+                                           dex: store, plan: planStore, router: nav)
+        }
+        return true
+    }
+
+    /// The card catch's save, behind the dex. Success: the provisional entry becomes the saved sticker (the
+    /// landing, the tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is
+    /// left behind, the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
+    private static func finishCardCatchSave(_ draft: CatchDraft, provisional: String, ts: Int, pendingId: String?,
+                                            dex: DexStore, plan: PlanStore, router: AppRouter) async {
+        do {
+            let outcome = try await dex.save(draft, ts: ts, replacing: provisional) { saved in
+                if let l = router.landing, l.stickerId == provisional { l.stickerId = saved.id }
+                if router.tourStickerId == provisional { router.tourStickerId = saved.id }
+            }
+            if let pid = pendingId {
+                PendingQueue.shared.remove(id: pid)
+                PendingRetry.shared.forget(pid)
+            }
+            dex.refreshPending()
+            if router.detailAfterSave == provisional {
+                router.detailAfterSave = nil
+                router.openDetail(outcome.sticker, zoom: false)
+            }
+        } catch {
+            dex.discardProvisional(provisional)
+            plan.undoCatch()
+            if router.tourStickerId == provisional { router.tourStickerId = nil }
+            if router.detailAfterSave == provisional { router.detailAfterSave = nil }
+            let reason = (error as? LocalizedError)?.errorDescription ?? ""
+            if let pid = pendingId {
+                PendingQueue.shared.updateReason(id: pid, reason: L("保存に失敗しました"))
+                PendingQueue.shared.setSaving(pid, false)
+            }
+            dex.refreshPending()
+            router.showNotice(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
         }
     }
 
