@@ -80,6 +80,8 @@ final class CardCatchModel {
     var pickUI = false
     var tagScale: [CCTransition] = []
     var tagOpacity: [CCTransition] = []
+    /// Each tag's bottom centre (design points), laid out once per `showPick` so no two tags overlap.
+    var tagSpots: [CGPoint] = []
 
     // .sheet
     var sheetT = CCTransition(0)
@@ -313,6 +315,7 @@ final class CardCatchModel {
         outlinePulseStart = motion.calm ? nil : CCClock.now
         tagScale = objs.map { _ in CCTransition(0) }
         tagOpacity = objs.map { _ in CCTransition(0) }
+        tagSpots = CCPickLayout.layout(rects: objs.map(\.rect), sizes: objs.map { CCPickLayout.tagSize(name: $0.name) })
         pickUI = true
         for i in objs.indices {
             let delay = motion.calm ? 0 : 0.14 + Double(i) * 0.13
@@ -325,6 +328,12 @@ final class CardCatchModel {
                 Haptics.pon(open: true)
             }
         }
+    }
+
+    /// A tap on the photo (design points): the object it means, even where boxes overlap (`CCPickLayout.object`).
+    func pickObject(at p: CGPoint) {
+        guard let i = CCPickLayout.object(at: p, rects: objs.map(\.rect)) else { return }
+        pickObject(i)
     }
 
     func pickObject(_ i: Int) {

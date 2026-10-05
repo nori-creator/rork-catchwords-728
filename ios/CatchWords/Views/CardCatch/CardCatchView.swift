@@ -162,11 +162,16 @@ struct CardCatchView: View {
     private func pickLayer(now: Double) -> some View {
         ZStack(alignment: .topLeading) {
             if model.pickUI {
-                ForEach(Array(model.objs.enumerated()), id: \.element.id) { i, o in
+                // Boxes can overlap: whichever box takes the tap, the object is chosen from every box under it
+                // (the smallest, or the nearest centre), never just the one drawn on top.
+                ForEach(model.objs) { o in
+                    let r = o.rect
                     Color.clear
                         .contentShape(RoundedRectangle(cornerRadius: 18, style: .circular))
-                        .onTapGesture { model.pickObject(i) }
-                        .ccPlace(o.rect)
+                        .onTapGesture(coordinateSpace: .local) { p in
+                            model.pickObject(at: CGPoint(x: r.minX + p.x, y: r.minY + p.y))
+                        }
+                        .ccPlace(r)
                 }
             }
             pill(now: now)
@@ -175,13 +180,16 @@ struct CardCatchView: View {
             if model.pickUI {
                 ForEach(Array(model.objs.enumerated()), id: \.element.id) { i, o in
                     if i < model.tagScale.count, i < model.tagOpacity.count {
+                        // Laid out once (`tagSpots`) so tags never cover each other; a tap on a tag is always its object.
+                        let spot = i < model.tagSpots.count ? model.tagSpots[i]
+                            : CGPoint(x: max(60, min(CCSpace.w - 60, o.rect.midX)), y: max(170, o.rect.minY + 6))
                         tag(o, now: now)
                             .onTapGesture { model.pickObject(i) }
                             .tourAnchor(.pick, if: i == 0 && model.phase == .pick)
                             .scaleEffect(0.5 + 0.5 * model.tagScale[i].value(now))
                             .opacity(model.tagOpacity[i].value(now))
                             .visualEffect { content, proxy in content.offset(y: -proxy.size.height / 2) }
-                            .position(x: max(60, min(CCSpace.w - 60, o.rect.midX)), y: max(170, o.rect.minY + 6))
+                            .position(x: spot.x, y: spot.y)
                     }
                 }
             }
