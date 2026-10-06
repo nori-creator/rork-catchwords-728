@@ -18,6 +18,10 @@ enum AccountCleanup {
         center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter(isAccountNotification))
         center.removeAllDeliveredNotifications()
         UserDefaults.standard.set(false, forKey: ReminderService.placeKey)
+        // The review reminder setting is that account's too: the next one starts from off and the default
+        // time, and takes its own from the account at sign-in (`ReminderService.loadFromAccount`).
+        UserDefaults.standard.set("off", forKey: ReminderService.modeKey)
+        UserDefaults.standard.set(ReminderService.defaultTime, forKey: ReminderService.timesKey)
         // Photos fetched through signed URLs may sit in the shared HTTP cache.
         URLCache.shared.removeAllCachedResponses()
     }

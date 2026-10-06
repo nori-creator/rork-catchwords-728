@@ -7,9 +7,13 @@ import SwiftUI
 /// (owner rule: 訳と発音だけ / メーターいらない). The full card keeps generating in the background.
 struct CatchCardView: View {
     @Bindable var vm: CaptureViewModel
+    /// The save started from this card is still running (even after the reward overlay gave up waiting).
+    var saving: Bool = false
     let onCatch: () -> Void
 
     @State private var showSelfie: Bool = false
+
+    private func resetCard() { vm.reset() }
     @State private var isCatching: Bool = false
     /// The cut-out animation has played for the current lift.
     @State private var revealDone: Bool = false
@@ -25,7 +29,8 @@ struct CatchCardView: View {
             AppBackground()
             ScrollView {
                 VStack(spacing: 14) {
-                    CollectHeader { vm.reset() }
+                    // No starting over while the save runs (it would drop the queued photo mid-save).
+                    CollectHeader(onClose: saving ? nil : resetCard)
                     stickerStage.tourAnchor(.peel)
                     actions
                     if vm.selfie != nil {
@@ -42,8 +47,10 @@ struct CatchCardView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        // A failed save or card shows a notice and keeps this card: let the user try again.
-        .onChange(of: vm.toastCount) { _, _ in isCatching = false }
+        // A failed save or card shows a notice and keeps this card: let the user try again — but never while
+        // the save is still running (the "taking long" notice must not allow a second save).
+        .onChange(of: vm.toastCount) { _, _ in if !saving { isCatching = false } }
+        .onChange(of: saving) { _, s in if !s { isCatching = false } }
         .onChange(of: vm.cutoutLift == nil) { _, none in if none { revealDone = false } }
     }
 
@@ -99,6 +106,7 @@ struct CatchCardView: View {
                     .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
             }
             .buttonStyle(PressableStyle())
+            .disabled(saving)
             Button(action: catchNow) {
                 HStack(spacing: 8) {
                     if isCatching && vm.details == nil {

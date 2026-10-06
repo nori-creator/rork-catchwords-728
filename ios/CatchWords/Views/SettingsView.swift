@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UserNotifications
 
 /// settings.tsx: small grey section titles outside white cards; every choice is a row of pills with a
 /// sliding blue capsule; language/level open a wheel card. Order matches the web app.
@@ -65,6 +66,13 @@ struct SettingsView: View {
             }
         }
         .onAppear { nameDraft = profile.displayName }
+        .task {
+            // Reminders that are on (set at sign-in from the account, or before) while the iPhone's own
+            // setting refuses them: say so, instead of a setting that silently never notifies.
+            guard reminderMode != "off" || placeRemind else { return }
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            notifyDenied = status == .denied
+        }
         .onChange(of: profile.displayName) { _, v in if !nameFocused { nameDraft = v } }
         .onChange(of: avatarItem) { _, item in
             guard let item else { return }

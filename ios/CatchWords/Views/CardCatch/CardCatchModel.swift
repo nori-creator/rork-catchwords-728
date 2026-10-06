@@ -460,13 +460,16 @@ final class CardCatchModel {
         guard my == runId else { return }
 
         // iOS: the card needs its details (example, category…). Until they arrive the star waits at the
-        // card's centre, twinkling; a failed card goes back to the objects.
-        while my == runId, vm.details == nil {
+        // card's centre, twinkling; a failed card goes back to the objects. The owned-word check must be over
+        // too: an owned word goes to the re-encounter and gets no card.
+        while my == runId, vm.details == nil || vm.isCheckingOwned {
+            // An owned word went to the re-encounter (its card generation is stopped): nothing to wait for.
+            if vm.step == .reencounter || vm.step == .camera { return }
             let failed = vm.picked != w || (vm.step == .select && !vm.isCheckingOwned && !vm.isLoadingDetails)
             if failed { returnToPick(); return }
             await wait(0.05)
         }
-        guard my == runId, let details = vm.details else { return }
+        guard my == runId, vm.step == .card, let details = vm.details else { return }
         let cropped = await photoArt?.value
         guard my == runId else { return }
         let e = makeEntry(o, w, details, cropped: cropped)
@@ -602,7 +605,7 @@ final class CardCatchModel {
     // MARK: 7. Into the dex (`sendToDex`, first half)
 
     func send() {
-        guard phase == .card else { return }
+        guard phase == .card, vm?.step == .card else { return }
         phase = .sending
         let my = runId
         uiShown = false

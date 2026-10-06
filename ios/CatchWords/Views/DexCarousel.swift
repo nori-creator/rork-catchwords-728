@@ -44,10 +44,12 @@ struct DexCoverFlow: View {
                 Spacer(minLength: 0)
             }
         }
-        .onChange(of: stickers.map(\.id)) { _, _ in
-            // Filtered down to other cards: start again from the first, without the slide sound.
-            muteSlideSound = true
-            spring.set(0)
+        .onChange(of: stickers.map(\.id)) { old, _ in
+            // The cards changed (a filter, a word added or removed): keep the place, clamped to the new
+            // last card, without the slide sound (muted only when the middle card really changes).
+            let to = min(center, max(0, stickers.count - 1))
+            if to != max(0, min(old.count - 1, spring.index)) { muteSlideSound = true }
+            spring.set(Double(to))
         }
         .onChange(of: center) { _, _ in
             if muteSlideSound { muteSlideSound = false; return }

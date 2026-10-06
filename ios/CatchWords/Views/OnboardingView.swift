@@ -24,6 +24,8 @@ struct OnboardingView: View {
     @State private var interests: Set<String> = []
     @State private var reminderMode: String = "ai"
     @State private var isSaving: Bool = false
+    /// The profile could not be saved on 「はじめる」: shown on the ready screen, which stays so it can be retried.
+    @State private var saveError: String?
     @State private var showMenu: Bool = false
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("reading.ja") private var readingJa: String = "kana"
@@ -262,6 +264,11 @@ struct OnboardingView: View {
                 .scaledFont(size: 15).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center).padding(.top, 10)
             Spacer()
+            if let saveError {
+                Text(saveError).font(.footnote).foregroundStyle(Theme.destructive)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24).padding(.bottom, 10)
+            }
             PrimaryButton(title: L("はじめる"), icon: "arrow.right", isLoading: isSaving, sheen: true) {
                 Task { await finish() }
             }
@@ -338,7 +345,12 @@ struct OnboardingView: View {
                     Picker(L("通知"), selection: $reminderMode) {
                         Text(L("おまかせ")).tag("ai")
                         Text(L("朝と夜")).tag("custom")
-                        Text(L("通知しない")).tag("off")
+                        // Not before the system sheet: 「次へ」 always hands over to it (no in-app way to skip it,
+                        // Guideline 5.1.1), so an "off" picked here would only be overridden there. Once it has
+                        // been shown (ready screen, or after "Don't Allow") turning them off is a real choice.
+                        if stage == .ready || reminderMode == "off" {
+                            Text(L("通知しない")).tag("off")
+                        }
                     }
                 }
                 Section(L("効果音と振動")) {
@@ -391,8 +403,10 @@ struct OnboardingView: View {
     }
 
     private func finish() async {
+        guard !isSaving else { return }
         isSaving = true
         defer { isSaving = false }
+        saveError = nil
         let times = reminderMode == "custom" ? ["08:00", "20:00"] : []
         UserDefaults.standard.set(reminderMode, forKey: ReminderService.modeKey)
         if !times.isEmpty { UserDefaults.standard.set(times.joined(separator: ","), forKey: ReminderService.timesKey) }
@@ -401,10 +415,14 @@ struct OnboardingView: View {
         let level = ProfileStore.remap(profile.levelGoal, to: targetLanguage)
         // native_language as the web writes it (readerL1 from the display and learning languages).
         let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: targetLanguage)
+        // The languages first, on their own: a save that fails keeps this screen (with the reason) so
+        // 「はじめる」 can be tried again, instead of finishing with the chosen languages lost.
+        await profile.update(["native_language": l1, "target_language": targetLanguage, "ui_language": uiLanguage])
+        if let failed = profile.message { saveError = failed; return }
         ReaderLanguage.native = l1
-        await profile.update(["native_language": l1, "target_language": targetLanguage, "ui_language": uiLanguage,
-                              "level_goal": level, "onboarded": true])
         profile.targetLanguage = targetLanguage
+        await profile.update(["level_goal": level, "onboarded": true])
+        if let failed = profile.message { saveError = failed; return }
         profile.levelGoal = level
         profile.onboarded = true
         let prefs: [String: Any] = [

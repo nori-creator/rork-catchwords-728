@@ -176,10 +176,12 @@ final class SupabaseClient {
         if let running = refreshTask { return try await running.value }
         let token = current.refreshToken
         let task = Task<Void, Error> { [self] in
-            defer { refreshTask = nil }
             try await refreshSession(refreshToken: token)
         }
         refreshTask = task
+        // Cleared by the caller that started it, and only while it is still the current one: a sign-out
+        // drops it, and a refresh started after that (next account) must not be cleared by this one.
+        defer { if refreshTask == task { refreshTask = nil } }
         try await task.value
     }
 
@@ -195,6 +197,9 @@ final class SupabaseClient {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
         let (data, response) = try await perform(req)
+        // Signed out (or into another account) while the request was in flight: the answer belongs to a
+        // session that is gone — never restore it, overwrite the next account, or sign that one out.
+        guard session?.refreshToken == refreshToken else { throw CancellationError() }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         if (200..<300).contains(response.statusCode) {
             try storeSession(json)
@@ -230,6 +235,8 @@ final class SupabaseClient {
     }
 
     func signOut() {
+        refreshTask?.cancel()
+        refreshTask = nil
         session = nil
         KeychainStore.delete(account: sessionAccount)
     }
@@ -420,12 +427,15 @@ final class SupabaseClient {
     /// Runs a request with the current token; on 401 refreshes once (forced) and retries. A second 401
     /// means the login is over.
     func withTokenRetry(_ send: (String) async throws -> (Data, HTTPURLResponse)) async throws -> (Data, HTTPURLResponse) {
-        guard let token = session?.accessToken else { throw APIError.unauthorized }
+        guard let token = session?.accessToken, let uid = session?.userId else { throw APIError.unauthorized }
         let first = try await send(token)
         guard Self.isExpiredToken(first) else { return first }
+        // Another account (or none) since the first try: never refresh, retry or expire on its behalf.
+        guard session?.userId == uid else { throw CancellationError() }
         try await refreshIfNeeded(force: true)
-        guard let fresh = session?.accessToken else { throw APIError.unauthorized }
+        guard let fresh = session?.accessToken, session?.userId == uid else { throw CancellationError() }
         let second = try await send(fresh)
+        guard session?.userId == uid else { throw CancellationError() }
         if Self.isExpiredToken(second) {
             expireSession()
             throw APIError.unauthorized

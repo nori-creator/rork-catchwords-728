@@ -124,10 +124,13 @@ struct ReencounterView: View {
                 vm.reencCount = res.count
                 vm.reencPhotoSaved = res.photoSaved
             }
-            vm.releasePending()
+            // The screen moved on (reset already let the photo go): never release the next photo's entry.
+            if vm.step == .reencounter, vm.owned?.stickerId == owned.stickerId { vm.releasePending() }
             dex.refreshPending()
             Haptics.success()
         } catch {
+            // Leaving this screen cancels the request: that is not a failure to report.
+            guard !Task.isCancelled, vm.step == .reencounter, vm.owned?.stickerId == owned.stickerId else { return }
             vm.reencFailed = true
             vm.showToast(L("記録に失敗しました"))
             Haptics.warning()

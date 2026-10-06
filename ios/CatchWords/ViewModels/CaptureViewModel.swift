@@ -82,6 +82,8 @@ final class CaptureViewModel {
 
     /// runToken: "cancel" only discards stale results; in-flight work is never killed mid-save.
     private var runToken: Int = 0
+    /// Goes up with every new analysis: the card catch screen starts over for each photo (`.id(vm.run)`).
+    private(set) var run: Int = 0
     private var cutoutTask: Task<Void, Never>?
     private var detailsTask: Task<CardDetails?, Never>?
     /// Cards already being generated for this photo (prefetched when an object is tapped), by headword.
@@ -104,6 +106,7 @@ final class CaptureViewModel {
     /// Starts analysis immediately; the selfie prompt covers the wait (web: "ものと一緒に、もう一枚").
     func analyze(_ image: UIImage, askSelfie: Bool = false) {
         runToken += 1
+        run += 1
         let token = runToken
         // A word check still running belongs to the old run: its result is dropped, so its flag must not
         // keep blocking taps on the new run's words.
@@ -138,9 +141,10 @@ final class CaptureViewModel {
             masksTask = Task<InstanceMasks?, Never> { await CutoutService.instanceMasks(from: image) }
         }
         // A photo restored from the queue is never queued again (one entry per photo, not per retry).
+        // Every new photo gets its own entry (an earlier photo's entry stays in 「解析待ち」).
         if let rid = restoredPendingId {
             pendingId = rid
-        } else if pendingId == nil {
+        } else {
             pendingId = PendingQueue.shared.add(image: image, reason: L("解析中"), lat: nil, lng: nil)?.id
         }
         // A photo opened from the queue goes through the automatic retry's path: the words it already
@@ -180,7 +184,11 @@ final class CaptureViewModel {
             let here = await loc
             guard token == runToken else { return }
             location = here
-            if let here { placeName = await LocationService.shared.placeName(for: here) }
+            if let here {
+                let name = await LocationService.shared.placeName(for: here)
+                guard token == runToken else { return }
+                placeName = name
+            }
         }
     }
 
@@ -188,7 +196,10 @@ final class CaptureViewModel {
     func retry() {
         guard let p = photo else { reset(); return }
         restoredPendingId = pendingId
+        // The selfie belongs to this photo: a retry keeps it.
+        let keptSelfie = selfie
         analyze(p)
+        selfie = keptSelfie
     }
 
     func finishSelfie(_ image: UIImage?) {

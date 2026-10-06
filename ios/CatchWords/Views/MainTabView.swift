@@ -55,6 +55,8 @@ final class AppRouter {
     var shutterFlying: Bool = false
     /// A word tapped while its catch was still being saved (a provisional dex entry): opened once it is saved.
     var detailAfterSave: String?
+    /// A word page's 「いま復習する」: the review tab brings this sticker in as the next card, due or not.
+    var reviewNow: String?
     /// A one-line notice over every tab (the card catch's background save reports a failure here: the camera
     /// screen, which has its own toast, is gone by then).
     var notice: String?
@@ -211,6 +213,8 @@ struct MainTabView: View {
             openNotification(NotificationRouter.shared.pending)
         }
         .onChange(of: NotificationRouter.shared.pending) { _, route in openNotification(route) }
+        // A word's reminder or widget tapped at launch waits for the dex to know that word.
+        .onChange(of: dex.hasLoaded) { _, loaded in if loaded { openNotification(NotificationRouter.shared.pending) } }
         .onChange(of: tourPending) { _, _ in beginTourIfPending() }
         .onChange(of: router.tab) { _, tab in
             if tab == .camera { router.advanceTour(from: .tapCamera, to: .shoot) }
@@ -250,6 +254,8 @@ struct MainTabView: View {
     /// A tapped reminder: the review tab, or the word a place reminder was about.
     private func openNotification(_ route: NotificationRoute?) {
         guard let route else { return }
+        // Cold launch: the dex isn't read yet, so the word can't be found — keep the route until it is.
+        if case .sticker(_) = route, !dex.hasLoaded { return }
         NotificationRouter.shared.pending = nil
         switch route {
         case .review:
@@ -292,6 +298,11 @@ struct MainTabView: View {
     }
 
     private func startTourReview() {
+        // Nothing to quiz on (no word in the dex): skip the practice instead of stopping on an empty review.
+        guard dex.stickers.contains(where: { $0.word != nil }) else {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { router.tour = .complete }
+            return
+        }
         withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
             router.tour = .review
             router.tab = .review

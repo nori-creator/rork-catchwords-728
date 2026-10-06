@@ -10,6 +10,8 @@ struct ReviewView: View {
     @State private var curveSticker: Sticker?
     /// Verdict for the current card (nil until a choice is picked).
     @State private var answer: Bool?
+    /// The card whose grade is still being saved (nil when none): 次へ waits for it.
+    @State private var gradingId: String?
     @State private var practiceIndex: Int = 0
     /// How far the answer sheet has been dragged sideways (swipe left = next card, like the web's SwipeCard).
     @State private var swipeX: CGFloat = 0
@@ -52,7 +54,7 @@ struct ReviewView: View {
         }
         .overlay(alignment: .bottom) {
             if let answer, let card = router.tour.isReview ? practiceCards[safe: practiceIndex] : store.current {
-                AnswerPanel(sticker: card.sticker, correct: answer) {
+                AnswerPanel(sticker: card.sticker, correct: answer, showsDex: !router.tour.isReview) {
                     if !router.tour.isReview { router.detailSticker = card.sticker }
                 } onNext: {
                     goNext()
@@ -113,6 +115,15 @@ struct ReviewView: View {
         .task {
             if store.hasLoaded, store.loadedTarget != NativeAPI.targetLanguage { store.reset() }
             if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+            applyReviewNow()
+        }
+        // 「いま復習する」 on a word's page: that word becomes the next card, due or not.
+        .onChange(of: router.reviewNow) { _, _ in applyReviewNow() }
+        // The tour's practice needs a word in the dex: without one there is nothing to quiz, so finish.
+        .task(id: router.tour.isReview && practiceCards.isEmpty) {
+            if router.tour.isReview && practiceCards.isEmpty {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { router.tour = .complete }
+            }
         }
         // R5 「学習言語台湾華語なのに英語の4択が表示されてる」: a switched learning language starts a fresh queue.
         .onChange(of: profile.targetLanguage) { _, _ in
@@ -137,6 +148,8 @@ struct ReviewView: View {
     }
 
     private func goNext() {
+        // A grade still being saved may bring the card back: wait for it (the tour's practice saves nothing).
+        guard router.tour.isReview || gradingId == nil else { return }
         withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { answer = nil }
         if router.tour.isReview { nextPractice() } else { store.advance() }
     }
@@ -149,6 +162,16 @@ struct ReviewView: View {
             practiceIndex = 0
             withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { router.tour = .complete }
         }
+    }
+
+    /// Brings `router.reviewNow` (set by a word page's 「いま復習する」) into the queue once it is loaded.
+    private func applyReviewNow() {
+        guard let id = router.reviewNow, store.hasLoaded else { return }
+        router.reviewNow = nil
+        guard !router.tour.isReview, let s = dex.sticker(id: id) else { return }
+        let answered = answer != nil
+        store.bringForward(s, review: dex.reviews[s.id], currentAnswered: answered)
+        if answered { goNext() }
     }
 
     private func closeCurve() {
@@ -203,10 +226,16 @@ struct ReviewView: View {
         } else if let card = store.current {
             QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker), isAnswered: answer != nil) { correct, ms in
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
+                gradingId = card.id
                 Task {
-                    // Not saved (offline, server down): the card comes back to be answered again.
-                    if !(await store.grade(card, correct: correct, responseMs: ms, dex: dex)) {
-                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = nil }
+                    let saved = await store.grade(card, correct: correct, responseMs: ms, dex: dex)
+                    if gradingId == card.id { gradingId = nil }
+                    // Not saved (offline, server down): the card comes back to be answered again —
+                    // only if it is still the one on screen (never wipe the next card's answer).
+                    if !saved {
+                        if store.current?.id == card.id {
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = nil }
+                        }
                         Haptics.warning()
                     }
                 }

@@ -66,6 +66,9 @@ final class DexStore {
 
     private let client = SupabaseClient.shared
     private var language: String { NativeAPI.targetLanguage }
+    /// Stickers `save` put in since the last `load` started: a load whose rows were read before such a save
+    /// landed keeps them instead of dropping them.
+    @ObservationIgnored private var savedSinceLoad: Set<String> = []
 
     // MARK: Reader language (word_explanations)
     /// word id → the shared `words` row as stored, before choosing what this reader sees.
@@ -109,6 +112,7 @@ final class DexStore {
         }
         let uid = client.userId
         isLoading = true
+        savedSinceLoad = []
         defer { isLoading = false }
         do {
             // Every page, like the web's listMyStickers (one capped read silently dropped the oldest
@@ -131,7 +135,10 @@ final class DexStore {
             // Only the words of the language being learned (web listMyStickers → matchesTargetLanguage).
             // A catch still being saved in the background stays on screen (its save swaps it for the real row).
             let provisional = stickers.filter { Self.isProvisional($0.id) }
-            stickers = provisional + present(rows.filter { $0.word?.matches(language) ?? true })
+            // A catch saved while the rows were being read (not among them yet) stays too.
+            let rowIds = Set(rows.map(\.id))
+            let savedMeanwhile = stickers.filter { savedSinceLoad.contains($0.id) && !rowIds.contains($0.id) }
+            stickers = provisional + savedMeanwhile + present(rows.filter { $0.word?.matches(language) ?? true })
             loadError = nil
             hasLoaded = true
             await loadReviews()
@@ -289,6 +296,7 @@ final class DexStore {
         }
         guard client.userId == uid else { throw Self.accountChanged }
         stickers.removeAll { $0.id == sticker.id }
+        savedSinceLoad.insert(sticker.id)
         if let provisionalId, let i = stickers.firstIndex(where: { $0.id == provisionalId }) {
             stickers[i] = sticker
         } else {

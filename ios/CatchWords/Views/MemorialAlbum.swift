@@ -356,6 +356,7 @@ struct MemorialReveal: View {
                 }
             }
             try? await Task.sleep(for: .milliseconds(250))
+            if Task.isCancelled { return }
             // 3) The photos fan out one by one.
             phase = .fan
             for i in 0..<fan.count {
@@ -365,6 +366,7 @@ struct MemorialReveal: View {
                 Haptics.impact(.light)
             }
             try? await Task.sleep(for: .milliseconds(400))
+            if Task.isCancelled { return }
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { phase = .ready }
         }
     }
