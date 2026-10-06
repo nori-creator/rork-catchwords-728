@@ -12,8 +12,6 @@ struct CatchCardView: View {
     let onCatch: () -> Void
 
     @State private var showSelfie: Bool = false
-
-    private func resetCard() { vm.reset() }
     @State private var isCatching: Bool = false
     /// The cut-out animation has played for the current lift.
     @State private var revealDone: Bool = false
@@ -30,7 +28,11 @@ struct CatchCardView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     // No starting over while the save runs (it would drop the queued photo mid-save).
-                    CollectHeader(onClose: saving ? nil : resetCard)
+                    if saving {
+                        CollectHeader()
+                    } else {
+                        CollectHeader { vm.reset() }
+                    }
                     stickerStage.tourAnchor(.peel)
                     actions
                     if vm.selfie != nil {
