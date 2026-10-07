@@ -26,6 +26,8 @@ struct CaptureView: View {
     @State private var shotFlash: Double?
     /// shoot(): the shutter and the viewfinder hide the moment the photo is taken.
     @State private var shooting: Bool = false
+    /// A sticker-card save is running (it may outlive the reward overlay): no second save, no reset meanwhile.
+    @State private var saveInFlight: Bool = false
 
     private var isMachine: Bool {
         switch vm.step {
@@ -43,6 +45,8 @@ struct CaptureView: View {
         ZStack {
             if showsCardCatch {
                 CardCatchView(vm: vm, onSend: sendCardCatch, onRetake: { vm.reset() })
+                    // A new photo starts the card catch over (its model holds the previous run's stage).
+                    .id(vm.run)
                     .transition(.opacity)
             } else {
                 stepView
@@ -116,7 +120,8 @@ struct CaptureView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let img = await ImageTools.downsampledInBackground(data) {
-                    beginAnalyze(img, askSelfie: false)
+                    // A photo that loads after another catch has started is dropped (never replaces it).
+                    if vm.step == .camera { beginAnalyze(img, askSelfie: false) }
                 } else {
                     vm.showToast(L("写真を読み込めませんでした。"))
                 }
@@ -151,7 +156,7 @@ struct CaptureView: View {
         case .select:
             CandidatePickerView(vm: vm).transition(.move(edge: .bottom).combined(with: .opacity))
         case .card:
-            CatchCardView(vm: vm, onCatch: startCatch).transition(.move(edge: .trailing).combined(with: .opacity))
+            CatchCardView(vm: vm, saving: saveInFlight, onCatch: startCatch).transition(.move(edge: .trailing).combined(with: .opacity))
         case .reencounter:
             ReencounterView(vm: vm, onSeeInDex: { id in
                 vm.reset()
@@ -550,35 +555,82 @@ struct CaptureView: View {
         vm.search(text: q)
     }
 
-    /// Card catch: the card has become the star — save through the app's own path (cut-out and card
-    /// details awaited, plan, pending queue), then hand over to the dex (`CatchLanding`). On failure the
-    /// toast says why and the card comes back (the photo stays in 解析待ち).
+    /// Card catch: the card has become the star. The dex opens at once (`CatchLanding`) on a provisional entry
+    /// while the catch is saved behind it through the app's own path (photo and cut-out uploads, saveSticker):
+    /// the learner never waits on the network after the flick (owner report 2026-10-04: the wait between the
+    /// flick and the dex was far too long — every upload and three server round trips ran after the flick).
+    /// The card exists only once its details are generated, so nothing else is awaited here.
+    /// Safety kept: the photo stays in 「解析待ち」 (hidden) until the save is done; a failed save removes the
+    /// provisional entry, gives the catch back to the plan, shows the photo in 「解析待ち」 again and says why.
     private func sendCardCatch() async -> Bool {
-        guard vm.picked != nil else { return false }
+        guard vm.picked != nil, vm.step == .card else { return false }
         guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
             vm.showToast(L("カード生成に失敗しました"))
             return false
         }
-        do {
-            let outcome = try await dex.save(draft)
-            plan.recordCatch()
-            vm.releasePending()
-            dex.refreshPending()
-            if router.tour == .peel || router.tour == .detail {
-                router.tourStickerId = outcome.sticker.id
-                router.tour = .added
-            }
-            // The dex page rises over this screen (the photo stays under it), then the camera is put back.
-            CatchLanding.land(stickerId: outcome.sticker.id, router: router, calm: reduceMotion)
-            Task {
-                try? await Task.sleep(for: .milliseconds(700))
-                vm.reset()
-            }
-            return true
-        } catch {
-            let reason = (error as? LocalizedError)?.errorDescription ?? ""
-            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
+        guard let local = dex.addProvisional(draft) else {
+            vm.showToast(L("保存に失敗しました"))
             return false
+        }
+        plan.recordCatch()
+        let pendingId = vm.detachPendingForSave()
+        // Photos uploaded while the card was on screen now belong to this save (`reset` must not delete them).
+        vm.handOffUploads(to: draft)
+        if router.tour == .peel || router.tour == .detail {
+            router.tourStickerId = local.sticker.id
+            router.tour = .added
+        }
+        // The dex page rises over this screen (the photo stays under it), then the camera is put back.
+        CatchLanding.land(stickerId: local.sticker.id, router: router, calm: reduceMotion)
+        // This screen goes away with the tab: the background save holds what it needs itself.
+        let model = vm, store = dex, planStore = plan, nav = router
+        Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            model.reset()
+        }
+        Task {
+            await Self.finishCardCatchSave(draft, provisional: local.sticker.id, ts: local.ts, pendingId: pendingId,
+                                           dex: store, plan: planStore, router: nav)
+        }
+        return true
+    }
+
+    /// The card catch's save, behind the dex. Success: the provisional entry becomes the saved sticker (the
+    /// landing, the tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is
+    /// left behind, the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
+    private static func finishCardCatchSave(_ draft: CatchDraft, provisional: String, ts: Int, pendingId: String?,
+                                            dex: DexStore, plan: PlanStore, router: AppRouter) async {
+        do {
+            let outcome = try await dex.save(draft, ts: ts, replacing: provisional) { saved in
+                if let l = router.landing, l.stickerId == provisional { l.stickerId = saved.id }
+                if router.tourStickerId == provisional { router.tourStickerId = saved.id }
+            }
+            if let pid = pendingId {
+                PendingQueue.shared.remove(id: pid)
+                PendingRetry.shared.forget(pid)
+            }
+            dex.refreshPending()
+            if router.detailAfterSave == provisional {
+                router.detailAfterSave = nil
+                router.openDetail(outcome.sticker, zoom: false)
+            }
+        } catch let error where DexStore.isAccountChanged(error) {
+            // Signed out (or into another account) during the save: the provisional entry and the plan count
+            // were cleared with the old account; the new one is told nothing about it.
+            dex.discardProvisional(provisional)
+            if let pid = pendingId { PendingQueue.shared.setSaving(pid, false) }
+        } catch {
+            dex.discardProvisional(provisional)
+            plan.undoCatch()
+            if router.tourStickerId == provisional { router.tourStickerId = nil }
+            if router.detailAfterSave == provisional { router.detailAfterSave = nil }
+            let reason = (error as? LocalizedError)?.errorDescription ?? ""
+            if let pid = pendingId {
+                PendingQueue.shared.updateReason(id: pid, reason: L("保存に失敗しました"))
+                PendingQueue.shared.setSaving(pid, false)
+            }
+            dex.refreshPending()
+            router.showNotice(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
         }
     }
 
@@ -586,11 +638,14 @@ struct CaptureView: View {
     /// The card must be real before saving (never placeholder level/category): if it is still being
     /// generated we wait for it; if it failed, nothing is saved.
     private func startCatch() {
-        guard reward == nil, vm.picked != nil else { return }
+        guard reward == nil, !saveInFlight, let want = vm.picked else { return }
         Task {
             // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
             await vm.awaitCutout()
-            guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
+            let details = await vm.awaitDetails()
+            // Another word was picked meanwhile: these details (and this tap) belong to the old one.
+            guard vm.picked == want else { return }
+            guard let d = details, let draft = vm.draft(details: d) else {
                 vm.showToast(L("カード生成に失敗しました"))
                 return
             }
@@ -599,7 +654,7 @@ struct CaptureView: View {
     }
 
     private func runCatch(_ draft: CatchDraft) {
-        guard reward == nil else { return }
+        guard reward == nil, !saveInFlight else { return }
         let gate = SaveGate()
         let payload = RewardPayload(
             image: draft.cutout ?? draft.photo,
@@ -613,12 +668,23 @@ struct CaptureView: View {
             gate: gate
         )
         withAnimation(nil) { reward = payload }
+        // The queued photo and the card this save belongs to (the screen may have moved on when it ends).
+        let pendingId = vm.pendingId
+        let want = draft.candidate
+        saveInFlight = true
         Task {
             let result: Result<SaveOutcome, Error>
             do {
                 let outcome = try await dex.save(draft)
                 plan.recordCatch()
-                vm.releasePending()
+                if let pid = pendingId {
+                    if vm.pendingId == pid {
+                        vm.releasePending()
+                    } else {
+                        PendingQueue.shared.remove(id: pid)
+                        PendingRetry.shared.forget(pid)
+                    }
+                }
                 dex.refreshPending()
                 result = .success(outcome)
             } catch {
@@ -627,8 +693,16 @@ struct CaptureView: View {
                 result = .failure(error)
             }
             gate.finish(result)
-            // The overlay gave up waiting (slow save): finish here instead of dropping the result.
-            if reward == nil { settleLateSave(result) }
+            saveInFlight = false
+            // The overlay gave up waiting (slow save): finish here instead of dropping the result — a success
+            // lands only while this very card is still on screen (never resets whatever the camera does now).
+            if reward == nil {
+                if case .failure = result {
+                    settleLateSave(result)
+                } else if vm.picked == want, vm.step == .card {
+                    settleLateSave(result)
+                }
+            }
         }
     }
 
@@ -638,6 +712,11 @@ struct CaptureView: View {
         switch result {
         case .success(let outcome):
             router.landingStickerId = outcome.sticker.id
+            // Same as `finishReward`: before `vm.reset()`, or the tour's capture-step onChange sends it back to 「撮る」.
+            if router.tour == .peel || router.tour == .detail {
+                router.tourStickerId = outcome.sticker.id
+                router.tour = .added
+            }
             vm.reset()
             withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
         case .failure(let error):

@@ -150,6 +150,36 @@ extension CutoutService {
         return hit == 0 ? nil : hit
     }
 
+    /// Every instance label within ~8% of `point` (0–1, top-left origin), nearest first, with its squared
+    /// distance in mask pixels (0 = the point lies on it). Card catch hands each object its own instance from
+    /// this list (`CatchObject.assignInstances`), so two objects never share one cut-out and box.
+    nonisolated static func rankedInstances(in mask: CVPixelBuffer, to point: CGPoint) -> [CatchObject.InstanceHit] {
+        CVPixelBufferLockBaseAddress(mask, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
+        let w = CVPixelBufferGetWidth(mask)
+        let h = CVPixelBufferGetHeight(mask)
+        guard w > 0, h > 0, let base = CVPixelBufferGetBaseAddress(mask) else { return [] }
+        let row = CVPixelBufferGetBytesPerRow(mask)
+        let x = min(w - 1, max(0, Int(point.x * CGFloat(w))))
+        let y = min(h - 1, max(0, Int(point.y * CGFloat(h))))
+        func label(_ px: Int, _ py: Int) -> Int { Int(base.advanced(by: py * row + px).load(as: UInt8.self)) }
+        var best: [Int: Int] = [:]
+        let under = label(x, y)
+        if under != 0 { best[under] = 0 }
+        let reach = max(4, Int(Double(max(w, h)) * 0.08))
+        let step = max(1, reach / 16)
+        for py in stride(from: max(0, y - reach), through: min(h - 1, y + reach), by: step) {
+            for px in stride(from: max(0, x - reach), through: min(w - 1, x + reach), by: step) {
+                let l = label(px, py)
+                guard l != 0 else { continue }
+                let d = (px - x) * (px - x) + (py - y) * (py - y)
+                if d < best[l, default: Int.max] { best[l] = d }
+            }
+        }
+        return best.map { CatchObject.InstanceHit(label: $0.key, distance: $0.value) }
+            .sorted { $0.distance != $1.distance ? $0.distance < $1.distance : $0.label < $1.label }
+    }
+
     /// Card catch: ONE foreground-instance request per photo, reused for every object in it.
     /// Nil when Vision finds no subject (or on the Simulator, where the model does not run).
     nonisolated static func instanceMasks(from source: UIImage) async -> InstanceMasks? {
@@ -185,10 +215,10 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
         self.handler = handler
     }
 
-    func instance(near point: CGPoint) -> Int? {
-        guard let hit = CutoutService.nearestInstance(in: observation.instanceMask, to: point),
-              observation.allInstances.contains(hit) else { return nil }
-        return hit
+    /// The foreground instances near `point`, nearest first (see `CutoutService.rankedInstances`).
+    func instances(near point: CGPoint) -> [CatchObject.InstanceHit] {
+        let all = observation.allInstances
+        return CutoutService.rankedInstances(in: observation.instanceMask, to: point).filter { all.contains($0.label) }
     }
 
     /// Heavy (renders a full-size mask): call off the main thread.

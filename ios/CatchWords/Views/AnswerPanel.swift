@@ -5,6 +5,8 @@ import SwiftUI
 struct AnswerPanel: View {
     let sticker: Sticker
     let correct: Bool
+    /// False during the tour's practice quiz (no word page opens there).
+    var showsDex: Bool = true
     let onDex: () -> Void
     let onNext: () -> Void
 
@@ -51,16 +53,18 @@ struct AnswerPanel: View {
                 explain
 
                 HStack(spacing: 10) {
-                    Button(action: onDex) {
-                        Label(L("図鑑で見る"), systemImage: "book")
-                            .scaledFont(size: 16, weight: .semibold)
-                            .foregroundStyle(Theme.foreground)
-                            .labelStyle(TintedIconLabel())
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    if showsDex {
+                        Button(action: onDex) {
+                            Label(L("図鑑で見る"), systemImage: "book")
+                                .scaledFont(size: 16, weight: .semibold)
+                                .foregroundStyle(Theme.foreground)
+                                .labelStyle(TintedIconLabel())
+                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .background(Theme.card, in: .rect(cornerRadius: 16, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                        }
+                        .buttonStyle(PressableStyle(scale: 0.98))
                     }
-                    .buttonStyle(PressableStyle(scale: 0.98))
                     Button(action: onNext) {
                         Text(L("次へ"))
                             .scaledFont(size: 16, weight: .semibold)

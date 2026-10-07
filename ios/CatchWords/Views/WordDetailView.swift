@@ -604,6 +604,8 @@ struct WordDetailView: View {
             ForgettingCurveSheet(sticker: current, store: curveStore, onReviewNow: {
                 showCurve = false
                 dismiss()
+                // Not due yet, it still comes up next (ReviewView brings it forward).
+                router.reviewNow = current.id
                 router.tab = .review
             })
             .presentationDetents([.large])
@@ -901,6 +903,8 @@ struct WordDetailView: View {
     /// Web AutoFillSections: visible sections that are still empty are written by the server in
     /// parallel (free, `only_if_empty`), then revealed together — never one by one popping in.
     private func autoFill() async {
+        // A run cancelled midway (another word / language) returns without clearing: no skeletons left behind.
+        filling = []
         // First this reader's own explanation (written in their display language); while it is being
         // written, the empty sections show as filling instead of another language's notes.
         let target = word?.language ?? NativeAPI.targetLanguage

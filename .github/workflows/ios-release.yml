@@ -18,6 +18,9 @@
 # 自動署名のアーカイブは一度「開発用」で署名し、送る時に配布用で署名し直す。開発用の
 # プロファイルを作るため、Apple Developer に端末が1台以上登録されている必要がある
 # （無いと「Your team has no devices」で止まる。手順書の「端末を1台登録する」）。
+# その開発用の証明書は実行ごとに 1 枚増えるので、scripts/asc_dev_certs.py で前の実行の残りと
+# この実行で増えた分を消す（API キーで作られたものだけ）。API キーの役割は Admin にすること
+# （Admin でないと証明書を消せず、配布用の証明書も毎回増えることがある）。
 name: iOS release（App Store Connect へ送る）
 
 on:
@@ -27,6 +30,11 @@ on:
         description: "ビルド番号の下駄（Rork で送ったビルドより大きくするため）。通常はそのまま"
         required: false
         default: "1000"
+      revoke_old_dev_certs:
+        description: "開発用証明書を、人が Mac で作ったものも含めてすべて消してから始める（通常は不要。自動の後片付けでも「証明書の上限」で止まった時だけ選ぶ。配布用には触らない）"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ios-release
@@ -73,6 +81,22 @@ jobs:
       - name: Xcode の版を表示
         run: xcodebuild -version
 
+      # 自動署名は毎回まっさらな Mac で「開発用」証明書を 1 枚作る。数えておき、最後に消す
+      # （消さないと Apple の上限に達してアーカイブが止まる）。
+      - name: 開発用証明書を数え、前の実行の残りを消す
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          REVOKE_OLD: ${{ inputs.revoke_old_dev_certs }}
+        run: |
+          export ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          if [ "$REVOKE_OLD" = "true" ]; then
+            python3 scripts/asc_dev_certs.py delete-all
+          else
+            python3 scripts/asc_dev_certs.py delete-ci
+          fi
+          python3 scripts/asc_dev_certs.py snapshot "$RUNNER_TEMP/dev-certs-before.txt"
+
       - name: アーカイブ（App Store 用に組み立てて署名する）
         working-directory: ios
         env:
@@ -114,13 +138,17 @@ jobs:
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" || true
           fi
-          if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log"; then
+          if grep -qiE "app groups|application-groups|com.nori.catchwords.widgets" "$RUNNER_TEMP/archive.log" && grep -q "error:" "$RUNNER_TEMP/archive.log" \
+            && ! grep -q "maximum number of certificates" "$RUNNER_TEMP/archive.log"; then
             echo "::warning::ウィジェット（com.nori.catchwords.widgets）か App Group（group.com.nori.catchwords）の署名で止まった可能性があります。Apple Developer → Identifiers で App Group を作り、2 つの App ID で App Groups を有効にしてから、もう一度実行してください"
           fi
           if [ ! -d "$RUNNER_TEMP/CatchWords.xcarchive" ]; then
             # 失敗の行そのものを注釈に出す（Actions の画面の一覧と API の両方から読めるように）。
             grep -E "error:|Provisioning|provisioning|entitlement|agreement|Agreement" "$RUNNER_TEMP/archive.log" | sort -u | head -8 \
               | while IFS= read -r line; do echo "::error title=archive.log::${line:0:900}"; done
+            if grep -q "maximum number of certificates" "$RUNNER_TEMP/archive.log"; then
+              echo "::error::Apple の「開発用」証明書が上限です（前の実行の残りを消しても足りませんでした）。Run workflow の画面で「開発用証明書を…すべて消してから始める」にチェックを入れて、もう一度実行してください"
+            fi
             echo "::error::アーカイブに失敗しました（archive.log を見てください）"
             exit 1
           fi
@@ -190,6 +218,15 @@ jobs:
           rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
           grep -qiE "No errors uploading|UPLOAD SUCCEEDED" "$RUNNER_TEMP/upload.log" || { echo "::error::App Store Connect への送信に失敗しました（upload.log を見てください）"; exit 1; }
           echo "::notice::App Store Connect に送りました。処理が終わると TestFlight に表示されます（10〜30 分）。"
+
+      - name: この実行で増えた開発用証明書を消す
+        if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          [ -f "$RUNNER_TEMP/AuthKey.p8" ] || exit 0
+          ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" python3 scripts/asc_dev_certs.py delete-new "$RUNNER_TEMP/dev-certs-before.txt"
 
       - name: API キーを消す
         if: always()

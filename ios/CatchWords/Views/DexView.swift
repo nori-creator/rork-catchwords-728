@@ -407,7 +407,18 @@ struct DexView: View {
             .scrollIndicators(.hidden)
             .refreshable { await dex.load() }
             .onAppear { takeLanding(proxy) }
-            .onChange(of: router.landing?.stickerId) { _, _ in takeLanding(proxy) }
+            .onChange(of: router.landing?.stickerId) { old, new in
+                // The landing's provisional entry was saved and got its real id: the hold and the lit slot
+                // follow it (the slot is redrawn at the same place, its fill animation keeps its start time).
+                if let old, let new, old != new {
+                    if galleryHold?.stickerId == old { galleryHold = DexBook.Hold(stickerId: new) }
+                    if var f = focus, f.id == old {
+                        f.id = new
+                        focus = f
+                    }
+                }
+                takeLanding(proxy)
+            }
             .onChange(of: router.landingStickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landing?.fillStart) { _, start in
                 // pon! — addEntry + renderDex: the gallery is redrawn at once (the word joins the caught group by

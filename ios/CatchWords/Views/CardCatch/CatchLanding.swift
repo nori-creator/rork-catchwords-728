@@ -18,7 +18,9 @@ struct CatchStar: Equatable {
 final class CatchLandingController {
     enum Phase { case opening, flying, landed }
 
-    let stickerId: String
+    /// The landing word. A card catch lands at once on a provisional entry; when its background save
+    /// finishes this becomes the saved sticker's id (DexView moves its hold and focus along).
+    var stickerId: String
     let star: CatchStar
     let motion: CCMotion
     /// The screen's size, for the prototype's fallback target when the slot is not on screen.

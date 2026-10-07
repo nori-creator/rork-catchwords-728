@@ -107,7 +107,8 @@ struct DiaryComposer: View {
             if !diary.journalLoaded { await diary.loadJournal() }
             if isToday { await diary.loadScaffold() }
         }
-        .onChange(of: text) { _, v in diary.keepDraft(v, for: day) }
+        // The saved text itself is no draft (opening a saved entry must not look "not saved").
+        .onChange(of: text) { _, v in diary.keepDraft(v == diary.text(for: day) ? "" : v, for: day) }
         .aiConsentSheet(isPresented: $askAIConsent) {
             if isToday { Task { await diary.loadScaffold() } }
         }

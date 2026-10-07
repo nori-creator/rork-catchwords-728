@@ -55,12 +55,15 @@ final class ProfileStore {
 
     func load() async {
         guard let uid = client.userId else { isLoaded = true; return }
-        defer { isLoaded = true }
         let full = "display_name,avatar_url,native_language,ui_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
         var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
-        if data == nil {
+        if data == nil, !Task.isCancelled, client.userId == uid {
             data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
         }
+        // Signed out (or into another account), or cancelled, while reading: this answer is not for the
+        // account on screen now — touch nothing (isLoaded / loadFailed included); its own load fills them.
+        guard !Task.isCancelled, client.userId == uid else { return }
+        defer { isLoaded = true }
         guard let data, let row = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first else {
             loadFailed = true
             return

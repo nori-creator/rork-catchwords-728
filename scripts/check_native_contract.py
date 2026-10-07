@@ -33,11 +33,11 @@ REPO = "nori-creator/Lovable-catch-words-app"
 # Remove an entry as soon as the patch is on the web's main (the check then warns, and checks the
 # function fully: the allowance only ever covers a function missing from NATIVE_FNS).
 PENDING_WEB_DEPLOY = {
-    # AI consent record (App Store 5.1.2(i) / APPI art. 28). Web patch: docs/web-changes/
-    # (docs/web-changes/series/0003-*.patch, spec docs/ios-spec/23-ai-consent.md; NATIVE_FNS entries
-    # recordAiConsent / getAiConsent). iOS: Services/AIConsent.swift (failures ignored, retried next launch).
-    "recordAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
-    "getAiConsent": "docs/web-changes/ 0003 (AI consent, docs/ios-spec/23-ai-consent.md)",
+    # recordAiConsent / getAiConsent (AI consent, docs/web-changes/ 0003) are on the web now.
+    # Add an entry here as "name": "where the web patch is" when iOS calls a function ahead of its deploy.
+    # Sign in with Apple revocation on account deletion (audit R7-03). AuthStore ignores every failure.
+    "storeAppleAuthCode": "web branch ccr-89cbeb71-xcif1z (src/lib/apple-token.functions.ts, "
+                          "migration 20261005120000_apple_tokens_client_id)",
 }
 
 

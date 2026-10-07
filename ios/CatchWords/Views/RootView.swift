@@ -76,6 +76,11 @@ struct RootView: View {
                         PendingRetry.shared.start()
                         await plan.bootstrap()
                         await ReminderService.loadFromAccount()
+                        // A setting taken from the account (web / another device) may be on while this iPhone
+                        // was never asked: ask now (the system sheet only appears while undecided).
+                        if (UserDefaults.standard.string(forKey: ReminderService.modeKey) ?? "off") != "off" {
+                            _ = await ReminderService.requestPermission()
+                        }
                         await ReminderService.refresh(due: dex.upcomingDueTimes)
                         // Place reminders are this account's (cleared on sign-out): set them again from its
                         // own catches when the setting is on.
@@ -123,7 +128,13 @@ struct RootView: View {
             // Scheduled reminders were written in the old language: write them again (N1). Not after a
             // sign-out (the language goes back to the iPhone's): that account's reminders were just cleared.
             guard auth.phase == .signedIn else { return }
-            Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
+            Task {
+                await ReminderService.refresh(due: dex.upcomingDueTimes)
+                // Place reminders carry their text too (only from a loaded dex: an empty one would clear them).
+                if UserDefaults.standard.bool(forKey: ReminderService.placeKey), dex.hasLoaded {
+                    await ReminderService.applyPlaces(enabled: true, stickers: dex.stickers)
+                }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             // おまかせ reminders follow yesterday's first open and the cards coming due.
