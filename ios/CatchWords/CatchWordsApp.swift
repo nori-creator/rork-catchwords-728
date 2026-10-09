@@ -6,7 +6,6 @@ struct CatchWordsApp: App {
     @State private var dex = DexStore()
     @State private var plan = PlanStore()
     @State private var profile = ProfileStore()
-    @State private var diary = DiaryStore()
     @AppStorage("theme.pref") private var themePref: String = "light"
 
     /// ライト / ダーク / システム (web settings theme).
@@ -46,7 +45,6 @@ struct CatchWordsApp: App {
                 UIPreviewRoot(name: p.scene)
                     .environment(\.locale, L10n.locale)
                     .environment(dex)
-                    .environment(diary)
                     .environment(auth)
                     .environment(plan)
                     .environment(profile)
@@ -69,7 +67,6 @@ struct CatchWordsApp: App {
                 .environment(dex)
                 .environment(plan)
                 .environment(profile)
-                .environment(diary)
                 .statusBarRoot()  // status-bar text colour per screen (inside the theme's colour scheme)
                 .preferredColorScheme(scheme)
                 .tint(Theme.primary)

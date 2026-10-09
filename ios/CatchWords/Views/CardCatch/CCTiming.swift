@@ -1,7 +1,7 @@
 import SwiftUI
 import QuartzCore
 
-// Timing for the card-catch flow, written to behave like the prototype's Web Animations / CSS
+// Timing for the catch's prototype animations (the dex landing, the dex gallery, the shutter flash), written to behave like the prototype's Web Animations / CSS
 // (docs/prototype/cardcatch-src.html): an `easing` given to `el.animate()` applies to the WHOLE
 // iteration (keyframes are linear in between, and an overshooting curve extrapolates past the last
 // keyframe), CSS @keyframes apply their timing function per segment, CSS transitions start from the
@@ -104,36 +104,6 @@ nonisolated struct CCAnim: Sendable {
     }
 }
 
-/// A CSS `transition` on one number: a new target starts from wherever the value is now.
-nonisolated struct CCTransition: Sendable {
-    var from: Double
-    var to: Double
-    var start: Double = 0
-    var duration: Double = 0.000_001
-    var easing: CCBezier = .ease
-
-    init(_ value: Double) {
-        from = value
-        to = value
-    }
-
-    func value(_ now: Double) -> Double {
-        let t = (now - start) / duration
-        if t >= 1 { return to }
-        if t <= 0 { return from }
-        return from + (to - from) * easing(t)
-    }
-
-    mutating func set(_ target: Double, duration: Double, easing: CCBezier = .ease, now: Double = CCClock.now) {
-        guard target != to else { return }
-        from = value(now)
-        to = target
-        start = now
-        self.duration = max(duration, 0.000_001)
-        self.easing = easing
-    }
-}
-
 /// The prototype's `CALM()` / `D(ms)` / `sleep(ms)` / `.calm` rules, from Reduce Motion.
 nonisolated struct CCMotion: Sendable {
     var calm: Bool
@@ -141,76 +111,21 @@ nonisolated struct CCMotion: Sendable {
     func d(_ ms: Double) -> Double { calm ? 0.001 : ms / 1000 }
     /// `sleep(ms)` in seconds: at most 60 ms when calm.
     func sleep(_ ms: Double) -> Double { (calm ? min(ms, 60) : ms) / 1000 }
-    /// `.calm *{transition-duration:.001s}`.
-    func transition(_ ms: Double) -> Double { calm ? 0.000_001 : ms / 1000 }
 }
 
-/// The 390×844 pt prototype screen mapped onto the real screen: one uniform scale `k`, centred.
-nonisolated struct CCSpace: Sendable, Equatable {
+/// The 390×844 pt prototype screen (the design space of `CCPickLayout.Area.design`).
+nonisolated enum CCSpace {
     static let w: CGFloat = 390
     static let h: CGFloat = 844
-    var size: CGSize
-
-    var k: CGFloat { max(0.0001, min(size.width / Self.w, size.height / Self.h)) }
-    var origin: CGPoint { CGPoint(x: (size.width - Self.w * k) / 2, y: (size.height - Self.h * k) / 2) }
-
-    func toDesign(_ r: CGRect) -> CGRect {
-        CGRect(x: (r.minX - origin.x) / k, y: (r.minY - origin.y) / k, width: r.width / k, height: r.height / k)
-    }
-    func toReal(_ p: CGPoint) -> CGPoint { CGPoint(x: origin.x + p.x * k, y: origin.y + p.y * k) }
-}
-
-extension View {
-    /// Lays `content` out on the 390×844 prototype screen and scales it onto the real one.
-    func ccDesignLayer(_ space: CCSpace) -> some View {
-        frame(width: CCSpace.w, height: CCSpace.h, alignment: .topLeading)
-            .scaleEffect(space.k, anchor: .center)
-            .frame(width: space.size.width, height: space.size.height)
-    }
-
-    /// `position:absolute; left; top; width; height` in the design space.
-    func ccPlace(_ r: CGRect) -> some View {
-        frame(width: max(0, r.width), height: max(0, r.height)).position(x: r.midX, y: r.midY)
-    }
 }
 
 // MARK: - Colour helpers
 
 extension Color {
-    /// CSS `hsla()`.
-    static func hsla(_ h: Double, _ s: Double, _ l: Double, _ a: Double) -> Color {
-        // CSS Color 4: f(n) = l − s·min(l, 1−l)·max(−1, min(k−3, 9−k, 1)), k = (n + h/30) mod 12
-        let hd = (h.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
-        func ch(_ n: Double) -> Double {
-            let k = (n + hd / 30).truncatingRemainder(dividingBy: 12)
-            return l - s * min(l, 1 - l) * max(-1, min(k - 3, 9 - k, 1))
-        }
-        return Color(.sRGB, red: ch(0), green: ch(8), blue: ch(4), opacity: a)
-    }
-
     /// `rgba(r,g,b,a)` with 0–255 channels.
     static func rgba(_ r: Double, _ g: Double, _ b: Double, _ a: Double) -> Color {
         Color(.sRGB, red: r / 255, green: g / 255, blue: b / 255, opacity: a)
     }
-}
-
-/// `color-mix(in srgb, <hex> p%, #000)`.
-func ccMixBlack(_ hex: UInt32, _ p: Double) -> Color {
-    let r = Double((hex >> 16) & 0xFF) / 255, g = Double((hex >> 8) & 0xFF) / 255, b = Double(hex & 0xFF) / 255
-    return Color(.sRGB, red: r * p, green: g * p, blue: b * p, opacity: 1)
-}
-
-/// A CSS `linear-gradient(<angle>deg, …)` laid on a box of `size` (the gradient line's length follows
-/// the CSS rule |w·sinθ| + |h·cosθ|, so the angle stays right on non-square boxes).
-func ccLinear(_ angle: Double, _ stops: [Gradient.Stop], size: CGSize) -> LinearGradient {
-    let th = angle * .pi / 180
-    let dx = sin(th), dy = -cos(th)
-    let w = max(Double(size.width), 0.0001), h = max(Double(size.height), 0.0001)
-    let len = abs(w * dx) + abs(h * dy)
-    let cx = w / 2, cy = h / 2
-    let sx = cx - dx * len / 2, sy = cy - dy * len / 2
-    let ex = cx + dx * len / 2, ey = cy + dy * len / 2
-    return LinearGradient(stops: stops, startPoint: UnitPoint(x: sx / w, y: sy / h), endPoint: UnitPoint(x: ex / w, y: ey / h))
 }
 
 /// A CSS `radial-gradient(circle at x% y%, …)` (size farthest-corner) on a box of `size`.
@@ -333,35 +248,6 @@ struct CCSVGPath: Shape {
 
 /// The prototype's icons (paths copied from cardcatch-src.html).
 nonisolated enum CCIcons {
-    /// `.spark` (pill): two sparkles, filled.
-    static let sparkle = ["M12 2l1.8 5.6L19.5 9l-5.7 1.6L12 16l-1.8-5.4L4.5 9l5.7-1.4z", "M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"]
     /// `STAR`: the four-point star of `.starlight`.
     static let star = "M12 0C12.6 7.2 16.8 11.4 24 12 16.8 12.6 12.6 16.8 12 24 11.4 16.8 7.2 12.6 0 12 7.2 11.4 11.4 7.2 12 0z"
-    /// Speaker body (filled) and its waves (stroked, width 2, round caps).
-    static let speakerBody = "M4 9h4l5-4v14l-5-4H4z"
-    static let speakerWave1 = "M16 8a5 5 0 0 1 0 8"
-    static let speakerWave2 = "M18.5 5.5a8.5 8.5 0 0 1 0 13"
-    /// `.gobtn` arrow (stroked 2.4, round).
-    static let arrowUp = "M12 19V5M5 12l7-7 7 7"
-    /// `.xbtn` cross (stroked 2.4, round).
-    static let cross = "M6 6l12 12M18 6L6 18"
-}
-
-/// The prototype's speaker icon: filled body + stroked waves (`waves` 1 for `.sayb`, 2 for `.wrow .sp`).
-struct CCSpeakerIcon: View {
-    var waves: Int = 2
-    var color: Color
-
-    var body: some View {
-        GeometryReader { g in
-            let s = min(g.size.width, g.size.height) / 24
-            ZStack {
-                CCSVGPath(d: CCIcons.speakerBody).fill(color)
-                CCSVGPath(d: CCIcons.speakerWave1).stroke(color, style: StrokeStyle(lineWidth: 2 * s, lineCap: .round))
-                if waves > 1 {
-                    CCSVGPath(d: CCIcons.speakerWave2).stroke(color, style: StrokeStyle(lineWidth: 2 * s, lineCap: .round))
-                }
-            }
-        }
-    }
 }

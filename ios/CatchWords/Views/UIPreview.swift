@@ -71,23 +71,18 @@ struct UIPreviewRoot: View {
     var body: some View {
         Group {
             switch name {
-            case "cutout": CutoutPreview()
+            case "cutout": CelebrationPreview(withCutout: false)
             case "picker": PickerPreview()
             case "japicker": PickerPreview(learning: "ja")
             case "enpicker": PickerPreview(learning: "en")
             case "tabbar": TabBarPreview()
-            case "reward": RewardPreview()
+            case "reward": CelebrationPreview()
             case "analyzing":
-                AnalyzingView(photo: PreviewFixtures.photo,
-                              previewTargets: [CGRect(x: 0.27, y: 0.27, width: 0.46, height: 0.45),
-                                               CGRect(x: 0.45, y: 0.27, width: 0.16, height: 0.12)]) {}
+                AnalyzingView(photo: PreviewFixtures.photo) {}
                     .uiReady("preview")
             case "hero": HeroPickerPreview()
-            case "journal": JournalPreview()
             case "memorial": MemorialPreview()
-            case "book": BookPreview()
             case "carousel": CarouselPreview()
-            case "bookturn": BookPreview(frozenTurn: 0.38)
             case "detail": DetailPreview()
             case "webimg": WebImagesPreview()
             case "chunks": ChunkWheelPreview()
@@ -156,8 +151,6 @@ enum PreviewFixtures {
         c.fillEllipse(in: CGRect(x: 420, y: 250, width: 110, height: 70))
     }
 
-    static let lift = CutoutService.Lift(cropped: subjectCropped, full: subject, photo: photo)
-
     /// The subject cropped to its bounds, like the saved sticker.
     static let subjectCropped: UIImage = {
         // cgImage is in pixels (the renderer draws at screen scale), so scale the point rect.
@@ -168,36 +161,8 @@ enum PreviewFixtures {
     }()
 }
 
-/// The cut-out animation, replayed every 3 seconds.
-private struct CutoutPreview: View {
-    @State private var round = 0
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("切り抜きアニメーション").scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
-            ZStack {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(LinearGradient(colors: [.white, Theme.secondary], startPoint: .top, endPoint: .bottom))
-                CutoutRevealView(lift: PreviewFixtures.lift) {}
-                    .padding(8)
-                    .id(round)
-            }
-            .aspectRatio(1, contentMode: .fit)
-            .padding(.horizontal, 16)
-            Spacer()
-        }
-        .padding(.top, 60)
-        .background(AppBackground())
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
-                round += 1
-            }
-        }
-    }
-}
-
-/// The candidate picker with made-up suggestions (two objects; the first has other names).
+/// The words on the photo with made-up suggestions (two objects; the first has other names): the mango's
+/// names sit on the mango, the plate's below it.
 private struct PickerPreview: View {
     var learning: String = "zh-TW"
     @State private var vm = CaptureViewModel()
@@ -231,34 +196,39 @@ private struct PickerPreview: View {
                 vm.photo = PreviewFixtures.photo
                 vm.candidates = rows.map { r in
                     Candidate(kind: "object", headword: r.0, zhuyin: r.1, pinyin: "", meaningJa: r.2[i], pos: NativeAPI.defaultPos,
-                              point: [500, 500], confidence: 0.9, alternatives: [], distinction: r.3[i], register: r.4, group: r.5)
+                              point: r.5 == 0 ? [500, 500] : [500, 820], confidence: 0.9, alternatives: [],
+                              distinction: r.3[i], register: r.4, group: r.5)
                 }
                 vm.step = .select
             }
     }
 }
 
-/// The full catch celebration with the cut-out sticker, replayed every 7 seconds.
-/// The save never "finishes" here, so the 1 s hold shows its breathing state.
-private struct RewardPreview: View {
+/// The celebration after a word is tapped: the cut-out sticker on the blurred photo (or, without a cut-out,
+/// the photo as a white-edged card), the word and 「図鑑に追加」. Replayed every 7 seconds.
+private struct CelebrationPreview: View {
+    var withCutout: Bool = true
+    @State private var vm = CaptureViewModel()
     @State private var round = 0
 
     var body: some View {
-        ZStack {
-            AppBackground()
-            RewardOverlay(payload: RewardPayload(
-                image: PreviewFixtures.subjectCropped, isCutout: true, headword: "芒果",
-                reading: "ㄇㄤˊ ㄍㄨㄛˇ", pinyin: "mángguǒ", meaning: "マンゴー", rarity: 0, gate: SaveGate()
-            )) {}
+        CatchCelebrationView(vm: vm, onAdd: { false })
             .id(round)
-        }
-        .ignoresSafeArea()
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(7))
-                round += 1
+            .onAppear {
+                NativeAPI.targetLanguage = "zh-TW"
+                vm.photo = PreviewFixtures.photo
+                vm.cutout = withCutout ? PreviewFixtures.subjectCropped : nil
+                vm.picked = Candidate(kind: "object", headword: "芒果", zhuyin: "ㄇㄤˊ ㄍㄨㄛˇ", pinyin: "mángguǒ",
+                                      meaningJa: L10n.lang == "en" ? "mango" : L10n.lang == "zh-TW" ? "芒果" : "マンゴー",
+                                      pos: NativeAPI.defaultPos, point: [500, 500], confidence: 0.9, alternatives: [])
+                vm.step = .celebrate
             }
-        }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(7))
+                    round += 1
+                }
+            }
     }
 }
 
@@ -302,29 +272,6 @@ private struct HeroPickerPreview: View {
     var body: some View {
         HeroPhotoPickerSheet(sticker: Self.sticker) { _ in }
             .padding(.top, 60)
-    }
-}
-/// The diary's AI correction result (corrected text, pattern notes, native phrases).
-private struct JournalPreview: View {
-    private static let entry: JournalEntry = {
-        let json = #"""
-        {"id":"j","entry_date":"2026-09-30","body_zh":null,"body_ja":null,
-         "user_draft":"今天我去咖啡店，我喝咖啡很好喝。",
-         "correction":"今天我去了咖啡店，喝的咖啡很好喝。",
-         "feedback_ja":"・「去了」で、もう行ったことを表します。\n・「我喝咖啡很好喝」は主語が2つに見えるので「喝的咖啡很好喝」にまとめます。",
-         "native_phrases":[{"zh":"這杯咖啡超好喝的！","ja":"このコーヒー、めっちゃおいしい！","note":"友だちに感動を伝えるとき"},
-                           {"zh":"我今天去咖啡廳坐了一下","ja":"今日はカフェでちょっと過ごした","note":"「坐一下」はくつろぐニュアンス"}]}
-        """#
-        return try! JSONDecoder().decode(JournalEntry.self, from: Data(json.utf8))
-    }()
-
-    var body: some View {
-        ScrollView {
-            CorrectionBlock(entry: Self.entry, highlight: true)
-                .padding(16)
-                .padding(.top, 50)
-        }
-        .background(Theme.background)
     }
 }
 /// The milestone celebration (day count, confetti, photos fanning out).
@@ -377,49 +324,6 @@ private struct CarouselPreview: View {
     }
 }
 
-/// The month book: slides to the diary page, then turns the page to the next day (autoplay).
-private struct BookPreview: View {
-    var frozenTurn: CGFloat? = nil
-    private static let days: [BookDay] = {
-        let cal = Calendar.current
-        let words = [("芒果", "マンゴー"), ("盤子", "お皿"), ("咖啡", "コーヒー"), ("雨傘", "傘"), ("花", "花")]
-        var out: [BookDay] = []
-        for d in 0..<3 {
-            let day = cal.date(byAdding: .day, value: d - 2, to: cal.startOfDay(for: Date()))!
-            var items: [Sticker] = []
-            for j in 0..<(d == 1 ? 1 : 2) {
-                let i = (d * 2 + j) % words.count
-                let json = #"{"id":"bw\#(i)","headword":"\#(words[i].0)","meaning_ja":"\#(words[i].1)"}"#
-                guard let word = try? JSONDecoder().decode(Word.self, from: Data(json.utf8)) else { continue }
-                let path = "preview/book-\(d)-\(j).jpg"
-                let img = UIGraphicsImageRenderer(size: CGSize(width: 600, height: j == 0 ? 760 : 520)).image { ctx in
-                    let hue = CGFloat(i) / 5
-                    UIColor(hue: hue, saturation: 0.4, brightness: 0.93, alpha: 1).setFill()
-                    ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 760))
-                    UIColor(hue: hue, saturation: 0.7, brightness: 0.72, alpha: 1).setFill()
-                    ctx.cgContext.fillEllipse(in: CGRect(x: 150, y: 140, width: 300, height: 260))
-                }
-                ImageCache.shared.set(img, for: path)
-                items.append(Sticker(id: "b\(d)\(j)", wordId: "w", objectImageUrl: path, cutoutImageUrl: nil, selfieImageUrl: nil,
-                                     caption: j == 0 && d == 0 ? "駅前のカフェで" : nil, locationName: nil,
-                                     takenAt: day.addingTimeInterval(Double(9 + j) * 3600), captureType: "photo", word: word))
-            }
-            out.append(BookDay(day: day, items: items))
-        }
-        return out
-    }()
-
-    var body: some View {
-        VStack {
-            MonthBookView(days: Self.days, startAtEnd: false, onOpen: { _ in }, onWrite: { _ in },
-                          autoplay: frozenTurn == nil, frozenTurn: frozenTurn)
-                .frame(height: 600)
-                .padding(.horizontal, 12)
-        }
-        .frame(maxHeight: .infinity)
-        .background(HomeBackground().ignoresSafeArea())
-    }
-}
 /// The word page's chunk / measure-word / related-word cards (web WordCard look), scrolled to the chunks.
 private struct DetailPreview: View {
     /// The same word as each display language's reader would get it (notes written in their language).
@@ -723,7 +627,7 @@ private struct DonePreview: View {
     }
 }
 
-/// Home (album and bookshelf) as a guest sees it: the empty album, read once so the skeleton ends.
+/// Home (the album) as a guest sees it: the empty album, read once so the skeleton ends.
 private struct HomePreview: View {
     @Environment(DexStore.self) private var dex
 

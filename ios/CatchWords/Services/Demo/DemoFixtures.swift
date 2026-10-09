@@ -12,8 +12,8 @@ import Foundation
 ///   language, explain { <reader>: { meaning, example_translation, extras } }
 ///   (index 0-5 are seeded with photos, 6 without a photo, 7-8 are new words offered by the AI functions)
 /// - variants: other names of a word (CandidatePickerView "other ways to say it")
-/// - distinctions, journal, prompts, patterns, synth (templates for unknown headwords),
-///   places (lat / lng / name per reader), common (caption, generic feedback, display name)
+/// - distinctions, synth (templates for unknown headwords),
+///   places (lat / lng / name per reader), common (caption, display name)
 nonisolated enum DemoFixtures {
     /// The parsed pack for a learning language ("zh-TW", "en", "ja"); empty when it cannot be read.
     static func pack(for language: String) -> [String: Any] {
@@ -1748,76 +1748,6 @@ nonisolated enum DemoFixtures {
        "en": "the everyday word"
       }
      },
-     "journal": {
-      "draft": "今天我去夜市和吃了芒果冰，很好吃。",
-      "correction": "今天我去夜市吃了芒果冰，很好吃。",
-      "body": {
-       "ja": "今日は夜市に行ってマンゴーかき氷を食べた。とてもおいしかった。",
-       "en": "Today I went to the night market and had mango shaved ice. It was delicious."
-      },
-      "feedback": {
-       "ja": "「和」は名詞どうしをつなぐ言葉で、動作をつなぐときには使いません。「去夜市吃了芒果冰」のように動詞を続けて書けます。",
-       "en": "“和” joins nouns, not actions. Just put the verbs one after another: “去夜市吃了芒果冰”."
-      },
-      "phrases": [
-       {
-        "zh": "這碗芒果冰超好吃的！",
-        "ja": {
-         "ja": "このマンゴーかき氷、めっちゃおいしい！",
-         "en": "This mango shaved ice is so good!"
-        },
-        "note": {
-         "ja": "感動を伝えるくだけた言い方",
-         "en": "a casual way to share excitement"
-        }
-       },
-       {
-        "zh": "我們去夜市逛逛吧。",
-        "ja": {
-         "ja": "夜市をぶらぶらしに行こう。",
-         "en": "Let's go and wander around the night market."
-        },
-        "note": {
-         "ja": "「逛逛」は目的を決めずにぶらぶら歩くこと",
-         "en": "“逛逛” means strolling around with no fixed plan"
-        }
-       }
-      ]
-     },
-     "prompts": [
-      {
-       "zh": "你今天在哪裡看到芒果？",
-       "ja": {
-        "ja": "今日どこでマンゴーを見かけましたか？",
-        "en": "Where did you see a mango today?"
-       },
-       "word": "mango"
-      },
-      {
-       "zh": "你喜歡喝珍珠奶茶嗎？為什麼？",
-       "ja": {
-        "ja": "タピオカミルクティーは好きですか？なぜですか？",
-        "en": "Do you like bubble tea? Why?"
-       },
-       "word": "bubbletea"
-      }
-     ],
-     "patterns": [
-      {
-       "zh": "我今天在＿＿看到了＿＿。",
-       "ja": {
-        "ja": "今日、＿＿で＿＿を見かけた。",
-        "en": "Today I saw ＿＿ at ＿＿."
-       }
-      },
-      {
-       "zh": "＿＿又＿＿又＿＿。",
-       "ja": {
-        "ja": "＿＿で、しかも＿＿だ。",
-        "en": "It's both ＿＿ and ＿＿."
-       }
-      }
-     ],
      "synth": {
       "pos": "N",
       "example": "我今天看到了{h}。",
@@ -1874,11 +1804,6 @@ nonisolated enum DemoFixtures {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",
        "zh-TW": "今天發現的！"
-      },
-      "feedback_generic": {
-       "ja": "自然に書けています。この調子で続けましょう。",
-       "en": "This reads naturally. Keep it up!",
-       "zh-TW": "寫得很自然，繼續保持！"
       },
       "display_name": {
        "ja": "ミカ",
@@ -3968,76 +3893,6 @@ nonisolated enum DemoFixtures {
        "zh-TW": "最常用的說法"
       }
      },
-     "journal": {
-      "draft": "Today I go to a cafe and drink a coffee. It was very delicious.",
-      "correction": "Today I went to a café and had a coffee. It was delicious.",
-      "body": {
-       "ja": "今日はカフェに行ってコーヒーを飲んだ。おいしかった。",
-       "zh-TW": "今天我去了咖啡店，喝了一杯咖啡，很好喝。"
-      },
-      "feedback": {
-       "ja": "過去のことなので go は went に。delicious は「とてもおいしい」という意味を含むので very は付けません。",
-       "zh-TW": "因為是過去的事，go 要改成 went。delicious 本身就有「非常好吃」的意思，不加 very。"
-      },
-      "phrases": [
-       {
-        "zh": "This coffee really hits the spot.",
-        "ja": {
-         "ja": "このコーヒー、まさに飲みたかった味。",
-         "zh-TW": "這杯咖啡正是我想要的。"
-        },
-        "note": {
-         "ja": "ちょうど欲しかったものに使う決まり文句",
-         "zh-TW": "形容剛好滿足需求的慣用說法"
-        }
-       },
-       {
-        "zh": "I grabbed a coffee on the way.",
-        "ja": {
-         "ja": "途中でコーヒーを買っていった。",
-         "zh-TW": "我順路買了杯咖啡。"
-        },
-        "note": {
-         "ja": "grab で「さっと手に入れる」感じが出ます",
-         "zh-TW": "用 grab 表示「順手買」的感覺"
-        }
-       }
-      ]
-     },
-     "prompts": [
-      {
-       "zh": "Where did you see a mango today?",
-       "ja": {
-        "ja": "今日どこでマンゴーを見かけましたか？",
-        "zh-TW": "你今天在哪裡看到芒果？"
-       },
-       "word": "mango"
-      },
-      {
-       "zh": "How do you take your coffee?",
-       "ja": {
-        "ja": "コーヒーはどうやって飲むのが好きですか？",
-        "zh-TW": "你喜歡怎麼喝咖啡？"
-       },
-       "word": "coffee"
-      }
-     ],
-     "patterns": [
-      {
-       "zh": "Today I saw ___ at ___.",
-       "ja": {
-        "ja": "今日、＿＿で＿＿を見かけた。",
-        "zh-TW": "今天我在＿＿看到了＿＿。"
-       }
-      },
-      {
-       "zh": "It was so ___ that I ___.",
-       "ja": {
-        "ja": "とても＿＿だったので＿＿した。",
-        "zh-TW": "因為太＿＿了，所以我＿＿。"
-       }
-      }
-     ],
      "synth": {
       "pos": "noun",
       "example": "I saw a {h} today.",
@@ -4094,11 +3949,6 @@ nonisolated enum DemoFixtures {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",
        "zh-TW": "今天發現的！"
-      },
-      "feedback_generic": {
-       "ja": "自然に書けています。この調子で続けましょう。",
-       "en": "This reads naturally. Keep it up!",
-       "zh-TW": "寫得很自然，繼續保持！"
       },
       "display_name": {
        "ja": "ミカ",
@@ -6348,76 +6198,6 @@ nonisolated enum DemoFixtures {
        "zh-TW": "最常用的說法"
       }
      },
-     "journal": {
-      "draft": "今日は駅の前で猫を見ました。とてもかわいいでした。",
-      "correction": "今日は駅の前で猫を見ました。とてもかわいかったです。",
-      "body": {
-       "en": "Today I saw a cat in front of the station. It was really cute.",
-       "zh-TW": "今天在車站前看到一隻貓，非常可愛。"
-      },
-      "feedback": {
-       "en": "An い-adjective changes itself for the past: say “かわいかったです”, not “かわいいでした”.",
-       "zh-TW": "い形容詞的過去式要直接變化：要說「かわいかったです」，不說「かわいいでした」。"
-      },
-      "phrases": [
-       {
-        "zh": "駅前で猫に会った。",
-        "ja": {
-         "en": "I came across a cat in front of the station.",
-         "zh-TW": "在車站前遇到一隻貓。"
-        },
-        "note": {
-         "en": "会う makes it sound like a friendly encounter.",
-         "zh-TW": "用「会う」聽起來像是跟朋友不期而遇。"
-        }
-       },
-       {
-        "zh": "めっちゃかわいかった！",
-        "ja": {
-         "en": "It was super cute!",
-         "zh-TW": "超可愛的！"
-        },
-        "note": {
-         "en": "めっちゃ is a casual way to say “very”.",
-         "zh-TW": "「めっちゃ」是「非常」的口語說法。"
-        }
-       }
-      ]
-     },
-     "prompts": [
-      {
-       "zh": "今日、どこで猫を見ましたか。",
-       "ja": {
-        "en": "Where did you see a cat today?",
-        "zh-TW": "你今天在哪裡看到貓？"
-       },
-       "word": "cat"
-      },
-      {
-       "zh": "お弁当には何が入っていましたか。",
-       "ja": {
-        "en": "What was in your bento?",
-        "zh-TW": "你的便當裡有什麼？"
-       },
-       "word": "bento"
-      }
-     ],
-     "patterns": [
-      {
-       "zh": "今日、＿＿で＿＿を見ました。",
-       "ja": {
-        "en": "Today I saw ___ at ___.",
-        "zh-TW": "今天我在＿＿看到了＿＿。"
-       }
-      },
-      {
-       "zh": "＿＿がとても＿＿かったです。",
-       "ja": {
-        "en": "The ___ was very ___.",
-        "zh-TW": "＿＿非常＿＿。"
-       }
-      }
-     ],
      "synth": {
       "pos": "名詞",
       "example": "今日、{h}を見ました。",
@@ -6478,11 +6258,6 @@ nonisolated enum DemoFixtures {
        "ja": "はじめて見つけた！",
        "en": "Spotted this today!",
        "zh-TW": "今天發現的！"
-      },
-      "feedback_generic": {
-       "ja": "自然に書けています。この調子で続けましょう。",
-       "en": "This reads naturally. Keep it up!",
-       "zh-TW": "寫得很自然，繼續保持！"
       },
       "display_name": {
        "ja": "ミカ",

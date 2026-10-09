@@ -71,17 +71,9 @@
   "en": "The AI couldn't write this section. Please try again.",
   "zh-TW": "AI 無法產生這個項目，請再試一次。"
  },
- "AIによる推定": {
-  "en": "AI estimate",
-  "zh-TW": "AI 推測"
- },
  "AIに探してもらう": {
   "en": "Let AI find it",
   "zh-TW": "讓 AI 找出來"
- },
- "AIに添削してもらう": {
-  "en": "Ask AI to review",
-  "zh-TW": "請 AI 幫忙修改"
  },
  "AIの機能は止まっています": {
   "en": "AI features are off",
@@ -126,10 +118,6 @@
  "Appleでのログインに失敗しました。": {
   "en": "Sign in with Apple failed.",
   "zh-TW": "使用 Apple 登入失敗。"
- },
- "CatchWords は、写真から単語を見つけたり、単語カードを作ったり、日記を添削したりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
-  "en": "CatchWords uses third-party AI services to find words in your photos, write word cards and correct your diary. Before you start, please check what is sent and choose whether you agree.",
-  "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字、製作單字卡、批改日記。開始使用前，請確認傳送的內容，並選擇是否同意。"
  },
  "Dcardで見る": {
   "en": "See it on Dcard",
@@ -215,10 +203,6 @@
   "en": "The same cut-outs as iPhone Photos make your collection beautiful",
   "zh-TW": "和 iPhone 照片相同的去背，讓圖鑑更漂亮"
  },
- "{1} {2}語": {
-  "en": "{1} · {2} words",
-  "zh-TW": "{1} {2} 個單字"
- },
  "{1}%おトク": {
   "en": "Save {1}%",
   "zh-TW": "省 {1}%"
@@ -239,29 +223,13 @@
   "en": "{1}, {2} words",
   "zh-TW": "{1}，{2} 個單字"
  },
- "{1}つ見つかりました": {
-  "en": "Found {1}",
-  "zh-TW": "找到 {1} 個"
- },
  "{1}で「{2}」をキャッチしました。覚えていますか？": {
   "en": "You caught “{2}” at {1}. Do you remember it?",
   "zh-TW": "你在{1}捕捉了「{2}」。還記得嗎？"
  },
- "{1}で調べる": {
-  "en": "Look it up in {1}",
-  "zh-TW": "用{1}查"
- },
  "{1}のアルバム": {
   "en": "{1} album",
   "zh-TW": "{1}的相簿"
- },
- "{1}の日記": {
-  "en": "Diary for {1}",
-  "zh-TW": "{1}的日記"
- },
- "{1}の日記が保存されていません": {
-  "en": "Your diary for {1} hasn't been saved",
-  "zh-TW": "{1}的日記尚未儲存"
  },
  "{1}を作っています": {
   "en": "Making {1}",
@@ -339,21 +307,9 @@
   "en": "{1} / month",
   "zh-TW": "{1}／月"
  },
- "→ 日記": {
-  "en": "→ Diary",
-  "zh-TW": "→ 日記"
- },
- "✦ 添削後": {
-  "en": "✦ Corrected",
-  "zh-TW": "✦ 修改後"
- },
  "、取得済み": {
   "en": ", collected",
   "zh-TW": "，已收集"
- },
- "「{1}」のこと": {
-  "en": "about “{1}”",
-  "zh-TW": "關於「{1}」"
  },
  "「{1}」はどれ？": {
   "en": "Which one is “{1}”?",
@@ -362,10 +318,6 @@
  "「{1}」を{2}に移しました": {
   "en": "Moved “{1}” to {2}",
   "zh-TW": "已將「{1}」移到{2}"
- },
- "「{1}」をどの言葉で集める？": {
-  "en": "Which word for “{1}”?",
-  "zh-TW": "「{1}」要用哪個詞收集？"
  },
  "「{1}」を外す": {
   "en": "Remove “{1}”",
@@ -487,21 +439,9 @@
   "en": "Money",
   "zh-TW": "金錢"
  },
- "かざして調べる": {
-  "en": "Point to look up",
-  "zh-TW": "對準物品查詢"
- },
- "かざす": {
-  "en": "Point",
-  "zh-TW": "對準"
- },
  "きょうの復習": {
   "en": "Today's review",
   "zh-TW": "今天的複習"
- },
- "くわしい名前": {
-  "en": "Specific name",
-  "zh-TW": "具體名稱"
  },
  "ここで覚えた単語": {
   "en": "A word you learned here",
@@ -563,10 +503,6 @@
   "en": "You don't have permission to edit this word.",
   "zh-TW": "你沒有編輯這個單字的權限。"
  },
- "この型が使えます": {
-  "en": "Patterns you can use",
-  "zh-TW": "可以用這些句型"
- },
  "この場所": {
   "en": "this place",
   "zh-TW": "這個地方"
@@ -579,10 +515,6 @@
   "en": "You don't have permission to do this.",
   "zh-TW": "你沒有執行此操作的權限。"
  },
- "この日のことを、学んでいる言葉で書いてみよう": {
-  "en": "Write about this day in the language you're learning",
-  "zh-TW": "用你正在學的語言寫寫這一天吧"
- },
  "この日は写真がありません。": {
   "en": "No photos on this day.",
   "zh-TW": "這天沒有照片。"
@@ -594,10 +526,6 @@
  "この時刻を消す": {
   "en": "Remove this time",
   "zh-TW": "刪除這個時間"
- },
- "この月の本はまだ白紙です。": {
-  "en": "This month's book is still blank.",
-  "zh-TW": "這個月的書還是空白的。"
  },
  "この本の今日ぶんは終わりです": {
   "en": "That's today's batch",
@@ -631,17 +559,9 @@
   "en": "Times you met this word",
   "zh-TW": "遇到這個字的紀錄"
  },
- "この言語の音声認識はこの端末では使えません": {
-  "en": "Speech recognition for this language isn't available on this device",
-  "zh-TW": "此裝置無法使用這個語言的語音辨識"
- },
  "この語で合っていますか": {
   "en": "Do these look right?",
   "zh-TW": "這些字對嗎"
- },
- "この語で図鑑に入れる": {
-  "en": "Add this word",
-  "zh-TW": "用這個詞加入圖鑑"
  },
  "この語の誤りを報告": {
   "en": "Report an error in this entry",
@@ -703,14 +623,6 @@
   "en": "none",
   "zh-TW": "無"
  },
- "はがして図鑑に追加": {
-  "en": "Peel to add to your collection",
-  "zh-TW": "撕下加入圖鑑"
- },
- "はがして図鑑へ": {
-  "en": "Peel it into your collection",
-  "zh-TW": "掀起照片，放進圖鑑"
- },
  "はじめて": {
   "en": "First",
   "zh-TW": "第一次"
@@ -718,10 +630,6 @@
  "はじめて撮った写真": {
   "en": "First photo taken",
   "zh-TW": "第一次拍的照片"
- },
- "はじめて見る語": {
-  "en": "new word",
-  "zh-TW": "第一次看到的字"
  },
  "はじめる": {
   "en": "Get started",
@@ -738,18 +646,6 @@
  "ひと言を編集": {
   "en": "Edit note",
   "zh-TW": "編輯一句話"
- },
- "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。": {
-  "en": "If another app is using the camera, close it and try again. You can also use a photo from your library or search by text.",
-  "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以使用相簿裡的照片或用文字查詢。"
- },
- "ほかの言い方": {
-  "en": "Other ways to say it",
-  "zh-TW": "其他說法"
- },
- "ほかの言い方 {1}": {
-  "en": "Other ways to say it: {1}",
-  "zh-TW": "其他說法 {1}"
  },
  "ほかの語": {
   "en": "Other words",
@@ -779,10 +675,6 @@
   "en": "Not found yet: {1}",
   "zh-TW": "還沒找到的詞：{1}"
  },
- "まだ過去の日記はありません": {
-  "en": "No past diary entries yet",
-  "zh-TW": "還沒有過去的日記"
- },
  "まだ選んでいません。AI を使う機能を使う前に確認します。": {
   "en": "Not chosen yet. You will be asked before using an AI feature.",
   "zh-TW": "尚未選擇。使用 AI 功能前會先詢問你。"
@@ -791,17 +683,9 @@
   "en": "Try again: {1} words you missed",
   "zh-TW": "再試一次答錯的 {1} 個字"
  },
- "めくる →": {
-  "en": "Turn →",
-  "zh-TW": "翻頁 →"
- },
  "もう一度": {
   "en": "Try again",
   "zh-TW": "再試一次"
- },
- "もう一度発音を聞く": {
-  "en": "Listen again",
-  "zh-TW": "再聽一次發音"
  },
  "もう一度覚えよう": {
   "en": "Let's learn it again",
@@ -838,10 +722,6 @@
  "やや話し言葉": {
   "en": "Leans spoken",
   "zh-TW": "偏口語"
- },
- "やり直す": {
-  "en": "Start over",
-  "zh-TW": "重來"
  },
  "よく使う形": {
   "en": "Most-used pattern",
@@ -899,10 +779,6 @@
   "en": "Camera",
   "zh-TW": "相機"
  },
- "カメラが見つかりません": {
-  "en": "No camera found",
-  "zh-TW": "找不到相機"
- },
  "カメラに戻る": {
   "en": "Back to camera",
   "zh-TW": "回到相機"
@@ -923,14 +799,6 @@
   "en": "Save to Camera Roll",
   "zh-TW": "儲存到相機膠卷"
  },
- "カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。": {
-  "en": "Features that use AI, such as the camera, scanning, making word cards and diary correction, are unavailable (nothing is sent). You can still view your words and review them. You can agree, or withdraw your consent, later in Settings.",
-  "zh-TW": "相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回同意。"
- },
- "カメラ切替": {
-  "en": "Switch camera",
-  "zh-TW": "切換相機"
- },
  "カレンダーで選ぶ": {
   "en": "Pick from calendar",
   "zh-TW": "從月曆選擇"
@@ -947,10 +815,6 @@
   "en": "The card came back incomplete. Please try again.",
   "zh-TW": "卡片內容不完整，請再試一次。"
  },
- "カードを動かしてみよう・上にはじいて図鑑へ": {
-  "en": "Move the card · flick it up into your collection",
-  "zh-TW": "動動卡片，往上一撥就收進圖鑑"
- },
  "カード生成に失敗しました": {
   "en": "Couldn't build the card",
   "zh-TW": "字卡產生失敗"
@@ -958,10 +822,6 @@
  "ガジェット": {
   "en": "Gadgets",
   "zh-TW": "3C 小物"
- },
- "キャッチする": {
-  "en": "Catch",
-  "zh-TW": "捕捉"
  },
  "キャッチ連続": {
   "en": "Catch streak",
@@ -1023,10 +883,6 @@
   "en": "System",
   "zh-TW": "跟隨系統"
  },
- "シーンを感知しています": {
-  "en": "Sensing the scene…",
-  "zh-TW": "正在感測場景"
- },
  "ジュエリー": {
   "en": "Jewelry",
   "zh-TW": "珠寶"
@@ -1038,14 +894,6 @@
  "スキップ": {
   "en": "Skip",
   "zh-TW": "跳過"
- },
- "スキャン": {
-  "en": "Scan",
-  "zh-TW": "掃描"
- },
- "ステッカー": {
-  "en": "Sticker",
-  "zh-TW": "貼紙"
  },
  "ステッカーが見つかりません": {
   "en": "Sticker not found.",
@@ -1070,14 +918,6 @@
  "スライド": {
   "en": "Slides",
   "zh-TW": "滑動"
- },
- "ズーム {1}倍": {
-  "en": "Zoom {1}×",
-  "zh-TW": "縮放 {1} 倍"
- },
- "タップして選んでください": {
-  "en": "Tap one to choose it",
-  "zh-TW": "點一下來選擇"
  },
  "タップで切り替え。並べ替えは右の取っ手を使います": {
   "en": "Tap to toggle. Use the handle on the right to reorder",
@@ -1110,10 +950,6 @@
  "ドラッグで移動、2本指で大きさと傾き": {
   "en": "Drag to move; use two fingers to resize and rotate",
   "zh-TW": "拖曳移動，用兩指調整大小和角度"
- },
- "ネイティブならこう言う": {
-  "en": "A native would say",
-  "zh-TW": "母語者會這樣說"
  },
  "ネットの画像": {
   "en": "Images from the web",
@@ -1150,10 +986,6 @@
  "フレーズ": {
   "en": "Phrase",
   "zh-TW": "片語"
- },
- "フレームを取得できませんでした": {
-  "en": "Couldn't grab a frame",
-  "zh-TW": "無法取得畫面"
  },
  "プライバシー": {
   "en": "Privacy",
@@ -1195,10 +1027,6 @@
   "en": "Go home",
   "zh-TW": "回首頁"
  },
- "マイクと音声認識の使用を設定で許可してください": {
-  "en": "Allow the microphone and speech recognition in Settings",
-  "zh-TW": "請在設定中允許使用麥克風和語音辨識"
- },
  "メニューや説明に使う言語です。": {
   "en": "The language for menus and explanations.",
   "zh-TW": "選擇選單與說明使用的語言。"
@@ -1239,10 +1067,6 @@
   "en": "Log in",
   "zh-TW": "登入"
  },
- "ログインすると日記を保存できます。書いた文章はこの端末に残っています。": {
-  "en": "Log in to save your diary. What you wrote is kept on this device.",
-  "zh-TW": "登入後即可儲存日記。你寫的內容會保留在這台裝置上。"
- },
  "ログインせずに入る（開発用）": {
   "en": "Enter without logging in (development)",
   "zh-TW": "不登入直接進入（開發用）"
@@ -1267,10 +1091,6 @@
   "en": "Your session has expired. Please log in again.",
   "zh-TW": "登入已過期。請重新登入。"
  },
- "・取得済み": {
-  "en": " · Collected",
-  "zh-TW": "，已收集"
- },
  "ㄅㄆㄇ 注音": {
   "en": "ㄅㄆㄇ Zhuyin",
   "zh-TW": "ㄅㄆㄇ 注音"
@@ -1286,10 +1106,6 @@
  "一覧を開く": {
   "en": "Open list",
   "zh-TW": "打開列表"
- },
- "一言メモ（任意）": {
-  "en": "A quick note (optional)",
-  "zh-TW": "一句話筆記（選填）"
  },
  "丁寧さ・敬語": {
   "en": "Politeness & keigo",
@@ -1342,10 +1158,6 @@
  "今のレベル": {
   "en": "Current level",
   "zh-TW": "目前等級"
- },
- "今の気持ちや場所をメモ…": {
-  "en": "Note how you feel or where you are…",
-  "zh-TW": "記下現在的心情或地點…"
  },
  "今日": {
   "en": "Today",
@@ -1415,10 +1227,6 @@
   "en": "Done for today",
   "zh-TW": "今天到這裡"
  },
- "今日キャッチした語を押すと本文に入ります": {
-  "en": "Tap a word you caught today to add it to the text",
-  "zh-TW": "點今天捕捉的單字即可加入內文"
- },
  "今日キャッチしました": {
   "en": "Caught today",
   "zh-TW": "今天捕捉"
@@ -1430,10 +1238,6 @@
  "今日復習する単語はありません。": {
   "en": "Nothing to review today.",
   "zh-TW": "今天沒有要複習的單字。"
- },
- "今日撮ったものから": {
-  "en": "From what you caught today",
-  "zh-TW": "從你今天拍到的東西"
  },
  "仕事": {
   "en": "Work",
@@ -1531,14 +1335,6 @@
   "en": "Couldn't save\n{1}",
   "zh-TW": "儲存失敗\n{1}"
  },
- "保存に失敗しました。": {
-  "en": "Couldn't save.",
-  "zh-TW": "儲存失敗。"
- },
- "保存に時間がかかっています。そのままお待ちください。": {
-  "en": "Saving is taking a while. Please wait.",
-  "zh-TW": "儲存需要一些時間，請稍候。"
- },
  "候補の形が整いませんでした。もう一度お試しください。": {
   "en": "The suggestions came back incomplete. Please try again.",
   "zh-TW": "候選內容不完整，請再試一次。"
@@ -1559,10 +1355,6 @@
   "en": "Restore original name",
   "zh-TW": "恢復原本的名稱"
  },
- "先月までの本がここに並びます": {
-  "en": "Books from past months will line up here",
-  "zh-TW": "過去月份的書會排在這裡"
- },
  "入れる語がありません": {
   "en": "There are no words to add",
   "zh-TW": "沒有可加入的單字"
@@ -1579,10 +1371,6 @@
   "en": "View details",
   "zh-TW": "查看內容"
  },
- "再会": {
-  "en": "meet again",
-  "zh-TW": "再次相遇"
- },
  "再会{1}回目": {
   "en": "Reunion #{1}",
   "zh-TW": "第 {1} 次重逢"
@@ -1591,29 +1379,9 @@
   "en": "Reunion!",
   "zh-TW": "重逢！"
  },
- "再会！写真を追加しました": {
-  "en": "Reunion! Photo added",
-  "zh-TW": "重逢！已新增照片"
- },
- "写っている物": {
-  "en": "In the photo",
-  "zh-TW": "照片裡的東西"
- },
- "写っている物の判定、単語カード・解説・例文の作成、日記の添削のためだけに使います。当社が写真や日記を AI の学習に使うことはありません。": {
-  "en": "Only to recognize what is in a photo, to write word cards, notes and example sentences, and to correct your diary. We never use your photos or diary to train AI.",
-  "zh-TW": "只用於辨識照片中的物品、製作單字卡、解說與例句，以及批改日記。我們不會把你的照片或日記用於訓練 AI。"
- },
- "写っている物を見つけられませんでした。別の写真で試してください。": {
-  "en": "Couldn't find anything in this photo. Try a different photo.",
-  "zh-TW": "找不到照片裡的東西。請換一張照片試試看。"
- },
  "写真": {
   "en": "Photos",
   "zh-TW": "照片"
- },
- "写真から見つけた候補です。残したいことばを選んでください。": {
-  "en": "Here are words found in your photo. Pick the one you want to keep.",
-  "zh-TW": "這些是照片中找到的候選單字，選一個想留下的吧。"
  },
  "写真から言葉を見つけられませんでした。明るい所で、撮りたい物に近づいて撮り直してください。": {
   "en": "No words were found in this photo. Move closer to the object in good light and retake it.",
@@ -1638,10 +1406,6 @@
  "写真を保存できませんでした。": {
   "en": "Couldn't save the photo.",
   "zh-TW": "照片儲存失敗。"
- },
- "写真を指で好きな方向にめくります。": {
-  "en": "Drag the photo in any direction.",
-  "zh-TW": "用手指把照片往任一方向掀起。"
  },
  "写真を替えました": {
   "en": "Photo replaced",
@@ -1714,14 +1478,6 @@
  "削除できませんでした。通信を確かめてください。": {
   "en": "Couldn't delete. Please check your connection.",
   "zh-TW": "無法刪除。請確認網路連線。"
- },
- "前に見た語": {
-  "en": "seen before",
-  "zh-TW": "之前看過的字"
- },
- "前のページ": {
-  "en": "Previous page",
-  "zh-TW": "上一頁"
  },
  "前の日": {
   "en": "Previous day",
@@ -1819,25 +1575,13 @@
   "en": "Antonyms",
   "zh-TW": "反義詞"
  },
- "取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。": {
-  "en": "Features that use AI, such as the camera, scanning, making word cards and diary correction, will stop working. Your words and reviews stay available.",
-  "zh-TW": "撤回後，相機、掃描、製作單字卡、批改日記等使用 AI 的功能將無法使用。收集的單字與複習仍可照常使用。"
- },
  "取り込めませんでした": {
   "en": "Couldn't import those",
   "zh-TW": "匯入失敗"
  },
- "取得済み": {
-  "en": "collected",
-  "zh-TW": "已收集"
- },
  "句動詞": {
   "en": "Phrasal verbs",
   "zh-TW": "片語動詞"
- },
- "台湾での言い方として不確か": {
-  "en": "Uncertain as Taiwan usage",
-  "zh-TW": "不確定是否為台灣說法"
  },
  "台湾のサイトで検索": {
   "en": "Search Taiwanese sites",
@@ -1862,10 +1606,6 @@
  "同意しています（{1}）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。": {
   "en": "You agreed ({1}). Photos and the words and text you enter are sent through our server to third-party AI services (such as Google).",
   "zh-TW": "已同意（{1}）。照片與輸入的單字、文字，會經由我們的伺服器傳送給外部的 AI 服務（例如 Google）。"
- },
- "同意していません。カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません。": {
-  "en": "You have not agreed. Features that use AI, such as the camera, scanning, making word cards and diary correction, are unavailable.",
-  "zh-TW": "尚未同意。相機、掃描、製作單字卡、批改日記等使用 AI 的功能無法使用。"
  },
  "同意して始める": {
   "en": "Agree and start",
@@ -1931,10 +1671,6 @@
   "en": "Couldn't load your collection.",
   "zh-TW": "無法載入圖鑑。"
  },
- "固有名詞": {
-  "en": "Proper noun",
-  "zh-TW": "專有名詞"
- },
  "土": {
   "en": "Sat",
   "zh-TW": "六"
@@ -1942,10 +1678,6 @@
  "地図": {
   "en": "Map",
   "zh-TW": "地圖"
- },
- "型と解説": {
-  "en": "Patterns & notes",
-  "zh-TW": "句型與解說"
  },
  "報告": {
   "en": "Report",
@@ -1958,10 +1690,6 @@
  "場所でリマインド": {
   "en": "Location reminders",
   "zh-TW": "地點提醒"
- },
- "声で調べる": {
-  "en": "Search by voice",
-  "zh-TW": "用語音查詢"
  },
  "変更": {
   "en": "Change",
@@ -1982,10 +1710,6 @@
  "好きなことから、\nことばを広げよう": {
   "en": "Start with what\nyou love.",
   "zh-TW": "從喜歡的事物，\n開始學單字。"
- },
- "好きな方向にはがしてキャッチ": {
-  "en": "Peel in any direction to catch",
-  "zh-TW": "往任何方向撕，捕捉單字"
  },
  "学びたい言語は？": {
   "en": "What would you\nlike to learn?",
@@ -2054,10 +1778,6 @@
  "家電": {
   "en": "Appliances",
   "zh-TW": "家電"
- },
- "対象を解析しています": {
-  "en": "Reading the object…",
-  "zh-TW": "正在解析對象"
  },
  "山": {
   "en": "Mountains",
@@ -2211,10 +1931,6 @@
   "en": "Hands",
   "zh-TW": "手"
  },
- "押すと下に入ります": {
-  "en": "Tap to drop it into your draft",
-  "zh-TW": "點一下就會加到下面"
- },
  "拼音": {
   "en": "Pinyin",
   "zh-TW": "拼音"
@@ -2238,10 +1954,6 @@
  "控えめ": {
   "en": "Subtle",
   "zh-TW": "輕微"
- },
- "撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（日記・報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
-  "en": "Photos you take, images you pick from the Photos app, scan frames, words you look up, text you enter (diary entries and report notes), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
-  "zh-TW": "你拍的照片、從照片 App 選的圖片、掃描的畫面、查詢的單字、輸入的文字（日記、回報的備註）、用語音查詢的詞（轉成的文字，不會傳送聲音本身），以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
  },
  "撮った写真をスマホの写真アプリにも残します": {
   "en": "Also save your photos to the Photos app",
@@ -2310,10 +2022,6 @@
  "文字": {
   "en": "Characters",
   "zh-TW": "文字"
- },
- "文字で調べる": {
-  "en": "Search by text",
-  "zh-TW": "用文字查詢"
  },
  "文房具": {
   "en": "Stationery",
@@ -2395,14 +2103,6 @@
   "en": "Learning Japanese",
   "zh-TW": "正在學日文"
  },
- "日記": {
-  "en": "Diary",
-  "zh-TW": "日記"
- },
- "日記を保存できませんでした。書いた文章はこの端末に残っています。": {
-  "en": "Couldn't save your diary. What you wrote is kept on this device.",
-  "zh-TW": "日記儲存失敗。你寫的內容會保留在這台裝置上。"
- },
  "日記を書き直す": {
   "en": "Edit the diary",
   "zh-TW": "修改日記"
@@ -2410,10 +2110,6 @@
  "日記を書く": {
   "en": "Write a diary",
   "zh-TW": "寫日記"
- },
- "日記を読み込めませんでした。": {
-  "en": "Couldn't load your diary.",
-  "zh-TW": "無法載入日記。"
  },
  "時刻を指定": {
   "en": "Set times",
@@ -2423,25 +2119,9 @@
   "en": "Add a time",
   "zh-TW": "新增時間"
  },
- "書いたものはこの端末に控えてあります。添削が通らなくても消えません。": {
-  "en": "Your writing is kept on this device — it won't be lost if the check fails.",
-  "zh-TW": "你寫的內容有留在這台裝置上，就算修改沒成功也不會不見。"
- },
- "書いた日記と添削はここに並びます。": {
-  "en": "Your diary entries and corrections will appear here.",
-  "zh-TW": "你寫的日記和批改會排列在這裡。"
- },
- "書き直す": {
-  "en": "Edit what I typed",
-  "zh-TW": "重寫"
- },
  "書き言葉": {
   "en": "Written",
   "zh-TW": "書面語"
- },
- "書く": {
-  "en": "Write",
-  "zh-TW": "寫"
  },
  "書類": {
   "en": "Documents",
@@ -2507,10 +2187,6 @@
   "en": "Thu",
   "zh-TW": "四"
  },
- "未来の日の日記は書けません": {
-  "en": "You can't write a diary for a future date",
-  "zh-TW": "無法寫未來日期的日記"
- },
  "未送信の下書き": {
   "en": "Unsent draft",
   "zh-TW": "尚未送出的草稿"
@@ -2518,14 +2194,6 @@
  "本": {
   "en": "Books",
   "zh-TW": "書"
- },
- "本文に入れる": {
-  "en": "Add to the text",
-  "zh-TW": "加入內文"
- },
- "札を押すと意味と発音が出ます": {
-  "en": "Tap a tag to see its meaning and pronunciation",
-  "zh-TW": "點標籤即可看到意思和發音"
  },
  "条件を外す": {
   "en": "Clear filters",
@@ -2559,10 +2227,6 @@
   "en": "Plants & Flowers",
   "zh-TW": "植物、花"
  },
- "検出に失敗しました": {
-  "en": "Detection failed",
-  "zh-TW": "偵測失敗"
- },
  "検索": {
   "en": "Search",
   "zh-TW": "搜尋"
@@ -2571,21 +2235,9 @@
   "en": "Clear search",
   "zh-TW": "清除搜尋"
  },
- "検証済み": {
-  "en": "Verified",
-  "zh-TW": "已驗證"
- },
  "楽器": {
   "en": "Instruments",
   "zh-TW": "樂器"
- },
- "横にスワイプでページをめくる": {
-  "en": "Swipe sideways to turn pages",
-  "zh-TW": "左右滑動翻頁"
- },
- "次のページ": {
-  "en": "Next page",
-  "zh-TW": "下一頁"
  },
  "次の日": {
   "en": "Next day",
@@ -2647,18 +2299,6 @@
   "en": "Couldn't delete it",
   "zh-TW": "刪除失敗"
  },
- "添削中…": {
-  "en": "Reviewing…",
-  "zh-TW": "修改中…"
- },
- "添削失敗": {
-  "en": "Review failed",
-  "zh-TW": "修改失敗"
- },
- "添削失敗: {1}": {
-  "en": "Correction failed: {1}",
-  "zh-TW": "批改失敗：{1}"
- },
  "減らす": {
   "en": "Reduce",
   "zh-TW": "減少"
@@ -2706,10 +2346,6 @@
  "画像をタップすると、この単語の写真にできます。": {
   "en": "Tap an image to make it this word's photo.",
   "zh-TW": "點一下圖片，就能設成這個單字的照片。"
- },
- "画像をタップで自撮りにフリップ": {
-  "en": "Tap the photo to flip to your selfie",
-  "zh-TW": "點圖片翻到自拍"
  },
  "画像を変更しました": {
   "en": "Photo updated",
@@ -2767,10 +2403,6 @@
   "en": "Signs",
   "zh-TW": "招牌"
  },
- "看板や物にかざして、ボタンを押してください": {
-  "en": "Point at a sign or object and press the button",
-  "zh-TW": "對準招牌或物品，然後按下按鈕"
- },
  "知っておくと得": {
   "en": "Good to know",
   "zh-TW": "知道了會加分"
@@ -2782,10 +2414,6 @@
  "短い時間でも大丈夫。あなたのペースで続けましょう。": {
   "en": "A few minutes is a great start. Make it your own pace.",
   "zh-TW": "幾分鐘也很好，照著自己的步調來。"
- },
- "砕けた言い方": {
-  "en": "Casual",
-  "zh-TW": "口語說法"
  },
  "確かめました。間違いは見つかりませんでした": {
   "en": "Checked. No mistakes found",
@@ -2999,10 +2627,6 @@
   "en": "Show",
   "zh-TW": "顯示"
  },
- "見つかりませんでした": {
-  "en": "Nothing found",
-  "zh-TW": "沒有找到"
- },
  "見つかりませんでした。": {
   "en": "It couldn't be found.",
   "zh-TW": "找不到。"
@@ -3115,10 +2739,6 @@
   "en": "Exam preparation",
   "zh-TW": "考試準備"
  },
- "話しかけてください": {
-  "en": "Speak now",
-  "zh-TW": "請開始說話"
- },
  "話し言葉": {
   "en": "Spoken",
   "zh-TW": "口語"
@@ -3195,10 +2815,6 @@
   "en": "Everyday things",
   "zh-TW": "生活用品"
  },
- "辞書と照合しています": {
-  "en": "Matching the dictionary…",
-  "zh-TW": "正在跟辭典比對"
- },
  "追加した単語を見てみる": {
   "en": "Explore your new word",
   "zh-TW": "看看剛加入的單字"
@@ -3254,14 +2870,6 @@
  "週": {
   "en": "Week",
   "zh-TW": "週"
- },
- "過去の日記": {
-  "en": "Past entries",
-  "zh-TW": "以前的日記"
- },
- "過去の日記と添削": {
-  "en": "Past diary entries and corrections",
-  "zh-TW": "過去的日記與批改"
  },
  "過去分詞": {
   "en": "Past participle",
@@ -3566,5 +3174,49 @@
  "開発者": {
   "en": "Developer",
   "zh-TW": "開發者"
+ },
+ "覚えたいことばをタップ": {
+  "en": "Tap a word to learn",
+  "zh-TW": "點一下想學的單字"
+ },
+ "新しいことばをキャッチ！": {
+  "en": "New word caught!",
+  "zh-TW": "抓到新單字了！"
+ },
+ "ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像からも集められます。": {
+  "en": "If another app is using the camera, close it and try again. You can also collect words from a photo in your library.",
+  "zh-TW": "如果有其他 App 正在使用相機，請關閉後再試一次。也可以用相簿裡的照片收集單字。"
+ },
+ "写真の中のものに、AIが見つけたことばを付けました。残したいことばをタップしてください。": {
+  "en": "AI has put the words it found on the things in your photo. Tap the one you want to keep.",
+  "zh-TW": "AI 把找到的單字標在照片裡的東西上了，點一下想留下的那個吧。"
+ },
+ "「図鑑に追加」を押すと、撮った写真と一緒に図鑑に入ります。": {
+  "en": "Tap “Add to collection” to keep the word with your photo in your collection.",
+  "zh-TW": "按下「加入圖鑑」，這個單字就會和你拍的照片一起放進圖鑑。"
+ },
+ "CatchWords は、写真から単語を見つけたり、単語カードを作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
+  "en": "CatchWords uses third-party AI services to find words in your photos and write word cards. Before you start, please check what is sent and choose whether you agree.",
+  "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字、製作單字卡。開始使用前，請確認傳送的內容，並選擇是否同意。"
+ },
+ "カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。": {
+  "en": "Features that use AI, such as the camera, scanning and making word cards, are unavailable (nothing is sent). You can still view your words and review them. You can agree, or withdraw your consent, later in Settings.",
+  "zh-TW": "相機、掃描、製作單字卡等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回同意。"
+ },
+ "写っている物の判定、単語カード・解説・例文の作成のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。": {
+  "en": "Only to recognize what is in a photo and to write word cards, notes and example sentences. We never use your photos or the text you enter to train AI.",
+  "zh-TW": "只用於辨識照片中的物品，以及製作單字卡、解說與例句。我們不會把你的照片或輸入的文字用於訓練 AI。"
+ },
+ "取り消すと、カメラ・スキャン・単語カードの作成など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。": {
+  "en": "Features that use AI, such as the camera, scanning and making word cards, will stop working. Your words and reviews stay available.",
+  "zh-TW": "撤回後，相機、掃描、製作單字卡等使用 AI 的功能將無法使用。收集的單字與複習仍可照常使用。"
+ },
+ "同意していません。カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません。": {
+  "en": "You have not agreed. Features that use AI, such as the camera, scanning and making word cards, are unavailable.",
+  "zh-TW": "尚未同意。相機、掃描、製作單字卡等使用 AI 的功能無法使用。"
+ },
+ "撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
+  "en": "Photos you take, images you pick from the Photos app, scan frames, words you look up, text you enter (report notes), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
+  "zh-TW": "你拍的照片、從照片 App 選的圖片、掃描的畫面、查詢的單字、輸入的文字（回報的備註）、用語音查詢的詞（轉成的文字，不會傳送聲音本身），以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
  }
 }

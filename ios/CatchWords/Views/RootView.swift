@@ -3,7 +3,6 @@ import SwiftUI
 struct RootView: View {
     @Environment(AuthStore.self) private var auth
     @Environment(DexStore.self) private var dex
-    @Environment(DiaryStore.self) private var diary
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
     @Environment(\.scenePhase) private var scenePhase
@@ -108,7 +107,6 @@ struct RootView: View {
                 // pictures in memory, the widgets' snapshot, the review Live Activity and the reminders
                 // (place reminders name its words and places).
                 dex.reset()
-                diary.reset()
                 profile.reset()
                 plan.reset()
                 AIConsent.shared.reset()

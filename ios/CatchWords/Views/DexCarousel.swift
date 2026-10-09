@@ -4,8 +4,8 @@ import SwiftUI
 /// The dex "slide" view — the web's `DexCoverFlow` with `theme="gallery"` (R15): white cards turn on a ring
 /// in a pale blue room, like choosing a card pack. The middle card faces you up front; the cards on either
 /// side swing back along the ring (outer edge toward you) and the next ones peek, smaller, behind them.
-/// The floor reflects each card, a light streak crosses a card's face as it passes the middle, and small
-/// sparks blink in the air. The middle card is a holo card: its foil shimmers and it leans with the phone.
+/// The floor reflects each card and small sparks blink in the air. The photos are shown as they are — no
+/// holographic foil, light streak or shimmer on them (owner 2026-10-09).
 ///
 /// Position and pose are worked out from one number every frame (`CarouselSpring.value`, in cards), so the
 /// ring follows the finger 1:1 and never lags a frame behind. On release the flick's momentum is projected
@@ -102,10 +102,9 @@ struct DexCoverFlow: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 8) {
                         ForEach(Array(stickers.enumerated()), id: \.element.id) { i, s in
-                            let path = s.heroPath
                             Button { bring(i) } label: {
                                 Color.black.opacity(0.05).frame(width: 48, height: 48)
-                                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                                    .overlay { DexThumb(sticker: s, inset: 3).allowsHitTesting(false) }
                                     .clipShape(.rect(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(i == center ? Theme.primary : .clear, lineWidth: 2))
                                     .opacity(i == center ? 1 : 0.6)
@@ -262,17 +261,7 @@ private struct CoverFlowStage: View {
         let originY = stageHeight * 0.45
         let cardCenterY = 16 + ch / 2
         let isCenter = i == center
-        // The streak sits off the right edge while the card rests in the middle and sweeps across its face
-        // (right → left) only while it passes the middle — like foil catching the light.
-        let sweep = 45 - min(1.2, abs(rel)) * 75
-        // Only the middle card is a live holo card (sensor + shader); its foil also slides with the swipe and
-        // fades as it hands over to the next card. The others stay plain and pass constant values, so they
-        // don't redraw for it.
-        let holo = isCenter
-        let holoIntensity = holo ? max(0.15, 1 - abs(rel) * 1.6) : 0
-        let holoTilt = holo ? CGPoint(x: max(-1, min(1, -rel * 1.6)), y: 0) : .zero
-        return CarouselCard(sticker: s, width: w, sweep: sweep, mirror: abs(rel) <= 3,
-                            holo: holo, holoIntensity: holoIntensity, holoTilt: holoTilt)
+        return CarouselCard(sticker: s, width: w, mirror: abs(rel) <= 3)
             .contentShape(Rectangle())
             .onTapGesture {
                 if isCenter { onOpen(s) } else { bring(i) }
@@ -316,26 +305,17 @@ enum CarouselPose {
     }
 }
 
-/// A white card (photo, word with its reading, meaning, date and place), the light streak, and its
-/// reflection on the floor. The middle card (`holo`) also gets the holographic foil and leans with the phone.
+/// A white card (photo, word with its reading, meaning, date and place) and its reflection on the floor.
+/// The photo is plain: no foil, streak or shimmer over it (owner 2026-10-09).
 private struct CarouselCard: View {
     let sticker: Sticker
     let width: CGFloat
-    let sweep: Double
     let mirror: Bool
-    var holo = false
-    var holoIntensity: Double = 0
-    var holoTilt: CGPoint = .zero
 
     var body: some View {
         CarouselCardFace(sticker: sticker, width: width)
-            .overlay { gloss }
             .clipShape(.rect(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color(red: 40 / 255, green: 80 / 255, blue: 140 / 255).opacity(0.1), lineWidth: 1))
-            // Always applied (same structure for every card, so becoming the middle card never reloads the
-            // photo); only the active one reads the sensor and runs the shader. No drag tilt: the ring owns the drag.
-            .holoCard(isActive: holo, cornerRadius: 14, intensity: holoIntensity, maxAngle: 10,
-                      allowsDragTilt: false, extraTilt: holoTilt)
             // One flattened layer, so the two shadows are cast once from the card outline rather than from
             // every text and image inside it on every frame.
             .compositingGroup()
@@ -344,22 +324,6 @@ private struct CarouselCard: View {
             .background(alignment: .top) {
                 if mirror { reflection }
             }
-    }
-
-    /// The streak of light (web `.dex-cf__gloss`: 105°, white 55% → 14%, 2.2 card widths wide).
-    private var gloss: some View {
-        LinearGradient(
-            stops: [
-                .init(color: .white.opacity(0), location: 0.38),
-                .init(color: .white.opacity(0.55), location: 0.47),
-                .init(color: .white.opacity(0.14), location: 0.53),
-                .init(color: .white.opacity(0), location: 0.62),
-            ],
-            startPoint: UnitPoint(x: 0, y: 0.37), endPoint: UnitPoint(x: 1, y: 0.63)
-        )
-        .frame(width: width * 2.2, height: width * 1.48 * 1.2)
-        .offset(x: width * 2.2 * sweep / 100)
-        .allowsHitTesting(false)
     }
 
     /// The card upside down under itself, faint at its feet and gone within a quarter of its height.
@@ -388,14 +352,12 @@ private struct CarouselCardFace: View {
 
     var body: some View {
         let s = sticker
-        let path = s.heroPath
         let h = width * 1.48
         return VStack(alignment: .leading, spacing: 0) {
             Color.black.opacity(0.05)
                 .frame(width: width, height: h * 0.64)
                 .overlay {
-                    StickerImage(path: path, url: dex.url(for: path), contentMode: path == s.cutoutImageUrl ? .fit : .fill)
-                        .allowsHitTesting(false)
+                    DexThumb(sticker: s, inset: 10).allowsHitTesting(false)
                 }
                 .clipped()
                 .overlay(alignment: .topLeading) {
@@ -406,6 +368,8 @@ private struct CarouselCardFace: View {
                     let emoji = DexCatalog.categories.first(where: { $0.no == no })?.emoji ?? ""
                     Text("\(emoji) \(DexCatalog.label(no))")
                         .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(Self.ink)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color(hex: cat.b1), in: Capsule())
@@ -416,9 +380,12 @@ private struct CarouselCardFace: View {
                     if let p = dex.memoryPercent(for: s) { MemoryBadge(percent: p).padding(8) }
                 }
             VStack(alignment: .leading, spacing: 4) {
-                ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 22, weight: .bold,
-                               color: Self.ink, readingColor: Self.muted, pinyin: s.word?.pinyin)
-                Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Self.ink.opacity(0.9)).lineLimit(1)
+                DexFitWidth {
+                    ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 22, weight: .bold,
+                                   color: Self.ink, readingColor: Self.muted, pinyin: s.word?.pinyin)
+                }
+                Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Self.ink.opacity(0.9))
+                    .lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
                 HStack(spacing: 6) {
                     Text(JPDate.monthDay(s.takenAt)).monospacedDigit()

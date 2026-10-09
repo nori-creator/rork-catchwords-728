@@ -4,7 +4,9 @@ import SwiftUI
 /// album-day-layout.ts): photos placed by hand stay where they were put; the rest settle around them.
 /// Positions are shared with the web through the same columns, so the page looks the same on both.
 ///
-/// Today's page can be rearranged (「並べ替え」): drag, pinch and twist a photo all at once, like a real
+/// Every photo is the background-removed cut-out alone (`AlbumPhoto`): no white print or frame behind it.
+///
+/// Today's photos can be rearranged (「並べ替え」): drag, pinch and twist a photo all at once, like a real
 /// print on paper. Near level it snaps straight with a haptic tick; the photo you touch comes to the front.
 struct CollageBoard: View {
     let items: [Sticker]
@@ -12,7 +14,7 @@ struct CollageBoard: View {
     let onOpen: (Sticker) -> Void
     /// Lay every photo out automatically, ignoring positions placed by hand (the memorial album).
     var autoOnly: Bool = false
-    /// Tells the book to stop turning pages while photos are being moved.
+    /// Tells the screen to stop scrolling while photos are being moved.
     var onEditingChange: ((Bool) -> Void)? = nil
 
     @Environment(DexStore.self) private var dex
@@ -61,6 +63,8 @@ struct CollageBoard: View {
             .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82), value: editing)
         }
         .onChange(of: editing) { _, on in onEditingChange?(on) }
+        // Never leave the screen frozen if this board goes away mid-edit.
+        .onDisappear { if editing { onEditingChange?(false) } }
     }
 
     // MARK: Layout
@@ -82,13 +86,13 @@ struct CollageBoard: View {
         }
         var ratios: [String: Double] = [:]
         for s in items {
-            if let path = s.heroPath, let img = ImageCache.shared.image(for: path), img.size.width > 0 {
+            if let path = AlbumPhoto.path(for: s), let img = ImageCache.shared.image(for: path), img.size.width > 0 {
                 ratios[s.id] = img.size.height / img.size.width
             }
         }
         let input = DayLayoutInput(
             stickers: stickers,
-            hasHero: { id in items.first { $0.id == id }?.heroPath != nil },
+            hasHero: { id in items.first { $0.id == id }.flatMap { AlbumPhoto.path(for: $0) } != nil },
             photoRatio: ratios,
             boardW: Double(boardW)
         )
@@ -106,18 +110,12 @@ struct CollageBoard: View {
     private func piece(_ s: Sticker, item: DayLayoutItem) -> some View {
         let p = item.place
         let size = AlbumLayout.sizePx(p, boardW: Double(boardW), ratio: item.ratio)
-        let hasHero = s.heroPath != nil
+        let hasHero = AlbumPhoto.path(for: s) != nil
         let captionH = hasHero ? AlbumLayout.dayExtra(DayLayoutSticker(id: s.id, caption: s.caption), hasHero: true, boardW: Double(boardW)) * Double(boardW) : 0
         let isGrabbed = grabbed == s.id
         VStack(spacing: 4) {
-            if let path = s.heroPath {
-                Theme.secondary
-                    .frame(width: size.w, height: size.h)
-                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: path == s.cutoutImageUrl ? .fit : .fill).allowsHitTesting(false) }
-                    .clipShape(.rect(cornerRadius: 3))
-                    .padding(5)
-                    .background(Color(hex: 0xFFFEFB))
-                    .shadow(color: Color(hex: 0x5A4630).opacity(isGrabbed ? 0.35 : 0.18), radius: isGrabbed ? 16 : 5, y: isGrabbed ? 12 : 3)
+            if hasHero {
+                AlbumPhoto(sticker: s, width: size.w, height: size.h, lifted: isGrabbed)
                 VStack(spacing: 1) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(s.word?.headword ?? "").font(.system(size: 15, weight: .bold)).foregroundStyle(Color(hex: 0x241C14))
@@ -222,6 +220,40 @@ struct CollageBoard: View {
                 live = [:]
                 front = []
             }
+        }
+    }
+}
+
+/// One photo in the album: the background-removed cut-out (`stickers.cutout_image_url`, a transparent PNG)
+/// alone, like a sticker, with only a soft shadow that follows its outline — no white print, paper or
+/// frame behind it. A catch with no cut-out yet (still being made, or none could be made) shows its
+/// usual picture clipped round instead.
+struct AlbumPhoto: View {
+    let sticker: Sticker
+    let width: CGFloat
+    let height: CGFloat
+    /// Picked up while rearranging: a deeper shadow.
+    var lifted: Bool = false
+
+    @Environment(DexStore.self) private var dex
+
+    /// The picture the album shows for a catch: the cut-out when there is one, else the word's usual picture.
+    nonisolated static func path(for s: Sticker) -> String? { s.cutoutImageUrl ?? s.heroPath }
+
+    var body: some View {
+        if let cut = sticker.cutoutImageUrl {
+            StickerImage(path: cut, url: dex.url(for: cut), contentMode: .fit)
+                .allowsHitTesting(false)
+                .frame(width: width, height: height)
+                .shadow(color: Color(hex: 0x5A4630).opacity(lifted ? 0.4 : 0.25), radius: lifted ? 10 : 3, y: lifted ? 8 : 2)
+        } else if let path = sticker.heroPath {
+            StickerImage(path: path, url: dex.url(for: path), contentMode: .fill)
+                .allowsHitTesting(false)
+                .frame(width: width, height: height)
+                .clipShape(.rect(cornerRadius: min(width, height) * 0.18, style: .continuous))
+                .shadow(color: Color(hex: 0x5A4630).opacity(lifted ? 0.35 : 0.18), radius: lifted ? 12 : 4, y: lifted ? 8 : 2)
+        } else {
+            Color.clear.frame(width: width, height: height)
         }
     }
 }

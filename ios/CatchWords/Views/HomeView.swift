@@ -1,21 +1,16 @@
 import SwiftUI
 
-/// home.tsx: bookshelf of months → today's date → today's album page → past pages.
+/// Home: the milestone banner, photos still waiting for analysis, then the album — every day's photos as
+/// cut-out stickers, newest day first, in one plain vertical scroll (nothing slides or turns sideways).
 struct HomeView: View {
     @Environment(DexStore.self) private var dex
     @Environment(ProfileStore.self) private var profile
-    @Environment(DiaryStore.self) private var diary
     @Environment(AppRouter.self) private var router
-    @State private var writingDay: WritingDay?
-    @State private var showJournal = false
     @State private var showStats = false
     @State private var memorialOpen: Int?
     @State private var memorialHidden = false
-    @State private var openMonth: MonthOpen?
-    private struct MonthOpen: Identifiable {
-        let month: Date
-        var id: Date { month }
-    }
+    /// True while today's photos are being rearranged: the screen holds still under the fingers.
+    @State private var albumEditing = false
 
     private struct MemorialDay: Identifiable {
         let n: Int
@@ -23,17 +18,11 @@ struct HomeView: View {
     }
 
     var body: some View {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
+        let today = Calendar.current.startOfDay(for: Date())
 
         ScrollView {
             VStack(spacing: 0) {
                 Color.clear.frame(height: 64)
-                // Past months stand on the shelf; this month's book lies open below.
-                Bookshelf(stickers: dex.stickers.filter { !cal.isDate($0.takenAt, equalTo: today, toGranularity: .month) }) { month in
-                    openMonth = MonthOpen(month: month)
-                }
-                .padding(.bottom, 22)
 
                 if let n = profile.createdAt.flatMap({ Milestone.today(start: $0) }),
                    !memorialHidden, !Milestone.wasDismissed(n) {
@@ -72,54 +61,28 @@ struct HomeView: View {
                     .padding(.bottom, 14)
                 }
 
-                HStack(alignment: .firstTextBaseline) {
-                    Text(L("\(JPDate.month(today))のアルバム"))
-                        .scaledFont(size: 20, weight: .heavy)
-                        .foregroundStyle(Color(hex: 0x33291F))
-                    Spacer()
-                    Text(L("横にスワイプでページをめくる"))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
-                }
-                .padding(.horizontal, 22)
-                .padding(.bottom, 8)
-
                 Group {
                     if let err = dex.loadError, dex.stickers.isEmpty {
                         // Nothing to show yet and the dex could not be read: say so, offer a retry.
                         AlbumLoadFailed(message: err) { Task { await dex.load() } }
+                            .frame(height: 360)
+                            .tourAnchor(.album)
                     } else if !dex.hasLoaded, dex.stickers.isEmpty {
                         AlbumSkeleton()
+                            .frame(height: 440)
+                            .tourAnchor(.album)
                     } else {
-                        MonthBookView(
-                            days: BookDay.days(in: today, stickers: dex.albumStickers, diaryDays: diary.dayKeys),
-                            startAtEnd: true,
+                        HomeAlbum(
+                            days: AlbumDay.days(from: dex.albumStickers, today: today),
                             onOpen: { router.detailSticker = $0 },
-                            onWrite: { writingDay = WritingDay(date: $0) },
-                            onCamera: { router.tab = .camera }
+                            onCamera: { router.tab = .camera },
+                            onEditingChange: { on in albumEditing = on }
                         )
                         .transition(.opacity)
                     }
                 }
-                .frame(height: max(520, UIScreen.main.bounds.height * 0.66))
                 .padding(.horizontal, 12)
                 .animation(.easeOut(duration: 0.3), value: dex.hasLoaded)
-                .tourAnchor(.album)
-
-                Button { showJournal = true } label: {
-                    Label(L("過去の日記と添削"), systemImage: "books.vertical")
-                        .scaledFont(size: 13, weight: .semibold)
-                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.7))
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(PressableStyle())
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 22)
-                .padding(.top, 8)
-
-                StrandedDiaryBanner { writingDay = WritingDay(date: $0) }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
 
                 AlbumHiddenTray()
                     .padding(.horizontal, 16)
@@ -128,23 +91,10 @@ struct HomeView: View {
                 Color.clear.frame(height: 120)
             }
         }
+        .scrollDisabled(albumEditing)
         .refreshable { await dex.load() }
         .background(HomeBackground())
         .overlay(alignment: .top) { header }
-        .sheet(item: $writingDay) { d in
-            DiaryComposer(day: d.date)
-                .presentationDetents([.large])
-        }
-        .sheet(isPresented: $showJournal) {
-            JournalHistoryView()
-        }
-        .fullScreenCover(item: $openMonth) { m in
-            MonthBookSheet(month: m.month) { s in
-                openMonth = nil
-                router.detailSticker = s
-            }
-            .statusBarTone(.dark)
-        }
         .fullScreenCover(item: Binding(get: { memorialOpen.map(MemorialDay.init) }, set: { memorialOpen = $0?.n })) { m in
             MemorialAlbumView(n: m.n, words: dex.stickers.count, picks: Milestone.highlights(dex.stickers)) { s in
                 memorialOpen = nil
@@ -187,12 +137,6 @@ struct HomeView: View {
     }
 }
 
-
-struct WritingDay: Identifiable {
-    let date: Date
-    var id: String { DiaryStore.key(date) }
-}
-
 struct HomeBackground: View {
     var body: some View {
         ZStack {
@@ -203,180 +147,115 @@ struct HomeBackground: View {
     }
 }
 
-// MARK: - Bookshelf
-
-/// Bookshelf.tsx: a wooden box with one spine per month (2026 / MONTH / count), a globe and the latest photo in a frame.
-struct Bookshelf: View {
-    @Environment(DexStore.self) private var dex
-    let stickers: [Sticker]
-    let onMonth: (Date) -> Void
-
-    private static let spineColors: [UInt32] = [0xD9663F, 0x8E4FB0, 0x74A84C, 0x4F6FA6, 0xC9A23A, 0x3F8F8A]
-
-    private var months: [(month: Date, count: Int)] {
-        let cal = Calendar.current
-        let grouped = Dictionary(grouping: stickers) { cal.date(from: cal.dateComponents([.year, .month], from: $0.takenAt)) ?? $0.takenAt }
-        return grouped.keys.sorted().suffix(5).map { ($0, grouped[$0]?.count ?? 0) }
-    }
-
-    var body: some View {
-        let latest = stickers.first
-        ZStack {
-            // Outer wood frame
-            RoundedRectangle(cornerRadius: 6)
-                .fill(LinearGradient(colors: [Color(hex: 0xC08A58), Color(hex: 0x9A6A3E)], startPoint: .top, endPoint: .bottom))
-                .shadow(color: .black.opacity(0.28), radius: 14, x: 8, y: 14)
-            // Back panel
-            RoundedRectangle(cornerRadius: 3)
-                .fill(LinearGradient(colors: [Color(hex: 0x5A3A22), Color(hex: 0x7A5233)], startPoint: .top, endPoint: .bottom))
-                .overlay(alignment: .top) {
-                    LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom).frame(height: 30)
-                }
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(LinearGradient(colors: [Color(hex: 0xB07E4E), Color(hex: 0x8C603A)], startPoint: .top, endPoint: .bottom))
-                        .frame(height: 16)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-
-            HStack(alignment: .bottom, spacing: 2) {
-                if months.isEmpty {
-                    Text(L("先月までの本がここに並びます"))
-                        .font(AppFont.hand(15))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ForEach(Array(months.enumerated()), id: \.element.month) { i, m in
-                        Button {
-                            Haptics.selection()
-                            SoundService.shared.play(.bookOpen, volume: 0.35)
-                            onMonth(m.month)
-                        } label: {
-                            BookSpine(month: m.month, count: m.count, color: Color(hex: Self.spineColors[i % Self.spineColors.count]))
-                        }
-                        .buttonStyle(PressableStyle(scale: 0.95))
-                    }
-                    Rectangle().fill(Color(hex: 0x3E2A18)).frame(width: 6, height: 82).padding(.leading, 2)
-                    Spacer(minLength: 8)
-                    Globe().padding(.bottom, 2)
-                    Spacer(minLength: 8)
-                }
-                if let latest {
-                    let path = latest.heroPath
-                    Color.white
-                        .frame(width: 54, height: 66)
-                        .overlay {
-                            Theme.secondary.padding(5)
-                                .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false).padding(5) }
-                                .clipped()
-                        }
-                        .overlay(Rectangle().stroke(Color(hex: 0xA57A4E), lineWidth: 4))
-                        .shadow(color: .black.opacity(0.35), radius: 3, x: 2, y: 2)
-                }
-            }
-            .padding(.horizontal, 30)
-            .padding(.bottom, 28)
-            .padding(.top, 24)
-        }
-        .frame(height: 190)
-        .overlay(alignment: .topLeading) {
-            VStack(spacing: -4) {
-                ForEach(0..<5, id: \.self) { i in
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color(hex: i.isMultiple(of: 2) ? 0x3E8E41 : 0x5AAE4F))
-                        .rotationEffect(.degrees(i.isMultiple(of: 2) ? -35 : 25))
-                        .offset(x: i.isMultiple(of: 2) ? 0 : 6)
-                }
-            }
-            .offset(x: -6, y: -4)
-        }
-        .padding(.horizontal, 14)
-    }
-}
-
-struct BookSpine: View {
-    let month: Date
-    let count: Int
-    let color: Color
-
-    var body: some View {
-        let year = Calendar.current.component(.year, from: month)
-        VStack(spacing: 6) {
-            Rectangle().fill(Color(hex: 0xE8C66A).opacity(0.8)).frame(height: 1.5)
-            Text(String(year)).font(.system(size: 7, weight: .bold, design: .serif)).foregroundStyle(Color(hex: 0xF3D98A))
-            spineMonth
-            Spacer(minLength: 0)
-            Text("\(count)")
-                .font(.system(size: 7, weight: .bold))
-                .foregroundStyle(Color(hex: 0xF3D98A))
-                .frame(width: 15, height: 15)
-                .overlay(Circle().stroke(Color(hex: 0xE8C66A), lineWidth: 1))
-            Rectangle().fill(Color(hex: 0xE8C66A).opacity(0.8)).frame(height: 1.5)
-        }
-        .padding(.vertical, 6)
-        .frame(width: 30, height: 120)
-        .background(
-            LinearGradient(colors: [color.mix(with: .black, by: 0.2), color, color.mix(with: .white, by: 0.12), color.mix(with: .black, by: 0.25)],
-                           startPoint: .leading, endPoint: .trailing),
-            in: .rect(cornerRadius: 3)
-        )
-        .shadow(color: .black.opacity(0.35), radius: 2, x: 2)
-        .accessibilityLabel(L("\(JPDate.month(month)) \(count)語"))
-    }
-
-    /// The month on the spine in the display language: English runs along the spine, Japanese and
-    /// Chinese stand upright one character under another (縦書き).
-    @ViewBuilder private var spineMonth: some View {
-        if L10n.lang == "en" {
-            Text(JPDate.monthName(month))
-                .font(.system(size: 9, weight: .bold, design: .serif))
-                .foregroundStyle(Color(hex: 0xF3D98A))
-                .fixedSize()
-                .rotationEffect(.degrees(90))
-                .frame(width: 14, height: 56)
-        } else {
-            VStack(spacing: 0) {
-                ForEach(Array(JPDate.month(month).enumerated()), id: \.offset) { _, ch in
-                    Text(String(ch))
-                }
-            }
-            .font(.system(size: 10, weight: .bold, design: .serif))
-            .foregroundStyle(Color(hex: 0xF3D98A))
-            .frame(width: 14, height: 56)
-        }
-    }
-}
-
-private struct Globe: View {
-    @State private var spin: Bool = false
-    @Environment(\.appReduceMotion) private var reduceMotion
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Circle()
-                .fill(RadialGradient(colors: [Color(hex: 0xA8DDF5), Color(hex: 0x3D8FC4)], center: .init(x: 0.35, y: 0.3), startRadius: 2, endRadius: 36))
-                .overlay {
-                    Image(systemName: "globe.asia.australia.fill")
-                        .resizable().scaledToFit()
-                        .foregroundStyle(Color(hex: 0xF0E3B0).opacity(0.85))
-                        .padding(4)
-                        .rotation3DEffect(.degrees(spin ? 360 : 0), axis: (x: 0, y: 1, z: 0))
-                }
-                .clipShape(Circle())
-                .frame(width: 46, height: 46)
-            Rectangle().fill(Color(hex: 0xC9A24A)).frame(width: 3, height: 10)
-            Ellipse().fill(Color(hex: 0xA0522D)).frame(width: 28, height: 7)
-        }
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 24).repeatForever(autoreverses: false)) { spin = true }
-        }
-    }
-}
-
 // MARK: - Album
+
+/// One day of the home album: that day's photos, oldest first (the board lays them out).
+struct AlbumDay: Identifiable, Equatable {
+    let day: Date
+    let items: [Sticker]
+    var id: Date { day }
+
+    /// Every day with photos, newest first. Today always leads, even before its first photo.
+    static func days(from stickers: [Sticker], today: Date) -> [AlbumDay] {
+        let cal = Calendar.current
+        var byDay = Dictionary(grouping: stickers) { cal.startOfDay(for: $0.takenAt) }
+        if byDay[today] == nil { byDay[today] = [] }
+        return byDay.keys.sorted(by: >).map { d in
+            AlbumDay(day: d, items: (byDay[d] ?? []).sorted { $0.takenAt < $1.takenAt })
+        }
+    }
+}
+
+/// The album as one plain vertical list: a month heading where the month changes, then each day's date
+/// and its photos. Only today's photos can be rearranged.
+struct HomeAlbum: View {
+    let days: [AlbumDay]
+    let onOpen: (Sticker) -> Void
+    let onCamera: () -> Void
+    var onEditingChange: ((Bool) -> Void)? = nil
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(days.enumerated()), id: \.element.id) { i, d in
+                let startsMonth = i == 0 || !Calendar.current.isDate(days[i - 1].day, equalTo: d.day, toGranularity: .month)
+                VStack(alignment: .leading, spacing: 10) {
+                    if startsMonth {
+                        monthHeading(d.day)
+                            .padding(.top, i == 0 ? 0 : 18)
+                    }
+                    daySection(d)
+                }
+                .padding(.bottom, 22)
+                .tourAnchor(.album, if: i == 0)
+            }
+        }
+    }
+
+    private func monthHeading(_ month: Date) -> some View {
+        let cal = Calendar.current
+        let year = cal.component(.year, from: month)
+        let otherYear = year != cal.component(.year, from: Date())
+        return VStack(alignment: .leading, spacing: 0) {
+            if otherYear {
+                Text(String(year))
+                    .scaledFont(size: 12, weight: .semibold)
+                    .foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
+            }
+            Text(L("\(JPDate.month(month))のアルバム"))
+                .scaledFont(size: 20, weight: .heavy)
+                .foregroundStyle(Color(hex: 0x33291F))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .padding(.horizontal, 10)
+    }
+
+    private func daySection(_ d: AlbumDay) -> some View {
+        let isToday = Calendar.current.isDateInToday(d.day)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(JPDate.monthDayWeek(d.day))
+                    .scaledFont(size: 16, weight: .bold)
+                    .foregroundStyle(Color(hex: 0x33291F))
+                Spacer()
+                if !d.items.isEmpty {
+                    Text(L("\(d.items.count)語"))
+                        .font(AppFont.mono(12, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x33291F, opacity: 0.5))
+                }
+            }
+            .padding(.horizontal, 10)
+            if d.items.isEmpty {
+                emptyDay(isToday: isToday)
+            } else {
+                CollageBoard(items: d.items, editable: isToday, onOpen: onOpen, onEditingChange: onEditingChange)
+            }
+        }
+    }
+
+    /// Today before its first photo: a short line and the way to the camera.
+    private func emptyDay(isToday: Bool) -> some View {
+        VStack(spacing: 14) {
+            Text(isToday ? L("今日のページはまだ白紙です。") : L("この日は写真がありません。"))
+                .font(AppFont.hand(19))
+                .foregroundStyle(Color(hex: 0x33291F).opacity(0.65))
+            if isToday {
+                Button(action: onCamera) {
+                    Label(L("今日の1枚を撮る"), systemImage: "camera.fill")
+                        .scaledFont(size: 15, weight: .semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .frame(minHeight: 46)
+                        .background(Theme.primary, in: Capsule())
+                        .shadow(color: Theme.primary.opacity(0.35), radius: 10, y: 5)
+                }
+                .buttonStyle(PressableStyle())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+    }
+}
 
 /// Web `album-hidden-tray`: photos taken off the album, each with 「戻す」. Collapsed by default.
 struct AlbumHiddenTray: View {
@@ -405,30 +284,25 @@ struct AlbumHiddenTray: View {
                 }
                 .buttonStyle(.plain)
                 if open {
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 10) {
-                            ForEach(hidden) { s in
-                                VStack(spacing: 6) {
-                                    let path = s.heroPath
-                                    Theme.secondary.frame(width: 84, height: 84)
-                                        .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
-                                        .clipShape(.rect(cornerRadius: 12))
-                                    Text(s.word?.headword ?? "").scaledFont(size: 12, weight: .semibold).lineLimit(1)
-                                    Button(L("戻す")) {
-                                        Haptics.selection()
-                                        Task {
-                                            let ok = await dex.setAlbumHidden(s.id, hidden: false)
-                                            withAnimation(.easeOut(duration: 0.2)) { failed = !ok }
-                                        }
+                    // A wrapping grid (nothing on Home slides sideways).
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10, alignment: .top)], alignment: .leading, spacing: 12) {
+                        ForEach(hidden) { s in
+                            VStack(spacing: 6) {
+                                AlbumPhoto(sticker: s, width: 84, height: 84)
+                                Text(s.word?.headword ?? "").scaledFont(size: 12, weight: .semibold).lineLimit(1)
+                                Button(L("戻す")) {
+                                    Haptics.selection()
+                                    Task {
+                                        let ok = await dex.setAlbumHidden(s.id, hidden: false)
+                                        withAnimation(.easeOut(duration: 0.2)) { failed = !ok }
                                     }
-                                    .scaledFont(size: 13, weight: .semibold)
-                                    .frame(minWidth: 44, minHeight: 32)
                                 }
-                                .frame(width: 84)
+                                .scaledFont(size: 13, weight: .semibold)
+                                .frame(minWidth: 44, minHeight: 32)
                             }
+                            .frame(width: 84)
                         }
                     }
-                    .scrollIndicators(.hidden)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                     if failed {
                         Text(L("保存できませんでした。通信を確かめてください。"))

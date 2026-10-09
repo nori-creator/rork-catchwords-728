@@ -300,7 +300,7 @@ struct SettingsView: View {
                 Haptics.warning()
             }
         } message: {
-            Text(L("取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
+            Text(L("取り消すと、カメラ・スキャン・単語カードの作成など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
         }
         .aiConsentSheet(isPresented: $showAIConsent)
     }
@@ -330,7 +330,7 @@ struct SettingsView: View {
             let day = date.formatted(.dateTime.year().month().day().locale(L10n.locale))
             return L("同意しています（\(day)）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。")
         case .declined:
-            return L("同意していません。カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません。")
+            return L("同意していません。カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません。")
         case .undecided:
             return L("まだ選んでいません。AI を使う機能を使う前に確認します。")
         }
@@ -606,10 +606,9 @@ struct SettingsView: View {
             try await profile.deleteAccount()
             await AccountCleanup.accountDeleted(userId: deletedId)
             isDeleting = false
-            // Nothing of the deleted account stays on this device (waiting photos, unsent diary drafts).
+            // Nothing of the deleted account stays on this device (waiting photos).
             if let uid {
                 PendingQueue.shared.removeAll(ownerId: uid)
-                DiaryStore.removeDrafts(userId: uid)
             }
             auth.signOut()
         } catch APIError.message(let text) {

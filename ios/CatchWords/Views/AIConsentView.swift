@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// Shown over the app once per account (RootView, after sign-in and onboarding, before the camera or any
 /// AI feature), and as a sheet wherever a blocked AI feature is opened again (the camera tab, 設定, the
-/// word page, the diary). The answer is kept by `AIConsent`; `NativeAPI.call` enforces it.
+/// word page). The answer is kept by `AIConsent`; `NativeAPI.call` enforces it.
 struct AIConsentView: View {
     /// Called after a choice (true = agreed). The overlay leaves it nil: it closes when the answer is saved.
     var onDecided: ((Bool) -> Void)? = nil
@@ -18,13 +18,13 @@ struct AIConsentView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         header
                         point(icon: "photo.on.rectangle", title: L("送るもの"),
-                              text: L("撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（日記・報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。"))
+                              text: L("撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。"))
                         point(icon: "network", title: L("送り先"),
                               text: L("当社のサーバを通して、外部のAIサービス（Google など）に送ります。送り先の会社と国は、プライバシーポリシーに書いてあります。"))
                         point(icon: "lightbulb", title: L("使い道"),
-                              text: L("写っている物の判定、単語カード・解説・例文の作成、日記の添削のためだけに使います。当社が写真や日記を AI の学習に使うことはありません。"))
+                              text: L("写っている物の判定、単語カード・解説・例文の作成のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。"))
                         point(icon: "hand.raised", title: L("同意しない場合"),
-                              text: L("カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。"))
+                              text: L("カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。"))
                         Text(LegalLinks.aiConsentDetails())
                             .scaledFont(size: 13)
                             .foregroundStyle(Theme.muted)
@@ -55,7 +55,7 @@ struct AIConsentView: View {
                 .foregroundStyle(Theme.foreground)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(L("CatchWords は、写真から単語を見つけたり、単語カードを作ったり、日記を添削したりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。"))
+            Text(L("CatchWords は、写真から単語を見つけたり、単語カードを作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。"))
                 .scaledFont(size: 15)
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)

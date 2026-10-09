@@ -501,23 +501,101 @@ struct DexView: View {
     }
 }
 
+extension Sticker {
+    /// The picture every dex view shows (owner 2026-10-09): the background-removed cut-out wherever the word has
+    /// one, else the photo, else the stand-in picture. The word page's tap still opens the original photo.
+    nonisolated var dexImagePath: String? { cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl }
+    /// True when `dexImagePath` is the cut-out (drawn whole, with a little air, instead of filling the frame).
+    nonisolated var dexShowsCutout: Bool { cutoutImageUrl != nil }
+}
+
+/// A dex picture inside a frame: the cut-out whole (fit, `inset` of air around it) or the photo filling it.
+struct DexThumb: View {
+    @Environment(DexStore.self) private var dex
+    let sticker: Sticker
+    var inset: CGFloat = 4
+    var preferThumb: Bool = true
+
+    var body: some View {
+        let path = sticker.dexImagePath
+        if sticker.dexShowsCutout {
+            StickerImage(path: path, url: dex.url(for: path, preferThumb: preferThumb), contentMode: .fit)
+                .padding(inset)
+        } else {
+            StickerImage(path: path, url: dex.url(for: path, preferThumb: preferThumb), contentMode: .fill)
+        }
+    }
+}
+
+/// A word drawn on one line at its natural size and scaled down (to `minScale`) to fit the width it is given,
+/// so a long word (冷氣遙控器) never runs over its neighbour. For plain text `lineLimit(1)` +
+/// `minimumScaleFactor` does this; a ruby (zhuyin beside each character) can't shrink that way, so it is
+/// measured and scaled as a whole. Past `minScale` the rest is clipped.
+struct DexFitWidth<Content: View>: View {
+    var minScale: CGFloat
+    var alignment: HorizontalAlignment
+    let content: Content
+
+    @State private var natural: CGSize = .zero
+    @State private var available: CGFloat = 0
+
+    init(minScale: CGFloat = 0.45, alignment: HorizontalAlignment = .leading, @ViewBuilder content: () -> Content) {
+        self.minScale = minScale
+        self.alignment = alignment
+        self.content = content()
+    }
+
+    private var scale: CGFloat {
+        guard natural.width > 0, available > 0 else { return 1 }
+        return max(minScale, min(1, available / natural.width))
+    }
+
+    var body: some View {
+        let s = scale
+        let measured = natural.width > 0
+        let boxWidth: CGFloat? = measured ? natural.width * s : nil
+        let boxHeight: CGFloat? = measured ? natural.height * s : nil
+        content
+            .lineLimit(1)
+            .fixedSize()
+            .onGeometryChange(for: CGSize.self) { proxy in
+                proxy.size
+            } action: { size in
+                natural = size
+            }
+            .scaleEffect(s)
+            // The scaled word's own box (the frame centres the full-size word, and the scale is about its centre).
+            .frame(width: boxWidth, height: boxHeight)
+            // minWidth 0: always exactly the width offered, never the word's own (which would overflow).
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { w in
+                available = w
+            }
+            .clipped()
+    }
+}
+
 struct DexListRow: View {
     @Environment(DexStore.self) private var dex
     let sticker: Sticker
     let onOpen: () -> Void
 
     var body: some View {
-        let path = sticker.heroPath
         HStack(spacing: 12) {
             Button(action: onOpen) {
                 HStack(spacing: 14) {
                     Theme.secondary.frame(width: 60, height: 60)
-                        .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                        .overlay { DexThumb(sticker: sticker).allowsHitTesting(false) }
                         .clipShape(.rect(cornerRadius: 16, style: .continuous))
                         .detailZoomSource(sticker.id)
                     VStack(alignment: .leading, spacing: 4) {
-                        ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
-                        Text(sticker.word?.meaningJa ?? "").scaledFont(size: 14).foregroundStyle(Theme.muted).lineLimit(1)
+                        DexFitWidth {
+                            ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin, size: 22, weight: .bold, pinyin: sticker.word?.pinyin)
+                        }
+                        Text(sticker.word?.meaningJa ?? "").scaledFont(size: 14).foregroundStyle(Theme.muted)
+                            .lineLimit(1).minimumScaleFactor(0.8)
                     }
                     Spacer(minLength: 0)
                 }
@@ -677,7 +755,6 @@ struct DexMapView: View {
         let selected = v.items.first { $0.id == selectedId }
         let isOn = selected != nil
         let s = selected ?? v.items[0]
-        let path = s.heroPath
         return Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedId = s.id; panelOpen = true }
@@ -685,7 +762,7 @@ struct DexMapView: View {
         } label: {
             VStack(spacing: 4) {
                 Theme.secondary.frame(width: isOn ? 64 : 48, height: isOn ? 64 : 48)
-                    .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                    .overlay { DexThumb(sticker: s, inset: isOn ? 7 : 5).allowsHitTesting(false) }
                     .clipShape(Circle())
                     .overlay(Circle().stroke(isOn ? Theme.primary : .white, lineWidth: isOn ? 4 : 3))
                     .overlay(alignment: .topTrailing) {
@@ -761,7 +838,6 @@ struct DexMapView: View {
 
     private func row(_ s: Sticker) -> some View {
         let isOn = s.id == selectedId
-        let path = s.heroPath
         return Button {
                                     if isOn { onOpen(s) } else {
                                         Haptics.selection()
@@ -771,10 +847,11 @@ struct DexMapView: View {
                                 } label: {
                                     HStack(spacing: 14) {
                                         Theme.secondary.frame(width: 64, height: 64)
-                                            .overlay { StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false) }
+                                            .overlay { DexThumb(sticker: s).allowsHitTesting(false) }
                                             .clipShape(.rect(cornerRadius: 16, style: .continuous))
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
+                                                .lineLimit(1).minimumScaleFactor(0.45)
                                             if let cap = s.caption, !cap.isEmpty {
                                                 Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
                                             } else {

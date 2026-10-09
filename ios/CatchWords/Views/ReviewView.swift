@@ -17,6 +17,10 @@ struct ReviewView: View {
     @State private var swipeX: CGFloat = 0
     /// The answer sheet's real height (it grows with the explanation): the question scrolls clear of it.
     @State private var panelHeight: CGFloat = 420
+    /// The scroll view's height and the header + memory bar's height: the quiz card is sized from what is left,
+    /// so the photo and all four choices are on screen together when the page opens (even on an iPhone SE).
+    @State private var viewportHeight: CGFloat = 0
+    @State private var topHeight: CGFloat = 0
     @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -24,9 +28,16 @@ struct ReviewView: View {
             AppBackground()
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        header
-                        MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            header
+                            MemoryBar(counts: dex.memoryLevelCounts, isOpen: $legendOpen)
+                        }
+                        .onGeometryChange(for: CGFloat.self) { geo in
+                            geo.size.height
+                        } action: { h in
+                            topHeight = h
+                        }
                         if legendOpen {
                             MemoryOverviewPanel(store: store) { s in
                                 withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { curveSticker = s }
@@ -41,6 +52,12 @@ struct ReviewView: View {
                     .padding(.bottom, answer == nil ? 120 : panelHeight + 16)
                 }
                 .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+                .onGeometryChange(for: CGFloat.self) { geo in
+                    // Only the part clear of the status bar and the home indicator (if the frame reaches under them).
+                    geo.size.height - geo.safeAreaInsets.top - geo.safeAreaInsets.bottom
+                } action: { h in
+                    viewportHeight = h
+                }
                 .statusBarScrim()
                 // A long question (English meanings especially) sat under the sheet that slides up: once
                 // answered, bring the question to the top so all of it stays readable above the sheet.
@@ -174,17 +191,26 @@ struct ReviewView: View {
         if answered { goNext() }
     }
 
+    /// The height the quiz card may take so it ends above the tab bar (58 pt + 4 pt, plus a little air):
+    /// the viewport minus the top padding, the header + memory bar, the gap, and the tab bar. nil until measured.
+    private var quizFitHeight: CGFloat? {
+        guard viewportHeight > 0, topHeight > 0 else { return nil }
+        return viewportHeight - 8 - topHeight - 10 - 70
+    }
+
     private func closeCurve() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { curveSticker = nil }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("きょうの復習")).scaledFont(size: 30, weight: .heavy).foregroundStyle(Theme.foreground)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("きょうの復習")).scaledFont(size: 26, weight: .heavy).foregroundStyle(Theme.foreground)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                     Text(store.streak > 0 ? L("復習が\(store.streak)日続いています") : L("今日から復習を始めましょう"))
                         .scaledFont(size: 14).foregroundStyle(Theme.muted)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Spacer()
                 if !store.queue.isEmpty {
@@ -207,7 +233,8 @@ struct ReviewView: View {
     @ViewBuilder
     private var content: some View {
         if router.tour.isReview, let card = practiceCards[safe: practiceIndex] {
-            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: nil, isAnswered: answer != nil) { correct, _ in
+            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: nil, isAnswered: answer != nil,
+                     fitHeight: quizFitHeight) { correct, _ in
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
                 router.advanceTour(from: .reviewPick, to: .reviewNext)
             } onBadge: {}
@@ -224,7 +251,8 @@ struct ReviewView: View {
         } else if !store.hasLoaded {
             ProgressView().frame(maxWidth: .infinity).padding(.top, 80)
         } else if let card = store.current {
-            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker), isAnswered: answer != nil) { correct, ms in
+            QuizCard(card: card, choices: store.choices(for: card, dex: dex), percent: dex.memoryPercent(for: card.sticker), isAnswered: answer != nil,
+                     fitHeight: quizFitHeight) { correct, ms in
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { answer = correct }
                 gradingId = card.id
                 Task {
@@ -364,10 +392,15 @@ struct QuizCard: View {
     let choices: [QuizChoice]
     let percent: Int?
     let isAnswered: Bool
+    /// The height the whole card should fit in (ReviewView measures it): the photo takes what the question and
+    /// the four choices leave, so nothing has to be scrolled to when the card opens. nil = the photo's usual height.
+    var fitHeight: CGFloat? = nil
     let onAnswer: (Bool, Int) -> Void
     let onBadge: () -> Void
 
     @State private var picked: String?
+    /// The question and the four choices together (measured; they never depend on the photo's height).
+    @State private var lowerHeight: CGFloat = 0
     @State private var started: Date = Date()
     @State private var shake: CGFloat = 0
 
@@ -375,6 +408,16 @@ struct QuizCard: View {
     static let questionID = "quiz.question"
     /// Room kept on each side of a choice's word for the speaker button (40 pt, 10 pt from the edge) and the ✓/✗.
     static let choiceSideInset: CGFloat = 56
+    /// The card's padding and the gap between the photo and the question.
+    private static let cardPadding: CGFloat = 12
+    private static let gap: CGFloat = 10
+
+    /// The photo's height: what is left of `fitHeight`, kept between a small but readable picture and 300 pt.
+    private var photoHeight: CGFloat {
+        guard let fitHeight, lowerHeight > 0 else { return 200 }
+        let left = fitHeight - lowerHeight - Self.gap - Self.cardPadding * 2
+        return min(300, max(84, left))
+    }
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
     /// The meaning as it is now (read in the reader's language after the card was made).
@@ -382,61 +425,60 @@ struct QuizCard: View {
     private var liveMeaning: String { ReaderLanguage.gloss((dex.sticker(id: card.sticker.id) ?? card.sticker).word?.meaningJa ?? "") }
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 26, height: 26)
-                        .background(Theme.primary, in: Circle())
-                    Text(L("4択クイズ")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
-                }
-                .padding(.leading, 4).padding(.trailing, 12).padding(.vertical, 4)
-                .background(Theme.secondary, in: Capsule())
-                Spacer()
-                if let percent {
-                    Button(action: onBadge) {
-                        let lv = MemoryBadge.level(percent)
-                        HStack(spacing: 5) {
-                            Circle().fill(Theme.memoryLevels[lv]).frame(width: 7, height: 7)
-                            Text("\(percent)%").scaledFont(size: 14, weight: .semibold, monospacedDigit: true)
-                                .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.35))
-                        }
-                        .padding(.horizontal, 10).frame(minHeight: 30)
-                        .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                        .frame(minHeight: 44)
+        VStack(spacing: Self.gap) {
+            if isAnswered {
+                // Answered: the photo makes way for the answer sheet; the quiz label and the memory badge stay.
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.grid.2x2.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 26, height: 26)
+                            .background(Theme.primary, in: Circle())
+                        Text(L("4択クイズ")).scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.foreground)
                     }
-                    .buttonStyle(PressableStyle(scale: 0.92))
-                    .accessibilityLabel(L("忘却曲線を見る"))
+                    .padding(.leading, 4).padding(.trailing, 12).padding(.vertical, 4)
+                    .background(Theme.secondary, in: Capsule())
+                    Spacer()
+                    if let percent { badge(percent) }
                 }
-            }
-
-            if !isAnswered {
+            } else {
                 let path = card.sticker.heroPath
                 Theme.secondary
-                    .frame(height: 220)
+                    .frame(height: photoHeight)
                     .overlay {
                         StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: .fit)
+                            .padding(6)
                             .allowsHitTesting(false)
                     }
                     .clipShape(.rect(cornerRadius: 22, style: .continuous))
+                    // The word's memory sits at the photo's top right (web CardMemoryBadge), tap → its curve.
+                    .overlay(alignment: .topTrailing) {
+                        if let percent { badge(percent).padding(.trailing, 4) }
+                    }
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }
 
-            Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
-                .scaledFont(size: 17, weight: .bold)
-                .foregroundStyle(Theme.foreground)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
-                .id(Self.questionID)
+            VStack(spacing: Self.gap) {
+                Text(liveMeaning.isEmpty ? L("この写真の物はどれ？") : L("「\(liveMeaning)」はどれ？"))
+                    .scaledFont(size: 17, weight: .bold)
+                    .foregroundStyle(Theme.foreground)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
+                    .id(Self.questionID)
 
-            VStack(spacing: 10) {
-                ForEach(choices) { c in choiceRow(c) }
+                VStack(spacing: 8) {
+                    ForEach(choices) { c in choiceRow(c) }
+                }
+                .offset(x: shake)
             }
-            .offset(x: shake)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.height
+            } action: { h in
+                lowerHeight = h
+            }
         }
-        .padding(14)
+        .padding(Self.cardPadding)
         .background(Theme.card, in: .rect(cornerRadius: 28, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
@@ -450,6 +492,25 @@ struct QuizCard: View {
         }
     }
 
+    /// The memory badge (level colour + %), 44 pt to tap; opens the forgetting curve.
+    private func badge(_ percent: Int) -> some View {
+        let lv = MemoryBadge.level(percent)
+        return Button(action: onBadge) {
+            HStack(spacing: 5) {
+                Circle().fill(Theme.memoryLevels[lv]).frame(width: 7, height: 7)
+                Text("\(percent)%").scaledFont(size: 14, weight: .semibold, monospacedDigit: true)
+                    .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.35))
+            }
+            .padding(.horizontal, 10).frame(minHeight: 30)
+            .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
+            .background(Theme.card.opacity(0.94), in: Capsule())   // stays readable over the photo
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.92))
+        .accessibilityLabel(L("忘却曲線を見る"))
+    }
+
     private func choiceRow(_ c: QuizChoice) -> some View {
         let isCorrect = c.headword == correctHead
         let isPicked = picked == c.headword
@@ -460,11 +521,11 @@ struct QuizCard: View {
             Button { answer(c) } label: {
                 // The speaker (40 pt + 10 trailing) and the ✓/✗ mark sit over the row: the word keeps clear of
                 // both sides, so a long one ("washing machine") wraps or shrinks instead of running under them.
-                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 34, weight: .bold)
+                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 28, weight: .bold)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Self.choiceSideInset)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity, minHeight: 76)
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity, minHeight: 56)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressableStyle(scale: 0.97))

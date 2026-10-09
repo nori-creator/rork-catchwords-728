@@ -46,7 +46,7 @@ final class FullTourTests: XCTestCase {
         snap("home-scrolled")
 
         dexAndDetail()
-        searchAndCatch()
+        photoAndCatch()
         review()
         settings()
         signOutAndBackIn()
@@ -97,48 +97,31 @@ final class FullTourTests: XCTestCase {
         settle(1)
     }
 
-    private func searchAndCatch() {
+    /// The camera only takes photos. Under `-uiDemo` the simulator has no camera: the viewfinder shows a
+    /// sample photo, the shutter takes it and the demo backend names what is in it. Shutter → the words on
+    /// the photo → tap the first → the celebration → 図鑑に追加 → the dex.
+    private func photoAndCatch() {
         tap("tab.camera")
         settle(2)
         snap("camera")
-        let search = app.buttons["camera.mode.search"]
-        guard search.waitForExistence(timeout: 10) else {
-            XCTFail("[\(display)/\(learning)] no search mode on the camera")
+        let shutter = app.buttons["camera.shutter"]
+        guard shutter.waitForExistence(timeout: 10), shutter.isEnabled else {
+            XCTFail("[\(display)/\(learning)] the shutter is missing or disabled")
             return
         }
-        search.tap()
-        settle(0.5)
-        // In search mode the shutter (a magnifier) opens the text sheet.
-        tap("camera.shutter")
-        let field = app.textFields["search.field"]
-        guard field.waitForExistence(timeout: 10) else {
-            XCTFail("[\(display)/\(learning)] the search sheet did not open")
-            return
-        }
-        snap("search")
-        field.tap()
-        field.typeText(sampleWord)
-        // A Japanese keyboard can hold the word as unconfirmed input: the field's text (and so the enabled
-        // state of 「〜で調べる」) only updates once it is confirmed, like a person pressing the keyboard's key.
-        let submit = app.buttons["search.submit"]
-        if !submit.isEnabled {
-            field.typeText("\n")
-            settle(0.5)
-        }
-        if submit.exists && submit.isEnabled { submit.tap() }
+        shutter.tap()
         let first = app.buttons["candidate.0"].firstMatch
-        if first.waitForExistence(timeout: 20) {
-            settle(1)
-            snap("candidates")
-            first.tap()
-            if app.buttons["candidate.confirm"].waitForExistence(timeout: 3) {
-                snap("candidate-others")
-                app.buttons["candidate.confirm"].tap()
-            }
+        guard first.waitForExistence(timeout: 30) else {
+            XCTFail("[\(display)/\(learning)] the words did not appear on the photo")
+            snap("analysis-failed")
+            return
         }
+        settle(1.5)
+        snap("candidates")
+        first.tap()
         let catchButton = app.buttons["card.catch"]
         let again = app.buttons["reencounter.dex"]
-        // A word already in the dex opens the re-encounter card instead of the catch card.
+        // A word already in the dex opens the re-encounter card instead of the celebration.
         let deadline = Date().addingTimeInterval(30)
         while !catchButton.exists && !again.exists && Date() < deadline { settle(0.5) }
         if again.exists && !catchButton.exists {
@@ -150,12 +133,12 @@ final class FullTourTests: XCTestCase {
             return
         }
         guard catchButton.exists else {
-            XCTFail("[\(display)/\(learning)] the word card did not open after searching")
-            snap("search-failed")
+            XCTFail("[\(display)/\(learning)] the celebration did not open after tapping a word")
+            snap("pick-failed")
             return
         }
         settle(2)
-        snap("card")
+        snap("celebration")
         catchButton.tap()
         settle(4)
         snap("after-catch")
@@ -252,14 +235,6 @@ final class FullTourTests: XCTestCase {
     }
 
     // MARK: - Helpers
-
-    private var sampleWord: String {
-        switch learning {
-        case "en": "mango"
-        case "ja": "傘"
-        default: "芒果"
-        }
-    }
 
     private var closeLabels: [String] { ["閉じる", "Close", "關閉"] }
 

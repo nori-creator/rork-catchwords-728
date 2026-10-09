@@ -31,9 +31,9 @@ enum AppTab: Int, CaseIterable, Identifiable {
 final class AppRouter {
     var tab: AppTab = .home
     var landingStickerId: String?
-    /// The card catch's star waiting for the save (CardCatchModel → CatchLanding).
+    /// The catch's star waiting for the save: it leaves from the celebration's sticker (CaptureView → CatchLanding).
     var catchStar: CatchStar?
-    /// A card-catch landing in progress: the dex opens in ギャラリー and the star flies into the slot.
+    /// A catch landing in progress: the dex opens in ギャラリー and the star flies into the slot.
     var landing: CatchLandingController?
     var detailSticker: Sticker?
     var showPaywall: Bool = false
@@ -57,7 +57,7 @@ final class AppRouter {
     var detailAfterSave: String?
     /// A word page's 「いま復習する」: the review tab brings this sticker in as the next card, due or not.
     var reviewNow: String?
-    /// A one-line notice over every tab (the card catch's background save reports a failure here: the camera
+    /// A one-line notice over every tab (a catch's background save reports a failure here: the camera
     /// screen, which has its own toast, is gone by then).
     var notice: String?
     @ObservationIgnored private var noticeToken = 0
@@ -157,7 +157,7 @@ struct MainTabView: View {
             }
         }
         .overlayPreferenceValue(TourAnchorKey.self) { anchors in
-            // The card catch hides the tab bar for its whole flow; its capture steps still need the guide.
+            // The catch hides the tab bar for its whole flow; its capture steps still need the guide.
             if router.tour != .off, router.tour != .word, router.tour != .complete,
                !router.tabBarHidden || (router.tab == .camera && router.tour.isCapture) {
                 TourLayer(step: router.tour, anchors: anchors, onNext: tourNext, onSkip: endTour)

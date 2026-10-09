@@ -1,14 +1,199 @@
 import SwiftUI
 
-/// One object in the photo: its everyday name, plus other names for the same object
-/// (candidate-order.ts `groupCandidates`). Candidates without a group are one object each.
-struct CandidateGroup: Identifiable {
-    let main: Candidate
-    let others: [Candidate]
-    var id: String { main.id }
+/// After the shot: the photo with each word the AI found as a tag ON its object (the AI's point; Vision's
+/// instance when it found one), and "違う単語を入力" underneath for a word that is not among them.
+/// A tap on a tag goes straight to the celebration (owner 2026-10-09: shoot → words → tap → done).
+/// - Each object's everyday name is the bold tag; its other names (砕けた / くわしい / 固有名詞) sit just
+///   above or below it, lighter. Tags never cover each other (`CCPickLayout`).
+/// - Without a position (the AI gave none) the words gather at the photo's centre, still one per line.
+struct CandidatePickerView: View {
+    let vm: CaptureViewModel
+    @State private var appeared: Bool = false
+    @State private var typed: String = ""
+    @FocusState private var inputFocused: Bool
+    @Environment(\.appReduceMotion) private var reduceMotion
 
-    /// ふだん → 砕けた → くわしい → 固有名詞. Same rank keeps the AI's order (likelihood).
-    static func rank(_ register: String?) -> Int {
+    private let ink = Color(hex: 0x0B121A)
+
+    /// One word's tag over the photo.
+    private struct Tag: Identifiable {
+        let id: String
+        let object: CatchObject
+        let word: Candidate
+        /// The object's everyday name; the others are its other names, drawn lighter.
+        let main: Bool
+        /// Order among the everyday names (`candidate.<n>`); nil for other names.
+        let mainIndex: Int?
+    }
+
+    /// A tag with its size and its bottom centre in the photo stage.
+    private struct Placed: Identifiable {
+        let tag: Tag
+        let size: CGSize
+        let spot: CGPoint
+        var id: String { tag.id }
+    }
+
+    /// The photo's objects. Built here from the words alone when the analysis did not build them
+    /// (no masks: each object gets the box around its own point).
+    private var objects: [CatchObject] {
+        if !vm.objects.isEmpty { return vm.objects }
+        guard let photo = vm.photo, !vm.candidates.isEmpty else { return [] }
+        return CatchObject.build(candidates: vm.candidates, masks: nil, photoSize: photo.size)
+    }
+
+    var body: some View {
+        ZStack {
+            MachineBackground()
+            VStack(spacing: 12) {
+                topBar
+                photoStage
+                    .clipShape(.rect(cornerRadius: 24, style: .continuous))
+                    .padding(.horizontal, 10)
+                bottomPanel
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+            }
+            if vm.isCheckingOwned {
+                Color.black.opacity(0.25).ignoresSafeArea()
+                ProgressView().controlSize(.large).tint(.white)
+            }
+        }
+        .allowsHitTesting(!vm.isCheckingOwned)
+        .onAppear {
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { appeared = true }
+            }
+        }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 10) {
+            Button { vm.reset() } label: {
+                Label(L("撮り直す"), systemImage: "arrow.counterclockwise")
+                    .scaledFont(size: 14, weight: .semibold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(.white.opacity(0.12), in: Capsule())
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityIdentifier("picker.retake")
+            Spacer(minLength: 8)
+            Text(L("覚えたいことばをタップ"))
+                .scaledFont(size: 14, weight: .semibold)
+                .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+    }
+
+    // MARK: The photo and its tags
+
+    private var photoStage: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            let placedTags = placed(in: size)
+            ZStack(alignment: .topLeading) {
+                if let photo = vm.photo {
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                        .allowsHitTesting(false)
+                }
+                ForEach(placedTags) { p in
+                    tagButton(p)
+                        .position(x: p.spot.x, y: p.spot.y - p.size.height / 2)
+                }
+            }
+            .frame(width: size.width, height: size.height)
+            .contentShape(.rect)
+            .onTapGesture { inputFocused = false }
+        }
+    }
+
+    /// Everyday names first (each keeps its own place on its object), then the other names, which move just
+    /// above or below the tags they would cover.
+    private func tags(_ objects: [CatchObject]) -> [Tag] {
+        var mains: [Tag] = []
+        var others: [Tag] = []
+        for o in objects {
+            // ふだん → 砕けた → くわしい → 固有名詞. Same rank keeps the AI's order (likelihood).
+            let order = o.words.indices.sorted { a, b in
+                let ra = Self.rank(o.words[a].register), rb = Self.rank(o.words[b].register)
+                return ra != rb ? ra < rb : a < b
+            }
+            for (k, i) in order.enumerated() {
+                let id = "\(o.id)-\(i)"
+                if k == 0 {
+                    mains.append(Tag(id: id, object: o, word: o.words[i], main: true, mainIndex: mains.count))
+                } else {
+                    others.append(Tag(id: id, object: o, word: o.words[i], main: false, mainIndex: nil))
+                }
+            }
+        }
+        return mains + others
+    }
+
+    private func placed(in size: CGSize) -> [Placed] {
+        guard let photo = vm.photo, size.width > 0, size.height > 0 else { return [] }
+        let list = tags(objects)
+        guard !list.isEmpty else { return [] }
+        let fill = Self.fillRect(image: photo.size, in: size)
+        let sizes = list.map { CCPickLayout.tagSize(name: $0.word.headword) }
+        let tallest = sizes.map(\.height).max() ?? 30
+        let area = CCPickLayout.Area(width: size.width, minBottom: tallest + 6,
+                                     maxBottom: max(tallest + 6, size.height - 6), sideClamp: 0)
+        var anchors: [CGPoint] = []
+        for (i, t) in list.enumerated() {
+            let p = CGPoint(x: fill.minX + t.object.point.x * fill.width, y: fill.minY + t.object.point.y * fill.height)
+            anchors.append(CCPickLayout.anchor(at: p, size: sizes[i], in: area))
+        }
+        let spots = CCPickLayout.layout(anchors: anchors, sizes: sizes, in: area)
+        return list.indices.map { Placed(tag: list[$0], size: sizes[$0], spot: spots[$0]) }
+    }
+
+    /// White capsule with a blue dot and the word (the other names: a grey dot, a little see-through).
+    private func tagButton(_ p: Placed) -> some View {
+        let t = p.tag
+        let delay = 0.08 + Double(t.mainIndex ?? 4) * 0.06
+        return Button { vm.choose(t.word, object: t.object) } label: {
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(t.main ? Color(hex: 0x2A9BFF) : Color(hex: 0x9AA6B5))
+                    .frame(width: 10, height: 10)
+                Text(t.word.headword)
+                    .font(.system(size: CCPickLayout.tagFontSize, weight: .heavy))
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.leading, 8)
+            .padding(.trailing, 12)
+            .padding(.vertical, 7)
+            .background(Color.white.opacity(t.main ? 0.96 : 0.8), in: Capsule())
+            .shadow(color: .black.opacity(0.3), radius: 10, y: 6)
+            .contentShape(Capsule().inset(by: -6))
+        }
+        .buttonStyle(PressableStyle(scale: 0.94))
+        .accessibilityHint(ReaderLanguage.gloss(ReaderLanguage.shown(t.word.meaningJa)))
+        .accessibilityIdentifier(t.mainIndex.map { "candidate.\($0)" } ?? "candidate.other")
+        .tourAnchor(.pick, if: t.mainIndex == 0)
+        .scaleEffect(appeared ? 1 : 0.6)
+        .opacity(appeared ? 1 : 0)
+        .animation(reduceMotion ? nil : Animation.spring(response: 0.45, dampingFraction: 0.7).delay(delay), value: appeared)
+    }
+
+    /// ふだん → 砕けた → くわしい → 固有名詞 (candidate-order.ts).
+    private static func rank(_ register: String?) -> Int {
         switch register {
         case "casual": 1
         case "specific": 2
@@ -17,244 +202,59 @@ struct CandidateGroup: Identifiable {
         }
     }
 
-    static func make(_ items: [Candidate]) -> [CandidateGroup] {
-        var order: [String] = []
-        var buckets: [String: [(Int, Candidate)]] = [:]
-        for (i, c) in items.enumerated() {
-            let key = c.group.map { "g\($0)" } ?? "solo\(i)"
-            if buckets[key] == nil { order.append(key) }
-            buckets[key, default: []].append((i, c))
-        }
-        return order.compactMap { key in
-            let sorted = (buckets[key] ?? [])
-                .sorted { (rank($0.1.register), $0.0) < (rank($1.1.register), $1.0) }
-                .map(\.1)
-            guard let main = sorted.first else { return nil }
-            return CandidateGroup(main: main, others: Array(sorted.dropFirst()))
-        }
-    }
-}
-
-/// capture.tsx PickWordPanel + CandidatePicker (owner rules 2026-09-27/28):
-/// - Stage 1: one row per object, **all the same size**, meaning only (2 lines max, never scrolls sideways).
-/// - Tapping an object with no other names picks it at once; otherwise stage 2 opens:
-///   the everyday name large with its usage note, "この語で図鑑に入れる", and the other names small
-///   with 砕けた言い方 / くわしい名前 / 固有名詞 chips.
-struct CandidatePickerView: View {
-    let vm: CaptureViewModel
-    @State private var appeared: Bool = false
-    @State private var typed: String = ""
-    @State private var openGroup: String?
-    @FocusState private var inputFocused: Bool
-    /// The tapped word travels from its row to the big word of stage 2 (and back).
-    @Namespace private var hero
-
-    private var groups: [CandidateGroup] { CandidateGroup.make(vm.candidates) }
-
-    var body: some View {
-        ZStack {
-            AppBackground()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    CollectHeader { vm.reset() }
-                    if let photo = vm.photo {
-                        Color.clear
-                            .frame(width: 160, height: 160)
-                            .overlay { Image(uiImage: photo).resizable().scaledToFill().allowsHitTesting(false) }
-                            .clipShape(.rect(cornerRadius: 24, style: .continuous))
-                            .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
-                            .frame(maxWidth: .infinity)
-                            .scaleEffect(appeared ? 1 : 0.9)
-                            .opacity(appeared ? 1 : 0)
-                    }
-                    if let g = groups.first(where: { $0.id == openGroup }) {
-                        stageTwo(g).transition(.move(edge: .trailing).combined(with: .opacity))
-                    } else {
-                        stageOne.transition(.move(edge: .leading).combined(with: .opacity))
-                        manualInput.padding(.top, 8)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 110)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            if vm.isCheckingOwned {
-                Color.black.opacity(0.06).ignoresSafeArea()
-                ProgressView().controlSize(.large)
-            }
-        }
-        .allowsHitTesting(!vm.isCheckingOwned)
-        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: openGroup)
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { appeared = true }
-        }
-    }
-
-    // MARK: Stage 1 — one row per object
-
-    private var stageOne: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L("写っている物"))
-                .scaledFont(size: 13, weight: .semibold)
-                .foregroundStyle(Theme.muted)
-                .padding(.top, 6)
-            VStack(spacing: 0) {
-                ForEach(Array(groups.enumerated()), id: \.element.id) { idx, g in
-                    stageOneRow(g)
-                        .accessibilityIdentifier("candidate.\(idx)")
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 14)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.05 + Double(idx) * 0.05), value: appeared)
-                    if idx < groups.count - 1 { Divider().overlay(Theme.border) }
-                }
-            }
-            .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
-            .tourAnchor(.pick)
-        }
-    }
-
-    private func stageOneRow(_ g: CandidateGroup) -> some View {
-        HStack(spacing: 10) {
-            Button {
-                if g.others.isEmpty {
-                    vm.pick(g.main)
-                } else {
-                    Haptics.selection()
-                    openGroup = g.id
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    wordLine(g.main, size: 24, note: false)
-                        .matchedGeometryEffect(id: "word-\(g.id)", in: hero, properties: .position, anchor: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if !g.others.isEmpty {
-                        HStack(spacing: 2) {
-                            Text(L("ほかの言い方 \(g.others.count)"))
-                            Image(systemName: "chevron.right").scaledFont(size: 11, weight: .semibold)
-                        }
-                        .scaledFont(size: 12)
-                        .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
-                        .layoutPriority(-1)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressableStyle(scale: 0.98))
-            PronounceCircle(text: g.main.headword)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(minHeight: 68)
-    }
-
-    // MARK: Stage 2 — the everyday name large, other names small
-
-    private func stageTwo(_ g: CandidateGroup) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button {
-                openGroup = nil
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left").scaledFont(size: 14, weight: .semibold)
-                    Text(L("戻る"))
-                }
-                .scaledFont(size: 16)
-                .foregroundStyle(Theme.muted)
-                .frame(minHeight: 44)
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
-                    wordLine(g.main, size: 40, note: true)
-                        .matchedGeometryEffect(id: "word-\(g.id)", in: hero, properties: .position, anchor: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    PronounceCircle(text: g.main.headword, size: 48)
-                }
-                Button { vm.pick(g.main) } label: {
-                    Text(L("この語で図鑑に入れる"))
-                        .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                        .background(Theme.primary, in: Capsule())
-                }
-                .buttonStyle(PressableStyle())
-                .accessibilityIdentifier("candidate.confirm")
-            }
-            .padding(16)
-            .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
-
-            Text(L("ほかの言い方"))
-                .scaledFont(size: 13, weight: .semibold)
-                .foregroundStyle(Theme.muted)
-                .padding(.horizontal, 4)
-            VStack(spacing: 0) {
-                ForEach(Array(g.others.enumerated()), id: \.element.id) { idx, c in
-                    HStack(spacing: 8) {
-                        Button { vm.pick(c) } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                if let chip = Self.registerLabel(c.register) {
-                                    Text(chip)
-                                        .scaledFont(size: 11)
-                                        .foregroundStyle(Theme.muted)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 2)
-                                        .background(Theme.secondary, in: Capsule())
-                                }
-                                wordLine(c, size: 20, note: true)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressableStyle(scale: 0.98))
-                        PronounceCircle(text: c.headword, size: 36)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 56)
-                    if idx < g.others.count - 1 { Divider().overlay(Theme.border) }
-                }
-            }
-            .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
-        }
-    }
-
-    static func registerLabel(_ register: String?) -> String? {
-        switch register {
-        case "casual": L("砕けた言い方")
-        case "specific": L("くわしい名前")
-        case "proper": L("固有名詞")
-        default: nil
-        }
-    }
-
-    /// Zhuyin to the right of each character; meaning up to 2 lines (wraps, never scrolls sideways);
-    /// the usage note only in stage 2.
-    private func wordLine(_ c: Candidate, size: CGFloat, note: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: size, pinyin: c.pinyin)
-            Text(ReaderLanguage.gloss(ReaderLanguage.shown(c.meaningJa)))
-                .scaledFont(size: size >= 34 ? 16 : 13)
-                .foregroundStyle(Theme.muted)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-            if note, !ReaderLanguage.shown(c.distinction, hanOnlyOk: false).isEmpty {
-                Text(ReaderLanguage.shown(c.distinction, hanOnlyOk: false))
-                    .scaledFont(size: size >= 34 ? 14 : 12)
-                    .foregroundStyle(Theme.primaryInk)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+    /// Where a scaledToFill image sits inside `size`.
+    static func fillRect(image: CGSize, in size: CGSize) -> CGRect {
+        guard image.width > 0, image.height > 0 else { return CGRect(origin: .zero, size: size) }
+        let scale = max(size.width / image.width, size.height / image.height)
+        let w = image.width * scale, h = image.height * scale
+        return CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h)
     }
 
     // MARK: "違う単語を入力"
 
+    private var bottomPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !vm.typedCandidates.isEmpty { typedList }
+            manualInput
+        }
+        .padding(14)
+        .background(Theme.card, in: .rect(cornerRadius: 22, style: .continuous))
+        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: vm.typedCandidates.count)
+    }
+
+    /// Several words for what was typed: one row each (never scrolls sideways).
+    private var typedList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(vm.typedCandidates.enumerated()), id: \.offset) { idx, c in
+                Button { vm.choose(c, object: nil) } label: {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 20, pinyin: c.pinyin)
+                            Text(ReaderLanguage.gloss(ReaderLanguage.shown(c.meaningJa)))
+                                .scaledFont(size: 12)
+                                .foregroundStyle(Theme.muted)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .scaledFont(size: 13, weight: .semibold)
+                            .foregroundStyle(Theme.muted)
+                    }
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 50)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle(scale: 0.98))
+                .accessibilityIdentifier("typed.\(idx)")
+                if idx < vm.typedCandidates.count - 1 { Divider().overlay(Theme.border) }
+            }
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
     private var manualInput: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(L("違う単語を入力"))
                 .scaledFont(size: 13, weight: .medium)
                 .foregroundStyle(Theme.muted)
@@ -269,9 +269,14 @@ struct CandidatePickerView: View {
                     .frame(minHeight: 46)
                     .background(Theme.background, in: .rect(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.primary.opacity(inputFocused ? 0.6 : 0.25), lineWidth: 1))
+                    .accessibilityIdentifier("picker.field")
                 Button(action: submit) {
                     HStack(spacing: 6) {
-                        if vm.isLookingUp { ProgressView().controlSize(.small) } else { Image(systemName: "magnifyingglass") }
+                        if vm.isLookingUp {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                        }
                         Text(L("検索"))
                     }
                     .scaledFont(size: 15, weight: .medium)
@@ -282,6 +287,7 @@ struct CandidatePickerView: View {
                 }
                 .buttonStyle(PressableStyle())
                 .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty || vm.isLookingUp)
+                .accessibilityIdentifier("picker.submit")
             }
             if let err = vm.searchError {
                 Text(err)
@@ -292,18 +298,14 @@ struct CandidatePickerView: View {
                     .transition(.opacity)
             }
         }
-        .padding(14)
-        .background(Theme.card, in: .rect(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
     }
 
     private func submit() {
         let q = typed.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return }
+        guard !q.isEmpty, !vm.isLookingUp else { return }
         inputFocused = false
         typed = ""
-        openGroup = nil
-        vm.search(text: q, keepPhoto: vm.photo != nil)
+        vm.search(text: q)
     }
 }
 

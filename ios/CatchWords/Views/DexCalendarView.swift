@@ -81,7 +81,6 @@ struct DexCalendarView: View {
         let isToday = cal.isDateInToday(day)
         let weekday = cal.component(.weekday, from: day)
         let isSelected = selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false
-        let path = first.map { $0.heroPath }
         return Button {
             guard !items.isEmpty else { return }
             Haptics.selection()
@@ -90,8 +89,8 @@ struct DexCalendarView: View {
             Color(light: 0xE8F1FD, dark: 0x17233A)
                 .aspectRatio(0.72, contentMode: .fit)
                 .overlay {
-                    if let path {
-                        StickerImage(path: path, url: dex.url(for: path), contentMode: .fill).allowsHitTesting(false)
+                    if let first {
+                        DexThumb(sticker: first, inset: 3).allowsHitTesting(false)
                     }
                 }
                 .clipShape(.rect(cornerRadius: 10, style: .continuous))
@@ -152,14 +151,15 @@ struct DexCalendarView: View {
                         HStack(spacing: 12) {
                             Color.clear.frame(width: 72, height: 72)
                                 .overlay {
-                                    StickerImage(path: s.heroPath, url: dex.url(for: s.heroPath), contentMode: s.cutoutImageUrl != nil ? .fit : .fill)
-                                        .allowsHitTesting(false)
+                                    DexThumb(sticker: s).allowsHitTesting(false)
                                 }
                                 .background(Theme.surface2.opacity(0.5))
                                 .clipShape(.rect(cornerRadius: 14))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(s.word?.headword ?? "").scaledFont(size: 20, weight: .bold).foregroundStyle(Theme.foreground)
+                                    .lineLimit(1).minimumScaleFactor(0.45)
                                 Text(s.word?.meaningJa ?? "").scaledFont(size: 13).foregroundStyle(Theme.muted)
+                                    .lineLimit(2)
                                 if s.lat != nil || !(s.locationName ?? "").isEmpty {
                                     Label {
                                         LocalizedPlaceText(lat: s.lat, lng: s.lng, saved: s.locationName)
@@ -172,7 +172,7 @@ struct DexCalendarView: View {
                                     Text(cap).font(AppFont.hand(14)).foregroundStyle(Theme.foreground.opacity(0.8)).lineLimit(2)
                                 }
                             }
-                            Spacer()
+                            Spacer(minLength: 0)
                         }
                         .padding(10)
                         .background(Theme.card, in: .rect(cornerRadius: 18))
