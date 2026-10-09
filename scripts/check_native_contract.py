@@ -32,12 +32,19 @@ REPO = "nori-creator/Lovable-catch-words-app"
 # The iOS code behind them must treat any failure (unknown function, 400, 404, network) as "no answer".
 # Remove an entry as soon as the patch is on the web's main (the check then warns, and checks the
 # function fully: the allowance only ever covers a function missing from NATIVE_FNS).
+_ADMIN_AI_PATCH = ("web branch ccr-89cbeb71-xcif1z, PR #168 (src/lib/admin-ai.functions.ts, "
+                   "images.functions.ts adminTestImage, native-fn.ts)")
 PENDING_WEB_DEPLOY = {
     # recordAiConsent / getAiConsent (AI consent, docs/web-changes/ 0003) are on the web now.
     # Add an entry here as "name": "where the web patch is" when iOS calls a function ahead of its deploy.
-    # Sign in with Apple revocation on account deletion (audit R7-03). AuthStore ignores every failure.
-    "storeAppleAuthCode": "web branch ccr-89cbeb71-xcif1z (src/lib/apple-token.functions.ts, "
-                          "migration 20261005120000_apple_tokens_client_id)",
+    # storeAppleAuthCode (Sign in with Apple revocation, audit R7-03) is on the web's main now.
+    # The developer "AI settings" (admins only, docs/admin-ai-api.md on the web). iOS treats any failure of
+    # adminGetAiSettings as "not an admin" (AdminAccess), so nobody sees the screen until this is deployed.
+    "adminGetAiSettings": _ADMIN_AI_PATCH,
+    "adminSetAiFeature": _ADMIN_AI_PATCH,
+    "adminSetImageConfig": _ADMIN_AI_PATCH,
+    "adminSetTtsVoice": _ADMIN_AI_PATCH,
+    "adminTestImage": _ADMIN_AI_PATCH,
 }
 
 

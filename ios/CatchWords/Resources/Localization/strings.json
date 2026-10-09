@@ -3422,5 +3422,149 @@
  "アカウントをお持ちの方はこちらから": {
   "en": "Already have an account?",
   "zh-TW": "已有帳號？"
+ },
+ "AI が動いていません": {
+  "en": "AI is not working",
+  "zh-TW": "AI 目前無法運作"
+ },
+ "AI の設定（開発者）": {
+  "en": "AI settings (developer)",
+  "zh-TW": "AI 設定（開發者）"
+ },
+ "AI は動いています（既定: {1}）": {
+  "en": "AI is working (default: {1})",
+  "zh-TW": "AI 運作正常（預設：{1}）"
+ },
+ "AI を選ぶ": {
+  "en": "Choose AI",
+  "zh-TW": "選擇 AI"
+ },
+ "いま: {1}": {
+  "en": "Now: {1}",
+  "zh-TW": "目前：{1}"
+ },
+ "この画面は管理者だけが使えます。": {
+  "en": "Only administrators can use this screen.",
+  "zh-TW": "只有管理員可以使用此畫面。"
+ },
+ "できました（{1} ms）": {
+  "en": "Done ({1} ms)",
+  "zh-TW": "完成（{1} ms）"
+ },
+ "モデル": {
+  "en": "Model",
+  "zh-TW": "模型"
+ },
+ "会社": {
+  "en": "Provider",
+  "zh-TW": "供應商"
+ },
+ "作った画像": {
+  "en": "Generated image",
+  "zh-TW": "產生的圖片"
+ },
+ "作れませんでした（{1} ms）": {
+  "en": "Could not generate ({1} ms)",
+  "zh-TW": "無法產生（{1} ms）"
+ },
+ "使えるモデルがありません": {
+  "en": "No models available",
+  "zh-TW": "沒有可用的模型"
+ },
+ "保存した設定で本当に1枚作ります（その会社の残高を使います）。": {
+  "en": "Really generates one image with the saved settings (uses that provider's credit).",
+  "zh-TW": "會用已儲存的設定實際產生一張圖片（會使用該供應商的額度）。"
+ },
+ "保存した設定はありません（サーバの既定で動いています）": {
+  "en": "Nothing saved (the server's defaults are in use)",
+  "zh-TW": "沒有已儲存的設定（使用伺服器的預設值）"
+ },
+ "保存しました": {
+  "en": "Saved",
+  "zh-TW": "已儲存"
+ },
+ "保存しました: {1}": {
+  "en": "Saved: {1}",
+  "zh-TW": "已儲存：{1}"
+ },
+ "声": {
+  "en": "Voice",
+  "zh-TW": "聲音"
+ },
+ "声が選ばれていないため、既定の声で鳴っています": {
+  "en": "No voice chosen, so the default voice is playing",
+  "zh-TW": "尚未選擇聲音，目前使用預設聲音"
+ },
+ "声の ID": {
+  "en": "Voice ID",
+  "zh-TW": "聲音 ID"
+ },
+ "女性": {
+  "en": "Female",
+  "zh-TW": "女性"
+ },
+ "既定": {
+  "en": "Default",
+  "zh-TW": "預設"
+ },
+ "既定の声": {
+  "en": "Default voice",
+  "zh-TW": "預設聲音"
+ },
+ "既定の声: {1}": {
+  "en": "Default voice: {1}",
+  "zh-TW": "預設聲音：{1}"
+ },
+ "機能ごとの AI": {
+  "en": "AI per feature",
+  "zh-TW": "各功能的 AI"
+ },
+ "状態": {
+  "en": "Status",
+  "zh-TW": "狀態"
+ },
+ "男性": {
+  "en": "Male",
+  "zh-TW": "男性"
+ },
+ "画像（文字検索のAI画像）": {
+  "en": "Images (AI images for text search)",
+  "zh-TW": "圖片（文字搜尋的 AI 圖片）"
+ },
+ "発音の声": {
+  "en": "Pronunciation voices",
+  "zh-TW": "發音的聲音"
+ },
+ "空ならその会社の既定のモデルを使います": {
+  "en": "Empty uses the provider's default model",
+  "zh-TW": "空白則使用該供應商的預設模型"
+ },
+ "自動（最新 {1}）": {
+  "en": "Auto (latest {1})",
+  "zh-TW": "自動（最新 {1}）"
+ },
+ "言葉（空なら「柚子」）": {
+  "en": "Word (empty: the default sample)",
+  "zh-TW": "詞語（空白則用「柚子」）"
+ },
+ "試しに1枚作る": {
+  "en": "Generate one to test",
+  "zh-TW": "試著產生一張"
+ },
+ "鍵がありません": {
+  "en": "No key",
+  "zh-TW": "沒有金鑰"
+ },
+ "鍵がありません: {1}": {
+  "en": "No key: {1}",
+  "zh-TW": "沒有金鑰：{1}"
+ },
+ "鍵の環境変数: {1}": {
+  "en": "Key environment variable: {1}",
+  "zh-TW": "金鑰的環境變數：{1}"
+ },
+ "開発者": {
+  "en": "Developer",
+  "zh-TW": "開發者"
  }
 }

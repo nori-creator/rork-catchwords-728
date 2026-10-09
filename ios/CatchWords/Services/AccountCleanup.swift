@@ -24,6 +24,8 @@ enum AccountCleanup {
         UserDefaults.standard.set(ReminderService.defaultTime, forKey: ReminderService.timesKey)
         // Photos fetched through signed URLs may sit in the shared HTTP cache.
         URLCache.shared.removeAllCachedResponses()
+        // Whether that account was an admin (the developer section of 設定).
+        AdminAccess.shared.clear()
     }
 
     /// Every notification the app plans belongs to the signed-in account (R6-03). The next sign-in plans

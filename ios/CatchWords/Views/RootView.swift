@@ -112,6 +112,7 @@ struct RootView: View {
                 profile.reset()
                 plan.reset()
                 AIConsent.shared.reset()
+                AdminAccess.shared.clear()
                 PendingRetry.shared.stop()
                 ImageCache.shared.removeAll()
                 StickerPhoto.invalidateAll()
