@@ -5,7 +5,7 @@ import Foundation
 /// learning language given with `-uiDemo` is written on first use. Nothing is kept across launches.
 ///
 /// Tables use the column names the app reads: profiles, stickers, words, reviews, review_history,
-/// journal_entries, encounters (photos of re-encounters),
+/// encounters (photos of re-encounters),
 /// dictionary_entries (empty). Dates are ISO 8601 strings in `SupabaseDate.string` form, so a plain
 /// string comparison orders them.
 nonisolated final class DemoDatabase: @unchecked Sendable {
@@ -321,23 +321,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
                 insert("encounters", e)
             }
         }
-
-        // One diary entry with its correction, three days ago.
-        let journal = DJ.dict(pack["journal"])
-        let jDay = now.addingTimeInterval(-3 * 86_400)
-        var entry: [String: Any] = [:]
-        entry["id"] = "demo-journal-1"
-        entry["user_id"] = uid
-        entry["entry_date"] = DJ.dayKey(jDay)
-        entry["user_draft"] = DJ.str(journal["draft"]) ?? ""
-        entry["correction"] = DJ.str(journal["correction"]) ?? ""
-        entry["body_zh"] = DJ.str(journal["correction"]) ?? ""
-        entry["body_ja"] = text(journal["body"], r)
-        entry["feedback_ja"] = text(journal["feedback"], r)
-        entry["native_phrases"] = phrases(journal, r)
-        entry["created_at"] = DJ.iso(jDay)
-        entry["updated_at"] = DJ.iso(jDay)
-        insert("journal_entries", entry)
     }
 
     func profileRow(onboarded: Bool, plan: String, displayName: String, created: Date) -> [String: Any] {
@@ -361,17 +344,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
         return p
     }
 
-    /// The journal's native phrases for a reader (JournalEntry.Phrase: zh, ja, note).
-    func phrases(_ journal: [String: Any], _ reader: String) -> [[String: Any]] {
-        DJ.list(journal["phrases"]).map { (p: [String: Any]) -> [String: Any] in
-            let out: [String: Any] = [
-                "zh": DJ.str(p["zh"]) ?? "",
-                "ja": text(p["ja"], reader),
-                "note": text(p["note"], reader),
-            ]
-            return out
-        }
-    }
 
     /// A profile for an account made after the seed (or after deleteMyAccount).
     func ensureProfile() {
@@ -481,8 +453,6 @@ nonisolated final class DemoDatabase: @unchecked Sendable {
             if row["last_reviewed_at"] == nil { row["last_reviewed_at"] = NSNull() }
         case "stickers":
             if row["taken_at"] == nil { row["taken_at"] = now }
-        case "journal_entries":
-            if row["updated_at"] == nil { row["updated_at"] = now }
         default:
             break
         }

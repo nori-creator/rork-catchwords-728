@@ -1,8 +1,9 @@
 import SwiftUI
 import Charts
 
-/// ForgettingCurveChart.tsx: past curve (solid, resets at each review), "if not reviewed" (dashed orange),
-/// review points (hollow blue), today's dot, and a "now is the time" callout.
+/// ForgettingCurveChart.tsx: the ground painted in the memory bands (MemoryChartStyle), one primary line —
+/// solid so far (it jumps back up at each review), dashed "if not reviewed" — review points (hollow), today's
+/// dot, and a "now is the time" callout.
 struct ForgettingCurveSheet: View {
     @Environment(DexStore.self) private var dex
     let sticker: Sticker
@@ -65,17 +66,9 @@ struct ForgettingCurveSheet: View {
                     Text(LocalizedStringKey(L("復習 **\(history.count)** 回"))).scaledFont(size: 15).foregroundStyle(Theme.muted)
                 }
                 Text(L("縦軸＝いま思い出せる確率（写真の右上の%と同じ）")).scaledFont(size: 13).foregroundStyle(Theme.muted)
-                HStack(spacing: 14) {
-                    legend(color: Theme.ok, dashed: false, text: L("これまで"))
-                    legend(color: Color(hex: 0xF59E0B), dashed: true, text: L("復習しなかったら"))
-                    HStack(spacing: 5) {
-                        Circle().stroke(Theme.primary, lineWidth: 2).frame(width: 10, height: 10)
-                        Text(L("復習した日"))
-                    }
-                }
-                .scaledFont(size: 13).foregroundStyle(Theme.muted)
+                MemoryChartLegend(reviews: true)
 
-                chart.frame(height: 260)
+                chart.frame(height: Self.chartHeight)
                     .onAppear {
                         if reduceMotion { reveal = 1 } else { withAnimation(.easeOut(duration: 0.9).delay(0.1)) { reveal = 1 } }
                     }
@@ -87,20 +80,17 @@ struct ForgettingCurveSheet: View {
             .padding(22)
     }
 
-    private func legend(color: Color, dashed: Bool, text: String) -> some View {
-        HStack(spacing: 5) {
-            Path { p in p.move(to: CGPoint(x: 0, y: 1.5)); p.addLine(to: CGPoint(x: 22, y: 1.5)) }
-                .stroke(color, style: StrokeStyle(lineWidth: 3, dash: dashed ? [4, 3] : []))
-                .frame(width: 22, height: 3)
-            Text(text)
-        }
-    }
+    private static let chartHeight: CGFloat = 240
 
-    private var curveData: (past: [Pt], future: [Pt], reviews: [Pt], today: Pt) {
+    private typealias CurveData = (past: [Pt], future: [Pt], reviews: [Pt], jumps: [Pt], today: Pt)
+
+    private var curveData: CurveData {
         let now = Date()
         let origin = sticker.takenAt
         var past: [Pt] = []
         var marks: [Pt] = []
+        /// Where the line stood just before each review (the review lifts it back to 100%).
+        var jumps: [Pt] = []
         var segStart = origin
         var ease = 2.5
         var interval = 0
@@ -115,6 +105,7 @@ struct ForgettingCurveSheet: View {
         }
         for h in history where h.reviewedAt <= now {
             sample(from: segStart, to: h.reviewedAt, seg: segIndex)
+            jumps.append(Pt(date: h.reviewedAt, value: past.last?.value ?? 0, series: "jump"))
             segIndex += 1
             marks.append(Pt(date: h.reviewedAt, value: 100, series: "mark"))
             segStart = h.reviewedAt
@@ -130,11 +121,11 @@ struct ForgettingCurveSheet: View {
             let t = now.addingTimeInterval(horizon * 86_400 * Double(i) / 24)
             future.append(Pt(date: t, value: Double(MemoryMath.percent(intervalDays: interval, ease: ease, last: segStart, now: t)), series: "future"))
         }
-        return (past, future, marks, Pt(date: now, value: todayVal, series: "today"))
+        return (past, future, marks, jumps, Pt(date: now, value: todayVal, series: "today"))
     }
 
     /// The curve's value on a day: the nearest sampled point of the past or "if not reviewed" line.
-    private func value(at date: Date, in d: (past: [Pt], future: [Pt], reviews: [Pt], today: Pt)) -> Pt? {
+    private func value(at date: Date, in d: CurveData) -> Pt? {
         let pts = date <= d.today.date ? d.past : d.future
         return pts.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
     }
@@ -142,45 +133,66 @@ struct ForgettingCurveSheet: View {
     private var chart: some View {
         let d = curveData
         let picked = scrubDate.flatMap { value(at: $0, in: d) }
+        let scrubbing = picked != nil
+        var values: [Double] = d.past.map { $0.value }
+        values.append(contentsOf: d.future.map { $0.value })
+        values = values.filter { $0 > 0 }
+        values.append(d.today.value)
+        let yMin = MemoryChartStyle.yMin(values)
+        let bands = MemoryChartStyle.bands(yMin: yMin)
+        let ticks = MemoryChartStyle.ticks(yMin: yMin)
+        let start = d.past.first?.date ?? sticker.takenAt
+        let end = d.future.last?.date ?? d.today.date
         return Chart {
-            ForEach(d.past) { p in
-                AreaMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", p.series))
-                    .foregroundStyle(LinearGradient(colors: [Theme.primary.opacity(0.1), Theme.primary.opacity(0.02)], startPoint: .top, endPoint: .bottom))
-                LineMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", p.series))
-                    .foregroundStyle(Theme.ok)
-                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
-            }
+            MemoryChartStyle.bandMarks(bands, from: start, to: end, yMin: yMin, plotHeight: Self.chartHeight - 24)
             ForEach(d.future) { p in
-                LineMark(x: .value("date", p.date), y: .value("%", p.value), series: .value("s", "future"))
-                    .foregroundStyle(LinearGradient(colors: [Theme.ok, Color(hex: 0xF59E0B), Color(hex: 0xEA580C)], startPoint: .leading, endPoint: .trailing))
-                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 5]))
+                LineMark(x: .value("date", p.date), y: .value("%", max(yMin, p.value)), series: .value("s", "future"))
+                    .foregroundStyle(Theme.primary)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [6, 5]))
+            }
+            // The rise at each review, drawn from where the line was (never under the axis) to 100%.
+            ForEach(d.jumps) { j in
+                RuleMark(x: .value("date", j.date), yStart: .value("%", max(yMin, j.value)), yEnd: .value("%", 100))
+                    .foregroundStyle(Theme.muted.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+            }
+            ForEach(d.past) { p in
+                LineMark(x: .value("date", p.date), y: .value("%", max(yMin, p.value)), series: .value("s", p.series))
+                    .foregroundStyle(Theme.primary)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
             ForEach(d.reviews) { p in
                 PointMark(x: .value("date", p.date), y: .value("%", p.value))
-                    .symbol { Circle().stroke(Theme.primary, lineWidth: 2.5).background(Circle().fill(Theme.card)).frame(width: 13, height: 13) }
+                    .symbol {
+                        Circle().fill(Theme.card)
+                            .overlay(Circle().stroke(Theme.primary, lineWidth: 2))
+                            .frame(width: 9, height: 9)
+                    }
             }
             if let picked {
                 RuleMark(x: .value("date", picked.date))
                     .foregroundStyle(Theme.muted.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
-                PointMark(x: .value("date", picked.date), y: .value("%", picked.value))
-                    .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(picked.value))]).overlay(Circle().stroke(.white, lineWidth: 2)).frame(width: 14, height: 14) }
+                PointMark(x: .value("date", picked.date), y: .value("%", max(yMin, picked.value)))
+                    .symbol { Circle().fill(Theme.primary).overlay(Circle().stroke(Theme.card, lineWidth: 2)).frame(width: 14, height: 14) }
                     .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                         VStack(spacing: 1) {
                             Text(Calendar.current.isDateInToday(picked.date) ? L("今日") : JPDate.monthDay(picked.date))
                                 .scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
                             Text("\(Int(picked.value))%").scaledFont(size: 17, weight: .heavy, monospacedDigit: true)
-                                .foregroundStyle(Theme.memoryLevels[MemoryBadge.level(Int(picked.value))].mix(with: Theme.foreground, by: 0.3))
+                                .foregroundStyle(Theme.foreground)
                         }
                         .padding(.horizontal, 10).padding(.vertical, 5)
                         .background(Theme.card, in: .rect(cornerRadius: 10, style: .continuous))
                         .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
                     }
             }
-            PointMark(x: .value("date", d.today.date), y: .value("%", d.today.value))
-                .symbol { Circle().fill(Theme.memoryLevels[MemoryBadge.level(Int(d.today.value))]).overlay(Circle().stroke(.white, lineWidth: 2.5)).frame(width: 18, height: 18) }
-                .annotation(position: .topTrailing, spacing: 2) {
-                    Text(L("今日 \(Int(d.today.value))%")).scaledFont(size: 13, weight: .bold).foregroundStyle(Theme.foreground)
+            PointMark(x: .value("date", d.today.date), y: .value("%", max(yMin, d.today.value)))
+                .symbol { Circle().fill(Theme.primary).overlay(Circle().stroke(Theme.card, lineWidth: 3)).frame(width: 16, height: 16) }
+                .annotation(position: .top, spacing: 4, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                    if !scrubbing {
+                        Text(L("今日 \(Int(d.today.value))%")).scaledFont(size: 12, weight: .bold).foregroundStyle(Theme.foreground)
+                    }
                 }
         }
         .chartXSelection(value: $scrubDate)
@@ -195,18 +207,19 @@ struct ForgettingCurveSheet: View {
                 Rectangle().frame(width: geo.size.width * reveal)
             }
         }
-        .chartYScale(domain: 0...100)
+        .chartYScale(domain: yMin...100)
         .chartYAxis {
-            AxisMarks(position: .leading, values: [0, 25, 50, 75, 100]) { v in
-                AxisGridLine().foregroundStyle(Theme.border)
-                AxisValueLabel { Text("\(v.as(Int.self) ?? 0)%").scaledFont(size: 12).foregroundStyle(Theme.muted) }
+            AxisMarks(position: .leading, values: ticks) { v in
+                AxisValueLabel {
+                    Text("\(Int((v.as(Double.self) ?? 0).rounded()))%").scaledFont(size: 10).foregroundStyle(Theme.muted)
+                }
             }
         }
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 4)) { v in
                 AxisValueLabel {
                     if let date = v.as(Date.self) {
-                        Text(Calendar.current.isDateInToday(date) ? L("今日") : JPDate.slash(date)).scaledFont(size: 12)
+                        Text(Calendar.current.isDateInToday(date) ? L("今日") : JPDate.slash(date)).scaledFont(size: 11)
                     }
                 }
             }

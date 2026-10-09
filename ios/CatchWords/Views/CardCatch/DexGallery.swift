@@ -129,11 +129,11 @@ private struct DexSlotView: View {
             sart(caught: true) { picture(s) }
                 .detailZoomSource(s.id)   // the word sheet zooms out of this square
             noText
-            CCZhuyinWord(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin ?? "", pinyin: s.word?.pinyin ?? "",
-                         size: 13, weight: .heavy, color: Theme.foreground)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .clipped()
+            // A long word (冷氣遙控器) shrinks to its own column instead of running over the next one.
+            DexFitWidth(minScale: 0.4, alignment: .center) {
+                CCZhuyinWord(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin ?? "", pinyin: s.word?.pinyin ?? "",
+                             size: 13, weight: .heavy, color: Theme.foreground)
+            }
         }
         .contentShape(Rectangle())
     }
@@ -146,7 +146,8 @@ private struct DexSlotView: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(DexInk.q)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity)
+                .minimumScaleFactor(0.4)
+                .frame(minWidth: 0, maxWidth: .infinity)
                 .clipped()
         }
     }
@@ -204,8 +205,9 @@ private struct DexSlotView: View {
     private func picture(_ s: Sticker) -> some View {
         GeometryReader { g in
             let w = g.size.width
-            let path = s.heroPath
-            let isPhoto = path != s.cutoutImageUrl
+            // The cut-out wherever the word has one (DexView `dexImagePath`), else the photo.
+            let path = s.dexImagePath
+            let isPhoto = !s.dexShowsCutout
             if isPhoto {
                 StickerImage(path: path, url: dex.url(for: path), contentMode: .fill)
                     .frame(width: w * 0.82, height: w * 0.82)

@@ -9,7 +9,7 @@ import UIKit
 enum StatusBarTone: Equatable {
     /// White text: dark full-screen views (camera, scan, analysing, reward, the memorial reveal).
     case light
-    /// Dark text: screens that stay paper-coloured even in the dark theme (home, onboarding, month book).
+    /// Dark text: screens that stay paper-coloured even in the dark theme (home, onboarding).
     case dark
     /// Follows the app's colour scheme.
     case automatic

@@ -2,6 +2,8 @@ import SwiftUI
 import PhotosUI
 import AVFoundation
 
+/// The camera tab: shoot → AI analyses → the words on their objects → tap one → celebration → 図鑑に追加.
+/// (owner 2026-10-09: the camera only takes photos — no 検索 / スキャン modes, no card catch.)
 struct CaptureView: View {
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
@@ -11,23 +13,20 @@ struct CaptureView: View {
     @State private var vm = CaptureViewModel()
     @State private var focusPoint: CGPoint?
     @State private var shutterFlash: Bool = false
-    @State private var showTextSearch: Bool = false
-    @State private var searchText: String = ""
     @State private var pickerItem: PhotosPickerItem?
     @State private var showPending: Bool = false
-    @State private var showScan: Bool = false
-    @State private var reward: RewardPayload?
     @State private var baseZoom: CGFloat = 1
     @State private var positionBeforeSelfie: AVCaptureDevice.Position = .back
-    @Namespace private var modeBubble
     @AppStorage("selfie.mode") private var selfieMode: Bool = false
     @Environment(\.appReduceMotion) private var reduceMotion
-    /// The card catch's shutter flash (`#flash` 0 → 1 at 12% → 0, 480 ms ease-out), above every screen.
+    /// The shutter flash (`#flash` 0 → 1 at 12% → 0, 480 ms ease-out), above every screen.
     @State private var shotFlash: Double?
     /// shoot(): the shutter and the viewfinder hide the moment the photo is taken.
     @State private var shooting: Bool = false
-    /// A sticker-card save is running (it may outlive the reward overlay): no second save, no reset meanwhile.
+    /// A save started from the celebration is running: no second save, no going back meanwhile.
     @State private var saveInFlight: Bool = false
+    /// The celebration's sticker on screen (global): the star flies into the dex from there.
+    @State private var stickerFrame: CGRect?
 
     private var isMachine: Bool {
         switch vm.step {
@@ -36,21 +35,30 @@ struct CaptureView: View {
         }
     }
 
-    /// The photo flow's analysis → objects → card run as one continuous card-catch screen.
-    private var showsCardCatch: Bool {
-        vm.usesCardCatch && (vm.step == .processing || vm.step == .select || vm.step == .card)
+    /// The words on the photo and the celebration are dark full-screen views too (no tab bar).
+    private var isFullScreen: Bool { vm.step == .select || vm.step == .celebrate }
+
+    /// `-uiDemo` (DEBUG, the UI tests on CI): the simulator has no camera, so the viewfinder shows a sample
+    /// photo and the shutter takes it (the demo backend then answers the analysis offline).
+    private var demoCamera: Bool {
+        #if DEBUG
+        return DemoBackend.isOn
+        #else
+        return false
+        #endif
+    }
+
+    private var demoPhoto: UIImage? {
+        #if DEBUG
+        return UIImage(data: DemoImages.png(seed: "camera-sample", emoji: "🛵", text: "", transparent: false, size: 1024))
+        #else
+        return nil
+        #endif
     }
 
     var body: some View {
         ZStack {
-            if showsCardCatch {
-                CardCatchView(vm: vm, onSend: sendCardCatch, onRetake: { vm.reset() })
-                    // A new photo starts the card catch over (its model holds the previous run's stage).
-                    .id(vm.run)
-                    .transition(.opacity)
-            } else {
-                stepView
-            }
+            stepView
             if let toast = vm.toast {
                 VStack {
                     Text(toast)
@@ -71,17 +79,12 @@ struct CaptureView: View {
             if shutterFlash {
                 Color.white.ignoresSafeArea().allowsHitTesting(false)
             }
-            if let reward {
-                RewardOverlay(payload: reward) { finishReward() }
-                    .ignoresSafeArea()
-                    .zIndex(10)
-            }
             CCShutterFlash(start: shotFlash, calm: reduceMotion).zIndex(30)
         }
         .denseTypeSizeCap()  // the camera chrome is laid out around the viewfinder and the shutter
-        // The camera machine, the card catch and the reward are dark full-screen views.
-        .statusBarTone(isMachine || showsCardCatch || reward != nil ? .light : .automatic)
-        .task { await camera.start() }
+        // The camera machine, the words on the photo and the celebration are dark full-screen views.
+        .statusBarTone(isMachine || isFullScreen ? .light : .automatic)
+        .task { await startCamera() }
         .onAppear {
             LocationService.shared.requestPermissionIfNeeded()
             syncChrome()
@@ -94,8 +97,15 @@ struct CaptureView: View {
         .onChange(of: vm.step) { old, step in
             syncChrome()
             if step == .select { router.advanceTour(from: .shoot, to: .pick) }
-            // The card catch moves the tour on when its card is on screen (CardCatchView).
-            if step == .card, !vm.usesCardCatch { router.advanceTour(from: .pick, to: .detail) }
+            if step == .celebrate {
+                router.advanceTour(from: .pick, to: .detail)
+                // The photos go up while the word is celebrated: 図鑑に追加 then only saves the row.
+                // A cut-out still being made is waited for, so the upload carries the sticker that is saved.
+                Task {
+                    await vm.awaitCutout()
+                    if vm.step == .celebrate { vm.startUploads(using: dex) }
+                }
+            }
             shooting = false
             if step == .camera, router.tour.isCapture, router.tour != .shoot {
                 withAnimation { router.tour = .shoot }
@@ -103,18 +113,17 @@ struct CaptureView: View {
             switch step {
             case .camera:
                 if old == .selfie || camera.position != positionBeforeSelfie { camera.switchTo(positionBeforeSelfie) }
-                // After a card catch the dex is already open while this screen fades out (vm.reset 700 ms later):
+                // After a catch the dex is already open while this screen fades out (vm.reset 700 ms later):
                 // never turn the camera back on behind another tab.
-                if router.tab == .camera { Task { await camera.start() } }
+                if router.tab == .camera { Task { await startCamera() } }
             case .selfie:
                 positionBeforeSelfie = camera.position
                 camera.switchTo(.front)
-                Task { await camera.start() }
+                Task { await startCamera() }
             default:
                 camera.stop()
             }
         }
-        .onChange(of: reward == nil) { _, _ in syncChrome() }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             Task {
@@ -128,11 +137,6 @@ struct CaptureView: View {
                 pickerItem = nil
             }
         }
-        .fullScreenCover(isPresented: $showScan, onDismiss: { Task { await camera.start() } }) {
-            ScanView()
-                .statusBarTone(.light)
-        }
-        .sheet(isPresented: $showTextSearch) { textSearchSheet }
         .onAppear { takePendingRequest() }
         .onChange(of: router.openPending) { _, _ in takePendingRequest() }
         .sheet(isPresented: $showPending) {
@@ -154,9 +158,11 @@ struct CaptureView: View {
             AnalyzingView(photo: vm.photo) { vm.reset() }
                 .transition(.opacity)
         case .select:
-            CandidatePickerView(vm: vm).transition(.move(edge: .bottom).combined(with: .opacity))
-        case .card:
-            CatchCardView(vm: vm, saving: saveInFlight, onCatch: startCatch).transition(.move(edge: .trailing).combined(with: .opacity))
+            CandidatePickerView(vm: vm).transition(.opacity)
+        case .celebrate:
+            CatchCelebrationView(vm: vm, saving: saveInFlight, onAdd: addToDex,
+                                 onStickerFrame: { stickerFrame = $0 })
+                .transition(.opacity)
         case .reencounter:
             ReencounterView(vm: vm, onSeeInDex: { id in
                 vm.reset()
@@ -187,8 +193,14 @@ struct CaptureView: View {
 
     private func syncChrome() {
         router.cameraImmersive = isMachine
-        // The prototype hides the tab bar through the whole catch (analyze, pick, word, card, sending).
-        router.tabBarHidden = vm.step == .processing || reward != nil || showsCardCatch
+        // No tab bar through the whole catch (analyze, the words, the celebration).
+        router.tabBarHidden = vm.step == .processing || isFullScreen
+    }
+
+    /// The real camera; never under `-uiDemo` (its sample photo stands in, `demoCamera`).
+    private func startCamera() async {
+        guard !demoCamera else { return }
+        await camera.start()
     }
 
     // MARK: Camera machine
@@ -207,13 +219,8 @@ struct CaptureView: View {
                 .padding(.horizontal, 10)
                 .padding(.top, 8)
 
-                if vm.step == .selfie {
-                    Color.clear.frame(height: 14)
-                } else {
-                    modeStrip.padding(.top, 10)
-                }
                 controls
-                    .padding(.top, 12)
+                    .padding(.top, 22)
                     .padding(.bottom, 86)
             }
         }
@@ -227,22 +234,6 @@ struct CaptureView: View {
             HStack {
                 if plan.isPro || PlanStore.catchLimitEnabled { usagePill }
                 Spacer()
-                Button {
-                    Haptics.selection()
-                    camera.stop()
-                    showScan = true
-                } label: {
-                    Label(L("かざす"), systemImage: "dot.viewfinder")
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(Theme.cyan)
-                        .padding(.horizontal, 10)
-                        .frame(minHeight: 30)
-                        .background(.white.opacity(0.1), in: Capsule())
-                        .frame(minHeight: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(PressableStyle())
-                .accessibilityLabel(L("かざして調べる"))
                 if !dex.pending.isEmpty {
                     Button { showPending = true } label: {
                         Label("\(dex.pending.count)", systemImage: "tray.and.arrow.up.fill")
@@ -264,51 +255,76 @@ struct CaptureView: View {
 
     @ViewBuilder
     private var previewLayer: some View {
-        switch camera.state {
-        case .running, .idle:
-            CameraPreview(session: camera.session) { point, device in
-                camera.focus(at: device)
-                Haptics.impact(.light, intensity: 0.5)
-                focusPoint = point
-                Task {
-                    try? await Task.sleep(for: .seconds(1.1))
-                    withAnimation(.easeOut(duration: 0.25)) { focusPoint = nil }
+        if demoCamera {
+            demoPreview
+        } else {
+            switch camera.state {
+            case .running, .idle:
+                livePreview
+            case .denied:
+                CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
+                                  message: L("1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る"),
+                                  buttonTitle: L("設定を開く")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+            case .unavailable:
+                CameraMessageView(icon: "camera.metering.unknown", title: L("カメラを起動できませんでした"),
+                                  message: L("ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像からも集められます。"),
+                                  buttonTitle: L("もう一度試す")) {
+                    Task { await startCamera() }
                 }
             }
-            .scaleEffect(x: camera.position == .front ? -1 : 1, y: 1)
-            .gesture(MagnifyGesture()
-                .onChanged { v in camera.setZoom(baseZoom * v.magnification) }
-                .onEnded { _ in baseZoom = camera.zoom })
+        }
+    }
+
+    private var livePreview: some View {
+        CameraPreview(session: camera.session) { point, device in
+            camera.focus(at: device)
+            Haptics.impact(.light, intensity: 0.5)
+            focusPoint = point
+            Task {
+                try? await Task.sleep(for: .seconds(1.1))
+                withAnimation(.easeOut(duration: 0.25)) { focusPoint = nil }
+            }
+        }
+        .scaleEffect(x: camera.position == .front ? -1 : 1, y: 1)
+        .gesture(MagnifyGesture()
+            .onChanged { v in camera.setZoom(baseZoom * v.magnification) }
+            .onEnded { _ in baseZoom = camera.zoom })
+        .overlay {
+            if vm.step == .camera, !shooting { ViewfinderBrackets().padding(36).allowsHitTesting(false) }
+        }
+        .overlay {
+            if let focusPoint {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Theme.gold, lineWidth: 1.5)
+                    .frame(width: 74, height: 74)
+                    .position(focusPoint)
+                    .transition(.scale(scale: 1.4).combined(with: .opacity))
+                    .allowsHitTesting(false)
+            }
+        }
+        .overlay(alignment: .top) {
+            if vm.step == .selfie { selfiePrompt.padding(.top, 48) }
+        }
+        .background(Color.black)
+    }
+
+    /// `-uiDemo`: the sample photo the shutter takes, in place of the live camera.
+    private var demoPreview: some View {
+        Color.black
+            .overlay {
+                if let img = demoPhoto {
+                    Image(uiImage: img).resizable().scaledToFill().allowsHitTesting(false)
+                }
+            }
+            .clipped()
             .overlay {
                 if vm.step == .camera, !shooting { ViewfinderBrackets().padding(36).allowsHitTesting(false) }
-            }
-            .overlay {
-                if let focusPoint {
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Theme.gold, lineWidth: 1.5)
-                        .frame(width: 74, height: 74)
-                        .position(focusPoint)
-                        .transition(.scale(scale: 1.4).combined(with: .opacity))
-                        .allowsHitTesting(false)
-                }
             }
             .overlay(alignment: .top) {
                 if vm.step == .selfie { selfiePrompt.padding(.top, 48) }
             }
-            .background(Color.black)
-        case .denied:
-            CameraMessageView(icon: "camera.fill", title: L("カメラの使用が許可されていません"),
-                              message: L("1. 下の「設定を開く」を押す\n2. 「カメラ」をオンにして、この画面に戻る"),
-                              buttonTitle: L("設定を開く")) {
-                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-            }
-        case .unavailable:
-            CameraMessageView(icon: "camera.metering.unknown", title: L("カメラを起動できませんでした"),
-                              message: L("ほかのアプリがカメラを使っていたら閉じてから、もう一度試してください。写真アプリの画像や、文字で調べることもできます。"),
-                              buttonTitle: L("もう一度試す")) {
-                Task { await camera.start() }
-            }
-        }
     }
 
     private var selfiePrompt: some View {
@@ -332,9 +348,11 @@ struct CaptureView: View {
     }
 
     /// The camera is on (zoom and 切替 work).
-    private var cameraLive: Bool { camera.state == .running }
+    private var cameraLive: Bool { !demoCamera && camera.state == .running }
     /// The camera was refused or could not start (its message and button fill the viewfinder).
-    private var cameraFailed: Bool { camera.state == .denied || camera.state == .unavailable }
+    private var cameraFailed: Bool { !demoCamera && (camera.state == .denied || camera.state == .unavailable) }
+    /// Something to shoot: the live camera, or the demo's sample photo.
+    private var canShoot: Bool { cameraLive || demoCamera }
 
     /// 1× 2× 3× 5× (CameraZoomMeter): the lit stop follows pinch zoom too.
     private var zoomPills: some View {
@@ -363,45 +381,6 @@ struct CaptureView: View {
         .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 1))
     }
 
-    /// 検索 · 撮影 · スキャン with the same sliding bubble as the tab bar; swipe also switches.
-    private var modeStrip: some View {
-        HStack(spacing: 0) {
-            ForEach(CameraMode.allCases) { m in
-                let isOn = vm.mode == m
-                Button { setMode(m) } label: {
-                    Text(m.label)
-                        .scaledFont(size: 15, weight: isOn ? .semibold : .regular)
-                        .foregroundStyle(.white.opacity(isOn ? 1 : 0.7))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background {
-                            if isOn {
-                                Capsule()
-                                    .fill(LinearGradient(colors: [Color(hex: 0x3B6FB8), Color(hex: 0x1F4E93)], startPoint: .top, endPoint: .bottom))
-                                    .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
-                                    .matchedGeometryEffect(id: "mode", in: modeBubble)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressableStyle(scale: 0.95))
-                .accessibilityIdentifier("camera.mode.\(String(describing: m))")
-            }
-        }
-        .padding(.horizontal, 24)
-        .gesture(DragGesture(minimumDistance: 20).onEnded { v in
-            let all = CameraMode.allCases
-            guard let i = all.firstIndex(of: vm.mode) else { return }
-            if v.translation.width < -44, i < all.count - 1 { setMode(all[i + 1]) }
-            if v.translation.width > 44, i > 0 { setMode(all[i - 1]) }
-        })
-    }
-
-    private func setMode(_ m: CameraMode) {
-        guard vm.mode != m else { return }
-        Haptics.selection()
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) { vm.mode = m }
-    }
-
     private var controls: some View {
         HStack(alignment: .top) {
             PhotosPicker(selection: $pickerItem, matching: .images) {
@@ -411,9 +390,7 @@ struct CaptureView: View {
             .opacity(vm.step == .selfie ? 0 : 1)
             .disabled(vm.step == .selfie)
             Spacer()
-            ShutterButton(icon: vm.step == .selfie ? "camera" : vm.mode.shutterIcon,
-                          enabled: vm.mode == .search || camera.state == .running,
-                          arriving: router.shutterFlying) { shoot() }
+            ShutterButton(enabled: canShoot, arriving: router.shutterFlying) { shoot() }
                 .opacity(shooting ? 0 : 1)
                 .allowsHitTesting(!shooting)
                 // The first tour's 撮る step lights the shutter and dims the rest. With the camera denied or
@@ -470,64 +447,37 @@ struct CaptureView: View {
         .frame(minWidth: 56)
     }
 
-    private var textSearchSheet: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                TextField("", text: $searchText, prompt: Text(L("例: \(NativeAPI.sample(.search))")).foregroundStyle(Theme.muted))
-                    .scaledFont(size: 18)
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 54)
-                    .background(Theme.secondary, in: .rect(cornerRadius: 14))
-                    .submitLabel(.search)
-                    .onSubmit(runSearch)
-                    .accessibilityIdentifier("search.field")
-                PrimaryButton(title: L("\(NativeAPI.targetName)で調べる"), icon: "magnifyingglass", action: runSearch)
-                    .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .accessibilityIdentifier("search.submit")
-                Spacer()
-            }
-            .padding(20)
-            .navigationTitle(L("文字で調べる"))
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .presentationDetents([.height(260)])
-        .presentationBackground(Theme.card)
-    }
-
     // MARK: Actions
+
+    /// The live camera's photo, or `-uiDemo`'s sample.
+    private func capturePhoto() async -> UIImage? {
+        if demoCamera { return demoPhoto }
+        return await camera.capture()
+    }
 
     private func shoot() {
         if vm.step == .selfie {
             flash()
-            Task { vm.finishSelfie(await camera.capture()) }
+            Task { vm.finishSelfie(await capturePhoto()) }
             return
         }
-        if vm.mode == .search { showTextSearch = true; return }
         guard plan.canCatch else { router.showPaywall = true; return }
-        if vm.mode == .photo {
-            // Card catch `shoot()`: the shutter sound, the white flash, the shutter and viewfinder hide.
-            SoundService.shared.playLayered(.ccShutter)
-            let shotAt = CCClock.now
-            shotFlash = shotAt
-            shooting = true
-            Task {
-                // The flash is over after 480 ms: drop it so its TimelineView stops redrawing.
-                try? await Task.sleep(for: .milliseconds(600))
-                if shotFlash == shotAt { shotFlash = nil }
-            }
-            Task {
-                if let img = await camera.capture() {
-                    beginAnalyze(img, askSelfie: selfieMode)
-                    vm.shotAt = shotAt
-                } else {
-                    shooting = false
-                }
-            }
-            return
-        }
-        flash()
+        // The shutter sound, the white flash, the shutter and viewfinder hide.
+        SoundService.shared.playLayered(.ccShutter)
+        let shotAt = CCClock.now
+        shotFlash = shotAt
+        shooting = true
         Task {
-            if let img = await camera.capture() { beginAnalyze(img, askSelfie: vm.mode == .photo && selfieMode) }
+            // The flash is over after 480 ms: drop it so its TimelineView stops redrawing.
+            try? await Task.sleep(for: .milliseconds(600))
+            if shotFlash == shotAt { shotFlash = nil }
+        }
+        Task {
+            if let img = await capturePhoto() {
+                beginAnalyze(img, askSelfie: selfieMode)
+            } else {
+                shooting = false
+            }
         }
     }
 
@@ -546,25 +496,22 @@ struct CaptureView: View {
         dex.refreshPending()
     }
 
-    private func runSearch() {
-        let q = searchText.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return }
-        guard plan.canCatch else { showTextSearch = false; router.showPaywall = true; return }
-        showTextSearch = false
-        searchText = ""
-        vm.search(text: q)
-    }
-
-    /// Card catch: the card has become the star. The dex opens at once (`CatchLanding`) on a provisional entry
-    /// while the catch is saved behind it through the app's own path (photo and cut-out uploads, saveSticker):
-    /// the learner never waits on the network after the flick (owner report 2026-10-04: the wait between the
-    /// flick and the dex was far too long — every upload and three server round trips ran after the flick).
-    /// The card exists only once its details are generated, so nothing else is awaited here.
+    /// 「図鑑に追加」. The dex opens at once (`CatchLanding`) on a provisional entry while the catch is saved behind
+    /// it through the app's own path (photo and cut-out uploads, saveSticker): the learner never waits on the
+    /// network after the tap (owner report 2026-10-04). Only the card's details and the cut-out are awaited
+    /// here (both started at the tap on the word, so usually ready).
     /// Safety kept: the photo stays in 「解析待ち」 (hidden) until the save is done; a failed save removes the
     /// provisional entry, gives the catch back to the plan, shows the photo in 「解析待ち」 again and says why.
-    private func sendCardCatch() async -> Bool {
-        guard vm.picked != nil, vm.step == .card else { return false }
-        guard let d = await vm.awaitDetails(), let draft = vm.draft(details: d) else {
+    private func addToDex() async -> Bool {
+        guard !saveInFlight, vm.step == .celebrate, let want = vm.picked else { return false }
+        saveInFlight = true
+        defer { saveInFlight = false }
+        // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
+        await vm.awaitCutout()
+        let details = await vm.awaitDetails()
+        // Another word was chosen (or the screen left) meanwhile: this tap belongs to the old one.
+        guard vm.picked == want, vm.step == .celebrate else { return false }
+        guard let d = details, let draft = vm.draft(details: d) else {
             vm.showToast(L("カード生成に失敗しました"))
             return false
         }
@@ -574,13 +521,17 @@ struct CaptureView: View {
         }
         plan.recordCatch()
         let pendingId = vm.detachPendingForSave()
-        // Photos uploaded while the card was on screen now belong to this save (`reset` must not delete them).
+        // Photos uploaded while the celebration was on screen now belong to this save (`reset` must not delete them).
         vm.handOffUploads(to: draft)
         if router.tour == .peel || router.tour == .detail {
             router.tourStickerId = local.sticker.id
             router.tour = .added
         }
-        // The dex page rises over this screen (the photo stays under it), then the camera is put back.
+        // The star leaves from the sticker and flies into the word's slot in the dex.
+        if let f = stickerFrame {
+            router.catchStar = CatchStar(center: CGPoint(x: f.midX, y: f.midY), size: 52, k: 1)
+        }
+        // The dex page rises over this screen, then the camera is put back.
         CatchLanding.land(stickerId: local.sticker.id, router: router, calm: reduceMotion)
         // This screen goes away with the tab: the background save holds what it needs itself.
         let model = vm, store = dex, planStore = plan, nav = router
@@ -589,17 +540,17 @@ struct CaptureView: View {
             model.reset()
         }
         Task {
-            await Self.finishCardCatchSave(draft, provisional: local.sticker.id, ts: local.ts, pendingId: pendingId,
-                                           dex: store, plan: planStore, router: nav)
+            await Self.finishSave(draft, provisional: local.sticker.id, ts: local.ts, pendingId: pendingId,
+                                  dex: store, plan: planStore, router: nav)
         }
         return true
     }
 
-    /// The card catch's save, behind the dex. Success: the provisional entry becomes the saved sticker (the
-    /// landing, the tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is
-    /// left behind, the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
-    private static func finishCardCatchSave(_ draft: CatchDraft, provisional: String, ts: Int, pendingId: String?,
-                                            dex: DexStore, plan: PlanStore, router: AppRouter) async {
+    /// The save, behind the dex. Success: the provisional entry becomes the saved sticker (the landing, the
+    /// tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is left behind,
+    /// the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
+    private static func finishSave(_ draft: CatchDraft, provisional: String, ts: Int, pendingId: String?,
+                                   dex: DexStore, plan: PlanStore, router: AppRouter) async {
         do {
             let outcome = try await dex.save(draft, ts: ts, replacing: provisional) { saved in
                 if let l = router.landing, l.stickerId == provisional { l.stickerId = saved.id }
@@ -631,122 +582,6 @@ struct CaptureView: View {
             }
             dex.refreshPending()
             router.showNotice(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
-        }
-    }
-
-    /// Animation starts immediately from the photo on screen; save runs in parallel behind the 1s hold gate.
-    /// The card must be real before saving (never placeholder level/category): if it is still being
-    /// generated we wait for it; if it failed, nothing is saved.
-    private func startCatch() {
-        guard reward == nil, !saveInFlight, let want = vm.picked else { return }
-        Task {
-            // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
-            await vm.awaitCutout()
-            let details = await vm.awaitDetails()
-            // Another word was picked meanwhile: these details (and this tap) belong to the old one.
-            guard vm.picked == want else { return }
-            guard let d = details, let draft = vm.draft(details: d) else {
-                vm.showToast(L("カード生成に失敗しました"))
-                return
-            }
-            runCatch(draft)
-        }
-    }
-
-    private func runCatch(_ draft: CatchDraft) {
-        guard reward == nil, !saveInFlight else { return }
-        let gate = SaveGate()
-        let payload = RewardPayload(
-            image: draft.cutout ?? draft.photo,
-            isCutout: draft.cutout != nil,
-            headword: draft.candidate.headword,
-            reading: draft.candidate.zhuyin,
-            pinyin: draft.candidate.pinyin,
-            meaning: ReaderLanguage.shown(draft.candidate.meaningJa),
-            // PRODUCT.md: no arbitrary rarity. Every catch gets the same lift.
-            rarity: 0,
-            gate: gate
-        )
-        withAnimation(nil) { reward = payload }
-        // The queued photo and the card this save belongs to (the screen may have moved on when it ends).
-        let pendingId = vm.pendingId
-        let want = draft.candidate
-        saveInFlight = true
-        Task {
-            let result: Result<SaveOutcome, Error>
-            do {
-                let outcome = try await dex.save(draft)
-                plan.recordCatch()
-                if let pid = pendingId {
-                    if vm.pendingId == pid {
-                        vm.releasePending()
-                    } else {
-                        PendingQueue.shared.remove(id: pid)
-                        PendingRetry.shared.forget(pid)
-                    }
-                }
-                dex.refreshPending()
-                result = .success(outcome)
-            } catch {
-                // The photo is still in "解析待ち" (queued at the shutter), and the card stays on
-                // screen so the chosen word is not lost.
-                result = .failure(error)
-            }
-            gate.finish(result)
-            saveInFlight = false
-            // The overlay gave up waiting (slow save): finish here instead of dropping the result — a success
-            // lands only while this very card is still on screen (never resets whatever the camera does now).
-            if reward == nil {
-                if case .failure = result {
-                    settleLateSave(result)
-                } else if vm.picked == want, vm.step == .card {
-                    settleLateSave(result)
-                }
-            }
-        }
-    }
-
-    /// A save that outlived the reward overlay: land the word in the dex, or say that it failed
-    /// (the photo stays queued either way).
-    private func settleLateSave(_ result: Result<SaveOutcome, Error>) {
-        switch result {
-        case .success(let outcome):
-            router.landingStickerId = outcome.sticker.id
-            // Same as `finishReward`: before `vm.reset()`, or the tour's capture-step onChange sends it back to 「撮る」.
-            if router.tour == .peel || router.tour == .detail {
-                router.tourStickerId = outcome.sticker.id
-                router.tour = .added
-            }
-            vm.reset()
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
-        case .failure(let error):
-            let reason = (error as? LocalizedError)?.errorDescription ?? ""
-            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
-        }
-    }
-
-    private func finishReward() {
-        guard let payload = reward else { return }
-        switch payload.gate.result {
-        case .success(let outcome):
-            router.landingStickerId = outcome.sticker.id
-            if router.tour == .peel || router.tour == .detail {
-                router.tourStickerId = outcome.sticker.id
-                router.tour = .added
-            }
-            vm.reset()
-            reward = nil
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
-        case .failure(let error):
-            // Web: toast 「保存に失敗しました」 and stay on the card (capture.tsx reportSaveFailure).
-            reward = nil
-            let reason = (error as? LocalizedError)?.errorDescription ?? ""
-            vm.showToast(reason.isEmpty ? L("保存に失敗しました") : L("保存に失敗しました\n\(reason)"))
-        case .none:
-            // Still saving after 20 s: keep the photo and the chosen word; the save finishes on its own
-            // (`settleLateSave`). Resetting here used to throw the queued photo away mid-save.
-            reward = nil
-            vm.showToast(L("保存に時間がかかっています。そのままお待ちください。"))
         }
     }
 }
@@ -793,11 +628,10 @@ struct ViewfinderBrackets: View {
     }
 }
 
-/// Deep-blue disc (the brand primary) with a white ring and a white glyph; the glyph follows the
-/// mode (SHUTTER_ICON). While the camera tab's icon is flying in (`arriving`) the disc waits hidden,
-/// then pops in with a small bounce while its white ring draws round.
+/// Deep-blue disc (the brand primary) with a white ring and a white camera glyph. While the camera tab's
+/// icon is flying in (`arriving`) the disc waits hidden, then pops in with a small bounce while its white
+/// ring draws round.
 struct ShutterButton: View {
-    var icon: String = "camera"
     var enabled: Bool
     /// The tab bar's camera icon is still on its way here (MainTabView's shutter flight).
     var arriving: Bool = false
@@ -822,8 +656,7 @@ struct ShutterButton: View {
                 Circle()
                     .fill(Self.discFill)
                     .frame(width: Self.discSize, height: Self.discSize)
-                    .overlay(Image(systemName: icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                        .contentTransition(.symbolEffect(.replace)))
+                    .overlay(Image(systemName: "camera").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white))
                     .scaleEffect(pressed ? 0.88 : 1)
             }
             .frame(width: 88, height: 88)

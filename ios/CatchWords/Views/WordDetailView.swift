@@ -26,7 +26,10 @@ struct WordDetailView: View {
     @State private var confirmDelete: Bool = false
     @State private var showSelfie: Bool = false
     @State private var flipAngle: Double = 0
-    @State private var showCutout: Bool = false
+    /// The front shows the cut-out wherever the word has one (owner 2026-10-09); the scissors button swaps.
+    @State private var showCutout: Bool = true
+    /// The original photo, full screen (a tap on the picture).
+    @State private var showingOriginal: Bool = false
     @State private var pickingHero: Bool = false
     @State private var showCurve: Bool = false
     @State private var refreshing: Set<CardSection> = []
@@ -45,8 +48,6 @@ struct WordDetailView: View {
     /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
     @State private var laterPhotos: [StickerPhoto] = []
     @State private var heroPage: Int = 0
-    /// The photo hero is at least partly in view (its holo foil and tilt run only then).
-    @State private var heroOnScreen: Bool = true
     /// ネットの画像 (web WebImagesBody): the search result, the 「別の画像」 round, and the one being applied.
     @State private var webCandidates: [WebImageCandidate] = []
     @State private var webRound: Int = 0
@@ -435,14 +436,32 @@ struct WordDetailView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if hasSelfie {
-                    Text(back ? L("タップで戻る") : L("タップで自撮りへ"))
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.black.opacity(0.55), in: Capsule())
-                        .padding(12)
-                        .allowsHitTesting(false)
+                    if back {
+                        // On the selfie side a tap anywhere turns the card back.
+                        Text(L("タップで戻る"))
+                            .scaledFont(size: 12, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(12)
+                            .allowsHitTesting(false)
+                    } else {
+                        // On the photo side a tap opens the original photo, so the selfie has its own button.
+                        Button { flip() } label: {
+                            Text(L("タップで自撮りへ"))
+                                .scaledFont(size: 12, weight: .semibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(.black.opacity(0.55), in: Capsule())
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressableStyle(scale: 0.94))
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 2)
+                    }
                 }
             }
             .overlay(alignment: .bottomLeading) {
@@ -461,15 +480,23 @@ struct WordDetailView: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 28, style: .continuous))
-            // A gentle holo card on the photo side (Holographic.swift): faint foil and a few degrees of lean
-            // with the phone, only while the hero is on screen. No drag tilt — the hero already pages by swipe.
-            .holoCard(isActive: heroOnScreen && !back, cornerRadius: 28, intensity: 0.5, maxAngle: 6, allowsDragTilt: false)
-            .onScrollVisibilityChange(threshold: 0.2) { heroOnScreen = $0 }
+            // A plain photo: no foil, glare or tilt over it (owner 2026-10-09).
             .scaleEffect(x: back ? -1 : 1)
             .rotation3DEffect(.degrees(flipAngle), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
             .shadow(color: .black.opacity(0.14), radius: 16, y: 8)
             .contentShape(.rect(cornerRadius: 28))
-            .onTapGesture { flip() }
+            .onTapGesture {
+                // The photo side opens the original photo full screen; the selfie side turns back.
+                if back {
+                    flip()
+                } else if originalPath != nil {
+                    Haptics.selection()
+                    showingOriginal = true
+                }
+            }
+            .fullScreenCover(isPresented: $showingOriginal) {
+                OriginalPhotoViewer(path: originalPath, url: dex.url(for: originalPath, preferThumb: false))
+            }
             // 長押し: この単語をどの絵で見せるか選ぶ（Web HeroPhotoPicker）。
             .onLongPressGesture(minimumDuration: 0.45) {
                 Haptics.impact(.medium)
@@ -496,6 +523,14 @@ struct WordDetailView: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(back ? L("自撮り写真") : L("写真"))
+            .accessibilityAction(named: L("元の写真を見る")) {
+                if originalPath != nil { showingOriginal = true }
+            }
+    }
+
+    /// The photo as it was taken (not the cut-out); a word with no photo of its own shows its stand-in.
+    private var originalPath: String? {
+        current.objectImageUrl ?? current.placeholderImageUrl ?? current.cutoutImageUrl
     }
 
     /// Shows the side the learner chose (`hero_role`): the selfie is the card's back, the cut-out a toggle.
@@ -503,8 +538,9 @@ struct WordDetailView: View {
         let role = current.heroRole
         let wantSelfie = role == "selfie" && hasSelfie
         let change = {
-            // nil (まだ選んでいない) keeps the page's own default.
-            if role == "cutout" || role == "object" { showCutout = role == "cutout" && current.cutoutImageUrl != nil }
+            // Opening the page always starts on the cut-out (owner 2026-10-09: the dex shows cut-outs); a choice
+            // just made in the picker (animated) is shown at once.
+            if animated, role == "cutout" || role == "object" { showCutout = role == "cutout" && current.cutoutImageUrl != nil }
             if wantSelfie != showSelfie {
                 showSelfie = wantSelfie
                 flipAngle = wantSelfie ? 180 : 0
@@ -1627,6 +1663,55 @@ struct WordDetailView: View {
 }
 
 /// The section's 「作り直す」 button (set by the word page; the links card has none).
+/// The original photo, full screen (a tap on the word page's picture). The ✕, a tap, or a swipe down closes it.
+struct OriginalPhotoViewer: View {
+    let path: String?
+    let url: URL?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var drag: CGFloat = 0
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black
+                .opacity(1 - Double(min(0.6, abs(drag) / 500)))
+                .ignoresSafeArea()
+            StickerImage(path: path, url: url, contentMode: .fit)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .offset(y: drag)
+                .contentShape(Rectangle())
+                .onTapGesture { dismiss() }
+                .gesture(
+                    DragGesture(minimumDistance: 12)
+                        .onChanged { v in drag = v.translation.height }
+                        .onEnded { v in
+                            if abs(v.translation.height) > 110 || abs(v.predictedEndTranslation.height) > 260 {
+                                dismiss()
+                            } else {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { drag = 0 }
+                            }
+                        }
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L("元の写真"))
+                .accessibilityAddTraits(.isImage)
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(.white.opacity(0.18), in: Circle())
+            }
+            .buttonStyle(PressableStyle(scale: 0.9))
+            .padding(.trailing, 16)
+            .padding(.top, 8)
+            .accessibilityLabel(L("閉じる"))
+            .accessibilityIdentifier("detail.original.close")
+        }
+        .accessibilityAction(.escape) { dismiss() }
+    }
+}
+
 struct SectionRefresh {
     var running: Bool
     var action: () -> Void

@@ -9,12 +9,12 @@ import UIKit
 /// caption grows like `.footnote` and a 34 pt title only as much as `.largeTitle`.
 ///
 /// Limits: the whole app stops at `AppTypeScale.cap` (accessibility 2, also set at the root with
-/// `.appTypeSizeCap()`), and dense or fixed-geometry screens (the camera, the month book) stop earlier
+/// `.appTypeSizeCap()`), and dense or fixed-geometry screens (the camera, the scanner) stop earlier
 /// with `.denseTypeSizeCap()`.
 ///
 /// Still drawn at a fixed size on purpose (their size is part of a spec or of a fixed frame):
 /// the card catch and the hologram card (`Views/CardCatch`, docs/prototype/SPEC.md), the dex shadow grid
-/// (`DexGallery`), the tab bar and the shutter, zhuyin ruby (`ZhuyinWordView`), the bookshelf spines,
+/// (`DexGallery`), the tab bar and the shutter, zhuyin ruby (`ZhuyinWordView`),
 /// album collage prints, calendar cells, and SF Symbol glyphs inside fixed-size circles and buttons.
 extension View {
     /// `.scaledFont(size: weight:design:)` that follows the user's text size (capped; see `AppTypeScale`).

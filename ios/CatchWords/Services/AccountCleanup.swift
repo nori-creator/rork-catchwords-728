@@ -9,7 +9,7 @@ import WidgetKit
 ///   ("◯日目の記念アルバム", counted from its sign-up day) and finished-analysis notices. Photos waiting in
 ///   「解析待ち」 stay — a photo that cannot be retaken is never thrown away just for signing out.
 /// - Account deletion (App Store Review Guideline 5.1.1(v)): the server erased the account; the copies on
-///   this phone go too — waiting photos, reminders, widget words and thumbnails, diary drafts, cached images.
+///   this phone go too — waiting photos, reminders, widget words and thumbnails, cached images.
 enum AccountCleanup {
     /// After any sign-out (button, expired login, account deleted).
     static func signedOut() async {
@@ -53,7 +53,8 @@ enum AccountCleanup {
         Milestone.removeRecord(userId: userId)
         TourStep.removePending(userId: userId)
 
-        // Diary drafts kept on this device for that account (DiaryStore `draftPrefix`).
+        // Unsent text drafts that older versions of the app kept on this device for that account
+        // (`diary-draft-<user>-<date>`; the feature is gone, the leftovers go with the account).
         if let userId {
             let prefix = "diary-draft-\(userId)-"
             let defaults = UserDefaults.standard

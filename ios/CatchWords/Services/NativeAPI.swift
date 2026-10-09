@@ -31,12 +31,9 @@ enum NativeAPI {
         case (.search, "en"): "mango"  // l10n-ignore (learning-language sample)
         case (.search, "ja"): "マンゴー"  // l10n-ignore (learning-language sample)
         case (.search, _): "芒果"  // l10n-ignore (learning-language sample)
-        case (.diary, "en"): "This morning I went to a café…"  // l10n-ignore (learning-language sample)
-        case (.diary, "ja"): "今朝、カフェに行きました…"  // l10n-ignore (learning-language sample)
-        case (.diary, _): "今天早上我去咖啡店…"  // l10n-ignore (learning-language sample)
         }
     }
-    enum SampleKind { case word, search, diary }
+    enum SampleKind { case word, search }
 
     /// target-profile.ts defaultPos: the placeholder part of speech saved before the card arrives, in the
     /// same system the card uses (I9: 「名詞」 was saved on English cards).

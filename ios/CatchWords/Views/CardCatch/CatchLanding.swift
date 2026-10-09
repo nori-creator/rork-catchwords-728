@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The waiting star of the card catch, handed from the camera screen to the landing (global coordinates).
+/// The waiting star of a catch, handed from the camera screen to the landing (global coordinates).
 struct CatchStar: Equatable {
     var center: CGPoint
     var size: CGFloat
@@ -18,7 +18,7 @@ struct CatchStar: Equatable {
 final class CatchLandingController {
     enum Phase { case opening, flying, landed }
 
-    /// The landing word. A card catch lands at once on a provisional entry; when its background save
+    /// The landing word. A catch lands at once on a provisional entry; when its background save
     /// finishes this becomes the saved sticker's id (DexView moves its hold and focus along).
     var stickerId: String
     let star: CatchStar

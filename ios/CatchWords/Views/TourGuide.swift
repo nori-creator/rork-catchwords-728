@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// FirstCatchFlow の体験段（ホーム → 撮る → 候補 → 発音 → はがす → 図鑑 → ことば → 復習 → 完了）。
+/// FirstCatchFlow の体験段（ホーム → 撮る → 候補 → 発音 → 図鑑に追加 → 図鑑 → ことば → 復習 → 完了）。
 /// Web 版は見本の画面を別に組むが、iOS 版はログイン後に始まるので**本物の画面の上に**案内を重ねる。
 /// 撮った1枚は本物の図鑑に入る（登録後の引き継ぎが要らない）。
 enum TourStep: String, Equatable {
@@ -31,7 +31,7 @@ enum TourStep: String, Equatable {
         case .tapCamera, .shoot: L("1枚撮ってみましょう")
         case .pick: L("覚えたいことばを選ぶ")
         case .detail, .word: L("発音と意味")
-        case .peel: L("はがして図鑑へ")
+        case .peel: L("図鑑に入れる")
         case .added: L("図鑑に追加しました！")
         case .dexTypes, .dexOpen: L("図鑑")
         case .review: L("復習")
@@ -44,9 +44,9 @@ enum TourStep: String, Equatable {
         case .home: L("見つけた場面ごと、今日のアルバムに。単語帳へ書き写す手間がなくなります。")
         case .tapCamera: L("下のカメラを押して、気になるものを撮ってみましょう。名前を知らなくても大丈夫。")
         case .shoot: L("知らないものも、撮るだけ。AIが写真の中から学べることばを提案します。")
-        case .pick: L("写真から見つけた候補です。残したいことばを選んでください。")
+        case .pick: L("写真の中のものに、AIが見つけたことばを付けました。残したいことばをタップしてください。")
         case .detail: L("スピーカーを押すと、発音を聞けます。")
-        case .peel: L("写真を指で好きな方向にめくります。")
+        case .peel: L("「図鑑に追加」を押すと、撮った写真と一緒に図鑑に入ります。")
         case .added: L("集めたことばが、撮った写真と一緒に並びます。")
         case .dexTypes: L("上のアイコンで、写真一覧・地図・リストへ切り替えられます。探し方も自分に合わせて。")
         case .dexOpen: L("追加した単語を開いて、意味や使い方を見てみましょう。")

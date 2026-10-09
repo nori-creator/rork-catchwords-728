@@ -95,12 +95,9 @@ nonisolated extension DemoDatabase {
             result = ["saved": true]
         case "saveAlbumLayout": result = saveAlbumLayout(DJ.list(data["items"]))
 
-        // Review, stats, journal, account
+        // Review, stats, account
         case "gradeReview": return gradeReview(data)
         case "getMyStats": result = myStats()
-        case "listJournal": result = listJournal()
-        case "getJournalPrompts": result = journalPrompts(r)
-        case "correctMyJournal": result = correctJournal(DJ.str(data["draft"]) ?? "", reader: r)
         case "recordAiConsent": return recordAiConsent(data)
         case "getAiConsent": result = aiConsentResult(recorded: true)
         case "deleteMyAccount":
@@ -730,78 +727,6 @@ nonisolated extension DemoDatabase {
             "reviews_due": due,
             "reviews_done_today": doneToday,
         ]
-    }
-
-    // MARK: - Journal
-
-    private func journalJSON(_ row: [String: Any]) -> [String: Any] {
-        var e: [String: Any] = [:]
-        e["id"] = DJ.str(row["id"]) ?? ""
-        e["entry_date"] = DJ.str(row["entry_date"]) ?? ""
-        e["body_zh"] = DJ.orNull(DJ.str(row["body_zh"]))
-        e["body_ja"] = DJ.orNull(DJ.str(row["body_ja"]))
-        e["user_draft"] = DJ.orNull(DJ.str(row["user_draft"]))
-        e["correction"] = DJ.orNull(DJ.str(row["correction"]))
-        e["feedback_ja"] = DJ.orNull(DJ.str(row["feedback_ja"]))
-        e["native_phrases"] = DJ.list(row["native_phrases"])
-        return e
-    }
-
-    private func listJournal() -> [[String: Any]] {
-        let sorted = rows("journal_entries").sorted { (DJ.str($0["entry_date"]) ?? "") > (DJ.str($1["entry_date"]) ?? "") }
-        return sorted.prefix(30).map { journalJSON($0) }
-    }
-
-    private func journalPrompts(_ r: String) -> Any {
-        let stickers = rows("stickers").sorted { (DJ.str($0["taken_at"]) ?? "") > (DJ.str($1["taken_at"]) ?? "") }
-        guard !stickers.isEmpty else { return NSNull() }
-        var prompts: [[String: Any]] = []
-        for p in DJ.list(pack["prompts"]) {
-            let key = DJ.str(p["word"]) ?? ""
-            let sid = "demo-sticker-\(key)"
-            prompts.append([
-                "sticker_id": first("stickers", id: sid) == nil ? (NSNull() as Any) : (sid as Any),
-                "question_zh": DJ.str(p["zh"]) ?? "",
-                "question_ja": text(p["ja"], r),
-            ])
-        }
-        let patterns: [[String: Any]] = DJ.list(pack["patterns"]).map { (p: [String: Any]) -> [String: Any] in
-            ["zh": DJ.str(p["zh"]) ?? "", "ja": text(p["ja"], r)]
-        }
-        var captures: [[String: Any]] = []
-        for s in stickers.prefix(3) {
-            guard let sid = DJ.str(s["id"]), let wid = DJ.str(s["word_id"]), let w = first("words", id: wid) else { continue }
-            captures.append(["id": sid, "headword": DJ.str(w["headword"]) ?? ""])
-        }
-        return ["prompts": prompts, "patterns": patterns, "captures": captures]
-    }
-
-    private func correctJournal(_ draft: String, reader r: String) -> [String: Any] {
-        let journal = DJ.dict(pack["journal"])
-        let text0 = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let canned = text0 == (DJ.str(journal["draft"]) ?? "")
-        let correction = canned ? (DJ.str(journal["correction"]) ?? text0) : text0
-        let feedback = canned ? text(journal["feedback"], r) : text(DJ.dict(pack["common"])["feedback_generic"], r)
-        let body: Any = canned ? (text(journal["body"], r) as Any) : (NSNull() as Any)
-        let day = DJ.dayKey(Date())
-        var row: [String: Any] = [:]
-        row["user_draft"] = text0
-        row["correction"] = correction
-        row["body_zh"] = correction
-        row["body_ja"] = body
-        row["feedback_ja"] = feedback
-        row["native_phrases"] = phrases(journal, r)
-        row["updated_at"] = DJ.now()
-        let changed = update("journal_entries", where: { DJ.str($0["entry_date"]) == day }) { e in
-            for (k, v) in row { e[k] = v }
-        }
-        if let saved = changed.first { return journalJSON(saved) }
-        row["id"] = DJ.uuid()
-        row["user_id"] = Self.userId
-        row["entry_date"] = day
-        row["created_at"] = DJ.now()
-        insert("journal_entries", row)
-        return journalJSON(row)
     }
 }
 #endif
