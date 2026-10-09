@@ -37,6 +37,7 @@ struct SettingsView: View {
     @State private var confirmSignOut: Bool = false
     @State private var showAIConsent: Bool = false
     @State private var confirmWithdrawAI: Bool = false
+    @State private var showAdminAi: Bool = false
 
     var body: some View {
         ScrollView {
@@ -48,6 +49,8 @@ struct SettingsView: View {
                 appearanceSection
                 feelSection
                 aiConsentSection
+                // Admins only (the server's answer for this account); nobody else ever sees this section.
+                if AdminAccess.shared.isAdmin { developerSection }
                 if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
@@ -72,6 +75,12 @@ struct SettingsView: View {
             guard reminderMode != "off" || placeRemind else { return }
             let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
             notifyDenied = status == .denied
+        }
+        // Is this account an admin? Asked once per account; any failure means "no" (AdminAccess).
+        .task { await AdminAccess.shared.refresh() }
+        .sheet(isPresented: $showAdminAi) {
+            NavigationStack { AdminAiSettingsView() }
+                .presentationBackground(Theme.background)
         }
         .onChange(of: profile.displayName) { _, v in if !nameFocused { nameDraft = v } }
         .onChange(of: avatarItem) { _, item in
@@ -294,6 +303,25 @@ struct SettingsView: View {
             Text(L("取り消すと、カメラ・スキャン・単語カードの作成・日記の添削など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
         }
         .aiConsentSheet(isPresented: $showAIConsent)
+    }
+
+    /// 開発者: the AI settings (web docs/admin-ai-api.md). Shown only while `AdminAccess` says admin.
+    private var developerSection: some View {
+        SettingsCard(title: L("開発者")) {
+            Button { showAdminAi = true } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "cpu").scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.primary)
+                        .accessibilityHidden(true)
+                    Text(L("AI の設定（開発者）")).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
+                    Spacer()
+                    Image(systemName: "chevron.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.adminAi")
+        }
     }
 
     private var aiConsentStatus: String {

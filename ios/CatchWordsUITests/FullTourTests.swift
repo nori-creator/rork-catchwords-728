@@ -215,9 +215,18 @@ final class FullTourTests: XCTestCase {
         // The dialog's button is reported twice (button inside button): take the first.
         let confirm = app.buttons["settings.signOut.confirm"].firstMatch
         if confirm.waitForExistence(timeout: 3) { confirm.tap() }
+        // Signed out: the welcome screen first (as on the web), then 「ログイン」 opens the sign-in options.
+        let signIn = app.buttons["welcome.signin"]
+        guard signIn.waitForExistence(timeout: 10) else {
+            XCTFail("[\(display)/\(learning)] the welcome screen did not appear after signing out")
+            return
+        }
+        settle(2)
+        snap("welcome")
+        signIn.tap()
         let mail = app.buttons["auth.mail"]
         guard mail.waitForExistence(timeout: 10) else {
-            XCTFail("[\(display)/\(learning)] the sign-in screen did not appear after signing out")
+            XCTFail("[\(display)/\(learning)] the sign-in screen did not open from the welcome screen")
             return
         }
         settle(1)

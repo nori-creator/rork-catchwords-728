@@ -98,7 +98,9 @@ struct UIPreviewRoot: View {
             case "enanswer": ReviewPreview(learning: "en", answered: true)
             case "endetail": LanguageCardPreview(kind: .en)
             case "settings": SettingsView()
+            case "aisettings": AdminAiSettingsPreview()
             case "auth": AuthView()
+            case "signin": AuthView(startOnOptions: true)
             case "onboarding": OnboardingView {}
             case "aiconsent": AIConsentView()
             case "paywall": PaywallView()
@@ -622,6 +624,88 @@ private struct ReviewPreview: View {
             }
             if answered {
                 AnswerPanel(sticker: c.sticker, correct: true, onDex: {}, onNext: {})
+            }
+        }
+    }
+}
+
+/// 設定 → 開発者 →「AI の設定（開発者）」 with made-up settings (no server, no admin check):
+/// scan on auto, diary correction moved to OpenRouter, one feature whose provider lost its key.
+private struct AdminAiSettingsPreview: View {
+    private static let json = """
+    {
+      "isAdmin": true,
+      "status": { "ok": true, "provider": "google", "error": null },
+      "features": [
+        { "id": "scan", "tier": "flash-lite", "needsVision": true, "labelKey": "aiSet.feature.scan",
+          "label": { "ja": "スキャン", "en": "Scan", "zh-TW": "掃描" },
+          "description": { "ja": "写真の物・文字の検出、単語の候補、単語帳の読み取り（写真を読めるモデルだけ）。",
+                           "en": "Finds objects and text in photos, suggests words and reads wordbook pages (image-capable models only).",
+                           "zh-TW": "偵測照片中的物品與文字、提出單字候選、讀取單字本（僅限能讀圖片的模型）。" },
+          "value": "auto", "provider": "google", "model": "latest-flash-lite", "resolved": "gemini-3.8-flash-lite", "error": null },
+        { "id": "card", "tier": "flash", "needsVision": false, "labelKey": "aiSet.feature.card",
+          "label": { "ja": "単語カード", "en": "Word cards", "zh-TW": "單字卡" },
+          "description": { "ja": "単語・フレーズのカード生成と作り直し。", "en": "Writes and rewrites word and phrase cards.", "zh-TW": "產生與重寫單字、片語卡。" },
+          "value": "auto", "provider": "google", "model": "latest-flash", "resolved": "gemini-3.8-flash", "error": null },
+        { "id": "journal", "tier": "flash", "needsVision": false, "labelKey": "aiSet.feature.journal",
+          "label": { "ja": "日記の添削", "en": "Diary correction", "zh-TW": "日記批改" },
+          "description": { "ja": "日記の添削・書き出しの質問。", "en": "Diary corrections and writing prompts.", "zh-TW": "日記批改與開頭提問。" },
+          "value": "openrouter:anthropic/claude-sonnet-4.5", "provider": "openrouter", "model": "anthropic/claude-sonnet-4.5",
+          "resolved": "anthropic/claude-sonnet-4.5", "error": null },
+        { "id": "audit", "tier": "flash", "needsVision": false, "labelKey": "aiSet.feature.audit",
+          "label": { "ja": "自己点検", "en": "Self-check", "zh-TW": "自我檢查" },
+          "description": { "ja": "報告された項目の特定・作り直しの判定。", "en": "Finds reported items and decides what to rewrite.", "zh-TW": "找出回報的項目並判斷是否重寫。" },
+          "value": "openai:gpt-5-mini", "provider": "google", "model": "latest-flash", "resolved": "gemini-3.8-flash",
+          "error": "openai の鍵が無いため既定の AI で動いています" },
+        { "id": "future_feature", "tier": "something-new", "needsVision": false,
+          "label": { "ja": "新しい機能" }, "value": "auto", "provider": null, "model": null, "resolved": null, "error": null }
+      ],
+      "providers": [
+        { "id": "google", "name": "Google Gemini", "hasKey": true,
+          "models": ["latest-flash-lite", "latest-flash", "latest-pro", "gemini-3.8-flash", "gemini-3.8-flash-lite"],
+          "visionModels": ["latest-flash-lite", "latest-flash", "latest-pro", "gemini-3.8-flash", "gemini-3.8-flash-lite"], "error": null },
+        { "id": "openai", "name": "OpenAI (ChatGPT)", "hasKey": false, "models": [], "visionModels": [], "error": null },
+        { "id": "openrouter", "name": "OpenRouter", "hasKey": true,
+          "models": ["anthropic/claude-sonnet-4.5", "openai/gpt-5-mini"], "visionModels": ["anthropic/claude-sonnet-4.5"], "error": null },
+        { "id": "brand-new", "name": "Brand New AI", "hasKey": true, "models": [], "visionModels": [], "error": "401 invalid key" }
+      ],
+      "image": {
+        "provider": "google", "model": "gemini-2.5-flash-image", "saved": { "provider": "google", "model": "gemini-2.5-flash-image" },
+        "providers": [
+          { "id": "lovable", "name": "Lovable AI", "hasKey": true, "defaultModel": "openai/gpt-image-1-mini" },
+          { "id": "google", "name": "Google AI Studio", "hasKey": true, "defaultModel": "gemini-2.5-flash-image" },
+          { "id": "higgsfield", "name": "Higgsfield", "hasKey": false, "defaultModel": "bytedance/seedream/v4/text-to-image" },
+          { "id": "off", "name": "Off", "hasKey": true, "defaultModel": "" }
+        ]
+      },
+      "tts": {
+        "defaultEngine": "OpenAI-compatible TTS",
+        "languages": {
+          "zh-TW": { "provider": "azure", "voice": "zh-TW-HsiaoChenNeural", "model": null, "gender": "female", "incomplete": false },
+          "en": { "provider": "default", "voice": "", "model": null, "gender": null, "incomplete": false },
+          "ja": { "provider": "elevenlabs", "voice": "", "model": "eleven_flash_v2_5", "gender": null, "incomplete": true }
+        },
+        "providers": [
+          { "id": "azure", "name": "Azure AI Speech", "hasKey": true, "keyEnvs": ["AZURE_SPEECH_KEY"], "models": [],
+            "voices": { "zh-TW": ["zh-TW-HsiaoChenNeural", "zh-TW-HsiaoYuNeural", "zh-TW-YunJheNeural"],
+                        "en": ["en-US-AvaMultilingualNeural", "en-US-JennyNeural"], "ja": ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"] } },
+          { "id": "gemini", "name": "Gemini TTS", "hasKey": true, "keyEnvs": ["GEMINI_API_KEY"],
+            "models": ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"], "voices": { "zh-TW": [], "en": [], "ja": [] } },
+          { "id": "elevenlabs", "name": "ElevenLabs", "hasKey": true, "keyEnvs": ["ELEVENLABS_API_KEY"],
+            "models": ["eleven_flash_v2_5", "eleven_v3"], "voices": { "zh-TW": [], "en": [], "ja": [] } }
+        ]
+      }
+    }
+    """
+
+    static let settings: AdminAiSettings? = try? JSONDecoder().decode(AdminAiSettings.self, from: Data(json.utf8))
+
+    var body: some View {
+        NavigationStack {
+            if let settings = Self.settings {
+                AdminAiSettingsView(preview: settings)
+            } else {
+                Text("AdminAiSettings mock did not decode")
             }
         }
     }
