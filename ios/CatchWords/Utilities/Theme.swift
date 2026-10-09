@@ -111,10 +111,11 @@ enum JPDate {
     static var veryShortWeekdays: [String] { fmt("EEEEE").veryShortWeekdaySymbols ?? [] }
 }
 
-/// Bundled fonts: Zen Kurenaido (handwritten Japanese captions) and Caveat (handwritten Latin).
+/// Bundled fonts: Zen Kurenaido (handwritten Japanese captions), Caveat (handwritten Latin) and Iansui
+/// cut down to the welcome screen's words (Taiwan's standard glyph shapes; Resources/Fonts/Iansui-OFL.txt).
 enum AppFont {
     static func registerAll() {
-        for name in ["ZenKurenaido-Regular", "Caveat"] {
+        for name in ["ZenKurenaido-Regular", "Caveat", "IansuiWelcome-Regular"] {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
@@ -124,6 +125,16 @@ enum AppFont {
     static func hand(_ size: CGFloat, fixed: Bool = false) -> Font {
         resolve(["ZenKurenaido-Regular", "Zen Kurenaido"], size, relativeTo: fixed ? nil : AppTypeScale.fontTextStyle(for: size))
             ?? .system(size: size, design: .rounded)
+    }
+
+    /// The welcome screen's pen for Taiwanese Mandarin words (芫荽 / Iansui; only 海邊 花 貓 咖啡 湖 are in it).
+    static func welcomePen(_ size: CGFloat) -> Font {
+        resolve(["IansuiWelcome-Regular", "Iansui Welcome"], size, relativeTo: nil) ?? .system(size: size)
+    }
+
+    /// Handwritten Latin (Caveat), at a fixed size.
+    static func caveat(_ size: CGFloat) -> Font {
+        resolve(["Caveat-Regular", "Caveat"], size, relativeTo: nil) ?? .system(size: size, design: .rounded)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {

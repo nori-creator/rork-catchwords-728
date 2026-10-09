@@ -99,6 +99,7 @@ struct UIPreviewRoot: View {
             case "endetail": LanguageCardPreview(kind: .en)
             case "settings": SettingsView()
             case "auth": AuthView()
+            case "signin": AuthView(startOnOptions: true)
             case "onboarding": OnboardingView {}
             case "aiconsent": AIConsentView()
             case "paywall": PaywallView()

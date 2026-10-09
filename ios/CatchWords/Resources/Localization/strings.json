@@ -183,10 +183,6 @@
   "en": "Weblio Dictionary",
   "zh-TW": "Weblio 辭典"
  },
- "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。": {
-  "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.",
-  "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字與照片都能直接使用。"
- },
  "Web版（catchwords.lovable.app）と同じアカウントで、集めた単語と写真がそのまま使えます。\nGoogleで登録した方は、ログイン画面の「パスワードを忘れた」から同じアカウントにパスワードを設定できます。": {
   "en": "Use the same account as the web app (catchwords.lovable.app) and your words and photos come with you.\nIf you signed up with Google, set a password for the same account from “Forgot password” on the login screen.",
   "zh-TW": "使用與網頁版（catchwords.lovable.app）相同的帳號，收集的單字和照片都能直接使用。\n用 Google 註冊的人，可以在登入畫面的「忘記密碼」為同一個帳號設定密碼。"
@@ -2947,10 +2943,6 @@
   "en": "What you find around town becomes words you learn.",
   "zh-TW": "在街上發現的東西，變成你學會的單字。"
  },
- "街で見つけた物が、学びたい言葉になる。": {
-  "en": "What you find on the street becomes the language you're learning.",
-  "zh-TW": "街上看到的東西，變成你想學的語言。"
- },
  "街並み": {
   "en": "Streets",
   "zh-TW": "街景"
@@ -3422,5 +3414,13 @@
  "（意味が読み取れていません）": {
   "en": "(no meaning was read)",
   "zh-TW": "（沒有讀到意思）"
+ },
+ "日常のすべてが学びになる": {
+  "en": "Every moment becomes a lesson",
+  "zh-TW": "生活中處處都是學習"
+ },
+ "アカウントをお持ちの方はこちらから": {
+  "en": "Already have an account?",
+  "zh-TW": "已有帳號？"
  }
 }
