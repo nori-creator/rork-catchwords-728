@@ -1,0 +1,224 @@
+[
+ {
+  "file": "wait_bed",
+  "role": "wait",
+  "dur_ms": 3000,
+  "note": "AI working: soft bed that opens up; loop the last second, stop (0.15 s fade) on the answer"
+ },
+ {
+  "file": "sketch_outline",
+  "role": "wait",
+  "dur_ms": 600,
+  "note": "pencil draws a shape found on device (play per outline, pan to it)"
+ },
+ {
+  "file": "sketch_writing",
+  "role": "wait",
+  "dur_ms": 1500,
+  "note": "pen writing in a draft name pill (very quiet, loop until the name)"
+ },
+ {
+  "file": "shape_found_1",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "shape #1 closes (D6): progress climbs the pentatonic"
+ },
+ {
+  "file": "shape_found_2",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "shape #2 closes (E6): progress climbs the pentatonic"
+ },
+ {
+  "file": "shape_found_3",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "shape #3 closes (F#6): progress climbs the pentatonic"
+ },
+ {
+  "file": "shape_found_4",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "shape #4 closes (A6): progress climbs the pentatonic"
+ },
+ {
+  "file": "name_ink_1",
+  "role": "earcon",
+  "dur_ms": 1000,
+  "note": "name #1 inked (D6)"
+ },
+ {
+  "file": "name_ink_2",
+  "role": "earcon",
+  "dur_ms": 1000,
+  "note": "name #2 inked (E6)"
+ },
+ {
+  "file": "name_ink_3",
+  "role": "earcon",
+  "dur_ms": 1000,
+  "note": "name #3 inked (F#6)"
+ },
+ {
+  "file": "name_ink_4",
+  "role": "earcon",
+  "dur_ms": 1000,
+  "note": "name #4 inked (A6)"
+ },
+ {
+  "file": "names_resolve",
+  "role": "earcon",
+  "dur_ms": 1200,
+  "note": "all names in (soft D chord)"
+ },
+ {
+  "file": "choose",
+  "role": "ui",
+  "dur_ms": 500,
+  "note": "choose a way to say it (tap + E→A check)"
+ },
+ {
+  "file": "dex_open",
+  "role": "motion",
+  "dur_ms": 450,
+  "note": "図鑑 opens"
+ },
+ {
+  "file": "scroll_detent",
+  "role": "ui",
+  "dur_ms": 60,
+  "note": "a category card passes under the header while scrolling to the slot"
+ },
+ {
+  "file": "riser_300",
+  "role": "motion",
+  "dur_ms": 300,
+  "note": "anticipation: ends 70 ms before the hit (leave that gap silent)"
+ },
+ {
+  "file": "riser_500",
+  "role": "motion",
+  "dur_ms": 500,
+  "note": "anticipation, longer variant"
+ },
+ {
+  "file": "land_impact",
+  "role": "reward",
+  "dur_ms": 1900,
+  "note": "IMPACT: D major chord + weight + tuned ElevenLabs texture + air + sparkle"
+ },
+ {
+  "file": "land_impact_light",
+  "role": "earcon",
+  "dur_ms": 1900,
+  "note": "the same hit for the Instant flow (quicker, lighter)"
+ },
+ {
+  "file": "new_badge",
+  "role": "ui",
+  "dur_ms": 149,
+  "note": "NEW badge pops"
+ },
+ {
+  "file": "count_tick_1",
+  "role": "ui",
+  "dur_ms": 60,
+  "note": "rolling counter #1 (E6): category → 枚 → 影, rising"
+ },
+ {
+  "file": "count_tick_2",
+  "role": "ui",
+  "dur_ms": 60,
+  "note": "rolling counter #2 (F#6): category → 枚 → 影, rising"
+ },
+ {
+  "file": "count_tick_3",
+  "role": "ui",
+  "dur_ms": 60,
+  "note": "rolling counter #3 (A6): category → 枚 → 影, rising"
+ },
+ {
+  "file": "refill",
+  "role": "ui",
+  "dur_ms": 251,
+  "note": "the next shadow appears"
+ },
+ {
+  "file": "goal_one_more",
+  "role": "earcon",
+  "dur_ms": 1600,
+  "note": "goal toast: E→A, the dominant left unresolved (one more word completes the set)"
+ },
+ {
+  "file": "draft_pencil",
+  "role": "wait",
+  "dur_ms": 750,
+  "note": "the pen drafts a line of the explanation"
+ },
+ {
+  "file": "ink_01",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 1 (D6): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_02",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 2 (E6): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_03",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 3 (F#6): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_04",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 4 (A6): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_05",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 5 (B6): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_06",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 6 (D7): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_07",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 7 (E7): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_08",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 8 (F#7): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_09",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 9 (A7): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "ink_10",
+  "role": "ui",
+  "dur_ms": 450,
+  "note": "ink cascade line 10 (B7): play 55 ms apart, a run that climbs two octaves"
+ },
+ {
+  "file": "written_resolve",
+  "role": "reward",
+  "dur_ms": 1800,
+  "note": "explanation complete: A→D resolves to the tonic"
+ }
+]

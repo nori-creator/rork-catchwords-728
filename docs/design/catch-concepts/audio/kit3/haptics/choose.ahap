@@ -1,0 +1,26 @@
+{
+ "Version": 1.0,
+ "Metadata": {
+  "Project": "CatchWords",
+  "Created": "2026-10-10",
+  "Description": "choose (v3; t=0 is the named moment)"
+ },
+ "Pattern": [
+  {
+   "Event": {
+    "Time": 0,
+    "EventType": "HapticTransient",
+    "EventParameters": [
+     {
+      "ParameterID": "HapticIntensity",
+      "ParameterValue": 0.55
+     },
+     {
+      "ParameterID": "HapticSharpness",
+      "ParameterValue": 0.8
+     }
+    ]
+   }
+  }
+ ]
+}
