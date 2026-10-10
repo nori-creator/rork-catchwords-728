@@ -1,0 +1,184 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press (finger)",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "rigid 0.8/0.6"
+ },
+ {
+  "t": 0.72,
+  "cue": "capture weight",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.72,
+  "cue": "music music_D1 from 0.45s",
+  "bus": "music",
+  "gain_db": -16,
+  "haptic": null
+ },
+ {
+  "t": 0.84,
+  "cue": "AI looking — airy shimmer bed",
+  "bus": "sfx",
+  "gain_db": -30,
+  "haptic": null
+ },
+ {
+  "t": 1.05,
+  "cue": "found object (D6)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.18,
+  "cue": "found object (E6)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.3,
+  "cue": "found object (F#6)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.42,
+  "cue": "found object (A6)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 2.14,
+  "cue": "tap word tag",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ },
+ {
+  "t": 2.198,
+  "cue": "photo melts (reverse swell ends on the page)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": null
+ },
+ {
+  "t": 2.57,
+  "cue": "float (soft D chord)",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 2.67,
+  "cue": "NEW chip",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 2.77,
+  "cue": "type 珍 (D5)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": null
+ },
+ {
+  "t": 2.82,
+  "cue": "type 珠 (F#5)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": null
+ },
+ {
+  "t": 2.87,
+  "cue": "type 奶 (A5)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": null
+ },
+ {
+  "t": 2.92,
+  "cue": "type 茶 (D6)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": null
+ },
+ {
+  "t": 2.92,
+  "cue": "pronunciation 珍珠奶茶 (zh-TW)",
+  "bus": "voice",
+  "gain_db": -3,
+  "haptic": null
+ },
+ {
+  "t": 3.83,
+  "cue": "press 図鑑に追加",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": "transient 0.7/0.4"
+ },
+ {
+  "t": 3.94,
+  "cue": "to the dex page",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 4.436,
+  "cue": "files into slot (card sleeve foley)",
+  "bus": "sfx",
+  "gain_db": -13,
+  "haptic": null
+ },
+ {
+  "t": 4.58,
+  "cue": "arrival chime A6",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "success: transient 0.9/0.5 + 0.6/0.8 @+70ms"
+ },
+ {
+  "t": 4.58,
+  "cue": "arrival weight",
+  "bus": "sfx",
+  "gain_db": -17,
+  "haptic": null
+ },
+ {
+  "t": 4.6,
+  "cue": "twinkle",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": null
+ },
+ {
+  "t": 4.65,
+  "cue": "arrival chime D7 (resolve to tonic)",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": null
+ },
+ {
+  "t": 4.65,
+  "cue": "count 4→5",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ }
+]
