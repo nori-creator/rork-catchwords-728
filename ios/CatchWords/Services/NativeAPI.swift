@@ -122,6 +122,26 @@ enum NativeAPI {
         }
     }
 
+    /// Opens the connection to the server while the camera is on screen, before the shutter (measured 2026-10-10:
+    /// the photo's request otherwise also pays for setting up the connection, and for a token refresh when the token
+    /// is about to expire). Nothing about the user is sent: a call to no function, which the server answers with
+    /// 404 before running anything or reading the account. At most once a minute.
+    static func warmUp() {
+        guard Date().timeIntervalSince(lastWarmUp) > 60 else { return }
+        lastWarmUp = Date()
+        Task {
+            // A token that expires within 10 minutes is refreshed now, not in front of the photo's request.
+            try? await SupabaseClient.shared.refreshIfNeeded(within: 600)
+            var req = URLRequest(url: AppConfig.webBaseURL.appendingPathComponent("api/native-fn"), timeoutInterval: 10)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = Data(#"{"fn":"warmup"}"#.utf8)
+            _ = try? await URLSession.shared.data(for: req)
+        }
+    }
+
+    private static var lastWarmUp = Date.distantPast
+
     static func call<T: Decodable>(_ fn: String, _ data: [String: Any], as type: T.Type,
                                    timeout: TimeInterval = 40, asUser: String? = nil) async throws -> T {
         let raw = try await call(fn, data, timeout: timeout, asUser: asUser)

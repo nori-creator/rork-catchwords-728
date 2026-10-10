@@ -61,6 +61,10 @@ final class CaptureViewModel {
     private var detailsTask: Task<CardDetails?, Never>?
     /// Cards already being generated for this photo, by headword.
     private var detailsCache: [String: Task<CardDetails?, Never>] = [:]
+    /// "Is this word already in the dex?" — started for each object's first word as soon as the words are found, so
+    /// a tap opens the celebration at once instead of waiting for the round trip (0.6–1.0 s measured 2026-10-10;
+    /// owner: 「ただ待たされる時間は苦痛」). nil = that check failed (asked again at the tap).
+    @ObservationIgnored private var ownedChecks: [String: Task<OwnedCheck?, Never>] = [:]
     /// The photos, uploaded while the celebration is on screen (`DexStore.preupload`). Handed to the save
     /// (`handOffUploads`); dropped ones are deleted again (`dropUploads`).
     private(set) var uploads: CatchPreupload?
@@ -101,9 +105,17 @@ final class CaptureViewModel {
         owned = nil
         objects = []
         step = askSelfie ? .selfie : .processing
+        ownedChecks = [:]
         // One foreground-instance request per photo, started with the server call and reused for every object.
         masksTask?.cancel()
         masksTask = Task<InstanceMasks?, Never> { await CutoutService.instanceMasks(from: image) }
+        // Every instance's cut-out is rendered while the AI is still naming the things (they used to be rendered
+        // after the server answered, between the answer and the words on screen).
+        let masksForCuts = masksTask
+        Task.detached(priority: .utility) {
+            guard let masks = await masksForCuts?.value else { return }
+            masks.prerenderCuts()
+        }
         // A photo restored from the queue is never queued again (one entry per photo, not per retry).
         // Every new photo gets its own entry (an earlier photo's entry stays in 「解析待ち」).
         if let rid = restoredPendingId {
@@ -133,6 +145,7 @@ final class CaptureViewModel {
                 guard token == runToken else { return }
                 objects = built
                 detectOutcome = .success(found)
+                prefetchOwnedChecks(found)
             } catch {
                 guard token == runToken else { return }
                 detectOutcome = .failure(error)
@@ -199,6 +212,7 @@ final class CaptureViewModel {
         runToken += 1
         let token = runToken
         isCheckingOwned = false
+        ownedChecks = [:]
         searchError = nil
         isLookingUp = true
         Task {
@@ -229,9 +243,31 @@ final class CaptureViewModel {
 
     private struct OwnedCheck: Decodable { let owned: OwnedWord? }
 
-    /// A word was tapped on its object (or typed under the photo, `object` nil). The owned-word check decides
-    /// between the celebration and the re-encounter; the card's details are generated from the tap on, so
-    /// 「図鑑に追加」 rarely waits. The sticker is the object's cut-out (cut-out mode on), else the photo.
+    /// The owned-word check for `headword` in this run: the one already running (or done), else a new one.
+    private func ownedCheck(for headword: String) -> Task<OwnedCheck?, Never> {
+        if let running = ownedChecks[headword] { return running }
+        let task = Task<OwnedCheck?, Never> {
+            try? await NativeAPI.call(
+                "checkOwnedWord",
+                ["headword": headword, "language": NativeAPI.targetLanguage],
+                as: OwnedCheck.self, timeout: 15
+            )
+        }
+        ownedChecks[headword] = task
+        return task
+    }
+
+    /// Starts the owned-word check of each object's first word (the word a tap usually picks) as the words appear.
+    private func prefetchOwnedChecks(_ found: [Candidate]) {
+        for words in CatchObject.groups(found) {
+            if let first = words.first { _ = ownedCheck(for: first.headword) }
+        }
+    }
+
+    /// A word was tapped on its object (or typed under the photo, `object` nil). The owned-word check (usually
+    /// already answered, `prefetchOwnedChecks`) decides between the celebration and the re-encounter; the card's
+    /// details are generated from the tap on and never waited for (`provisionalDetails`). The sticker is the
+    /// object's cut-out (cut-out mode on), else the photo.
     func choose(_ word: Candidate, object: CatchObject?) {
         guard !isCheckingOwned else { return }
         let token = runToken
@@ -254,12 +290,14 @@ final class CaptureViewModel {
         }
         isCheckingOwned = true
         loadDetails(for: word)
+        let early = ownedCheck(for: word.headword)
         Task {
-            let found = try? await NativeAPI.call(
-                "checkOwnedWord",
-                ["headword": word.headword, "language": NativeAPI.targetLanguage],
-                as: OwnedCheck.self, timeout: 15
-            )
+            // Usually finished already (started when the words appeared). One that failed is asked once more now.
+            var found = await early.value
+            if found == nil, token == runToken, picked == word {
+                ownedChecks[word.headword] = nil
+                found = await ownedCheck(for: word.headword).value
+            }
             guard token == runToken, picked == word else { return }
             isCheckingOwned = false
             if let o = found?.owned {
@@ -325,7 +363,9 @@ final class CaptureViewModel {
         await task.value
     }
 
-    /// Web: card failure → toast 「カード生成に失敗しました」 and back to the words.
+    /// The card for the picked word, generated from the tap on. A card that fails no longer sends the learner back
+    /// to the words (it did, with 「カード生成に失敗しました」): the catch can be saved without it, from the word's
+    /// own fields (`provisionalDetails`), and the detail page writes the notes when it is opened.
     private func loadDetails(for candidate: Candidate) {
         let token = runToken
         isLoadingDetails = true
@@ -342,9 +382,6 @@ final class CaptureViewModel {
             isLoadingDetails = false
             if let d {
                 withAnimation(.easeOut(duration: 0.3)) { details = d }
-            } else if step == .celebrate {
-                showToast(L("カード生成に失敗しました"))
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
             }
         }
     }
@@ -370,12 +407,18 @@ final class CaptureViewModel {
         uploads = nil
     }
 
-    /// Saving needs the real card (level, category, extras). Never save placeholder values:
-    /// wait for the card that is already being generated.
-    func awaitDetails() async -> CardDetails? {
-        if let details { return details }
-        return await detailsTask?.value
+    /// 「図鑑に追加」 when the card is not here yet (owner 2026-10-10: 「ただ待たされる時間は苦痛」): the catch is
+    /// saved at once from the picked word's own fields (reading, meaning, category — the web's hint card, capture.tsx
+    /// confirmWord), and the card still being generated (`cardStillComing`) fills the notes in behind the dex
+    /// (`DexStore.fillCard`). Nothing here is a made-up value: the empty fields are filled only from the real card.
+    func provisionalDetails() -> CardDetails? {
+        guard let picked else { return nil }
+        let category = picked.categoryKey.flatMap { $0.isEmpty ? nil : $0 } ?? "other"
+        return CardDetails(categoryKey: category, exampleSentence: "", exampleTranslation: "", extras: WordExtras())
     }
+
+    /// The card being generated for the picked word (nil = none running).
+    var cardStillComing: Task<CardDetails?, Never>? { details == nil ? detailsTask : nil }
 
     func draft(details d: CardDetails) -> CatchDraft? {
         guard let picked else { return nil }
@@ -459,6 +502,7 @@ final class CaptureViewModel {
         details = nil
         detailsTask = nil
         detailsCache = [:]
+        ownedChecks = [:]
         dropUploads()
         cutout = nil
         caption = ""
