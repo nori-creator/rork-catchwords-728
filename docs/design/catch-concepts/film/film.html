@@ -6,17 +6,25 @@
 <canvas id="c" width="1080" height="2340"></canvas>
 <script src="node_modules/lottie-web/build/player/lottie.min.js"></script>
 <script src="js/core.js"></script>
-<script src="js/sketch.js"></script>
+<script src="js/tags.js"></script>
+<script src="js/scan.js"></script>
 <script src="js/picker.js"></script>
 <script src="js/dex.js"></script>
 <script src="js/concepts.js"></script>
+<script src="js/p1_lift.js"></script>
+<script src="js/p2_depth.js"></script>
+<script src="js/p3_edges.js"></script>
+<script src="js/s1_shadow.js"></script>
+<script src="js/s2_flap.js"></script>
+<script src="js/s3_dots.js"></script>
 <script src="js/detail.js"></script>
 <script>
-const CONCEPTS = { A: conceptA, B: conceptB, C: conceptC, D: conceptD, E: conceptE };
-function durOf(c) { CONCEPTS[c](0); return CUES[c].end; }
+const CONCEPTS = {};
+for (const [k, f] of Object.entries({ P1: 'conceptP1', P2: 'conceptP2', P3: 'conceptP3', S1: 'conceptS1', S2: 'conceptS2', S3: 'conceptS3', S4: 'conceptS4', A: 'conceptA', D: 'conceptD', E: 'conceptE' })) if (typeof window[f] === 'function') CONCEPTS[k] = window[f];
+function durOf(c) { CONCEPTS[c](START[c] || 0); return CUES[c].end - (START[c] || 0); }
 function renderFrame(t, c = CONCEPT) { CONCEPT = c; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); ctx.globalAlpha = 1; CONCEPTS[c](t); ctx.restore(); }
-window.ready = load().then(() => {
-  window.renderFrame = renderFrame;
+window.ready = load().then(loadScan).then(() => typeof loadOutlines === 'function' ? loadOutlines() : null).then(() => typeof loadDepth === 'function' ? loadDepth() : null).then(() => typeof loadEdges === 'function' ? loadEdges() : null).then(() => {
+  window.renderFrame = renderFrame; window.START = START;
   window.DUR = {}; for (const c of Object.keys(CONCEPTS)) window.DUR[c] = durOf(c);
   window.CUES = CUES;
   renderFrame(parseFloat(Q.get('t') || '3')); return true;

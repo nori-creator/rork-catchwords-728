@@ -1,0 +1,86 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 1.1,
+  "cue": "glitter runs over the thing: cup",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 1.18,
+  "cue": "glitter runs over the thing: scooter",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 1.26,
+  "cue": "glitter runs over the thing: plant",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 1.34,
+  "cue": "glitter runs over the thing: sign",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 1.4,
+  "cue": "particles drift into the tags",
+  "bus": "sfx",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 3.72,
+  "cue": "the word forms: cup",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient train ×4 (0.2/0.9)"
+ },
+ {
+  "t": 3.86,
+  "cue": "the word forms: scooter",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient train ×4 (0.2/0.9)"
+ },
+ {
+  "t": 4,
+  "cue": "the word forms: plant",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient train ×4 (0.2/0.9)"
+ },
+ {
+  "t": 4.14,
+  "cue": "the word forms: sign",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient train ×4 (0.2/0.9)"
+ },
+ {
+  "t": 4.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

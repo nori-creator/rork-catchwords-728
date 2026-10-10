@@ -1,7 +1,10 @@
-// detail.js — E: the word page and its AI wait. Same idea as the catch (下書き → 清書), different hand: blue pencil on
-// paper, like an animator's blue-line rough before the clean-up. What is already known (the word, its reading, the
-// meaning, the other ways to say it) is clean at once; only the AI-written sections are drafted, line by line, in the
-// exact place their text will take — then inked top to bottom in one cascade when the answer lands.
+// detail4.js — E: the word page and its AI wait, v4: "dither reform" (the reference video's transition).
+// What is already known — the word, its reading, the meaning, the other ways to say it — is clean from the first frame.
+// The sections the AI writes (例文 / 使い方のコツ / 豆知識) open as placeholders in the exact shape of their lines; from the
+// left they break into fine ink particles, which drift as a living cloud while the AI writes (and slowly gather toward
+// their lines, so the page feels closer to done the longer it works). When the answer lands, the particles gather from
+// the left into the real text — dithered first, then crisp — section by section, top to bottom.
+// Same idea as the catch (a material that becomes the answer in place), different material: ink instead of glass.
 const T_OPEN_E = .62, T_DETAIL = 1.05, T_DONE = T_DETAIL + 5.4;   // first open of a word: card generation ~5 s (P50 estimate)
 const EX = [
   { zh: Z('我要一杯珍奶，半糖少冰。', 'ㄨㄛˇ ㄧㄠˋ ㄧˋ ㄅㄟ ㄓㄣ ㄋㄞˇ ㄅㄢˋ ㄊㄤˊ ㄕㄠˇ ㄅㄧㄥ'), ja: '珍奶を1杯、甘さ半分・氷少なめで。' },
@@ -9,36 +12,93 @@ const EX = [
 ];
 const TIPS = ['注文では「珍奶」だけで通じる。', '甘さは 全糖・半糖・微糖・無糖、', '氷は 正常冰・少冰・去冰 で伝える。'];
 const TRIVIA = ['1980年代に台湾で生まれた飲み物。', '台中と台南の店が元祖を名乗っている。'];
-const PENC = '0,120,255';                  // blue pencil
+const DET = { x: 48, w: W - 96, sim: 1030, ex: 1340, tips: 1840, triv: 2160 };
+const SEC = [{ y: DET.ex, h: 470, title: '例文' }, { y: DET.tips, h: 290, title: '使い方のコツ' }, { y: DET.triv, h: 260, title: '豆知識' }];
+const T_DIS = s => T_DETAIL + .32 + .1 * s;            // when each section's placeholders start to break up
+const T_REF = s => T_DONE + .16 * s;                   // when each section's text starts to form
+const INK_RGB = '11,18,26', MUTED_RGB = '92,100,111';
 
-// layout of the AI sections (y positions), shared by the draft and the clean text so the ink lands on the sketch
-const DET = { x: 48, w: W - 96, sim: 1050, ex: 1388, tips: 1912, triv: 2240 };
-function exLines() {   // [{kind, x, y, w, h, i}] for the example card
-  const out = []; let y = DET.ex + 124;
-  EX.forEach((e, i) => { const zw = zyWidth(e.zh, 46); out.push({ kind: 'zh', x: DET.x + 76, y, w: zw, h: 46, i }); out.push({ kind: 'ja', x: DET.x + 76, y: y + 52, w: measure(e.ja, 500, 30), h: 30, i }); y += 172; });
-  return out;
+// ---------- the lines of the AI sections (shared by the placeholders, the particles and the clean text) ----------
+let DLINES = null;
+function detLines() {
+  if (DLINES) return DLINES;
+  const L = [];
+  EX.forEach((e, i) => {
+    const y = DET.ex + 124 + i * 172, x = DET.x + 76;
+    L.push({ sec: 0, k: L.filter(l => l.sec === 0).length, x, y, w: zyWidth(e.zh, 46), top: y - 52, bot: y + 12, bar: [y - 42, 46], rgb: INK_RGB,
+      draw: c => zyDraw(e.zh, x, y, 46, { align: 'left', w: 600, c }) });
+    L.push({ sec: 0, k: L.filter(l => l.sec === 0).length, x, y: y + 52, w: measure(e.ja, 500, 30), top: y + 52 - 30, bot: y + 52 + 9, bar: [y + 52 - 25, 28], rgb: MUTED_RGB,
+      draw: c => text(e.ja, x, y + 52, { w: 500, size: 30, color: MUTED, align: 'left', c }) });
+  });
+  [[TIPS, 1, DET.tips], [TRIVIA, 2, DET.triv]].forEach(([list, s, y0]) => list.forEach((str, i) => {
+    const x = DET.x + 44, y = y0 + 112 + i * 58;
+    L.push({ sec: s, k: i, x, y, w: measure(str, 500, 32), top: y - 32, bot: y + 10, bar: [y - 27, 30], rgb: INK_RGB,
+      draw: c => text(str, x, y, { w: 500, size: 32, color: INK, align: 'left', c }) });
+  }));
+  return DLINES = L;
 }
-function textLines(list, y0, size = 32) { return list.map((s, i) => ({ s, x: DET.x + 44, y: y0 + 112 + i * 58, w: measure(s, 500, size), h: size })); }
 
-function sectionCard(y, h, title, iconName, { alpha = 1, lift = 0 } = {}) {
+// ---------- particles: one per dithered cell of the final text ----------
+const DSTEP = 3;
+let DOTS = null;
+const OFF = document.createElement('canvas'); OFF.width = W; OFF.height = H; const ofx = OFF.getContext('2d', { willReadFrequently: true });
+function gauss(i) { const u = Math.max(1e-6, rnd(i)), v = rnd(i + 77.7); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function buildDots() {
+  if (DOTS) return DOTS;
+  const lines = detLines(), X0 = DET.x + 30, X1 = DET.x + DET.w - 30;
+  lines.forEach((l, li) => {
+    // targets: the line rendered alone, cut into 3 px cells; a cell keeps a particle with a probability = its ink (dither)
+    ofx.clearRect(0, 0, W, H); l.draw(ofx);
+    const x0 = Math.floor(l.x - 6), x1 = Math.ceil(l.x + l.w + 6), y0 = Math.floor(l.top), y1 = Math.ceil(l.bot), ww = x1 - x0;
+    const data = ofx.getImageData(x0, y0, ww, y1 - y0).data, tg = [];
+    for (let y = 0; y + DSTEP <= y1 - y0; y += DSTEP) for (let x = 0; x + DSTEP <= ww; x += DSTEP) {
+      let a = 0; for (let yy = 0; yy < DSTEP; yy++) for (let xx = 0; xx < DSTEP; xx++) a += data[((y + yy) * ww + x + xx) * 4 + 3];
+      a /= DSTEP * DSTEP * 255;
+      const seed = li * 9173 + x * 3.17 + y * 11.3;
+      if (a > .05 && a > rnd(seed) * .9) tg.push([x0 + x + 1.5 + (rnd(seed + 1) - .5) * .8, y0 + y + 1.5 + (rnd(seed + 2) - .5) * .8, Math.min(1, .5 + a * .6)]);
+    }
+    tg.sort((p, q) => p[0] - q[0]);
+    const n = tg.length;
+    // placeholder: the same particles packed into the line's bar (jittered grid), ordered by x
+    const [by, bh] = l.bar, sp = Math.sqrt(l.w * bh / n), sk = [];
+    for (let y = by + sp / 2; y < by + bh; y += sp) for (let x = l.x + sp / 2; x < l.x + l.w; x += sp) sk.push([x + (rnd(x * 1.3 + y) - .5) * sp * .8, y + (rnd(x + y * 2.1) - .5) * sp * .8]);
+    while (sk.length < n) sk.push([l.x + rnd(sk.length + li) * l.w, by + rnd(sk.length * 3 + li) * bh]);
+    const skp = sk.map((p, i) => [p, rnd(i * 5.1 + li)]).sort((a, b) => a[1] - b[1]).slice(0, n).map(a => a[0]).sort((p, q) => p[0] - q[0]);
+    // the cloud: across the card, banded loosely round the line; each particle wanders on its own noise
+    const mid = (l.top + l.bot) / 2, cl = [];
+    for (let i = 0; i < n; i++) cl.push({ bx: X0 + (i + rnd(i * 2.3 + li)) / n * (X1 - X0), g: gauss(i * 1.7 + li * 31), seed: li * 101 + i * .37 });
+    l.n = n; l.tg = tg; l.sk = skp; l.cl = cl; l.mid = mid; l.X0 = X0; l.X1 = X1;
+    // which target each particle gathers into: decided by x order at the moment the line starts to form
+    const tr0 = T_REF(l.sec) + .05 * l.k, order = cl.map((c, i) => [cloudPos(l, i, tr0)[0], i]).sort((a, b) => a[0] - b[0]);
+    l.tgOf = new Int32Array(n); order.forEach(([, i], k) => l.tgOf[i] = k);
+    // a crisp copy of the line for the final crossfade
+    const cc = document.createElement('canvas'); cc.width = ww; cc.height = y1 - y0; const cx = cc.getContext('2d'); cx.translate(-x0, -y0); l.draw(cx);
+    l.crisp = { c: cc, x: x0, y: y0 };
+  });
+  return DOTS = lines;
+}
+// a particle's place in the cloud at time t (a pure function of t, so any frame can be drawn on its own)
+function cloudPos(l, i, t) {
+  const c = l.cl[i], el = Math.max(0, t - T_DIS(l.sec));
+  const sig = 30 * (.5 + .5 * Math.exp(-el / 3.2));                    // the cloud slowly gathers toward its line
+  const wx = l.X1 - l.X0, x = l.X0 + (((c.bx - l.X0 + 16 * el + 14 * vnoise(t * .8 + c.seed * 3, 1)) % wx) + wx) % wx;
+  const S = SEC[l.sec], y = clamp(l.mid + c.g * sig + 9 * vnoise(t * .9 + c.seed * 5, 2), S.y + 92, S.y + S.h - 22);
+  return [x, y];
+}
+
+// ---------- the section cards and the known part of the page ----------
+function sectionCard(y, h, title, { alpha = 1, lift = 0 } = {}) {
   ctx.save(); ctx.globalAlpha *= alpha;
   ctx.save(); ctx.shadowColor = `rgba(15,40,80,${.06 + .06 * lift})`; ctx.shadowBlur = 24 + 20 * lift; ctx.shadowOffsetY = 8 + 6 * lift; ctx.fillStyle = '#fff'; rr(DET.x, y, DET.w, h, 44); ctx.fill(); ctx.restore();
-  ctx.strokeStyle = '#E6ECF3'; ctx.lineWidth = 2.5; rr(DET.x, y, DET.w, h, 44); ctx.stroke();
+  ctx.strokeStyle = '#E0E5EB'; ctx.lineWidth = 2.5; rr(DET.x, y, DET.w, h, 44); ctx.stroke();
   text(title, DET.x + 44, y + 64, { w: 800, size: 34, align: 'left' });
   ctx.restore();
 }
-// how far the draft has grown at time t: lines start at a slowing pace (fast at first, then steady), never finishing
-// before the answer — the pen is always somewhere
-function draftStart(i) { return T_DETAIL + .25 + 2.1 * Math.log(1 + i * .4); }
-// after the first pass, the pen goes over the lines again (a refining pass) so the page never just waits
-const N_LINES = 10;
-function refineStart(i) { return draftStart(N_LINES - 1) + .7 + i * .42; }
 function drawDetail(t) {
-  // backdrop: the 図鑑 page underneath (after the landing), the page zooms out of the slot
+  // backdrop: the 図鑑 page underneath, the page grows out of the slot (iOS zoom transition)
   const zoom = E.inOutQuart(seg(t, T_OPEN_E, T_DETAIL));
   if (zoom < 1) drawDexPage(t, { fx: FX(-10, -11) });
   const ts = targetSlot(), sx = ts.x, sy = ts.y;
-  // the page grows out of the slot (iOS zoom transition)
   const x0 = lerp(sx, 0, zoom), y0 = lerp(sy, 0, zoom), w0 = lerp(SLOT, W, zoom), h0 = lerp(SLOT, H, zoom), r0 = lerp(44, 0, zoom);
   if (zoom > 0) {
     ctx.save(); ctx.fillStyle = BG_APP; ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 60 * (1 - zoom); rr(x0, y0, w0, h0, r0); ctx.fill(); ctx.restore();
@@ -52,14 +112,13 @@ function drawDetail(t) {
   statusBar(true); homeIndicator(true);
 }
 function detailContent(t) {
-  // hero backdrop + nav
   const g = ctx.createRadialGradient(540, 470, 0, 540, 470, 420); g.addColorStop(0, '#EAF4FF'); g.addColorStop(1, 'rgba(234,244,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 150, W, 700);
-  ctx.save(); ctx.fillStyle = '#EEF2F7'; ctx.beginPath(); ctx.arc(96, 220, 44, 0, Math.PI * 2); ctx.fill(); icon('chevL', 92, 220, 40, INK, 8); ctx.restore();
+  ctx.save(); ctx.fillStyle = '#EDF2F8'; ctx.beginPath(); ctx.arc(96, 220, 44, 0, Math.PI * 2); ctx.fill(); icon('chevL', 92, 220, 40, INK, 8); ctx.restore();
   text('図鑑', 160, 232, { w: 600, size: 34, color: MUTED, align: 'left' });
   // the word (known): reading, register, meaning, the note — clean from the first frame
   zyDraw(PICK_U, 500, 820, 132, {});
   speakerBtn(820, 772, 50, t, T_DETAIL + .12, {});
-  const chip = REG[PICK.reg], cw = measure(chip, 600, 26) + 34; ctx.fillStyle = '#EEF1F5'; rr(W / 2 - 300, 868, cw, 46, 23); ctx.fill(); text(chip, W / 2 - 300 + cw / 2, 900, { w: 600, size: 26, color: MUTED });
+  const chip = REG[PICK.reg], cw = measure(chip, 600, 26) + 34; ctx.fillStyle = '#EDF2F8'; rr(W / 2 - 300, 868, cw, 46, 23); ctx.fill(); text(chip, W / 2 - 300 + cw / 2, 900, { w: 600, size: 26, color: MUTED });
   text(PICK.mean, W / 2 - 300 + cw + 22, 902, { w: 500, size: 34, color: MUTED, align: 'left' });
   text(PICK.note, W / 2, 970, { w: 600, size: 30, color: '#0066CC' });
   // 似た言い方 (known from the candidates — no wait)
@@ -68,86 +127,93 @@ function detailContent(t) {
     const y = DET.sim + 150 + i * 72; zyDraw(v.u, DET.x + 44, y, 46, { align: 'left', w: 600 });
     text(s, DET.x + DET.w - 44, y - 4, { w: 500, size: 30, color: MUTED, align: 'right' });
   });
-  // AI sections: titles known; bodies drafted, then inked
-  const done = t >= T_DONE, cas = t - T_DONE;
-  const lift = E.outCubic(seg(t, T_DONE + .6, T_DONE + 1.0)) * (1 - seg(t, T_DONE + 1.2, T_DONE + 1.8));
-  sectionCard(DET.ex, 480, '例文', null, { lift });
-  sectionCard(DET.tips, 300, '使い方のコツ', null, { lift });
-  sectionCard(DET.triv, 260, '豆知識', null, { lift });
-  // status line under the word: what the AI is doing, honestly
-  aiStatus(t);
-  // drafts + ink, one sequence across the sections (top → bottom)
-  const lines = [];
-  exLines().forEach(l => lines.push(Object.assign({ sec: 'ex' }, l)));
-  textLines(TIPS, DET.tips).forEach(l => lines.push(Object.assign({ sec: 'tips' }, l)));
-  textLines(TRIVIA, DET.triv).forEach(l => lines.push(Object.assign({ sec: 'triv' }, l)));
-  // speech bubbles for the two examples (drafted as soon as the section has started)
+  // the AI sections: titles and layout known at once; bodies are the particles
+  const lift = E.outCubic(seg(t, T_DONE + .7, T_DONE + 1.0)) * (1 - seg(t, T_DONE + 1.2, T_DONE + 1.8));
+  SEC.forEach(s => sectionCard(s.y, s.h, s.title, { lift }));
+  // the example bubbles are layout (known), the speaker buttons come with the text
   [0, 1].forEach(i => {
     const by = DET.ex + 84 + i * 172, bh = 136, bw = DET.w - 88, bx = DET.x + 44;
-    const st = draftStart(i * 2) - .2, p = E.inOutSine(seg(t, st, st + .45));
-    const ink = seg(t, T_DONE + i * .1, T_DONE + i * .1 + .3);
-    const pts = bubblePts(bx, by, bw, bh);
-    if (ink < 1) pencil(pts, p * 1.04, t, { seed: 30 + i, amp: 2, width: 3, color: PENC, alpha: .55 * (1 - ink), glow: false, passes: 2 });
-    if (ink > 0) { ctx.save(); ctx.globalAlpha *= ink; ctx.fillStyle = '#F4F8FD'; ctx.strokeStyle = '#E3ECF6'; ctx.lineWidth = 2; const path = new Path2D(); pts.forEach((q, j) => j ? path.lineTo(q[0], q[1]) : path.moveTo(q[0], q[1])); path.closePath(); ctx.fill(path); ctx.stroke(path); ctx.restore(); }
-    if (ink >= 1) speakerBtn(bx + bw - 54, by + bh / 2, 32, t, -9, { blue: false, alpha: E.outCubic(seg(t, T_DONE + .7, T_DONE + 1.0)) * (1 + 0) });
+    ctx.save(); ctx.fillStyle = '#F4F8FD'; ctx.strokeStyle = '#E3ECF6'; ctx.lineWidth = 2; rr(bx, by, bw, bh, 34); ctx.fill(); ctx.stroke(); ctx.restore();
+    const sa = E.outBack(seg(t, T_REF(0) + .75 + i * .08, T_REF(0) + 1.05 + i * .08), 2);
+    if (sa > 0) { ctx.save(); const cx = bx + bw - 54, cy = by + bh / 2; ctx.translate(cx, cy); ctx.scale(sa, sa); ctx.translate(-cx, -cy); speakerBtn(cx, cy, 32, t, -9, { blue: false }); ctx.restore(); }
   });
-  lines.forEach((l, i) => {
-    const st = draftStart(i), dp = seg(t, st, st + .55 + l.w / 1600);
-    const ti = T_DONE + i * .055, ink = seg(t, ti, ti + .2);
-    // the pencil draft of this line (its exact width and place)
-    if (ink < 1 && dp > 0) {
-      const amp = l.kind === 'zh' ? l.h * .55 : l.h * .42;
-      draftLine(l.x, l.y - l.h * .32, l.w, amp, dp, t, i, (1 - E.inQuad(ink)));
-      const rs = refineStart(i), rp = seg(t, rs, rs + .5 + l.w / 2000);
-      if (rp > 0) draftLine(l.x, l.y - l.h * .32, l.w, amp * .9, rp, t + .37, i + 50, .8 * (1 - E.inQuad(ink)), true);
+  aiStatus4(t);
+  drawAIText(t);
+}
+
+// ---------- the AI text: placeholder → particles → cloud → dithered text → crisp text ----------
+const DLV = 6;
+function drawAIText(t) {
+  const lines = buildDots();
+  const paths = { [INK_RGB]: Array.from({ length: DLV }, () => new Path2D()), [MUTED_RGB]: Array.from({ length: DLV }, () => new Path2D()) };
+  const put = (rgb, x, y, a, s = 2.7) => { if (a <= .02) return; const lv = Math.min(DLV - 1, Math.floor(a * DLV)); paths[rgb][lv].rect(x - s / 2, y - s / 2, s, s); };
+  for (const l of lines) {
+    const td0 = T_DIS(l.sec) + .04 * l.k, tr0 = T_REF(l.sec) + .05 * l.k;
+    // the placeholder bar, eaten from the left by the break-up front
+    const front = l.x + (l.w + 10) * seg(t, td0, td0 + .42);
+    if (front < l.x + l.w) {
+      const [by, bh] = l.bar; ctx.save(); ctx.beginPath(); ctx.rect(front, by - 4, l.x + l.w - front + 4, bh + 8); ctx.clip();
+      ctx.fillStyle = '#E9EEF4'; rr(l.x, by + bh * .12, l.w, bh * .76, bh * .38); ctx.fill(); ctx.restore();
     }
-    // the clean text, revealed behind an ink head that runs along the sketch
-    if (ink > 0) {
-      const mx = l.x + (l.w + 40) * E.outCubic(ink);
-      ctx.save(); ctx.beginPath(); ctx.rect(l.x - 20, l.y - l.h * 1.4, mx - l.x + 20, l.h * 2); ctx.clip();
-      if (l.kind === 'zh') zyDraw(EX[l.i].zh, l.x, l.y, 46, { align: 'left', w: 600 });
-      else if (l.kind === 'ja') text(EX[l.i].ja, l.x, l.y, { w: 500, size: 30, color: MUTED, align: 'left' });
-      else text(l.s, l.x, l.y, { w: 500, size: 32, color: INK, align: 'left' });
-      ctx.restore();
-      if (ink < 1) { const hx = mx - 20, hy = l.y - l.h * .35; const gg = ctx.createRadialGradient(hx, hy, 0, hx, hy, 34); gg.addColorStop(0, 'rgba(255,255,255,0.95)'); gg.addColorStop(.3, 'rgba(90,170,255,0.55)'); gg.addColorStop(1, 'rgba(90,170,255,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(hx, hy, 34, 0, Math.PI * 2); ctx.fill(); }
+    // the crisp text, revealed from the left once the particles have formed the dithered text
+    const cf0 = tr0 + .34, cfront = l.x - 20 + (l.w + 80) * seg(t, cf0, cf0 + .5);
+    if (cfront > l.x - 20) crispLine(l, cfront);
+    if (t < td0) continue;
+    for (let i = 0; i < l.n; i++) {
+      const [sx, sy] = l.sk[i], xr = (sx - l.x) / l.w, td = td0 + xr * .42 + rnd(i * 3.3 + l.k) * .05;
+      if (t < td) continue;
+      const tj = l.tg[l.tgOf[i]], xt = (tj[0] - l.x) / l.w, tr = tr0 + xt * .42 + rnd(i * 7.7 + l.k) * .06;
+      let x, y, a;
+      const u = seg(t, td, td + .55);
+      if (t < tr) {
+        const [cx, cy] = cloudPos(l, i, t), m = E.inOutCubic(seg(u, .12, 1)), tw = Math.sin(Math.PI * m) * 18, ang = rnd(i * 1.9 + l.k * 7) * Math.PI * 2;
+        x = lerp(sx, cx, m) + Math.cos(ang) * tw + (1 - m) * (rnd(i + Math.floor(t * 30)) - .5) * 2;
+        y = lerp(sy, cy, m) + Math.sin(ang) * tw * .6;
+        a = lerp(.62, .7, m) * clamp(u * 6);
+        a *= clamp((x - l.X0) / 26) * clamp((l.X1 - x) / 26);              // the cloud fades at its edges (where it wraps)
+      } else {
+        const v = seg(t, tr, tr + .4), e = E.outCubic(v), [cx, cy] = cloudPos(l, i, t), nz = (1 - v) * 7;
+        x = lerp(cx, tj[0], e) + (rnd(i * 2.1 + Math.floor(t * 30)) - .5) * nz; y = lerp(cy, tj[1], e) + (rnd(i * 4.3 + Math.floor(t * 30)) - .5) * nz;
+        a = lerp(.7, tj[2], e) * clamp(1 - (cfront - tj[0] - 6) / 30) * (e < 1 ? clamp((x - l.X0) / 26 + e) * clamp((l.X1 - x) / 26 + e) : 1);
+      }
+      put(l.rgb, x, y, a);
     }
-  });
-  // the last line's ink ends with a little sparkle; the play buttons come in after
-  if (done) drawLottie('twinkle', t, T_DONE + lines.length * .055 + .1, DET.x + 120, DET.ex + 120, 300);
+  }
+  for (const rgb of [INK_RGB, MUTED_RGB]) for (let lv = 0; lv < DLV; lv++) { ctx.fillStyle = `rgba(${rgb},${(lv + .5) / DLV})`; ctx.fill(paths[rgb][lv]); }
+  // the last line's text ends with a small twinkle
+  const last = lines.filter(l => l.sec === 1).pop();
+  if (last) drawLottie('twinkle', t, T_REF(1) + .05 * last.k + .9, DET.x + DET.w - 120, DET.tips + 70, 260);
 }
-// a draft line: the pen writes a loose cursive line left → right, the boil keeps it alive
-function draftLine(x, y, w, h, p, t, seed, alpha, refine = false) {
-  const N = Math.max(24, Math.floor(w / 9)), pts = [];
-  for (let i = 0; i <= N; i++) { const u = i / N, ph = u * (w / 26) * Math.PI + seed; pts.push([x + u * w + Math.cos(ph) * h * .22, y + Math.sin(ph) * h * .42 + vnoise(u * 5, seed) * h * .12]); }
-  const q = boiled(pts, t, seed * 3 + 7, 1.2), m = Math.floor(N * clamp(p));
-  if (m < 1) return;
-  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalAlpha *= alpha;
-  ctx.beginPath(); for (let j = 0; j <= m; j++) j ? ctx.lineTo(q[j][0], q[j][1]) : ctx.moveTo(q[j][0], q[j][1]);
-  ctx.strokeStyle = `rgba(${PENC},${refine ? .3 : .42})`; ctx.lineWidth = refine ? 4.5 : 3; ctx.stroke();
-  if (p < 1) { const hp = q[m]; const g = ctx.createRadialGradient(hp[0], hp[1], 0, hp[0], hp[1], 18); g.addColorStop(0, `rgba(${PENC},0.9)`); g.addColorStop(1, `rgba(${PENC},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hp[0], hp[1], 18, 0, Math.PI * 2); ctx.fill(); }
-  ctx.restore();
+const CR = document.createElement('canvas'); CR.width = W; CR.height = 120; const crx = CR.getContext('2d');
+function crispLine(l, front) {
+  const { c, x, y } = l.crisp;
+  if (front >= x + c.width + 40) { ctx.drawImage(c, x, y); return; }
+  if (CR.width < c.width || CR.height < c.height) { CR.width = Math.max(CR.width, c.width); CR.height = Math.max(CR.height, c.height); }
+  crx.clearRect(0, 0, CR.width, CR.height); crx.globalCompositeOperation = 'source-over'; crx.drawImage(c, 0, 0);
+  crx.globalCompositeOperation = 'destination-in'; const fx = front - x, g = crx.createLinearGradient(fx - 40, 0, fx, 0); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  crx.fillStyle = g; crx.fillRect(0, 0, c.width, c.height); crx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(CR, 0, 0, c.width, c.height, x, y, c.width, c.height);
 }
-function bubblePts(x, y, w, h) {
-  const pts = pillPts(x, y, w, h, 34, 7);
-  return pts;
-}
-function aiStatus(t) {
-  const a = seg(t, T_DETAIL + .2, T_DETAIL + .45), y = DET.ex - 22, x = DET.x + 8;
-  if (a <= 0) return;
-  const done = t >= T_DONE + .2, fin = seg(t, T_DONE + .2, T_DONE + .4), gone = seg(t, T_DONE + 1.6, T_DONE + 2.0);
+// status in the 例文 header: what the AI is doing, honestly; a check when it is done
+function aiStatus4(t) {
+  const a = seg(t, T_DETAIL + .2, T_DETAIL + .45), gone = seg(t, T_DONE + 1.7, T_DONE + 2.1); if (a <= 0 || gone >= 1) return;
+  const done = t >= T_DONE + .7, fin = seg(t, T_DONE + .7, T_DONE + .9), xr = DET.x + DET.w - 40, y = DET.ex + 62;
+  const s = !done ? (t < T_DETAIL + 3.6 ? 'AIが例文と解説を書いています' : 'もう少しで書き終わります') : '書き終わりました';
+  const prevS = t < T_DETAIL + 3.6 ? null : 'AIが例文と解説を書いています', sw = done ? 1 : E.inOutCubic(seg(t, T_DETAIL + 3.6, T_DETAIL + 3.9));
+  const w = measure(s, 600, 25) + 70;
   ctx.save(); ctx.globalAlpha *= a * (1 - gone);
+  ctx.fillStyle = done ? 'rgba(0,169,92,0.10)' : 'rgba(0,131,255,0.08)'; rr(xr - w, y - 34, w, 48, 24); ctx.fill();
   if (!done) {
-    // the pencil glyph writes a tiny loop
-    const ph = t * 5; ctx.save(); ctx.translate(x + 26 + Math.cos(ph) * 4, y - 12 + Math.sin(ph * 2) * 3); icon('pencil', 0, 0, 34, BLUE, 7); ctx.restore();
-    const s = t < T_DETAIL + 3.6 ? 'AIが例文と解説を書いています' : 'もう少しで書き終わります';
-    text(s, x + 60, y, { w: 600, size: 28, color: BLUE, align: 'left' });
+    ctx.save(); ctx.translate(xr - w + 30, y - 10); const tw = 1 + .14 * Math.sin(t * 8); ctx.scale(tw, tw); icon('sparkles', 0, 0, 30, BLUE, 6); ctx.restore();
+    if (prevS && sw < 1) text(prevS, xr - 18, y, { w: 600, size: 25, color: BLUE, align: 'right', alpha: 1 - sw });
+    text(s, xr - 18, y, { w: 600, size: 25, color: BLUE, align: 'right', alpha: prevS ? sw : 1 });
   } else {
-    const s2 = E.outBack(fin, 2.5); ctx.save(); ctx.translate(x + 26, y - 10); ctx.scale(s2, s2); ctx.fillStyle = '#00A95C'; ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill(); icon('check', 0, 1, 22, '#fff', 9); ctx.restore();
-    text('書き終わりました', x + 60, y, { w: 600, size: 28, color: '#00A95C', align: 'left', alpha: fin });
+    const s2 = E.outBack(fin, 2.5); ctx.save(); ctx.translate(xr - w + 30, y - 10); ctx.scale(s2, s2); ctx.fillStyle = '#00A95C'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill(); icon('check', 0, 1, 19, '#fff', 9); ctx.restore();
+    text(s, xr - 18, y, { w: 600, size: 25, color: '#00A95C', align: 'right', alpha: fin });
   }
   ctx.restore();
 }
 function conceptE(t) {
-  CUES.E = { tap: .52, open: T_OPEN_E, detail: T_DETAIL, voice: T_DETAIL + .12, draft0: draftStart(0), done: T_DONE, nLines: N_LINES, end: T_DONE + 2.6 };
+  CUES.E = { tap: .52, open: T_OPEN_E, detail: T_DETAIL, voice: T_DETAIL + .12, dis: [0, 1, 2].map(T_DIS), done: T_DONE, ref: [0, 1, 2].map(T_REF), finish: T_REF(2) + .9, end: T_DONE + 2.6 };
   drawDetail(t);
 }

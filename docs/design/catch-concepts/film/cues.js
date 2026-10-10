@@ -1,29 +1,17 @@
-// node cues3.js > audio/cues3.json — exact event times from the film for the mix and haptics
-const { chromium } = require('playwright');
+// node cues.js (from film/) -> ../audio/cues5.json: every cue of the v5 films (for the sound mix and haptics), plus geometry the mix pans by
+const { chromium } = require('playwright'); const fs = require('fs');
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
   const p = await b.newPage({ viewport: { width: 1080, height: 2340 } });
-  await p.goto('http://127.0.0.1:8765/film.html?c=A&t=0'); await p.evaluate(() => window.ready);
-  const out = await p.evaluate(() => {
-    const res = { shared: { T_PRESS, T_CAP, T_NAMES, T_TAP, C0 } };
-    res.shared.outlines = TAGS.map(g => { const pts = shapeOf(g.id); return { id: g.id, t: OUTLINE_T(g.id), dur: .5 + pts.length / 2600, x: g.p[0], draft: OUTLINE_T(g.id) + (.5 + pts.length / 2600) * .85 }; });
-    res.shared.names = TAGS.map(g => ({ id: g.id, t: NAME_T(g), x: g.p[0] }));
-    const from = { A: 4, B: 3, C: 2, D: 3 };
-    for (const c of ['A', 'B', 'C', 'D', 'E']) {
-      CONCEPTS[c](0); const cu = Object.assign({}, CUES[c]); delete cu.pickXY; res[c] = cu;
-      if (from[c]) { // card tops passing the header while the list scrolls
-        const a = scrollToCat(from[c]), ticks = []; let prev = a;
-        for (let t = cu.scroll0; t <= cu.scroll1 + .3; t += 1 / 240) {
-          const sy = scrollAt(t, cu.scroll0, cu.scroll1, a, 0);
-          for (let k = 1; k < from[c]; k++) { const th = scrollToCat(k); if (prev > th && sy <= th) ticks.push({ t: +t.toFixed(3), cat: k }); }
-          prev = sy;
-        }
-        cu.ticks = ticks;
-      }
-    }
-    res.E.lines = Array.from({ length: N_LINES }, (_, i) => ({ draft: +draftStart(i).toFixed(3), refine: +refineStart(i).toFixed(3), ink: +(T_DONE + i * .055).toFixed(3) }));
-    res.DUR = window.DUR;
-    return res;
+  await p.goto('http://127.0.0.1:8765/film.html?c=P1&t=0'); await p.evaluate(() => window.ready);
+  const cues = await p.evaluate(() => {
+    for (const c of Object.keys(window.DUR)) window.renderFrame((window.START[c] || 0) + window.DUR[c] - .3, c);
+    const out = JSON.parse(JSON.stringify(window.CUES));
+    out.shared = { T_PRESS, T_CAP, T_NAMES, T_TAP, T_VIS: typeof T_VIS !== 'undefined' ? T_VIS : null,
+      tags: TAGS.map(tg => ({ id: tg.id, x: tg.p[0], y: tg.p[1] })), start: window.START, dur: window.DUR,
+      depthOf: Object.fromEntries(['cup', 'scooter', 'sign'].map(id => { const M = MK[id]; let s = 0, n = 0; for (let y = M.y; y < M.y + M.h; y += 6) for (let x = M.x; x < M.x + M.w; x += 6) if (maskAt(id, x, y) > .5) { s += DEPTH[Math.round(y) * W + Math.round(x)]; n++; } return [id, s / n]; })) };
+    return out;
   });
-  console.log(JSON.stringify(out, null, 1)); await b.close();
+  fs.writeFileSync('../audio/cues5.json', JSON.stringify(cues, null, 1));
+  console.log(Object.keys(cues).join(' '), JSON.stringify(cues.shared.dur)); await b.close();
 })();

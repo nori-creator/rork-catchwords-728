@@ -1,0 +1,121 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 3.768,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 3.858,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 3.908,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 3.948,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 3.998,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.038,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.048,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.138,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.17,
+  "cue": "board done: scooter",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.5"
+ },
+ {
+  "t": 4.188,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.21,
+  "cue": "board done: cup",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.5"
+ },
+ {
+  "t": 4.278,
+  "cue": "flap stops",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.45/0.9"
+ },
+ {
+  "t": 4.31,
+  "cue": "board done: plant",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.5"
+ },
+ {
+  "t": 4.45,
+  "cue": "board done: sign",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.5"
+ },
+ {
+  "t": 4.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

@@ -1,4 +1,4 @@
-// node preview.js A 0.3,1.0,... out.png  -> contact sheet of frames
+// node preview.js P1 0.3,1.0,... out.png  -> contact sheet of frames
 const { chromium } = require('playwright'); const fs = require('fs');
 (async () => {
   const [c, ts, out] = process.argv.slice(2);
