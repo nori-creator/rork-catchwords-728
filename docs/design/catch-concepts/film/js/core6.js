@@ -91,7 +91,7 @@ const PT = 2.75;                                         // px per iOS point in 
 // shared timeline (seconds). The AI analysis takes 3.0 s here (design target median 2.5 s; QA: usually under 8 s).
 // the AI wait comes from real data (web app, last 7 days, funnel 'candidates_shown': median 6.0 s, 90th percentile 11.5 s);
 // ?ai=11.5 renders the slow case
-const T_PRESS = .62, T_CAP = .72, T_ANALYSIS = parseFloat(Q.get('ai') || '6.0'), T_NAMES = T_CAP + T_ANALYSIS, T_TAP = T_NAMES + 1.25, C0 = T_TAP + .10;
+const T_PRESS = .62, T_CAP = .72, T_ANALYSIS = parseFloat(Q.get('ai') || '6.0'), T_NAMES = T_CAP + T_ANALYSIS, T_TAP = Math.max(T_NAMES + 1.25, parseFloat(Q.get('tapmin') || '0')), C0 = T_TAP + .10;   // tapmin: a film may hold the tap until its last tag is in
 
 // ---------- drawing helpers ----------
 function rr(x, y, w, h, r, c = ctx) { c.beginPath(); c.roundRect(x, y, w, h, r); }
