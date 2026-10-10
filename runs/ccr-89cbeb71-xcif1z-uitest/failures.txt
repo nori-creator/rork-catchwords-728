@@ -1,1 +1,5 @@
-(could not read results: Expecting value: line 1 column 1 (char 0))
+CatchWords / test_2_ja_en(): FullTourTests.swift:109: failed - [ja/en] the shutter is missing or disabled
+CatchWords / test_2_ja_en(): FullTourTests.swift:177: failed - [ja/en] settings.wheel.native missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:177: failed - [ja/en] settings.wheel.target missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:177: failed - [ja/en] settings.wheel.current missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:177: failed - [ja/en] settings.wheel.goal missing
