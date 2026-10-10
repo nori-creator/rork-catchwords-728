@@ -89,12 +89,29 @@ final class FullTourTests: XCTestCase {
             snap("detail-sections")
             dismissPopover()
         }
-        if app.buttons["detail.close"].exists {
-            app.buttons["detail.close"].tap()
-        } else {
-            app.swipeDown(velocity: .fast)
-        }
+        closeDetail()
         settle(1)
+    }
+
+    /// Closes the word sheet and makes sure it is gone: the sheet stayed open over the tab bar in one run
+    /// (ja/en, 2026-10-10) when × was tapped while the sections popover was still going away, and every later
+    /// tab (camera, settings) failed behind it. × again once, then a swipe as the last resort.
+    private func closeDetail() {
+        let close = app.buttons["detail.close"]
+        guard close.exists else {
+            app.swipeDown(velocity: .fast)
+            return
+        }
+        for _ in 0..<2 where close.exists {
+            close.tap()
+            if waitGone(close, timeout: 3) { return }
+        }
+        if close.exists { app.swipeDown(velocity: .fast) }
+    }
+
+    private func waitGone(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
+        return XCTWaiter().wait(for: [gone], timeout: timeout) == .completed
     }
 
     /// The camera only takes photos. Under `-uiDemo` the simulator has no camera: the viewfinder shows a
