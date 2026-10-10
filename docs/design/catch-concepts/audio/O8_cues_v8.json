@@ -1,0 +1,79 @@
+[
+ {
+  "t": 0.71,
+  "cue": "shutter (cc-shutter)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 0.98,
+  "cue": "analysis starts, the bracket appears (cc-scan-start)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": null
+ },
+ {
+  "t": 1.78,
+  "cue": "bracket locks: cup (cc-tick)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "selection"
+ },
+ {
+  "t": 2.72,
+  "cue": "bracket locks: scooter (cc-tick)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "selection"
+ },
+ {
+  "t": 3.66,
+  "cue": "bracket locks: sign (cc-tick)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "selection"
+ },
+ {
+  "t": 6.72,
+  "cue": "names arrive (cc-found)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": null
+ },
+ {
+  "t": 6.86,
+  "cue": "tag: cup (cc-pop)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "impact light"
+ },
+ {
+  "t": 6.99,
+  "cue": "tag: scooter (cc-pop)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "impact light"
+ },
+ {
+  "t": 7.12,
+  "cue": "tag: plant (cc-pop)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "impact light"
+ },
+ {
+  "t": 7.25,
+  "cue": "tag: sign (cc-pop)",
+  "bus": "sfx",
+  "gain_db": -11.0,
+  "haptic": "impact light"
+ },
+ {
+  "t": 7.99,
+  "cue": "tap the word (as the approved flow)",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]
