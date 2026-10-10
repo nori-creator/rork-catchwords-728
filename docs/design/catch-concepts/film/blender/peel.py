@@ -117,7 +117,10 @@ front.inputs['Coat Weight'].default_value = 0.55
 front.inputs['Coat Roughness'].default_value = 0.06
 nt.links.new(tex.outputs['Color'], front.inputs['Base Color'])
 back = nt.nodes.new('ShaderNodeBsdfPrincipled')
-back.inputs['Base Color'].default_value = (0.93, 0.92, 0.89, 1)
+back.inputs['Base Color'].default_value = (0.96, 0.955, 0.94, 1)
+# the back is white paper: a little self-light keeps it reading as paper when it turns away from the key light
+back.inputs['Emission Color'].default_value = (0.95, 0.945, 0.93, 1)
+back.inputs['Emission Strength'].default_value = 0.32
 back.inputs['Roughness'].default_value = 0.85
 back.inputs['Specular IOR Level'].default_value = 0.2
 noise = nt.nodes.new('ShaderNodeTexNoise'); noise.inputs['Scale'].default_value = 420; noise.inputs['Detail'].default_value = 2

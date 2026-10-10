@@ -192,8 +192,9 @@ function analysis(t, { cupAlpha = 1, otherAlpha = 1, cupPress = 0, cupDone = 0, 
 }
 // status messages during the analysis (honest, specific, with what is already known)
 function analysisPills(t, tHide) {
-  const nFound = TAGS.filter(g => t > OUTLINE_T(g.id) + .4).length;
-  if (t < T_CAP + 1.45) topPill(t, T_CAP + .15, Math.min(tHide, T_NAMES), 'AIが写真を見ています', { shimmer: true });
-  else topPill(t, T_CAP + .15, Math.min(tHide, T_NAMES), `${Math.max(nFound, 1)}つ見つけました・名前を調べています`, { shimmer: true, prev: 'AIが写真を見ています', tSwap: T_CAP + 1.45 });
+  // switch once every shape is drawn, so the count never jumps right after the change
+  const tSw = Math.max(...TAGS.map(g => OUTLINE_T(g.id))) + .5, n = TAGS.length;
+  if (t < tSw) topPill(t, T_CAP + .15, Math.min(tHide, T_NAMES), 'AIが写真を見ています', { shimmer: true });
+  else topPill(t, T_CAP + .15, Math.min(tHide, T_NAMES), `${n}つ見つけました・名前を調べています`, { shimmer: true, prev: 'AIが写真を見ています', tSwap: tSw });
   topPill(t, T_NAMES + .3, tHide, '覚えたいことばをタップ', { icon: 'sparkles' });
 }
