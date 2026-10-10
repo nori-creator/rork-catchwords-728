@@ -1,0 +1,128 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 0.82,
+  "cue": "AI on: the screen edge lights (soft chord blooms)",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": "continuous 0.15 rising 0.4s (sharpness 0.2)"
+ },
+ {
+  "t": 1.135,
+  "cue": "the light passes (reveal)",
+  "bus": "sfx",
+  "gain_db": -31,
+  "haptic": null
+ },
+ {
+  "t": 1.361,
+  "cue": "found: scooter (the light reaches it)",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.4"
+ },
+ {
+  "t": 1.438,
+  "cue": "found: cup (the light reaches it)",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.4"
+ },
+ {
+  "t": 1.486,
+  "cue": "found: sign (the light reaches it)",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient 0.3/0.4"
+ },
+ {
+  "t": 2.24,
+  "cue": "waiting: a low pad",
+  "bus": "loop",
+  "gain_db": -36,
+  "haptic": null
+ },
+ {
+  "t": 2.698,
+  "cue": "waiting: the light passes again",
+  "bus": "loop",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 5.098,
+  "cue": "waiting: the light passes again",
+  "bus": "loop",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 7.498,
+  "cue": "waiting: the light passes again",
+  "bus": "loop",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 9.898,
+  "cue": "waiting: the light passes again",
+  "bus": "loop",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 12.2,
+  "cue": "names arrive: the edge light flares, a chord resolves",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "success"
+ },
+ {
+  "t": 12.24,
+  "cue": "tag: cup (tink)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.34,
+  "cue": "tag: scooter (tink)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.44,
+  "cue": "tag: plant (tink)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.54,
+  "cue": "tag: sign (tink)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 13.49,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]
