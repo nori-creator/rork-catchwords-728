@@ -48,6 +48,9 @@ final class CaptureViewModel {
     /// the candidates screen puts each word on its object, the celebration shows the object's cut-out.
     var objects: [CatchObject] = []
     private var masksTask: Task<InstanceMasks?, Never>?
+    /// This photo's catch scan (v10: bracket, light pen, tags as the names come). Kept for the run, so going back
+    /// from the celebration shows the words as they were instead of replaying it. nil = no scan (a preview).
+    var scan: CatchScanSession?
 
     // Re-encounter ("再会！")
     var owned: OwnedWord?
@@ -116,6 +119,14 @@ final class CaptureViewModel {
             guard let masks = await masksForCuts?.value else { return }
             masks.prerenderCuts()
         }
+        // The scan's outlines, traced from the same masks while the AI is naming the things.
+        let session = CatchScanSession()
+        scan = session
+        Task {
+            let masks = await masksForCuts?.value
+            let lines = await Task.detached(priority: .userInitiated) { masks?.outlines() ?? [] }.value
+            session.setOutlines(lines, at: Date())
+        }
         // A photo restored from the queue is never queued again (one entry per photo, not per retry).
         // Every new photo gets its own entry (an earlier photo's entry stays in 「解析待ち」).
         if let rid = restoredPendingId {
@@ -144,6 +155,7 @@ final class CaptureViewModel {
                 }.value
                 guard token == runToken else { return }
                 objects = built
+                scan?.setNames(built, at: Date())
                 detectOutcome = .success(found)
                 prefetchOwnedChecks(found)
             } catch {
@@ -190,7 +202,7 @@ final class CaptureViewModel {
         switch outcome {
         case .success(let found):
             candidates = found
-            Haptics.impact(.medium)
+            // No tap here: the scan sounds and taps each tag as it comes up (`CatchScanSession`).
             withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
         case .failure(let error):
             let retryable = (error as? APIError)?.isRetryable ?? true
@@ -268,9 +280,35 @@ final class CaptureViewModel {
     /// already answered, `prefetchOwnedChecks`) decides between the celebration and the re-encounter; the card's
     /// details are generated from the tap on and never waited for (`provisionalDetails`). The sticker is the
     /// object's cut-out (cut-out mode on), else the photo.
+    /// Which candidate was picked (web `logCandidatePick`): its place in the server's order and how many there
+    /// were — never the word. The developer settings count Top-1 / Top-3 per AI model from it. A word from the
+    /// photo's tags is `photo`; a word found by typing after the photo is `native_search` (the photo's words
+    /// missed it). Nothing waits for it and a failure is ignored.
+    private func logPick(_ word: Candidate, object: CatchObject?) {
+        let via: String
+        let rank: Int
+        let count: Int
+        if object != nil, let i = candidates.firstIndex(where: { AIService.sameSuggestion($0, word) }) {
+            via = "photo"
+            rank = i + 1
+            count = candidates.count
+        } else if object == nil, photo != nil {
+            via = "native_search"
+            rank = (typedCandidates.firstIndex(where: { $0.headword == word.headword }) ?? 0) + 1
+            count = max(typedCandidates.count, rank)
+        } else {
+            return
+        }
+        let r = min(rank, 50)
+        let n = min(max(count, rank), 50)
+        Task { _ = try? await NativeAPI.call("logCandidatePick", ["via": via, "rank": r, "n": n], timeout: 15) }
+    }
+
     func choose(_ word: Candidate, object: CatchObject?) {
+        UITestTrace.log("choose \(word.headword) checking=\(isCheckingOwned) step=\(step) token=\(runToken)")
         guard !isCheckingOwned else { return }
         let token = runToken
+        logPick(word, object: object)
         picked = word
         details = nil
         detailsTask = nil
@@ -297,6 +335,8 @@ final class CaptureViewModel {
                 ownedChecks[word.headword] = nil
                 found = await ownedCheck(for: word.headword).value
             }
+            UITestTrace.log("choose.checked \(word.headword) owned=\(found?.owned != nil) failed=\(found == nil)"
+                            + " sameRun=\(token == runToken) samePick=\(picked == word)")
             guard token == runToken, picked == word else { return }
             isCheckingOwned = false
             if let o = found?.owned {
@@ -484,6 +524,7 @@ final class CaptureViewModel {
         masksTask?.cancel()
         masksTask = nil
         objects = []
+        scan = nil
         if let pid = pendingId {
             PendingQueue.shared.remove(id: pid)
             PendingRetry.shared.forget(pid)

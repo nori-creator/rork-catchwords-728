@@ -6,12 +6,21 @@ import SwiftUI
 /// - Each object's everyday name is the bold tag; its other names (砕けた / くわしい / 固有名詞) sit just
 ///   above or below it, lighter. Tags never cover each other (`CCPickLayout`).
 /// - Without a position (the AI gave none) the words gather at the photo's centre, still one per line.
+/// - From the shutter on (`.processing`) the same screen runs the catch scan over the photo (v10, owner 2026-10-11:
+///   bracket, light pen, `CatchScan.swift`), and each tag comes up where it is tapped, when the scan brings it up.
+///   Typing a word waits until the names are in.
 struct CandidatePickerView: View {
     let vm: CaptureViewModel
+    /// The names are not in yet (`.processing`): the scan is running and nothing can be typed. Handed in by the camera
+    /// screen, which switches on `vm.step`: this view must never read `vm.step` itself. When it did, the camera screen
+    /// missed the change to `.celebrate` made right after the tap (it was redrawn during that change and kept the old
+    /// step), so the words stayed on screen and the celebration never opened (the UI tour's 5 of 6, trace 2026-10-11).
+    let scanning: Bool
     @State private var appeared: Bool = false
     @State private var typed: String = ""
     @FocusState private var inputFocused: Bool
     @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     private let ink = Color(hex: 0x0B121A)
 
@@ -53,6 +62,9 @@ struct CandidatePickerView: View {
                 bottomPanel
                     .padding(.horizontal, 10)
                     .padding(.bottom, 8)
+                    .disabled(scanning)
+                    .opacity(scanning ? 0.5 : 1)
+                    .animation(.easeOut(duration: 0.25), value: scanning)
             }
             if vm.isCheckingOwned {
                 Color.black.opacity(0.25).ignoresSafeArea()
@@ -66,6 +78,26 @@ struct CandidatePickerView: View {
             } else {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { appeared = true }
             }
+        }
+        .task(id: vm.scan.map { ObjectIdentifier($0) }) { await runScan() }
+    }
+
+    /// Steps this photo's scan about 60 times a second (its sounds, its tags) until everything is up.
+    private func runScan() async {
+        guard let scan = vm.scan else { return }
+        scan.begin(now: Date())
+        while !Task.isCancelled, !scan.settled {
+            scan.step(now: Date(), reduceMotion: reduceMotion)
+            try? await Task.sleep(for: .milliseconds(16))
+        }
+    }
+
+    /// The line at the top right: what the scan is doing, then what to do.
+    private var topHint: String {
+        switch vm.scan?.phase {
+        case .scanning?: return L("写真をスキャンしています")
+        case .naming?: return L("名前を調べています")
+        default: return L("覚えたいことばをタップ")
         }
     }
 
@@ -84,11 +116,13 @@ struct CandidatePickerView: View {
             .buttonStyle(PressableStyle())
             .accessibilityIdentifier("picker.retake")
             Spacer(minLength: 8)
-            Text(L("覚えたいことばをタップ"))
+            Text(topHint)
                 .scaledFont(size: 14, weight: .semibold)
                 .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.25), value: topHint)
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
@@ -100,6 +134,7 @@ struct CandidatePickerView: View {
         GeometryReader { geo in
             let size = geo.size
             let placedTags = placed(in: size)
+            let _ = UITestTrace.log(traceStage(size, placedTags))
             ZStack(alignment: .topLeading) {
                 if let photo = vm.photo {
                     Image(uiImage: photo)
@@ -109,6 +144,10 @@ struct CandidatePickerView: View {
                         .clipped()
                         .allowsHitTesting(false)
                 }
+                if let scan = vm.scan, let photo = vm.photo {
+                    CatchScanOverlay(scan: scan, photo: photo.size, reduceMotion: reduceMotion)
+                        .frame(width: size.width, height: size.height)
+                }
                 ForEach(placedTags) { p in
                     tagButton(p)
                         .position(x: p.spot.x, y: p.spot.y - p.size.height / 2)
@@ -116,8 +155,26 @@ struct CandidatePickerView: View {
             }
             .frame(width: size.width, height: size.height)
             .contentShape(.rect)
-            .onTapGesture { inputFocused = false }
+            .onTapGesture {
+                UITestTrace.log("stage.tap")
+                inputFocused = false
+            }
+            .onChange(of: size, initial: true) { _, s in layoutScan(s) }
+            .onChange(of: vm.scan.map { ObjectIdentifier($0) }) { _, _ in layoutScan(size) }
         }
+    }
+
+    /// The UI tests' trace of a render of the stage (`UITestTrace`, DEBUG + `-uiDemo` only): what it shows and can take.
+    private func traceStage(_ size: CGSize, _ placedTags: [Placed]) -> String {
+        let shown = placedTags.filter { vm.scan?.revealed.contains($0.tag.object.id) ?? true }.map(\.id)
+        let state = "scanning=\(scanning) checking=\(vm.isCheckingOwned) enabled=\(isEnabled)"
+        return "picker.stage \(Int(size.width))x\(Int(size.height)) \(state) shown=\(shown)"
+    }
+
+    /// Tells the scan where the photo sits on the stage (it draws in the stage's points).
+    private func layoutScan(_ size: CGSize) {
+        guard let scan = vm.scan, let photo = vm.photo else { return }
+        scan.layout(stage: size, fill: Self.fillRect(image: photo.size, in: size))
     }
 
     /// Everyday names first (each keeps its own place on its object), then the other names, which move just
@@ -162,10 +219,21 @@ struct CandidatePickerView: View {
     }
 
     /// White capsule with a blue dot and the word (the other names: a grey dot, a little see-through).
+    /// With a scan, a tag comes up when the scan brings its object up (the film's rise: a little low, small and soft,
+    /// then up into place); the object's other names follow its everyday name by 0.06 s.
     private func tagButton(_ p: Placed) -> some View {
         let t = p.tag
         let delay = 0.08 + Double(t.mainIndex ?? 4) * 0.06
-        return Button { vm.choose(t.word, object: t.object) } label: {
+        let scanned = vm.scan != nil
+        let shown = vm.scan.map { $0.revealed.contains(t.object.id) } ?? appeared
+        let rise = scanned && !reduceMotion && !shown
+        let motion: Animation? = scanned
+            ? (reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.42, dampingFraction: 0.68).delay(t.main ? 0 : 0.06))
+            : (reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.7).delay(delay))
+        return Button {
+            UITestTrace.log("tag.action \(t.id) shown=\(shown) checking=\(vm.isCheckingOwned)")
+            vm.choose(t.word, object: t.object)
+        } label: {
             HStack(spacing: 7) {
                 Circle()
                     .fill(t.main ? Color(hex: 0x2A9BFF) : Color(hex: 0x9AA6B5))
@@ -187,9 +255,13 @@ struct CandidatePickerView: View {
         .accessibilityHint(ReaderLanguage.gloss(ReaderLanguage.shown(t.word.meaningJa)))
         .accessibilityIdentifier(t.mainIndex.map { "candidate.\($0)" } ?? "candidate.other")
         .tourAnchor(.pick, if: t.mainIndex == 0)
-        .scaleEffect(appeared ? 1 : 0.6)
-        .opacity(appeared ? 1 : 0)
-        .animation(reduceMotion ? nil : Animation.spring(response: 0.45, dampingFraction: 0.7).delay(delay), value: appeared)
+        .scaleEffect(shown ? 1 : (scanned ? 0.86 : 0.6))
+        .offset(y: rise ? 6 : 0)
+        .blur(radius: rise ? 3 : 0)
+        .opacity(shown ? 1 : 0)
+        .allowsHitTesting(shown)
+        .accessibilityHidden(!shown)
+        .animation(motion, value: shown)
     }
 
     /// ふだん → 砕けた → くわしい → 固有名詞 (candidate-order.ts).

@@ -6,11 +6,14 @@ import UIKit
 /// - which AI each feature uses (自動 = the newest Gemini Flash, Flash-Lite for the scan, or any provider
 ///   with a key and one of its models), saved at once with `adminSetAiFeature`;
 /// - the AI images of the text search (`adminSetImageConfig`, `adminTestImage`);
+/// - the speed and accuracy of each feature's AI by model, and a fixed-photo test (`AdminAiStatsCard`);
 /// - the pronunciation voice of each learning language (`adminSetTtsVoice`).
 /// Server messages are shown as they come (this screen is for the developer, not for learners).
 struct AdminAiSettingsView: View {
     /// UIPreview only: settings to show instead of asking the server (nothing is sent).
     var preview: AdminAiSettings? = nil
+    /// UIPreview only: the speed and accuracy numbers to show with them.
+    var previewStats: AdminAiStats? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -48,6 +51,7 @@ struct AdminAiSettingsView: View {
                 if let settings {
                     statusCard(settings)
                     featuresCard(settings)
+                    AdminAiStatsCard(settings: settings, preview: previewStats)
                     if let image = settings.image {
                         imageCard(image)
                     }

@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/local.css">
+<style>html,body{margin:0;background:#000}canvas{display:block;width:540px;height:1170px}</style>
+</head><body>
+<canvas id="c" width="1080" height="2340"></canvas>
+<script src="node_modules/lottie-web/build/player/lottie.min.js"></script>
+<script src="js/core6.js"></script>
+<script src="js/tags.js"></script>
+<script src="js/scan.js"></script>
+<script>const CUES = {}, START = {};</script>
+<script src="js/scan7.js"></script>
+<script src="js/o9_pen.js"></script>
+<script src="js/o10_pen.js"></script>
+<script>
+const CONCEPTS = { O9: conceptO9, O10: conceptO10 };
+function durOf(c) { CONCEPTS[c](START[c] || 0); return CUES[c].end - (START[c] || 0); }
+function renderFrame(t, c = CONCEPT) { CONCEPT = c; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); ctx.globalAlpha = 1; CONCEPTS[c](t); ctx.restore(); }
+window.ready = load().then(loadScan).then(loadOutlines).then(() => {
+  window.renderFrame = renderFrame; window.START = START;
+  window.DUR = {}; for (const c of Object.keys(CONCEPTS)) window.DUR[c] = durOf(c);
+  window.CUES = CUES;
+  renderFrame(parseFloat(Q.get('t') || '3')); return true;
+});
+</script>
+</body></html>

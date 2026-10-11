@@ -221,6 +221,31 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
         return CutoutService.rankedInstances(in: observation.instanceMask, to: point).filter { all.contains($0.label) }
     }
 
+    /// The outlines of the largest foreground instances, largest first, for the catch scan (`CatchOutlineTracer`,
+    /// on a copy of Vision's label mask at most 512 px on its long side — the outline is smoothed anyway).
+    /// Heavy: call off the main thread.
+    func outlines(limit: Int = CatchObject.maxObjects) -> [CatchOutline] {
+        let buffer = observation.instanceMask
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        let w = CVPixelBufferGetWidth(buffer), h = CVPixelBufferGetHeight(buffer)
+        let row = CVPixelBufferGetBytesPerRow(buffer)
+        guard w > 0, h > 0, let base = CVPixelBufferGetBaseAddress(buffer) else { return [] }
+        let step = max(1, Int((Double(max(w, h)) / 512).rounded(.up)))
+        let mw = (w + step - 1) / step, mh = (h + step - 1) / step
+        var known = [Bool](repeating: false, count: 256)
+        for label in observation.allInstances where label > 0 && label < 256 { known[label] = true }
+        var mask = [UInt8](repeating: 0, count: mw * mh)
+        for y in 0..<mh {
+            let line = base.advanced(by: y * step * row)
+            for x in 0..<mw {
+                let v = line.load(fromByteOffset: x * step, as: UInt8.self)
+                if v != 0, known[Int(v)] { mask[y * mw + x] = v }
+            }
+        }
+        return CatchOutlineTracer.outlines(mask: mask, width: mw, height: mh, limit: limit)
+    }
+
     /// Renders the cut-outs of the first `limit` instances into the cache. Called off the main thread while the AI
     /// is still naming the things, so the words screen only picks finished cut-outs (they used to be rendered after
     /// the server answered, on the way to the words — owner 2026-10-10: 「ただ待たされる時間は苦痛」).

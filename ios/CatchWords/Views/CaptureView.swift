@@ -95,6 +95,7 @@ struct CaptureView: View {
             router.tabBarHidden = false
         }
         .onChange(of: vm.step) { old, step in
+            UITestTrace.log("step \(old) -> \(step)")
             syncChrome()
             if step == .select { router.advanceTour(from: .shoot, to: .pick) }
             if step == .celebrate {
@@ -151,14 +152,13 @@ struct CaptureView: View {
 
     @ViewBuilder
     private var stepView: some View {
+        let _ = UITestTrace.log("capture.stepView \(vm.step)")
         switch vm.step {
         case .camera, .selfie:
             cameraMachine.transition(.opacity)
-        case .processing:
-            AnalyzingView(photo: vm.photo) { vm.reset() }
-                .transition(.opacity)
-        case .select:
-            CandidatePickerView(vm: vm).transition(.opacity)
+        case .processing, .select:
+            // One view from the shutter to the tap (the scan runs over the same photo the tags land on).
+            CandidatePickerView(vm: vm, scanning: vm.step == .processing).transition(.opacity)
         case .celebrate:
             CatchCelebrationView(vm: vm, saving: saveInFlight, onAdd: addToDex,
                                  onStickerFrame: { stickerFrame = $0 })

@@ -13,6 +13,9 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
     let box: CGRect
     /// The subject on transparency, cropped exactly to `box`; nil = the prototype's "no cutImg" path.
     let cut: UIImage?
+    /// Vision's instance under this object (nil = none, `fallbackBox`). The catch scan waits for that instance's
+    /// outline (`CatchOutline.label`) before this object's tag comes up.
+    var instance: Int? = nil
 
     /// The prototype asks the AI for at most 4 objects (`askAI` → `.slice(0,4)`), 3 words each.
     static let maxObjects = 4
@@ -54,9 +57,10 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
         return list.enumerated().map { (i, words) -> CatchObject in
             let p = points[i]
             if let masks, let label = labels[i], let cut = masks.cut(instance: label) {
-                return CatchObject(id: i, words: words, point: p, box: cut.box, cut: cut.image)
+                return CatchObject(id: i, words: words, point: p, box: cut.box, cut: cut.image, instance: label)
             }
-            return CatchObject(id: i, words: words, point: p, box: fallbackBox(at: p, photoSize: photoSize), cut: nil)
+            return CatchObject(id: i, words: words, point: p, box: fallbackBox(at: p, photoSize: photoSize), cut: nil,
+                               instance: labels[i])
         }
     }
 
