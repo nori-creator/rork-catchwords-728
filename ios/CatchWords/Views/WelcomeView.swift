@@ -52,14 +52,18 @@ struct WelcomeView: View {
     private func page(scrolls: Bool) -> some View {
         VStack(spacing: 0) {
             header
+            // Last in line for the height (its priority on the outermost modifier, where the stack reads it): the words
+            // and buttons below keep their whole height — the agreement used to be cut to one line.
             WelcomeStickers(appeared: appeared, animate: !reduceMotion)
                 .frame(minHeight: Self.minStage, maxHeight: scrolls ? Self.minStage : .infinity)
-                .layoutPriority(-1)
                 .padding(.horizontal, -24)
+                .layoutPriority(-1)
             copy
                 .padding(.top, 4)
+                .fixedSize(horizontal: false, vertical: true)
             ways
                 .padding(.top, 18)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 24)
         .padding(.top, 4)
