@@ -1,7 +1,35 @@
-CatchWords / test_1_ja_zh(): FullTourTests.swift:153: failed - [ja/zh-TW] the celebration did not open after tapping a word
-CatchWords / test_1_ja_zh(): FullTourTests.swift:263: failed - [ja/zh-TW] tab.review not found
-CatchWords / test_1_ja_zh(): FullTourTests.swift:263: failed - [ja/zh-TW] tab.settings not found
-CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.native missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.target missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.current missing
-CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.goal missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:159: failed - [ja/zh-TW] the celebration did not open after tapping a word (candidate.0 hittable true, frame (152.33333333333331, 413.3333333333333, 73.33333333333331, 41.666666666666686); now: picker.retake@67,88 candidate.0@188,434 candidate.1@353,302 candidate.other@188,471 picker.submit@335,795
+CatchWords / test_1_ja_zh(): FullTourTests.swift:270: failed - [ja/zh-TW] tab.review not found
+CatchWords / test_1_ja_zh(): FullTourTests.swift:270: failed - [ja/zh-TW] tab.settings not found
+CatchWords / test_1_ja_zh(): FullTourTests.swift:201: failed - [ja/zh-TW] settings.wheel.native missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:201: failed - [ja/zh-TW] settings.wheel.target missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:201: failed - [ja/zh-TW] settings.wheel.current missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:201: failed - [ja/zh-TW] settings.wheel.goal missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:159: failed - [ja/en] the celebration did not open after tapping a word (candidate.0 hittable true, frame (138.66666666666666, 413.3333333333333, 100.33333333333334, 41.666666666666686); now: picker.retake@67,88 candidate.0@188,434 candidate.1@342,302 candidate.other@188,471 picker.submit@335,795
+CatchWords / test_2_ja_en(): FullTourTests.swift:270: failed - [ja/en] tab.review not found
+CatchWords / test_2_ja_en(): FullTourTests.swift:270: failed - [ja/en] tab.settings not found
+CatchWords / test_2_ja_en(): FullTourTests.swift:201: failed - [ja/en] settings.wheel.native missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:201: failed - [ja/en] settings.wheel.target missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:201: failed - [ja/en] settings.wheel.current missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:201: failed - [ja/en] settings.wheel.goal missing
+CatchWords / test_3_en_zh(): FullTourTests.swift:159: failed - [en/zh-TW] the celebration did not open after tapping a word (candidate.0 hittable true, frame (151.33333333333331, 413.3333333333333, 75.00000000000003, 41.666666666666686); now: picker.retake@64,88 candidate.0@188,434 candidate.1@352,302 candidate.other@189,471 picker.submit@325,795
+CatchWords / test_3_en_zh(): FullTourTests.swift:270: failed - [en/zh-TW] tab.review not found
+CatchWords / test_3_en_zh(): FullTourTests.swift:270: failed - [en/zh-TW] tab.settings not found
+CatchWords / test_3_en_zh(): FullTourTests.swift:201: failed - [en/zh-TW] settings.wheel.native missing
+CatchWords / test_3_en_zh(): FullTourTests.swift:201: failed - [en/zh-TW] settings.wheel.target missing
+CatchWords / test_3_en_zh(): FullTourTests.swift:201: failed - [en/zh-TW] settings.wheel.current missing
+CatchWords / test_3_en_zh(): FullTourTests.swift:201: failed - [en/zh-TW] settings.wheel.goal missing
+CatchWords / test_4_en_ja(): FullTourTests.swift:159: failed - [en/ja] the celebration did not open after tapping a word (candidate.0 hittable true, frame (133.33333333333331, 413.3333333333333, 111.00000000000003, 41.666666666666686); now: picker.retake@64,88 candidate.0@188,434 candidate.1@357,302 candidate.other@188,471 picker.submit@325,795
+CatchWords / test_4_en_ja(): FullTourTests.swift:270: failed - [en/ja] tab.review not found
+CatchWords / test_4_en_ja(): FullTourTests.swift:270: failed - [en/ja] tab.settings not found
+CatchWords / test_4_en_ja(): FullTourTests.swift:201: failed - [en/ja] settings.wheel.native missing
+CatchWords / test_4_en_ja(): FullTourTests.swift:201: failed - [en/ja] settings.wheel.target missing
+CatchWords / test_4_en_ja(): FullTourTests.swift:201: failed - [en/ja] settings.wheel.current missing
+CatchWords / test_4_en_ja(): FullTourTests.swift:201: failed - [en/ja] settings.wheel.goal missing
+CatchWords / test_6_zh_ja(): FullTourTests.swift:159: failed - [zh-TW/ja] the celebration did not open after tapping a word (candidate.0 hittable true, frame (133.33333333333331, 413.3333333333333, 111.00000000000003, 41.666666666666686); now: picker.retake@55,88 candidate.0@188,434 candidate.1@357,302 candidate.other@188,471 picker.submit@335,795
+CatchWords / test_6_zh_ja(): FullTourTests.swift:270: failed - [zh-TW/ja] tab.review not found
+CatchWords / test_6_zh_ja(): FullTourTests.swift:270: failed - [zh-TW/ja] tab.settings not found
+CatchWords / test_6_zh_ja(): FullTourTests.swift:201: failed - [zh-TW/ja] settings.wheel.native missing
+CatchWords / test_6_zh_ja(): FullTourTests.swift:201: failed - [zh-TW/ja] settings.wheel.target missing
+CatchWords / test_6_zh_ja(): FullTourTests.swift:201: failed - [zh-TW/ja] settings.wheel.current missing
+CatchWords / test_6_zh_ja(): FullTourTests.swift:201: failed - [zh-TW/ja] settings.wheel.goal missing
