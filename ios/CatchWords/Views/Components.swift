@@ -144,12 +144,19 @@ nonisolated enum MemoryMath {
     }
 }
 
-/// Loads a sticker photo by storage path through the signed-URL map + cache.
+/// Loads a sticker photo by storage path: memory, then the copy kept on this phone (`ImageCache` disk), then the
+/// signed link. A picture whose link is missing (a catch just saved, a signing that failed) or no longer works
+/// (links last 6 hours) asks the dex for a new one, and the new link draws it — it never stays blank for the
+/// rest of the session (the home album's 馬桶 that showed no picture, 2026-10-11).
 struct StickerImage: View {
     let path: String?
     let url: URL?
     var contentMode: ContentMode = .fit
+    /// Told the picture's size once it is drawn (the word page shapes its hero after the cut-out).
+    var onLoad: ((CGSize) -> Void)? = nil
 
+    /// Optional: screens outside the signed-in app (previews) have no dex; they only use the cache.
+    @Environment(DexStore.self) private var dex: DexStore?
     @State private var image: UIImage?
 
     var body: some View {
@@ -165,13 +172,45 @@ struct StickerImage: View {
         }
         // Keyed on the URL too: the signed URL usually arrives after the first draw, and a task keyed on the
         // path alone never ran again, leaving the picture blank.
-        .task(id: "\(path ?? "")|\(url?.absoluteString ?? "")") {
-            guard let path else { return }
-            if let hit = ImageCache.shared.image(for: path) { image = hit; return }
-            guard let url else { return }
-            let loaded = await ImageCache.shared.load(url: url, key: path)
-            withAnimation(.easeOut(duration: 0.25)) { image = loaded }
+        .task(id: "\(path ?? "")|\(url?.absoluteString ?? "")") { await fill() }
+        .onChange(of: image) { _, img in
+            if let img { onLoad?(img.size) }
         }
+    }
+
+    private func fill() async {
+        guard let path else { return }
+        // The link says which size this is: a thumbnail is kept under its own key, never as the full picture.
+        let thumb = url.map { $0.path.hasSuffix(DexStore.thumbSuffix) } ?? false
+        let key = thumb ? path + DexStore.thumbSuffix : path
+        // Already here: the very picture, or the full one where a thumbnail was asked for (only better).
+        if let hit = ImageCache.shared.image(for: key) ?? (thumb ? ImageCache.shared.image(for: path) : nil) {
+            image = hit
+            return
+        }
+        // While the full picture comes, its thumbnail stands in.
+        if image == nil, !thumb, let small = ImageCache.shared.image(for: path + DexStore.thumbSuffix) { image = small }
+        var kept = await ImageCache.shared.cached(for: key)
+        if kept == nil, thumb { kept = await ImageCache.shared.cached(for: path) }
+        if kept == nil, !thumb, image == nil { kept = await ImageCache.shared.cached(for: path + DexStore.thumbSuffix) }
+        guard !Task.isCancelled else { return }
+        if let kept {
+            image = kept
+            // A thumbnail kept on disk stood in for a full picture: go on and fetch the full one.
+            if thumb || ImageCache.shared.image(for: path) != nil { return }
+        }
+        guard let url else {
+            dex?.requestSigning(path)
+            return
+        }
+        if let loaded = await ImageCache.shared.load(url: url, key: key) {
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.25)) { image = loaded }
+            return
+        }
+        // The link has expired or the request failed: one new link (the dex limits how often), which redraws this.
+        guard !Task.isCancelled else { return }
+        dex?.requestSigning(path, force: true)
     }
 }
 

@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(DexStore.self) private var dex
     @Environment(PlanStore.self) private var plan
     @Environment(ProfileStore.self) private var profile
+    @Environment(ReviewStore.self) private var review
     @Environment(\.scenePhase) private var scenePhase
     /// This account's onboarding flag on this device (`OnboardingState`), read again on every sign-in.
     @State private var onboardingDone: Bool = false
@@ -60,9 +61,14 @@ struct RootView: View {
                         TourStep.adoptDevicePending(userId: SupabaseClient.shared.userId)
                         AIConsent.shared.load(userId: SupabaseClient.shared.userId)
                         let guessed = NativeAPI.targetLanguage
+                        // The dex as it was last read on this phone, at once (its pictures are on disk too); the
+                        // server's read below replaces it.
+                        dex.restoreSnapshot()
                         async let p: Void = profile.load()
                         await dex.load()
                         await p
+                        // Today's review is read and its first cards made ready now, not when the tab is opened.
+                        Task { await review.preload(dex: dex, limit: profile.effectiveReviewLimit) }
                         // This device's answer and the server's record are made to agree (an unsent answer is
                         // sent, an agreement or withdrawal made elsewhere is taken). Never awaited: a server
                         // without these functions yet, or no network, changes nothing and blocks nothing.
@@ -107,8 +113,11 @@ struct RootView: View {
                 // pictures in memory, the widgets' snapshot, the review Live Activity and the reminders
                 // (place reminders name its words and places).
                 dex.reset()
+                review.reset()
                 profile.reset()
                 plan.reset()
+                CutoutBackfill.shared.stop()
+                DexSnapshot.removeAll()
                 AIConsent.shared.reset()
                 AdminAccess.shared.clear()
                 PendingRetry.shared.stop()
@@ -142,6 +151,9 @@ struct RootView: View {
             ReminderService.recordAppOpen()
             PendingRetry.shared.kick()   // waiting photos that are due (a no-op until sign-in has finished)
             Task { await ReminderService.refresh(due: dex.upcomingDueTimes) }
+            // Back after a while: picture links older than 5 hours are made again, and the review is made ready.
+            dex.refreshStaleLinks()
+            if dex.hasLoaded { Task { await review.preload(dex: dex, limit: profile.effectiveReviewLimit) } }
         }
     }
 }

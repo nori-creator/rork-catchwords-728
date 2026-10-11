@@ -1,10 +1,11 @@
 import SwiftUI
 import UIKit
 
-/// 設定 › アニメーション, the one place that decides whether the app moves less (R6-04):
-/// - 自動 ("system", the default): follows the iPhone's Reduce Motion.
-/// - 見せる ("full"): always the full motion, even with Reduce Motion on.
-/// - 減らす ("reduce"): always reduced, even with Reduce Motion off.
+/// 設定 › アニメーション, the one place that decides whether the app moves less (R6-04). On screen it is one switch,
+/// as on the web (owner 2026-10-11: 「アニメーションはスライドのON/OFFに変更して」); the stored values stay:
+/// - "system" (the default, before the switch is ever used): follows the iPhone's Reduce Motion.
+/// - "full" (switch on): always the full motion, even with Reduce Motion on.
+/// - "reduce" (switch off): always reduced — also no auto-sliding photos in the dex.
 ///
 /// Views never read `accessibilityReduceMotion` themselves: they read `\.appReduceMotion`, which the root
 /// (`appMotionPreference()`) sets from this choice and the iPhone's setting. Code outside the view tree

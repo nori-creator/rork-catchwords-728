@@ -280,13 +280,12 @@ final class CaptureViewModel {
         cutout = nil
         dropUploads()
         Haptics.impact(.light)
-        if Self.cutoutMode {
-            if let cut = object?.cut {
-                cutout = cut
-            } else {
-                // No Vision instance for this object (or a typed word): lift the subject near its point.
-                startCutout(near: object?.point)
-            }
+        // Every catch is cut out (owner 2026-10-11: the 切り抜きモード setting is gone).
+        if let cut = object?.cut {
+            cutout = cut
+        } else {
+            // No Vision instance for this object (or a typed word): lift the subject near its point.
+            startCutout(near: object?.point)
         }
         isCheckingOwned = true
         loadDetails(for: word)
@@ -335,10 +334,6 @@ final class CaptureViewModel {
         dropUploads()
         withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
     }
-
-    /// Settings → 切り抜きモード (web `catchSpeed`, default on). Off = keep the photo as the sticker.
-    static let cutoutModeKey = "capture.cutoutMode"
-    static var cutoutMode: Bool { UserDefaults.standard.object(forKey: cutoutModeKey) as? Bool ?? true }
 
     /// Cut-out mode: cutting starts the moment a word is tapped, never delays the celebration,
     /// and is awaited only right before saving (capture.tsx: 図鑑に入れる前に切り抜きが揃っていること).

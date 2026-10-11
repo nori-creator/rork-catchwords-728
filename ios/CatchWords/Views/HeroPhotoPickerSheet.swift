@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// 「この単語は、どの絵で見せるか」(web HeroPhotoPicker.tsx, 要望 #17).
 ///
@@ -8,6 +9,9 @@ import SwiftUI
 struct HeroPhotoPickerSheet: View {
     let sticker: Sticker
     let onPick: (String) async throws -> Void
+    /// 写真を替える, at the bottom of this sheet (owner 2026-10-11, web HeroPhotoPicker `onReplaceFile`). The word page
+    /// does the replacing (and the new cut-out); nil = not offered here.
+    var onReplace: ((PhotosPickerItem) -> Void)? = nil
 
     @Environment(DexStore.self) private var dex
     @Environment(\.dismiss) private var dismiss
@@ -15,6 +19,7 @@ struct HeroPhotoPickerSheet: View {
     @State private var saving: String?
     @State private var chosen: String?
     @State private var failure: String?
+    @State private var newPhoto: PhotosPickerItem?
 
     private struct Option: Identifiable {
         let id: String
@@ -61,6 +66,20 @@ struct HeroPhotoPickerSheet: View {
                     .foregroundStyle(Theme.primary)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            if onReplace != nil {
+                PhotosPicker(selection: $newPhoto, matching: .images) {
+                    Label(L("写真を替える"), systemImage: "photo.badge.arrow.down")
+                        .scaledFont(size: 16, weight: .semibold)
+                        .foregroundStyle(Theme.foreground)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(Theme.card, in: .rect(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                }
+                .buttonStyle(PressableStyle())
+                .disabled(saving != nil)
+                .accessibilityIdentifier("hero.replacePhoto")
+                .padding(.top, 4)
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
@@ -68,6 +87,12 @@ struct HeroPhotoPickerSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.background.ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: chosen)
+        .onChange(of: newPhoto) { _, item in
+            guard let item else { return }
+            newPhoto = nil
+            dismiss()
+            onReplace?(item)
+        }
     }
 
     private func tile(_ option: Option) -> some View {

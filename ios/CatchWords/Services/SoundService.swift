@@ -187,9 +187,11 @@ final class SoundService {
         return dir
     }()
 
-    /// Caches/tts keeps at most this many files and bytes (the OS may also clear it when space runs low).
-    nonisolated private static let ttsMaxFiles = 300
-    nonisolated private static let ttsMaxBytes = 50 * 1024 * 1024
+    /// Caches/tts keeps at most this many files and bytes (the OS may also clear it when space runs low). Room for
+    /// every word of a large dex and its review choices: a voice heard once plays at once from then on (owner
+    /// 2026-10-11: 「端末に画像や発音を保存し…ラグなしで」).
+    nonisolated private static let ttsMaxFiles = 3000
+    nonisolated private static let ttsMaxBytes = 150 * 1024 * 1024
 
     /// Deletes the least recently used pronunciations (oldest modification date first; a replay touches
     /// the file) until the cache is within both limits. File work only, so it runs off the main actor.

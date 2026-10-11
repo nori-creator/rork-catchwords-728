@@ -70,8 +70,8 @@ private struct DexCategoryCard: View {
             .padding(.top, 2)
             .padding(.bottom, 10)
             LazyVGrid(columns: columns, spacing: 9) {
-                ForEach(section.slots) { slot in
-                    DexSlotView(slot: slot, focus: focus?.id == slot.id ? focus : nil, calm: calm,
+                ForEach(Array(section.slots.enumerated()), id: \.element.id) { index, slot in
+                    DexSlotView(slot: slot, index: index, focus: focus?.id == slot.id ? focus : nil, calm: calm,
                                 onTargetFrame: focus?.id == slot.id ? onTargetFrame : nil, onOpen: onOpen)
                         .id(slot.id)
                 }
@@ -92,6 +92,8 @@ private struct DexCategoryCard: View {
 private struct DexSlotView: View {
     @Environment(DexStore.self) private var dex
     let slot: DexSlot
+    /// Its place in the category (the photo cycling is staggered by it, web `DexCyclingPhoto`).
+    let index: Int
     let focus: DexGalleryFocus?
     let calm: Bool
     let onTargetFrame: ((CGRect) -> Void)?
@@ -160,24 +162,14 @@ private struct DexSlotView: View {
         }
     }
 
-    /// `.sart`: square, radius 16, #EEF2F7 (caught: radial-gradient(circle at 50% 38%, #fff, #E2ECF8)).
-    /// The landing slot reports its frame; filled, its content runs `fillIn` and the ring glows blue.
+    /// The square a picture or a shadow stands in. No tile or frame behind it any more (owner 2026-10-11:
+    /// 「図鑑の一覧のそれぞれの単語の画像は切り抜きで、画像周りの枠は削除して」): the cut-out stands on the card
+    /// like a sticker, a shadow is its grey silhouette alone. The landing slot reports its frame; filled, its
+    /// content runs `fillIn` and the blue ring glows for the moment of the landing.
     private func sart<C: View>(caught: Bool, @ViewBuilder content: () -> C) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .circular)
         let inner = content()
         return Color.clear
             .aspectRatio(1, contentMode: .fit)
-            .background {
-                if caught {
-                    GeometryReader { g in
-                        shape.fill(ccRadial(at: UnitPoint(x: 0.5, y: 0.38),
-                                            [.init(color: DexInk.caughtTop, location: 0), .init(color: DexInk.caughtEdge, location: 1)],
-                                            size: g.size))
-                    }
-                } else {
-                    shape.fill(DexInk.sart)
-                }
-            }
             .overlay { DexFillIn(start: focus?.fillStart, calm: calm) { inner } }
             .background {
                 // .slot.fill .sart: box-shadow 0 0 0 2.5px #2A9BFF, 0 0 22px rgba(42,155,255,.6)
@@ -200,29 +192,75 @@ private struct DexSlotView: View {
             }
     }
 
-    /// `.pic` (cut-out: inset 7%, contain, drop-shadow 0 3px 4px rgba(0,30,70,.25)) or `.pic.sq` (photo: inset 9%,
-    /// cover, radius 11, a 2.5 pt white ring and 0 3px 8px rgba(0,30,70,.25)).
+    /// The word's pictures: the cut-out whole (a soft shadow along its outline), a photo still without one rounded —
+    /// with no white ring or frame — and, when the word was photographed more than once, each picture in turn.
     private func picture(_ s: Sticker) -> some View {
+        DexCyclingPicture(pictures: dex.dexPictures(for: s), stagger: index, calm: calm)
+    }
+}
+
+/// A caught word's pictures in turn (web `DexCyclingPhoto`, owner 2026-10-11: 「単語の写真を複数枚撮った場合は、WEB版の
+/// ように図鑑をみているときに、その単語の欄で別の画像が自動で…切り替わるように」): a 1 s crossfade every 3.6 s, squares
+/// staggered 0.6 s apart so they never all change at once, only while on screen, and never with 設定 › アニメーション off.
+/// Only the picture on show and the next one are drawn (the next one has loaded before it fades in).
+struct DexCyclingPicture: View {
+    let pictures: [DexPicture]
+    let stagger: Int
+    let calm: Bool
+
+    @Environment(DexStore.self) private var dex
+    @State private var shown = 0
+
+    /// Web `DEX_CYCLE_MS` / `DEX_FADE_MS`.
+    static let cycle: Double = 3.6
+    static let fade: Double = 1.0
+
+    private var cycling: Bool { pictures.count > 1 && !calm }
+    private var current: Int { pictures.isEmpty ? 0 : shown % pictures.count }
+    private var frames: [Int] {
+        guard !pictures.isEmpty else { return [] }
+        return cycling ? [current, (current + 1) % pictures.count] : [0]
+    }
+
+    var body: some View {
         GeometryReader { g in
             let w = g.size.width
-            // The cut-out wherever the word has one (DexView `dexImagePath`), else the photo.
-            let path = s.dexImagePath
-            let isPhoto = !s.dexShowsCutout
-            if isPhoto {
-                StickerImage(path: path, url: dex.url(for: path), contentMode: .fill)
-                    .frame(width: w * 0.82, height: w * 0.82)
-                    .clipShape(.rect(cornerRadius: 11, style: .circular))
-                    .background(RoundedRectangle(cornerRadius: 11, style: .circular).fill(.white).padding(-2.5))
-                    .shadow(color: .rgba(0, 30, 70, 0.25), radius: 4, y: 3)
-                    .frame(width: w, height: w)
-            } else {
-                StickerImage(path: path, url: dex.url(for: path), contentMode: .fit)
-                    .frame(width: w * 0.86, height: w * 0.86)
-                    .shadow(color: .rgba(0, 30, 70, 0.25), radius: 2, y: 3)
-                    .frame(width: w, height: w)
+            ZStack {
+                ForEach(frames, id: \.self) { i in
+                    one(pictures[i], width: w)
+                        .opacity(i == current ? 1 : 0)
+                }
             }
+            .frame(width: w, height: w)
         }
         .allowsHitTesting(false)
+        .task(id: "\(pictures.map(\.path).joined(separator: "|"))|\(calm)") {
+            shown = 0
+            guard cycling else { return }
+            // Web: the first change comes at (stagger × 7 mod 6) × 0.6 s + 1.8 s, then every 3.6 s.
+            let offset = Double((stagger * 7) % 6) * (Self.cycle / 6)
+            try? await Task.sleep(for: .seconds(offset + Self.cycle / 2))
+            while !Task.isCancelled {
+                withAnimation(.easeInOut(duration: Self.fade)) { shown += 1 }
+                try? await Task.sleep(for: .seconds(Self.cycle))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func one(_ p: DexPicture, width w: CGFloat) -> some View {
+        if p.isCutout {
+            StickerImage(path: p.path, url: dex.url(for: p.path), contentMode: .fit)
+                .frame(width: w * 0.9, height: w * 0.9)
+                .shadow(color: .rgba(0, 30, 70, 0.22), radius: 2.5, y: 2.5)
+                .frame(width: w, height: w)
+        } else {
+            StickerImage(path: p.path, url: dex.url(for: p.path), contentMode: .fill)
+                .frame(width: w * 0.86, height: w * 0.86)
+                .clipShape(.rect(cornerRadius: 12, style: .continuous))
+                .shadow(color: .rgba(0, 30, 70, 0.18), radius: 4, y: 3)
+                .frame(width: w, height: w)
+        }
     }
 }
 

@@ -37,6 +37,8 @@ PENDING_WEB_DEPLOY = {
     # Add an entry here as "name": "where the web patch is" when iOS calls a function ahead of its deploy.
     # storeAppleAuthCode (Sign in with Apple revocation, audit R7-03) is on the web's main now.
     # The developer "AI settings" (admin*, docs/admin-ai-api.md) are on the web's main now (PR #168).
+    # The developer's users and metrics (adminListUsers … adminGetBetaMetrics, Services/AdminAnalytics.swift) are on
+    # the web's main now (PR #178). Until the web is published they answer 404 and the screens say so.
 }
 
 
