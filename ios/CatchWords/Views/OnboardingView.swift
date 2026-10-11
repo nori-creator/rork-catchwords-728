@@ -50,8 +50,15 @@ struct OnboardingView: View {
         ("ja", L("日本語"), "日本語", "🇯🇵"), ("en", L("英語"), "English", "🇺🇸"), ("zh-TW", L("繁体字中国語"), "繁體中文", "🇹🇼"),  // l10n-ignore (autonyms)
     ] }
     static var targets: [(id: String, label: String, native: String, flag: String)] { [
-        ("zh-TW", L("台湾華語"), "臺灣華語", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸"), ("ja", L("日本語"), "日本語", "🇯🇵")  // l10n-ignore (autonyms)
+        ("zh-TW", L("繁體字（台灣）"), "繁體字（台灣）", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸"), ("ja", L("日本語"), "日本語", "🇯🇵")  // l10n-ignore (autonyms)
     ] }
+    /// The learning languages offered (only 繁體字（台灣） for now: `ProfileStore.offeredTargets`), never the display
+    /// language itself. Someone whose display language is the only offered one still gets a choice (the hidden
+    /// ones) instead of an empty step.
+    static func targetChoices(ui: String) -> [(id: String, label: String, native: String, flag: String)] {
+        let offered = targets.filter { ProfileStore.offeredTargets.contains($0.id) && $0.id != ui }
+        return offered.isEmpty ? targets.filter { $0.id != ui } : offered
+    }
 
     var body: some View {
         ZStack {
@@ -153,7 +160,9 @@ struct OnboardingView: View {
                 ForEach(Self.uiLanguages, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native == l.label ? nil : l.native, isOn: uiLanguage == l.id) {
                         uiLanguage = l.id
-                        if targetLanguage == l.id { targetLanguage = Self.targets.first { $0.id != l.id }?.id ?? "zh-TW" }
+                        if !Self.targetChoices(ui: l.id).contains(where: { $0.id == targetLanguage }) {
+                            targetLanguage = Self.targetChoices(ui: l.id).first?.id ?? "zh-TW"
+                        }
                         withAnimation(.easeInOut(duration: 0.25)) { L10n.set(l.id) }
                     }
                 }
@@ -161,8 +170,8 @@ struct OnboardingView: View {
         case 1:
             VStack(spacing: 10) {
                 // Your own language is not offered as the one to learn (web l1ChoicesFor).
-                ForEach(Self.targets.filter { $0.id != uiLanguage }, id: \.id) { l in
-                    ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native, isOn: targetLanguage == l.id) {
+                ForEach(Self.targetChoices(ui: uiLanguage), id: \.id) { l in
+                    ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native == l.label ? nil : l.native, isOn: targetLanguage == l.id) {
                         targetLanguage = l.id
                     }
                 }
@@ -317,13 +326,15 @@ struct OnboardingView: View {
                 Section(L("言語")) {
                     Picker(L("表示言語"), selection: Binding(get: { uiLanguage }, set: { picked in
                         uiLanguage = picked
-                        if targetLanguage == picked { targetLanguage = Self.targets.first { $0.id != picked }?.id ?? "zh-TW" }
+                        if !Self.targetChoices(ui: picked).contains(where: { $0.id == targetLanguage }) {
+                            targetLanguage = Self.targetChoices(ui: picked).first?.id ?? "zh-TW"
+                        }
                         L10n.set(picked)
                     })) {
                         ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
                     }
                     Picker(L("学ぶ言語"), selection: $targetLanguage) {
-                        ForEach(Self.targets.filter { $0.id != uiLanguage }, id: \.id) { Text($0.label).tag($0.id) }
+                        ForEach(Self.targetChoices(ui: uiLanguage), id: \.id) { Text($0.label).tag($0.id) }
                     }
                     // The same choices as 設定 › 発音表記 for each learning language (English has none).
                     if targetLanguage == "zh-TW" {

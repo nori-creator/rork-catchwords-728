@@ -39,6 +39,8 @@ PENDING_WEB_DEPLOY = {
     # The developer "AI settings" (admin*, docs/admin-ai-api.md) are on the web's main now (PR #168).
     # Speed and accuracy by model, the fixed-photo test and the candidate rank log are on the web's main now
     # (PR #176).
+    # The developer's users and metrics (adminListUsers … adminGetBetaMetrics, Services/AdminAnalytics.swift) are on
+    # the web's main now (PR #178). Until the web is published they answer 404 and the screens say so.
 }
 
 

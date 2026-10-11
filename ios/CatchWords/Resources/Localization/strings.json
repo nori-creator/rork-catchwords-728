@@ -3470,5 +3470,873 @@
  "チュートリアルのレッスン": {
   "en": "Tutorial lesson",
   "zh-TW": "教學的課程"
+ },
+ "AIへのデータ送信": {
+  "en": "Sending data to AI",
+  "zh-TW": "將資料傳送給 AI"
+ },
+ "写真・調べた単語・入力した文章を、外部のAIサービス（Google など）に送ってよいかの設定です。": {
+  "en": "Whether your photos, the words you look up and the text you type may be sent to external AI services (such as Google).",
+  "zh-TW": "是否允許將照片、查詢的單字與輸入的文字傳送給外部 AI 服務（例如 Google）。"
+ },
+ "同意しています（{1}）": {
+  "en": "You agreed ({1})",
+  "zh-TW": "已同意（{1}）"
+ },
+ "同意していません。AI を使う機能は止まっています。": {
+  "en": "You haven't agreed. Features that use AI are turned off.",
+  "zh-TW": "尚未同意。使用 AI 的功能目前已停用。"
+ },
+ "取り消す": {
+  "en": "Withdraw",
+  "zh-TW": "撤回"
+ },
+ "同意を取り消しました": {
+  "en": "Consent withdrawn",
+  "zh-TW": "已撤回同意"
+ },
+ "AIへのデータ送信に同意しました": {
+  "en": "You agreed to send data to AI",
+  "zh-TW": "已同意將資料傳送給 AI"
+ },
+ "規約と表記": {
+  "en": "Legal",
+  "zh-TW": "條款與標示"
+ },
+ "開発者専用（あなたにしか表示されません）": {
+  "en": "Developer only (visible to you alone)",
+  "zh-TW": "開發者專用（只有你看得到）"
+ },
+ "利用者ごとの情報": {
+  "en": "Per-user details",
+  "zh-TW": "各使用者的資訊"
+ },
+ "KPIダッシュボード": {
+  "en": "KPI dashboard",
+  "zh-TW": "KPI 儀表板"
+ },
+ "ベータの指標": {
+  "en": "Beta metrics",
+  "zh-TW": "Beta 指標"
+ },
+ "アプリの情報": {
+  "en": "App details",
+  "zh-TW": "App 的資訊"
+ },
+ "ホームに表示する写真": {
+  "en": "Photo shown on Home",
+  "zh-TW": "首頁顯示的照片"
+ },
+ "配置を変える": {
+  "en": "Rearrange",
+  "zh-TW": "調整位置"
+ },
+ "アルバムから外す": {
+  "en": "Remove from album",
+  "zh-TW": "從相簿移除"
+ },
+ "読み込めませんでした": {
+  "en": "Couldn't load",
+  "zh-TW": "無法載入"
+ },
+ "この画面に使うサーバの機能がまだありません。Web版の更新（Publish）が必要です。": {
+  "en": "The server doesn't have what this screen needs yet. The web app needs to be updated (Publish).",
+  "zh-TW": "伺服器還沒有這個畫面需要的功能。需要更新網頁版（Publish）。"
+ },
+ "このアカウントは管理者ではありません。": {
+  "en": "This account is not an admin.",
+  "zh-TW": "這個帳號不是管理者。"
+ },
+ "記録なし": {
+  "en": "No record",
+  "zh-TW": "沒有紀錄"
+ },
+ "たった今": {
+  "en": "Just now",
+  "zh-TW": "剛剛"
+ },
+ "{1}分前": {
+  "en": "{1} min ago",
+  "zh-TW": "{1} 分鐘前"
+ },
+ "{1}時間前": {
+  "en": "{1} h ago",
+  "zh-TW": "{1} 小時前"
+ },
+ "{1}日前": {
+  "en": "{1} days ago",
+  "zh-TW": "{1} 天前"
+ },
+ "{1}か月前": {
+  "en": "{1} mo ago",
+  "zh-TW": "{1} 個月前"
+ },
+ "合計 {1}": {
+  "en": "Total {1}",
+  "zh-TW": "合計 {1}"
+ },
+ "登録": {
+  "en": "Sign-ups",
+  "zh-TW": "註冊"
+ },
+ "オンボ完了": {
+  "en": "Onboarded",
+  "zh-TW": "完成引導"
+ },
+ "初スキャン": {
+  "en": "First scan",
+  "zh-TW": "第一次掃描"
+ },
+ "初キャッチ": {
+  "en": "First catch",
+  "zh-TW": "第一次捕捉"
+ },
+ "D1継続": {
+  "en": "D1 retention",
+  "zh-TW": "D1 留存"
+ },
+ "ファネル(累計)": {
+  "en": "Funnel (all time)",
+  "zh-TW": "漏斗（累計）"
+ },
+ "目標(β): 初キャッチ到達 ≥80% / D1 ≥40%": {
+  "en": "Beta targets: first catch ≥80% / D1 ≥40%",
+  "zh-TW": "Beta 目標：第一次捕捉 ≥80% / D1 ≥40%"
+ },
+ "日次(直近14日)": {
+  "en": "Daily (last 14 days)",
+  "zh-TW": "每日（最近 14 天）"
+ },
+ "まだデータがありません": {
+  "en": "No data yet",
+  "zh-TW": "還沒有資料"
+ },
+ "アクティブ": {
+  "en": "Active",
+  "zh-TW": "活躍"
+ },
+ "キャッチ": {
+  "en": "Catches",
+  "zh-TW": "捕捉"
+ },
+ "スキャン": {
+  "en": "Scan",
+  "zh-TW": "掃描"
+ },
+ "タップ": {
+  "en": "Taps",
+  "zh-TW": "點擊"
+ },
+ "復習添削": {
+  "en": "Speaking reviews",
+  "zh-TW": "複習批改"
+ },
+ "登録前のチュートリアルは、日ごとの段の数だけを数えます（写真・語・メール・IP は集めません）。人数・費用は匿名の口座と管理者を除いた数です。": {
+  "en": "The pre-signup tutorial is counted only as daily step totals (no photos, words, emails or IPs). User counts and costs exclude anonymous accounts and admins.",
+  "zh-TW": "註冊前的教學只記錄每天各步驟的次數（不收集照片、單字、電子郵件或 IP）。人數與費用不含匿名帳號與管理者。"
+ },
+ "期間": {
+  "en": "Period",
+  "zh-TW": "期間"
+ },
+ "{1}日": {
+  "en": "{1} days",
+  "zh-TW": "{1} 天"
+ },
+ "行が多すぎて一部を読み切れていません（数は少なめに出ています）。": {
+  "en": "Some tables hit the read limit; numbers may be undercounted.",
+  "zh-TW": "部分資料超過讀取上限，數字可能偏低。"
+ },
+ "待ち時間（p50 / p90 / p99）": {
+  "en": "Latency (p50 / p90 / p99)",
+  "zh-TW": "等待時間（p50 / p90 / p99）"
+ },
+ "登録した人の実機の計測。平均ではなく順位で見ます。n が少ない間は p99 は最大値とほぼ同じです。": {
+  "en": "Measured on members' devices. Percentiles, not averages. With small n, p99 is close to the maximum.",
+  "zh-TW": "會員裝置上的實測。以百分位而非平均值呈現。n 少時 p99 接近最大值。"
+ },
+ "候補の当たり方（写真の候補）": {
+  "en": "Candidate accuracy (photo candidates)",
+  "zh-TW": "候選字命中率（照片候選）"
+ },
+ "母語で調べ直した": {
+  "en": "Native-language re-search",
+  "zh-TW": "改用母語搜尋"
+ },
+ "選んだ回": {
+  "en": "Picks",
+  "zh-TW": "選擇次數"
+ },
+ "撮影 → 候補が並ぶ": {
+  "en": "Shutter → candidates shown",
+  "zh-TW": "拍照 → 顯示候選字"
+ },
+ "候補を選ぶ → 意味が出る": {
+  "en": "Candidate picked → meaning shown",
+  "zh-TW": "選擇候選字 → 顯示意思"
+ },
+ "発音を頼む → 最初の音": {
+  "en": "Pronunciation asked → first sound",
+  "zh-TW": "要求發音 → 第一個聲音"
+ },
+ "図鑑に追加 → 保存完了": {
+  "en": "Add to dex → saved",
+  "zh-TW": "加入圖鑑 → 儲存完成"
+ },
+ "登録 → 最初のキャッチ → 最初の復習": {
+  "en": "Signup → first catch → first review",
+  "zh-TW": "註冊 → 第一次捕捉 → 第一次複習"
+ },
+ "最初のキャッチ": {
+  "en": "First catch",
+  "zh-TW": "第一次捕捉"
+ },
+ "最初の復習": {
+  "en": "First review",
+  "zh-TW": "第一次複習"
+ },
+ "{1}（{2}人中） · 以降 {3}": {
+  "en": "{1} (of {2}) · or later {3}",
+  "zh-TW": "{1}（{2} 人中） · 之後 {3}"
+ },
+ "継続（登録日ごと）": {
+  "en": "Retention (by signup day)",
+  "zh-TW": "留存（依註冊日）"
+ },
+ "D1/D7/D30 = ちょうどその日に使った人の割合。「以降」は、その日以降のどこかで戻った割合。": {
+  "en": "D1/D7/D30 = share active exactly on that day. \"Or later\" = share who came back on or after that day.",
+  "zh-TW": "D1/D7/D30 = 剛好在當天使用的比例。「之後」= 當天或之後回來的比例。"
+ },
+ "North-star: 覚えている語 / 週": {
+  "en": "North-star: words retained / week",
+  "zh-TW": "北極星：每週記得的單字"
+ },
+ "使った人 {1} · 覚えている語 {2} · 1人あたり {3} · AI {4}/人": {
+  "en": "Active {1} · retained {2} · per user {3} · AI {4}/user",
+  "zh-TW": "活躍 {1} · 記得的單字 {2} · 每人 {3} · AI {4}/人"
+ },
+ "使い方（週ごと）": {
+  "en": "Engagement (weekly)",
+  "zh-TW": "使用情況（每週）"
+ },
+ "使った人 {1} · 撮影 / 人 {2} · 復習 / 人 {3} · 復習1回 {4}分": {
+  "en": "Active {1} · catches/user {2} · reviews/user {3} · review session {4} min",
+  "zh-TW": "活躍 {1} · 捕捉/人 {2} · 複習/人 {3} · 單次複習 {4} 分"
+ },
+ "アクティブ1人あたり / 月（推定）": {
+  "en": "Per active user / month (est.)",
+  "zh-TW": "每位活躍使用者 / 月（估算）"
+ },
+ "30日の推定費用": {
+  "en": "30-day estimated cost",
+  "zh-TW": "30 天估算費用"
+ },
+ "30日のアクティブ人数": {
+  "en": "30-day active users",
+  "zh-TW": "30 天活躍人數"
+ },
+ "うち登録前（チュートリアル）": {
+  "en": "of which pre-signup (tutorial)",
+  "zh-TW": "其中註冊前（教學）"
+ },
+ "日ごとの推定費用（米ドル）": {
+  "en": "Daily estimated cost (USD)",
+  "zh-TW": "每日估算費用（美元）"
+ },
+ "{1}回": {
+  "en": "{1} times",
+  "zh-TW": "{1} 次"
+ },
+ "除外した管理者の分": {
+  "en": "Excluded admin usage",
+  "zh-TW": "已排除的管理者用量"
+ },
+ "AI・音声の費用（推定）": {
+  "en": "AI / voice cost (estimate)",
+  "zh-TW": "AI／語音費用（估算）"
+ },
+ "推定です。呼び出し回数 × 仮の単価。正確な額は各サービスの請求で確かめてください。管理者の分は除いています。": {
+  "en": "Estimate only: call counts × assumed unit costs. Check each provider's bill for real amounts. Admin usage is excluded.",
+  "zh-TW": "僅為估算：呼叫次數 × 假設單價。實際金額請以各服務的帳單為準。不含管理者的用量。"
+ },
+ "（名前なし）": {
+  "en": "(no name)",
+  "zh-TW": "（沒有名字）"
+ },
+ "最後に使った": {
+  "en": "Last used",
+  "zh-TW": "最後使用"
+ },
+ "撮った語": {
+  "en": "Words caught",
+  "zh-TW": "拍下的單字"
+ },
+ "この30日 {1}語": {
+  "en": "{1} words in 30 days",
+  "zh-TW": "最近 30 天 {1} 個字"
+ },
+ "続けた日（今）": {
+  "en": "Current streak",
+  "zh-TW": "目前連續天數"
+ },
+ "最長 {1}日": {
+  "en": "Best {1} days",
+  "zh-TW": "最長 {1} 天"
+ },
+ "復習の正答率": {
+  "en": "Review accuracy",
+  "zh-TW": "複習正確率"
+ },
+ "直近180日 {1}回": {
+  "en": "{1} in the last 180 days",
+  "zh-TW": "最近 180 天 {1} 次"
+ },
+ "日ごとの動き": {
+  "en": "Daily activity",
+  "zh-TW": "每日動態"
+ },
+ "復習した回数": {
+  "en": "Reviews",
+  "zh-TW": "複習次數"
+ },
+ "正答率 {1}": {
+  "en": "Accuracy {1}",
+  "zh-TW": "正確率 {1}"
+ },
+ "アプリを開いた回数": {
+  "en": "App opens",
+  "zh-TW": "開啟 App 次數"
+ },
+ "使った時間（分）": {
+  "en": "Time used (min)",
+  "zh-TW": "使用時間（分）"
+ },
+ "札の数": {
+  "en": "Cards",
+  "zh-TW": "卡片數"
+ },
+ "いま期限": {
+  "en": "Due now",
+  "zh-TW": "現在到期"
+ },
+ "定着（間隔21日以上）": {
+  "en": "Mature (interval ≥21 days)",
+  "zh-TW": "已熟記（間隔 21 天以上）"
+ },
+ "この30日": {
+  "en": "Last 30 days",
+  "zh-TW": "最近 30 天"
+ },
+ "答えるまで（中央値）": {
+  "en": "Time to answer (median)",
+  "zh-TW": "作答時間（中位數）"
+ },
+ "正答率（180日）": {
+  "en": "Accuracy (180 days)",
+  "zh-TW": "正確率（180 天）"
+ },
+ "いまの記憶の段（札の数）": {
+  "en": "Memory levels now (cards)",
+  "zh-TW": "目前的記憶程度（卡片數）"
+ },
+ "復習の予定（これから14日）": {
+  "en": "Review schedule (next 14 days)",
+  "zh-TW": "複習預定（接下來 14 天）"
+ },
+ "期限切れ": {
+  "en": "Overdue",
+  "zh-TW": "已過期"
+ },
+ "使い方（直近180日）": {
+  "en": "Usage (last 180 days)",
+  "zh-TW": "使用情況（最近 180 天）"
+ },
+ "開いた日": {
+  "en": "Days opened",
+  "zh-TW": "開啟天數"
+ },
+ "1回の滞在（中央値）": {
+  "en": "Session length (median)",
+  "zh-TW": "單次停留（中位數）"
+ },
+ "{1}分 · {2}回 · 計{3}分": {
+  "en": "{1} min · {2} sessions · {3} min total",
+  "zh-TW": "{1} 分 · {2} 次 · 共 {3} 分"
+ },
+ "{1}回 · 報告 {2}回": {
+  "en": "{1} times · {2} reports",
+  "zh-TW": "{1} 次 · 回報 {2} 次"
+ },
+ "開く時間帯（台湾時間）": {
+  "en": "Hours opened (Taiwan time)",
+  "zh-TW": "開啟時段（台灣時間）"
+ },
+ "開く曜日": {
+  "en": "Days of the week opened",
+  "zh-TW": "開啟的星期"
+ },
+ "1回の滞在の長さ": {
+  "en": "Session lengths",
+  "zh-TW": "單次停留時間"
+ },
+ "離れる直前にいた画面": {
+  "en": "Last screen before leaving",
+  "zh-TW": "離開前所在的畫面"
+ },
+ "写真の保存の失敗": {
+  "en": "Photo save failures",
+  "zh-TW": "照片儲存失敗"
+ },
+ "撮影 {1}回、再会 {2}回、登録前の1枚 {3}回": {
+  "en": "Catch {1}, re-encounter {2}, pre-signup photo {3}",
+  "zh-TW": "拍攝 {1} 次、重逢 {2} 次、註冊前的照片 {3} 次"
+ },
+ "裏の処理の失敗": {
+  "en": "Background failures",
+  "zh-TW": "背景處理失敗"
+ },
+ "発音 {1} · 写真 {2} · 縮小 {3} · 採点 {4} · 最初の分析 {5}": {
+  "en": "Voice {1} · photo {2} · thumbnail {3} · grading {4} · first analysis {5}",
+  "zh-TW": "發音 {1} · 照片 {2} · 縮圖 {3} · 評分 {4} · 第一次分析 {5}"
+ },
+ "撮った単語": {
+  "en": "Caught words",
+  "zh-TW": "拍下的單字"
+ },
+ "合計": {
+  "en": "Total",
+  "zh-TW": "合計"
+ },
+ "最初": {
+  "en": "First",
+  "zh-TW": "第一次"
+ },
+ "最後": {
+  "en": "Last",
+  "zh-TW": "最後一次"
+ },
+ "よく撮る場所（地名まで）": {
+  "en": "Frequent places (place names only)",
+  "zh-TW": "常拍的地點（只到地名）"
+ },
+ "撮り方": {
+  "en": "Capture types",
+  "zh-TW": "拍攝方式"
+ },
+ "最近の語": {
+  "en": "Recent words",
+  "zh-TW": "最近的單字"
+ },
+ "合計（記録のある分）": {
+  "en": "Total (recorded)",
+  "zh-TW": "合計（有紀錄的部分）"
+ },
+ "約 {1}": {
+  "en": "About {1}",
+  "zh-TW": "約 {1}"
+ },
+ "AI の呼び出し（日ごと・30日）": {
+  "en": "AI calls (daily, 30 days)",
+  "zh-TW": "AI 呼叫（每日，30 天）"
+ },
+ "記録のあるトークン": {
+  "en": "Recorded tokens",
+  "zh-TW": "有紀錄的 token"
+ },
+ "入力 {1} / 出力 {2}": {
+  "en": "In {1} / out {2}",
+  "zh-TW": "輸入 {1} / 輸出 {2}"
+ },
+ "AI の費用（概算）": {
+  "en": "AI cost (estimate)",
+  "zh-TW": "AI 費用（概算）"
+ },
+ "呼び出し回数 × 仮の単価。正確な額は各 AI の管理画面で確かめてください。": {
+  "en": "Call counts × assumed unit costs. Check each AI provider's console for exact amounts.",
+  "zh-TW": "呼叫次數 × 假設單價。確切金額請到各 AI 的管理畫面確認。"
+ },
+ "速さ（直近180日）": {
+  "en": "Speed (last 180 days)",
+  "zh-TW": "速度（最近 180 天）"
+ },
+ "スキャン回数": {
+  "en": "Scans",
+  "zh-TW": "掃描次數"
+ },
+ "見つけるまで（中央値）": {
+  "en": "Time to detect (median)",
+  "zh-TW": "偵測時間（中位數）"
+ },
+ "押して音が出るまで": {
+  "en": "Tap → sound",
+  "zh-TW": "點擊到發出聲音"
+ },
+ "スキャン→図鑑に入るまで": {
+  "en": "Scan → in the dex",
+  "zh-TW": "掃描到加入圖鑑"
+ },
+ "候補を押した割合": {
+  "en": "Candidate tap rate",
+  "zh-TW": "點擊候選字的比例"
+ },
+ "撮った語（合計）": {
+  "en": "Words caught (total)",
+  "zh-TW": "拍下的單字（合計）"
+ },
+ "撮った語（30日）": {
+  "en": "Words caught (30 days)",
+  "zh-TW": "拍下的單字（30 天）"
+ },
+ "復習（30日）": {
+  "en": "Reviews (30 days)",
+  "zh-TW": "複習（30 天）"
+ },
+ "開いた日（30日）": {
+  "en": "Days opened (30 days)",
+  "zh-TW": "開啟天數（30 天）"
+ },
+ "ほかの利用者と比べて（{1}人の中）": {
+  "en": "Compared with other users ({1} users)",
+  "zh-TW": "與其他使用者比較（{1} 人中）"
+ },
+ "{1} / 中央値 {2} · 上位 {3}": {
+  "en": "{1} / median {2} · top {3}",
+  "zh-TW": "{1} / 中位數 {2} · 前 {3}"
+ },
+ "1日の復習数": {
+  "en": "Daily reviews",
+  "zh-TW": "每日複習數"
+ },
+ "プラン": {
+  "en": "Plan",
+  "zh-TW": "方案"
+ },
+ "初回設定済み": {
+  "en": "Onboarded",
+  "zh-TW": "已完成初次設定"
+ },
+ "登録日": {
+  "en": "Signed up",
+  "zh-TW": "註冊日"
+ },
+ "はい": {
+  "en": "Yes",
+  "zh-TW": "是"
+ },
+ "いいえ": {
+  "en": "No",
+  "zh-TW": "否"
+ },
+ "1分未満": {
+  "en": "Under 1 min",
+  "zh-TW": "不到 1 分"
+ },
+ "1〜3分": {
+  "en": "1–3 min",
+  "zh-TW": "1–3 分"
+ },
+ "3〜5分": {
+  "en": "3–5 min",
+  "zh-TW": "3–5 分"
+ },
+ "5〜10分": {
+  "en": "5–10 min",
+  "zh-TW": "5–10 分"
+ },
+ "10〜20分": {
+  "en": "10–20 min",
+  "zh-TW": "10–20 分"
+ },
+ "20〜30分": {
+  "en": "20–30 min",
+  "zh-TW": "20–30 分"
+ },
+ "30分以上": {
+  "en": "30 min or more",
+  "zh-TW": "30 分以上"
+ },
+ "撮る": {
+  "en": "Capture",
+  "zh-TW": "拍攝"
+ },
+ "スキャン（物を見つける）": {
+  "en": "Scan (find objects)",
+  "zh-TW": "掃描（找出物品）"
+ },
+ "スキャン（部分）": {
+  "en": "Scan (parts)",
+  "zh-TW": "掃描（部分）"
+ },
+ "候補の提案": {
+  "en": "Candidate suggestions",
+  "zh-TW": "候選字建議"
+ },
+ "単語の解説": {
+  "en": "Word explanations",
+  "zh-TW": "單字解說"
+ },
+ "フレーズの解説": {
+  "en": "Phrase explanations",
+  "zh-TW": "片語解說"
+ },
+ "話す練習の評価": {
+  "en": "Speaking feedback",
+  "zh-TW": "口說練習評分"
+ },
+ "添削": {
+  "en": "Corrections",
+  "zh-TW": "批改"
+ },
+ "日記のお題": {
+  "en": "Diary prompts",
+  "zh-TW": "日記題目"
+ },
+ "単語帳": {
+  "en": "Wordbook",
+  "zh-TW": "單字本"
+ },
+ "クエスト": {
+  "en": "Quests",
+  "zh-TW": "任務"
+ },
+ "発音の音声": {
+  "en": "Pronunciation audio",
+  "zh-TW": "發音語音"
+ },
+ "発音の作り置き": {
+  "en": "Pronunciation pre-generation",
+  "zh-TW": "預先產生發音"
+ },
+ "見せるのは改善に要る数字だけです。メールアドレス、正確な位置（緯度経度）、写真、日記や一言の本文は出しません。": {
+  "en": "Only the numbers needed to improve the app are shown. Email addresses, exact locations (coordinates), photos, diary entries and notes are never shown.",
+  "zh-TW": "只顯示改善所需的數字。不會顯示電子郵件、精確位置（經緯度）、照片、日記或一句話的內容。"
+ },
+ "全体": {
+  "en": "Overall",
+  "zh-TW": "整體"
+ },
+ "ひとりずつ": {
+  "en": "Each user",
+  "zh-TW": "每位使用者"
+ },
+ "最後に使った順（開いた・撮った・復習した、のいちばん新しい時刻）。": {
+  "en": "Ordered by last use (the latest of opening, catching or reviewing).",
+  "zh-TW": "依最後使用排序（開啟、拍攝、複習中最新的時間）。"
+ },
+ "名前 または ID の頭": {
+  "en": "Name or start of ID",
+  "zh-TW": "名字或 ID 開頭"
+ },
+ "利用者": {
+  "en": "Users",
+  "zh-TW": "使用者"
+ },
+ "この7日で +{1}": {
+  "en": "+{1} in 7 days",
+  "zh-TW": "最近 7 天 +{1}"
+ },
+ "今日使った人": {
+  "en": "Active today",
+  "zh-TW": "今天使用的人"
+ },
+ "7日 {1} · 30日 {2}": {
+  "en": "7 days {1} · 30 days {2}",
+  "zh-TW": "7 天 {1} · 30 天 {2}"
+ },
+ "撮った語（全体）": {
+  "en": "Words caught (all)",
+  "zh-TW": "拍下的單字（全體）"
+ },
+ "復習 30日 {1}回": {
+  "en": "{1} reviews in 30 days",
+  "zh-TW": "30 天複習 {1} 次"
+ },
+ "使った人（日ごと）": {
+  "en": "Active users (daily)",
+  "zh-TW": "使用人數（每日）"
+ },
+ "撮った語（日ごと）": {
+  "en": "Words caught (daily)",
+  "zh-TW": "拍下的單字（每日）"
+ },
+ "新しく登録した人": {
+  "en": "New sign-ups",
+  "zh-TW": "新註冊的人"
+ },
+ "続けて使っている割合（登録から N 日後にも使った人）": {
+  "en": "Retention (used again N days after signing up)",
+  "zh-TW": "持續使用比例（註冊 N 天後仍使用的人）"
+ },
+ "翌日": {
+  "en": "Next day",
+  "zh-TW": "隔天"
+ },
+ "7日後": {
+  "en": "After 7 days",
+  "zh-TW": "7 天後"
+ },
+ "30日後": {
+  "en": "After 30 days",
+  "zh-TW": "30 天後"
+ },
+ "1人あたりの撮った語（分布）": {
+  "en": "Words caught per user (distribution)",
+  "zh-TW": "每人拍下的單字（分布）"
+ },
+ "中央値: 撮った語 {1} · 復習(30日) {2}回 · 開いた日(30日) {3}日": {
+  "en": "Median: words {1} · reviews (30 days) {2} · days opened (30 days) {3}",
+  "zh-TW": "中位數：單字 {1} · 複習（30 天）{2} 次 · 開啟天數（30 天）{3} 天"
+ },
+ "学習言語 · プラン": {
+  "en": "Learning language · plan",
+  "zh-TW": "學習語言 · 方案"
+ },
+ "{1}人中": {
+  "en": "of {1}",
+  "zh-TW": "{1} 人中"
+ },
+ "名前のない{1}人は出していません（全体の数には入っています）。": {
+  "en": "{1} users without a name are not listed (they are in the totals).",
+  "zh-TW": "沒有名字的 {1} 人不列出（已計入整體數字）。"
+ },
+ "該当する人はいません。": {
+  "en": "No matching users.",
+  "zh-TW": "沒有符合的人。"
+ },
+ "{1} · 登録 {2} · {3} · {4}": {
+  "en": "{1} · joined {2} · {3} · {4}",
+  "zh-TW": "{1} · 註冊 {2} · {3} · {4}"
+ },
+ "アプリ": {
+  "en": "App",
+  "zh-TW": "App"
+ },
+ "バージョン": {
+  "en": "Version",
+  "zh-TW": "版本"
+ },
+ "ビルド": {
+  "en": "Build",
+  "zh-TW": "組建"
+ },
+ "バンドル ID": {
+  "en": "Bundle ID",
+  "zh-TW": "Bundle ID"
+ },
+ "入れ方": {
+  "en": "Installed from",
+  "zh-TW": "安裝來源"
+ },
+ "端末": {
+  "en": "Device",
+  "zh-TW": "裝置"
+ },
+ "機種": {
+  "en": "Model",
+  "zh-TW": "機型"
+ },
+ "画面": {
+  "en": "Screen",
+  "zh-TW": "螢幕"
+ },
+ "端末の言語": {
+  "en": "Device language",
+  "zh-TW": "裝置語言"
+ },
+ "タイムゾーン": {
+  "en": "Time zone",
+  "zh-TW": "時區"
+ },
+ "アカウント": {
+  "en": "Account",
+  "zh-TW": "帳號"
+ },
+ "ユーザー ID": {
+  "en": "User ID",
+  "zh-TW": "使用者 ID"
+ },
+ "コピー": {
+  "en": "Copy",
+  "zh-TW": "複製"
+ },
+ "同意済み": {
+  "en": "Agreed",
+  "zh-TW": "已同意"
+ },
+ "未同意": {
+  "en": "Not agreed",
+  "zh-TW": "未同意"
+ },
+ "管理者": {
+  "en": "Admin",
+  "zh-TW": "管理者"
+ },
+ "サーバ": {
+  "en": "Servers",
+  "zh-TW": "伺服器"
+ },
+ "Web版": {
+  "en": "Web app",
+  "zh-TW": "網頁版"
+ },
+ "データベース": {
+  "en": "Database",
+  "zh-TW": "資料庫"
+ },
+ "AI の状態": {
+  "en": "AI status",
+  "zh-TW": "AI 狀態"
+ },
+ "図鑑の語（この学習言語）": {
+  "en": "Dex words (this learning language)",
+  "zh-TW": "圖鑑的單字（這個學習語言）"
+ },
+ "再会の写真": {
+  "en": "Re-encounter photos",
+  "zh-TW": "重逢的照片"
+ },
+ "切り抜きのない写真": {
+  "en": "Photos without a cut-out",
+  "zh-TW": "沒有去背的照片"
+ },
+ "今日の復習（読み込み済み）": {
+  "en": "Today's review (loaded)",
+  "zh-TW": "今天的複習（已載入）"
+ },
+ "端末に保存した画像": {
+  "en": "Pictures kept on this device",
+  "zh-TW": "存在裝置上的圖片"
+ },
+ "端末に保存した発音": {
+  "en": "Voices kept on this device",
+  "zh-TW": "存在裝置上的發音"
+ },
+ "図鑑の控え": {
+  "en": "Dex copy",
+  "zh-TW": "圖鑑的備份"
+ },
+ "この端末のデータ": {
+  "en": "Data on this device",
+  "zh-TW": "這台裝置的資料"
+ },
+ "画像・発音・図鑑の控えは、すぐ表示するために端末に保存しています。サインアウトすると消えます。": {
+  "en": "Pictures, voices and a copy of the dex are kept on this device so they show at once. Signing out removes them.",
+  "zh-TW": "圖片、發音與圖鑑的備份存在裝置上，以便立即顯示。登出後會刪除。"
+ },
+ "確かめられませんでした": {
+  "en": "Couldn't check",
+  "zh-TW": "無法確認"
+ },
+ "動いています（{1}）": {
+  "en": "Working ({1})",
+  "zh-TW": "運作中（{1}）"
+ },
+ "動いていません": {
+  "en": "Not working",
+  "zh-TW": "沒有運作"
+ },
+ "開発用ビルド": {
+  "en": "Development build",
+  "zh-TW": "開發用組建"
  }
 }

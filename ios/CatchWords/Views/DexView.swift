@@ -509,12 +509,14 @@ extension Sticker {
     nonisolated var dexShowsCutout: Bool { cutoutImageUrl != nil }
 }
 
-/// A dex picture inside a frame: the cut-out whole (fit, `inset` of air around it) or the photo filling it.
+/// A dex picture: the cut-out whole (fit, `inset` of air around it, on nothing) or the photo filling its square,
+/// rounded by `cornerRadius` (no tile or frame behind either, owner 2026-10-11).
 struct DexThumb: View {
     @Environment(DexStore.self) private var dex
     let sticker: Sticker
     var inset: CGFloat = 4
     var preferThumb: Bool = true
+    var cornerRadius: CGFloat = 0
 
     var body: some View {
         let path = sticker.dexImagePath
@@ -522,7 +524,9 @@ struct DexThumb: View {
             StickerImage(path: path, url: dex.url(for: path, preferThumb: preferThumb), contentMode: .fit)
                 .padding(inset)
         } else {
-            StickerImage(path: path, url: dex.url(for: path, preferThumb: preferThumb), contentMode: .fill)
+            Color.clear
+                .overlay { StickerImage(path: path, url: dex.url(for: path, preferThumb: preferThumb), contentMode: .fill) }
+                .clipShape(.rect(cornerRadius: cornerRadius, style: .continuous))
         }
     }
 }
@@ -586,9 +590,10 @@ struct DexListRow: View {
         HStack(spacing: 12) {
             Button(action: onOpen) {
                 HStack(spacing: 14) {
-                    Theme.secondary.frame(width: 60, height: 60)
-                        .overlay { DexThumb(sticker: sticker).allowsHitTesting(false) }
-                        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+                    DexThumb(sticker: sticker, inset: 2, cornerRadius: 14)
+                        .frame(width: 60, height: 60)
+                        .shadow(color: .black.opacity(sticker.dexShowsCutout ? 0.16 : 0.08), radius: 3, y: 2)
+                        .allowsHitTesting(false)
                         .detailZoomSource(sticker.id)
                     VStack(alignment: .leading, spacing: 4) {
                         DexFitWidth {
@@ -846,9 +851,9 @@ struct DexMapView: View {
                                     }
                                 } label: {
                                     HStack(spacing: 14) {
-                                        Theme.secondary.frame(width: 64, height: 64)
-                                            .overlay { DexThumb(sticker: s).allowsHitTesting(false) }
-                                            .clipShape(.rect(cornerRadius: 16, style: .continuous))
+                                        DexThumb(sticker: s, inset: 2, cornerRadius: 14)
+                                            .frame(width: 64, height: 64)
+                                            .allowsHitTesting(false)
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
                                                 .lineLimit(1).minimumScaleFactor(0.45)

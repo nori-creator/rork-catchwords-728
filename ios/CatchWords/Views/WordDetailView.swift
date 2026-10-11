@@ -15,8 +15,6 @@ struct WordDetailView: View {
     @State private var takingSelfie: Bool = false
     @State private var isAddingSelfie: Bool = false
     @State private var autoplayed: String = ""
-    @State private var isCutting: Bool = false
-    @State private var cutoutMessage: String?
     @State private var prefs: CardPrefsStore = .shared
     @State private var showSections: Bool = false
     @State private var editingHead: Bool = false
@@ -26,14 +24,16 @@ struct WordDetailView: View {
     @State private var confirmDelete: Bool = false
     @State private var showSelfie: Bool = false
     @State private var flipAngle: Double = 0
-    /// The front shows the cut-out wherever the word has one (owner 2026-10-09); the scissors button swaps.
+    /// The front shows the cut-out wherever the word has one (owner 2026-10-09 / 2026-10-11); a choice made in the
+    /// long-press picker (元の写真) swaps it for this visit.
     @State private var showCutout: Bool = true
+    /// The cut-out's width ÷ height once it is drawn: the hero takes the cut-out's own shape (no empty box above
+    /// and below it, owner 2026-10-11: 「単語の詳細のページの上の余白なくして」).
+    @State private var cutoutRatio: CGFloat?
     /// The original photo, full screen (a tap on the picture).
     @State private var showingOriginal: Bool = false
     @State private var pickingHero: Bool = false
-    @State private var showCurve: Bool = false
     @State private var refreshing: Set<CardSection> = []
-    @State private var curveStore = ReviewStore()
     @State private var editingCaption: Bool = false
     @State private var captionDraft: String = ""
     /// Sections being filled by the server right now (web AutoFillSections).
@@ -43,7 +43,6 @@ struct WordDetailView: View {
     @State private var isFixing: Bool = false
     /// A report or 「作り直す」 without the AI consent: the consent sheet instead (nothing is sent).
     @State private var askAIConsent: Bool = false
-    @State private var newPhoto: PhotosPickerItem?
     @State private var isReplacing: Bool = false
     /// Photos of this word from later encounters, paged in the hero by swiping (page 0 = the main picture).
     @State private var laterPhotos: [StickerPhoto] = []
@@ -72,11 +71,10 @@ struct WordDetailView: View {
             topBar
             ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     if !photos.isEmpty { photoHero }
                     metaCard
                     heroCard
-                    if current.cutoutImageUrl == nil, current.objectImageUrl != nil { cutoutRow }
                     EncounterHistoryView(stickerId: current.id)
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
@@ -92,7 +90,7 @@ struct WordDetailView: View {
                     footer
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 14)
+                .padding(.top, 8)
                 .padding(.bottom, 40)
             }
             .background(
@@ -119,6 +117,11 @@ struct WordDetailView: View {
         }
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
         .task(id: current.id) { await dex.autoHero(current) }
+        // Every picture is cut out (owner 2026-10-11): a photo without a cut-out yet gets one now, behind the page
+        // (the scissors button is gone).
+        .task(id: current.id + "|cutout") {
+            if CutoutBackfill.needsCutout(current) { await CutoutBackfill.shared.make(for: current, dex: dex) }
+        }
         .task(id: current.id + "|play") {
             // The word is read once when its page opens (web WordCard autoplay, 400 ms).
             guard autoplayed != current.id else { return }
@@ -138,10 +141,13 @@ struct WordDetailView: View {
         .onAppear { applyHeroRole(animated: false) }
         .aiConsentSheet(isPresented: $askAIConsent)
         .sheet(isPresented: $pickingHero) {
-            HeroPhotoPickerSheet(sticker: current) { role in
+            HeroPhotoPickerSheet(sticker: current, onPick: { role in
                 try await dex.setHeroRole(current, role: role)
                 applyHeroRole(animated: true)
-            }
+            }, onReplace: { item in
+                // 写真を替える sits at the bottom of this sheet now (owner 2026-10-11).
+                Task { await replacePhoto(item) }
+            })
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
@@ -227,15 +233,17 @@ struct WordDetailView: View {
             .accessibilityIdentifier("detail.close")
         }
         .padding(.horizontal, 16)
-        .padding(.top, 22)
-        .padding(.bottom, 10)
+        .padding(.top, 12)
+        .padding(.bottom, 6)
         .background(Theme.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
     }
 
+    /// The headword, its reading, part of speech and register. Tighter than before (owner 2026-10-11: 「単語の見出しの
+    /// 項目の余白を減らして」); the error report moved to the bottom of the page, beside 削除 (as on the web).
     private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
                 ZhuyinWordView(headword: headword, zhuyin: word?.readingZhuyin, size: 38, weight: .heavy, pinyin: word?.pinyin, language: learningLang)
                     .opacity(isSavingHead ? 0.4 : 1)
                 Button {
@@ -254,51 +262,59 @@ struct WordDetailView: View {
                 Spacer(minLength: 8)
                 PronounceCircle(text: headword, size: 50)
             }
-            FlowRow(spacing: 8) {
-                if let pos = word?.partOfSpeech, !pos.isEmpty { chip(posLabel(pos)) }
-                if let r = extras?.resolvedRegister { chip(registerLabel(r)) }
+            let pos = word?.partOfSpeech.map(posLabel) ?? ""
+            let register = extras?.resolvedRegister.map(registerLabel)
+            if !pos.isEmpty || register != nil {
+                FlowRow(spacing: 8) {
+                    if !pos.isEmpty { chip(pos) }
+                    if let register { chip(register) }
+                }
             }
             // The reading line only when the zhuyin ruby cannot be drawn (web hides it otherwise).
             if (word?.readingZhuyin ?? "").isEmpty, let p = word?.pinyin, !p.isEmpty {
                 Text(p).scaledFont(size: 14).foregroundStyle(Theme.muted)
             }
-            HStack {
-                Spacer()
-                // web ReportButton: let the AI find what is wrong, or point at the item yourself.
-                Menu {
-                    Button(L("AIに探してもらう"), systemImage: "sparkle.magnifyingglass") {
-                        guard AIConsent.shared.isGranted else { askAIConsent = true; return }
-                        reportNote = ""
-                        reporting = true
-                    }
-                    Section(L("違う項目を選ぶ")) {
-                        ForEach(reportItems, id: \.self) { item in
-                            Button(Self.itemTitle(item)) { reportAndFix(item: item) }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
-                        Text(isFixing ? L("直しています…") : L("報告"))
-                    }
-                    .scaledFont(size: 13)
-                    .foregroundStyle(Theme.muted)
-                    .frame(minWidth: 44, minHeight: 44)
-                }
-                .disabled(isFixing)
-                .accessibilityLabel(L("この語の誤りを報告"))
-            }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             LinearGradient(colors: [Color(light: 0xEAF3FE, dark: 0x0F2442), Theme.card], startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: .rect(cornerRadius: 28, style: .continuous)
+            in: .rect(cornerRadius: 26, style: .continuous)
         )
-        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+    }
+
+    /// web ReportButton: let the AI find what is wrong, or point at the item yourself. At the bottom of the page,
+    /// beside 削除 (owner 2026-10-11, as on the web 2026-10-02).
+    private var reportMenu: some View {
+        Menu {
+            Button(L("AIに探してもらう"), systemImage: "sparkle.magnifyingglass") {
+                guard AIConsent.shared.isGranted else { askAIConsent = true; return }
+                reportNote = ""
+                reporting = true
+            }
+            Section(L("違う項目を選ぶ")) {
+                ForEach(reportItems, id: \.self) { item in
+                    Button(Self.itemTitle(item)) { reportAndFix(item: item) }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if isFixing { ProgressView().controlSize(.mini) } else { Image(systemName: "flag") }
+                Text(isFixing ? L("直しています…") : L("報告"))
+            }
+            .scaledFont(size: 16, weight: .semibold)
+            .foregroundStyle(Theme.foreground.opacity(0.8))
+            .padding(.horizontal, 18)
+            .frame(minHeight: 48)
+            .background(Theme.secondary, in: Capsule())
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+        }
+        .disabled(isFixing)
+        .accessibilityLabel(L("この語の誤りを報告"))
+        .accessibilityIdentifier("detail.report")
     }
 
     /// The learner's visible sections that exist for this word's language.
@@ -421,16 +437,30 @@ struct WordDetailView: View {
         }
     }
 
+    /// The hero's shape: a cut-out's own width ÷ height (kept between a tall 0.8 and a wide 1.8, so neither a bottle
+    /// nor a long bench makes the page odd), a photo the 4:5 card.
+    private func heroRatio(isCut: Bool, path: String?) -> CGFloat {
+        guard isCut else { return 0.8 }
+        let known = cutoutRatio ?? path.flatMap { ImageCache.shared.image(for: $0) }.map { $0.size.width / max(1, $0.size.height) }
+        return min(1.8, max(0.8, known ?? 1))
+    }
+
     private var mainFace: some View {
         let back = showSelfie
         let path = back ? current.selfieImageUrl : frontPath
         let isCut = !back && showCutout && path == current.cutoutImageUrl
-        return Theme.surface2
-            .aspectRatio(0.8, contentMode: .fit)
+        // A cut-out stands on the page by itself — no grey box around it (owner 2026-10-11); a photo keeps its card.
+        return (isCut ? Color.clear : Theme.surface2)
+            .aspectRatio(heroRatio(isCut: isCut || (back && current.cutoutImageUrl != nil && showCutout), path: current.cutoutImageUrl),
+                         contentMode: .fit)
             .overlay {
-                StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: isCut ? .fit : .fill)
-                    .padding(isCut ? 24 : 0)
-                    .shadow(color: .black.opacity(isCut ? 0.25 : 0), radius: 12, y: 8)
+                StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: isCut ? .fit : .fill,
+                             onLoad: isCut ? { size in
+                                 guard size.height > 0 else { return }
+                                 withAnimation(.easeOut(duration: 0.2)) { cutoutRatio = size.width / size.height }
+                             } : nil)
+                    .padding(isCut ? 14 : 0)
+                    .shadow(color: .black.opacity(isCut ? 0.2 : 0), radius: 10, y: 7)
                     .allowsHitTesting(false)
                     .id(path)
             }
@@ -503,24 +533,6 @@ struct WordDetailView: View {
                 pickingHero = true
             }
             .accessibilityAction(named: L("表示する写真を選ぶ")) { pickingHero = true }
-            .overlay(alignment: .bottomLeading) {
-                if !back, current.cutoutImageUrl != nil {
-                    Button {
-                        Haptics.selection()
-                        withAnimation(.snappy) { showCutout.toggle() }
-                    } label: {
-                        Image(systemName: showCutout ? "photo" : "scissors")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .background(.black.opacity(0.55), in: Circle())
-                    }
-                    .buttonStyle(PressableStyle(scale: 0.9))
-                    .accessibilityLabel(showCutout ? L("元の写真を見る") : L("切り抜きを見る"))
-                    .padding(10)
-                    .opacity(abs(flipAngle.truncatingRemainder(dividingBy: 180)) < 1 ? 1 : 0)
-                }
-            }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(back ? L("自撮り写真") : L("写真"))
             .accessibilityAction(named: L("元の写真を見る")) {
@@ -568,108 +580,72 @@ struct WordDetailView: View {
         }
     }
 
-    // MARK: - Meta (date, place, one-liner)
+    // MARK: - Meta (when and where it was taken; the one-liner only when one was written)
 
+    /// The top of the page is when and where the photo was taken (owner 2026-10-11: 「単語の詳細の一番上は撮った詳しい
+    /// 時刻と場所だけ」). The one-liner shows only when one was written at the catch (still editable with its pencil);
+    /// the memory curve is no longer on this page (the review screen has it).
     private var metaCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
+            Label {
+                Text(JPDate.full(current.takenAt))
+                    .scaledFont(size: 15, weight: .medium, monospacedDigit: true)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            } icon: {
                 Image(systemName: "clock").scaledFont(size: 14)
-                Text(JPDate.full(current.takenAt)).scaledFont(size: 14, monospacedDigit: true)
-                Spacer(minLength: 8)
-                placeChip
             }
-            .foregroundStyle(Theme.foreground.opacity(0.75))
-            Button {
-                captionDraft = current.caption ?? ""
-                editingCaption = true
-            } label: {
-                HStack(alignment: .center) {
-                    if let cap = current.caption, !cap.isEmpty {
+            .foregroundStyle(Theme.foreground.opacity(0.8))
+            .frame(minHeight: 30, alignment: .leading)
+            .accessibilityIdentifier("detail.takenAt")
+            if mapsURL != nil { placeButton }
+            if let cap = current.caption, !cap.isEmpty {
+                Divider().overlay(Theme.border).padding(.vertical, 4)
+                Button {
+                    captionDraft = cap
+                    editingCaption = true
+                } label: {
+                    HStack(alignment: .center) {
                         Text(cap).font(AppFont.hand(18)).foregroundStyle(Theme.foreground.opacity(0.9))
                             .multilineTextAlignment(.leading)
-                    } else {
-                        Text(L("ひと言")).scaledFont(size: 14).foregroundStyle(Theme.muted)
+                        Spacer()
+                        Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.muted)
+                            .frame(width: 44, height: 40, alignment: .trailing)
                     }
-                    Spacer()
-                    Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.muted)
-                        .frame(width: 44, height: 40, alignment: .trailing)
+                    .contentShape(.rect)
                 }
-                .contentShape(.rect)
-            }
-            .buttonStyle(PressableStyle(scale: 0.98))
-            .accessibilityLabel(L("ひと言を編集"))
-            if let pct = dex.memoryPercent(for: current) {
-                Divider().overlay(Theme.border)
-                memoryRow(pct)
+                .buttonStyle(PressableStyle(scale: 0.98))
+                .accessibilityLabel(L("ひと言を編集"))
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(Theme.card, in: .rect(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card, in: .rect(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
     }
 
-    /// 記憶の曲線 (web dex.$stickerId ForgettingCurveChart): how likely you remember it now.
-    private func memoryRow(_ pct: Int) -> some View {
-        let lv = MemoryBadge.level(pct)
-        return Button {
-            Haptics.selection()
-            showCurve = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "chart.line.downtrend.xyaxis")
-                    .scaledFont(size: 14, weight: .semibold)
-                    .foregroundStyle(Theme.memoryLevels[lv])
-                Text(L("記憶の曲線"))
-                    .scaledFont(size: 14, weight: .medium)
-                    .foregroundStyle(Theme.foreground.opacity(0.85))
-                Spacer()
-                Text("\(MemoryBadge.labels[lv]) · \(pct)%")
-                    .scaledFont(size: 13, weight: .bold, monospacedDigit: true)
-                    .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
-                    .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                Image(systemName: "chevron.right").scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
-            }
-            .frame(minHeight: 40)
-            .contentShape(.rect)
-        }
-        .buttonStyle(PressableStyle(scale: 0.98))
-        .sheet(isPresented: $showCurve) {
-            ForgettingCurveSheet(sticker: current, store: curveStore, onReviewNow: {
-                showCurve = false
-                dismiss()
-                // Not due yet, it still comes up next (ReviewView brings it forward).
-                router.reviewNow = current.id
-                router.tab = .review
-            })
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-    }
-
-    @ViewBuilder private var placeChip: some View {
-        if mapsURL != nil { placeButton }
-    }
-
+    /// Where it was taken, by name (never 「地図を開く」 in place of the name); a tap opens Maps there.
     private var placeButton: some View {
         Button {
             if let url = mapsURL { openURL(url) }
         } label: {
-            Label {
+            HStack(spacing: 8) {
+                Image(systemName: "mappin.and.ellipse").scaledFont(size: 14)
                 LocalizedPlaceText(lat: current.lat, lng: current.lng, saved: current.locationName, fallback: L("撮影地"))
-            } icon: {
-                Image(systemName: "mappin.and.ellipse")
+                    .scaledFont(size: 15, weight: .semibold)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 4)
+                Image(systemName: "arrow.up.right").scaledFont(size: 12, weight: .semibold).foregroundStyle(Theme.muted)
             }
-                .scaledFont(size: 14, weight: .semibold)
-                .lineLimit(1)
-                .foregroundStyle(Theme.primaryInk)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Theme.primary.opacity(0.1), in: Capsule())
+            .foregroundStyle(Theme.primaryInk)
+            .frame(minHeight: 36)
+            .contentShape(.rect)
         }
-        .buttonStyle(PressableStyle(scale: 0.95))
+        .buttonStyle(PressableStyle(scale: 0.98))
+        .accessibilityIdentifier("detail.place")
     }
 
     private var mapsURL: URL? {
@@ -677,28 +653,6 @@ struct WordDetailView: View {
         if let lat = current.lat, let lng = current.lng { return URL(string: "https://maps.apple.com/?ll=\(lat),\(lng)&q=\(q)") }
         if let name = current.locationName, !name.isEmpty { return URL(string: "https://maps.apple.com/?q=\(q)") }
         return nil
-    }
-
-    private var cutoutRow: some View {
-        VStack(spacing: 6) {
-            Button { Task { await cutOut() } } label: {
-                HStack(spacing: 8) {
-                    if isCutting { ProgressView().tint(Theme.primaryInk) } else { Image(systemName: "scissors") }
-                    Text(isCutting ? L("切り抜いています") : L("被写体を切り抜く"))
-                }
-                .scaledFont(size: 14, weight: .semibold)
-                .foregroundStyle(Theme.primaryInk)
-                .padding(.horizontal, 18)
-                .frame(minHeight: 44)
-                .background(Theme.primary.opacity(0.1), in: Capsule())
-            }
-            .buttonStyle(PressableStyle())
-            .disabled(isCutting)
-            if let cutoutMessage {
-                Text(cutoutMessage).scaledFont(size: 12).foregroundStyle(Theme.muted)
-            }
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private func chip(_ text: String) -> some View {
@@ -1561,12 +1515,10 @@ struct WordDetailView: View {
         }
     }
 
+    /// The bottom of the page: a selfie to take when there is none, then 報告 beside 削除 (as on the web). The 「〇日前に
+    /// キャッチしました」 line is gone and 写真を替える moved into the long-press photo sheet (owner 2026-10-11).
     private var footer: some View {
-        let days = Calendar.current.dateComponents([.day], from: current.takenAt, to: Date()).day ?? 0
-        return VStack(alignment: .leading, spacing: 12) {
-            Label(days == 0 ? L("今日キャッチしました") : L("\(days)日前にキャッチしました"), systemImage: "clock.arrow.circlepath")
-                .font(AppFont.hand(16))
-                .foregroundStyle(Theme.muted)
+        VStack(alignment: .leading, spacing: 12) {
             // No selfie yet: offer to take one now (web PhotoAddButtons).
             if current.selfieImageUrl == nil && current.hasOwnPhoto && SelfieCamera.isAvailable {
                 Button { takingSelfie = true } label: {
@@ -1585,38 +1537,30 @@ struct WordDetailView: View {
                         .statusBarTone(.hidden)
                 }
             }
-            HStack {
-            PhotosPicker(selection: $newPhoto, matching: .images) {
-                Label(isReplacing ? L("替えています…") : L("写真を替える"), systemImage: "photo.badge.arrow.down")
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(Theme.primaryInk)
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 48)
-                    .background(Theme.primary.opacity(0.08), in: Capsule())
+            if isReplacing {
+                Label(L("替えています…"), systemImage: "photo.badge.arrow.down")
+                    .scaledFont(size: 14, weight: .semibold)
+                    .foregroundStyle(Theme.muted)
             }
-            .disabled(isReplacing)
-            .onChange(of: newPhoto) { _, item in
-                guard let item else { return }
-                newPhoto = nil
-                Task { await replacePhoto(item) }
-            }
-            Spacer()
-            Button { confirmDelete = true } label: {
-                Label(L("削除"), systemImage: "trash")
-                    .scaledFont(size: 16, weight: .semibold)
-                    .foregroundStyle(Theme.destructive)
-                    .padding(.horizontal, 20)
-                    .frame(minHeight: 48)
-                    .background(Theme.destructive.opacity(0.08), in: Capsule())
-                    .overlay(Capsule().stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
-            }
-            .buttonStyle(PressableStyle(scale: 0.95))
+            HStack(spacing: 10) {
+                Spacer()
+                reportMenu
+                Button { confirmDelete = true } label: {
+                    Label(L("削除"), systemImage: "trash")
+                        .scaledFont(size: 16, weight: .semibold)
+                        .foregroundStyle(Theme.destructive)
+                        .padding(.horizontal, 20)
+                        .frame(minHeight: 48)
+                        .background(Theme.destructive.opacity(0.08), in: Capsule())
+                        .overlay(Capsule().stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
+                }
+                .buttonStyle(PressableStyle(scale: 0.95))
             }
         }
         .padding(.top, 6)
     }
 
-    /// 写真を替える: upload + web replaceStickerPhoto; in cut-out mode the new photo is cut out too.
+    /// 写真を替える (from the long-press photo sheet): upload + web replaceStickerPhoto; the new photo is cut out too.
     private func replacePhoto(_ item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let img = await ImageTools.downsampledInBackground(data) else {
@@ -1629,7 +1573,7 @@ struct WordDetailView: View {
             try await dex.replacePhoto(current, with: img)
             Haptics.success()
             showToast(L("写真を替えました"))
-            if CaptureViewModel.cutoutMode, let lifted = await CutoutService.liftSubject(from: img) {
+            if let lifted = await CutoutService.liftSubject(from: img) {
                 try? await dex.addCutout(to: current, image: lifted)
             }
         } catch {
@@ -1638,28 +1582,6 @@ struct WordDetailView: View {
         }
     }
 
-    private func cutOut() async {
-        guard let path = current.objectImageUrl else { return }
-        isCutting = true
-        cutoutMessage = nil
-        defer { isCutting = false }
-        var image = ImageCache.shared.image(for: path)
-        if image == nil, let url = dex.url(for: path, preferThumb: false) {
-            image = await ImageCache.shared.load(url: url, key: path)
-        }
-        guard let image, let lifted = await CutoutService.liftSubject(from: image) else {
-            cutoutMessage = L("この写真では切り抜けませんでした。")
-            Haptics.warning()
-            return
-        }
-        do {
-            try await dex.addCutout(to: current, image: lifted)
-            withAnimation(.snappy) { showCutout = true }
-            Haptics.success()
-        } catch {
-            cutoutMessage = (error as? LocalizedError)?.errorDescription
-        }
-    }
 }
 
 /// The section's 「作り直す」 button (set by the word page; the links card has none).

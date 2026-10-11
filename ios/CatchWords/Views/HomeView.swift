@@ -9,8 +9,10 @@ struct HomeView: View {
     @State private var showStats = false
     @State private var memorialOpen: Int?
     @State private var memorialHidden = false
-    /// True while today's photos are being rearranged: the screen holds still under the fingers.
+    /// True while a day's photos are being rearranged: the screen holds still under the fingers and 「完了」 shows.
     @State private var albumEditing = false
+    /// 「完了」 pressed: the board being rearranged saves and stops.
+    @State private var finishEditing = 0
 
     private struct MemorialDay: Identifiable {
         let n: Int
@@ -76,7 +78,8 @@ struct HomeView: View {
                             days: AlbumDay.days(from: dex.albumStickers, today: today),
                             onOpen: { router.detailSticker = $0 },
                             onCamera: { router.tab = .camera },
-                            onEditingChange: { on in albumEditing = on }
+                            onEditingChange: { on in withAnimation(.snappy) { albumEditing = on } },
+                            finishRequest: finishEditing
                         )
                         .transition(.opacity)
                     }
@@ -95,6 +98,27 @@ struct HomeView: View {
         .refreshable { await dex.load() }
         .background(HomeBackground())
         .overlay(alignment: .top) { header }
+        // Rearranging the album ends with 「完了」 (web: a fixed button above the tab bar), wherever the board is.
+        .overlay(alignment: .bottom) {
+            if albumEditing {
+                Button {
+                    Haptics.impact(.light)
+                    finishEditing += 1
+                } label: {
+                    Label(L("完了"), systemImage: "checkmark")
+                        .scaledFont(size: 17, weight: .bold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 28)
+                        .frame(minHeight: 52)
+                        .background(Theme.primary, in: Capsule())
+                        .shadow(color: Theme.primary.opacity(0.4), radius: 14, y: 6)
+                }
+                .buttonStyle(PressableStyle())
+                .padding(.bottom, 84)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .accessibilityIdentifier("home.album.done")
+            }
+        }
         .fullScreenCover(item: Binding(get: { memorialOpen.map(MemorialDay.init) }, set: { memorialOpen = $0?.n })) { m in
             MemorialAlbumView(n: m.n, words: dex.stickers.count, picks: Milestone.highlights(dex.stickers)) { s in
                 memorialOpen = nil
@@ -167,12 +191,13 @@ struct AlbumDay: Identifiable, Equatable {
 }
 
 /// The album as one plain vertical list: a month heading where the month changes, then each day's date
-/// and its photos. Only today's photos can be rearranged.
+/// and its photos. Any day's photos can be rearranged with a long press (as on the web).
 struct HomeAlbum: View {
     let days: [AlbumDay]
     let onOpen: (Sticker) -> Void
     let onCamera: () -> Void
     var onEditingChange: ((Bool) -> Void)? = nil
+    var finishRequest: Int = 0
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -228,7 +253,8 @@ struct HomeAlbum: View {
             if d.items.isEmpty {
                 emptyDay(isToday: isToday)
             } else {
-                CollageBoard(items: d.items, editable: isToday, onOpen: onOpen, onEditingChange: onEditingChange)
+                CollageBoard(items: d.items, editable: true, onOpen: onOpen, onEditingChange: onEditingChange,
+                             finishRequest: finishRequest)
             }
         }
     }

@@ -381,20 +381,28 @@ nonisolated struct Sticker: Codable, Sendable, Identifiable, Hashable {
         case captureType = "capture_type"
     }
 
-    /// One place decides which photo represents a sticker (photo-surface.ts): the learner's choice,
-    /// else the cut-out, else the original.
+    /// The word's own picture (photo-surface.ts): the learner's choice for its page (`hero_role`, long-pressing the
+    /// photo there), else the cut-out, else the original, else the stand-in. 設定 › ホームに表示する写真 is for the home
+    /// album only (`homePath`, owner 2026-10-11); the dex, the word page and the review show the cut-out.
     var heroPath: String? {
-        // The word's own choice first, else 設定 › 表示するタイプ (web: hero_role ?? resolvePrefer(pref)).
-        let role = heroRole ?? { () -> String? in
-            let p = UserDefaults.standard.string(forKey: "photo.pref") ?? "auto"
-            return p == "auto" ? nil : p
-        }()
-        return switch role {
+        switch heroRole {
         case "object": objectImageUrl ?? cutoutImageUrl ?? placeholderImageUrl
-        case "cutout": cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
         case "placeholder": placeholderImageUrl ?? cutoutImageUrl ?? objectImageUrl
         default: cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        }
+    }
+
+    /// 設定 › ホームに表示する写真 (`"object"` / `"cutout"` / `"selfie"`; never chosen = `"auto"` = the cut-out).
+    static let homePhotoKey = "photo.pref"
+
+    /// The picture the home album shows: the kind chosen in 設定 › ホームに表示する写真, each falling back to what the
+    /// word has (owner 2026-10-11: 「ホームで表示する画像の種類は設定から元の画像か、切り抜きか、自撮りか選べるように」).
+    var homePath: String? {
+        switch UserDefaults.standard.string(forKey: Self.homePhotoKey) ?? "auto" {
+        case "object": objectImageUrl ?? cutoutImageUrl ?? selfieImageUrl ?? placeholderImageUrl
+        case "selfie": selfieImageUrl ?? cutoutImageUrl ?? objectImageUrl ?? placeholderImageUrl
+        default: cutoutImageUrl ?? objectImageUrl ?? selfieImageUrl ?? placeholderImageUrl
         }
     }
     var room: Room { Category.room(for: builtinShelfKey ?? word?.categoryKey) }
