@@ -11,7 +11,7 @@
   - 年齢区分の未回答: developerAgeRatingInfoUrl, gracRatingClassificationNumber, kidsAgeBand
 
 ## バージョン
-- 1.0.0: 状態 **PREPARE_FOR_SUBMISSION**（PREPARE_FOR_SUBMISSION）、ビルド 1023
+- 1.0.0: 状態 **PREPARE_FOR_SUBMISSION**（PREPARE_FOR_SUBMISSION）、ビルド 1024
   - 審査の情報: 連絡先の名前 True・電話 True・メール True、デモアカウント必要 True・ID True・パスワード True、メモ 2894 字
   - ja: 説明 785 字（「身の回りの物を撮るだけで、台湾華語（繁体字）の単語が集まる図鑑アプリです。単語は、自分で撮った写真から切り抜いたステッカーになって図鑑に並びます。
 
