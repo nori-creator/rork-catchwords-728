@@ -11,6 +11,6 @@
 - zh-Hant: `ios/metadata` に無い言語。ここでは消さない（消すなら App Store Connect の画面で）
 
 ## 審査メモ（App Review Information の Notes）
-- 今の Notes 839 バイト → 新しい Notes 2798 バイト（`docs/app-store/review-notes.en.txt` の内容。今の本文は公開しないため出さない）
+- 今の Notes 839 バイト → 新しい Notes 2894 バイト（`docs/app-store/review-notes.en.txt` の内容。今の本文は公開しないため出さない）
 
 変わる所: 5 か所（試すだけ。書き込むには apply をオンにして実行）
