@@ -541,7 +541,9 @@ struct QuizCard: View {
             Button { answer(c) } label: {
                 // The speaker (40 pt + 10 trailing) and the ✓/✗ mark sit over the row: the word keeps clear of
                 // both sides, so a long one ("washing machine") wraps or shrinks instead of running under them.
-                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: compact ? 25 : 28, weight: .bold)
+                // The pinyin is passed so ピンイン (設定 › 発音表記) is honoured here too (owner 2026-10-11
+                // 「設定でピン音にしても復習で注音が表示される。」); without it the view always fell back to zhuyin.
+                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: compact ? 25 : 28, weight: .bold, pinyin: c.pinyin)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Self.choiceSideInset)
                     .padding(.vertical, compact ? 3 : 5)
