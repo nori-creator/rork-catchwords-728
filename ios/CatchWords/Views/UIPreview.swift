@@ -198,7 +198,7 @@ private struct ScanPreview: View {
     @State private var round = 0
 
     var body: some View {
-        CandidatePickerView(vm: vm)
+        CandidatePickerView(vm: vm, scanning: vm.step == .processing)
             .id(round)
             .task(id: round) {
                 await play()
@@ -299,7 +299,7 @@ private struct PickerPreview: View {
     }
 
     var body: some View {
-        CandidatePickerView(vm: vm)
+        CandidatePickerView(vm: vm, scanning: false)
             .onAppear {
                 NativeAPI.targetLanguage = learning
                 let i = L10n.lang == "en" ? 1 : L10n.lang == "zh-TW" ? 2 : 0

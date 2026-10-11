@@ -158,7 +158,7 @@ struct CaptureView: View {
             cameraMachine.transition(.opacity)
         case .processing, .select:
             // One view from the shutter to the tap (the scan runs over the same photo the tags land on).
-            CandidatePickerView(vm: vm).transition(.opacity)
+            CandidatePickerView(vm: vm, scanning: vm.step == .processing).transition(.opacity)
         case .celebrate:
             CatchCelebrationView(vm: vm, saving: saveInFlight, onAdd: addToDex,
                                  onStickerFrame: { stickerFrame = $0 })

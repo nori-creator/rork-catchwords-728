@@ -11,6 +11,11 @@ import SwiftUI
 ///   Typing a word waits until the names are in.
 struct CandidatePickerView: View {
     let vm: CaptureViewModel
+    /// The names are not in yet (`.processing`): the scan is running and nothing can be typed. Handed in by the camera
+    /// screen, which switches on `vm.step`: this view must never read `vm.step` itself. When it did, the camera screen
+    /// missed the change to `.celebrate` made right after the tap (it was redrawn during that change and kept the old
+    /// step), so the words stayed on screen and the celebration never opened (the UI tour's 5 of 6, trace 2026-10-11).
+    let scanning: Bool
     @State private var appeared: Bool = false
     @State private var typed: String = ""
     @FocusState private var inputFocused: Bool
@@ -76,9 +81,6 @@ struct CandidatePickerView: View {
         }
         .task(id: vm.scan.map { ObjectIdentifier($0) }) { await runScan() }
     }
-
-    /// The names are not in yet (the scan is running and nothing can be typed or tapped).
-    private var scanning: Bool { vm.step == .processing }
 
     /// Steps this photo's scan about 60 times a second (its sounds, its tags) until everything is up.
     private func runScan() async {
@@ -165,7 +167,7 @@ struct CandidatePickerView: View {
     /// The UI tests' trace of a render of the stage (`UITestTrace`, DEBUG + `-uiDemo` only): what it shows and can take.
     private func traceStage(_ size: CGSize, _ placedTags: [Placed]) -> String {
         let shown = placedTags.filter { vm.scan?.revealed.contains($0.tag.object.id) ?? true }.map(\.id)
-        let state = "step=\(vm.step) checking=\(vm.isCheckingOwned) enabled=\(isEnabled)"
+        let state = "scanning=\(scanning) checking=\(vm.isCheckingOwned) enabled=\(isEnabled)"
         return "picker.stage \(Int(size.width))x\(Int(size.height)) \(state) shown=\(shown)"
     }
 
@@ -229,7 +231,7 @@ struct CandidatePickerView: View {
             ? (reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.42, dampingFraction: 0.68).delay(t.main ? 0 : 0.06))
             : (reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.7).delay(delay))
         return Button {
-            UITestTrace.log("tag.action \(t.id) shown=\(shown) checking=\(vm.isCheckingOwned) step=\(vm.step)")
+            UITestTrace.log("tag.action \(t.id) shown=\(shown) checking=\(vm.isCheckingOwned)")
             vm.choose(t.word, object: t.object)
         } label: {
             HStack(spacing: 7) {
