@@ -12,7 +12,7 @@
  "appInfos": [
   {
    "id": "d1dec511-432b-48c5-aeb0-e9b74265ea84",
-   "state": "REJECTED",
+   "state": "PREPARE_FOR_SUBMISSION",
    "ageRating": "FOUR_PLUS",
    "kidsAgeBand": null,
    "localizations": [
@@ -69,15 +69,15 @@
   {
    "id": "5132cbbf-3786-4ee7-b227-b02466c1acea",
    "version": "1.0.0",
-   "state": "REJECTED",
-   "appStoreState": "REJECTED",
+   "state": "PREPARE_FOR_SUBMISSION",
+   "appStoreState": "PREPARE_FOR_SUBMISSION",
    "releaseType": "AFTER_APPROVAL",
    "copyright": "2026 近藤範之",
    "createdDate": "2026-10-01T04:24:38-07:00",
    "build": {
-    "version": "1015",
+    "version": "1023",
     "processingState": "VALID",
-    "uploadedDate": "2026-10-04T03:44:13-07:00",
+    "uploadedDate": "2026-10-11T05:54:52-07:00",
     "expired": false
    },
    "reviewDetail": {
@@ -121,6 +121,14 @@
   }
  ],
  "builds": [
+  {
+   "build": "1024",
+   "version": "1.0.0",
+   "processingState": "VALID",
+   "uploadedDate": "2026-10-11T06:01:26-07:00",
+   "expired": false,
+   "minOsVersion": "18.0"
+  },
   {
    "build": "1023",
    "version": "1.0.0",
@@ -174,14 +182,6 @@
    "version": "1.0.0",
    "processingState": "VALID",
    "uploadedDate": "2026-10-08T22:34:29-07:00",
-   "expired": false,
-   "minOsVersion": "18.0"
-  },
-  {
-   "build": "1016",
-   "version": "1.0.0",
-   "processingState": "VALID",
-   "uploadedDate": "2026-10-08T19:40:12-07:00",
    "expired": false,
    "minOsVersion": "18.0"
   }
