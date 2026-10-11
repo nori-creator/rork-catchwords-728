@@ -209,6 +209,9 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
     private let handler: VNImageRequestHandler
     private let lock = NSLock()
     private var cache: [Int: Cut] = [:]
+    /// The tags' places (`anchors`), measured once. A lock of their own, so they never wait for a cut-out to render.
+    private let anchorLock = NSLock()
+    private var anchorCache: [Int: CGPoint]?
 
     init(observation: VNInstanceMaskObservation, handler: VNImageRequestHandler) {
         self.observation = observation
@@ -225,13 +228,33 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
     /// on a copy of Vision's label mask at most 512 px on its long side — the outline is smoothed anyway).
     /// Heavy: call off the main thread.
     func outlines(limit: Int = CatchObject.maxObjects) -> [CatchOutline] {
+        guard let m = labelMask() else { return [] }
+        return CatchOutlineTracer.outlines(mask: m.mask, width: m.width, height: m.height, limit: limit)
+    }
+
+    /// Where each instance's name tag sits (`CatchAnchor`: deep inside its mask, near the middle of the thing), by
+    /// label, 0–1 of the photo, top-left origin — read from the same copy of the label mask as the outlines, so a tag
+    /// lands inside its own outline. Measured once for every instance, then cached; heavy the first time (reads the
+    /// whole mask): call off the main thread (the capture warms it while the AI is still naming the things).
+    func anchors() -> [Int: CGPoint] {
+        anchorLock.lock()
+        defer { anchorLock.unlock() }
+        if let cached = anchorCache { return cached }
+        let found = labelMask().map { CatchAnchor.anchors(mask: $0.mask, width: $0.width, height: $0.height) } ?? [:]
+        anchorCache = found
+        return found
+    }
+
+    /// A copy of Vision's label mask at most `maxSide` px on its long side (every `step`-th pixel), with only this
+    /// observation's own instances kept (0 = background).
+    private func labelMask(maxSide: Int = 512) -> (mask: [UInt8], width: Int, height: Int)? {
         let buffer = observation.instanceMask
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
         let w = CVPixelBufferGetWidth(buffer), h = CVPixelBufferGetHeight(buffer)
         let row = CVPixelBufferGetBytesPerRow(buffer)
-        guard w > 0, h > 0, let base = CVPixelBufferGetBaseAddress(buffer) else { return [] }
-        let step = max(1, Int((Double(max(w, h)) / 512).rounded(.up)))
+        guard w > 0, h > 0, let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
+        let step = max(1, Int((Double(max(w, h)) / Double(maxSide)).rounded(.up)))
         let mw = (w + step - 1) / step, mh = (h + step - 1) / step
         var known = [Bool](repeating: false, count: 256)
         for label in observation.allInstances where label > 0 && label < 256 { known[label] = true }
@@ -243,7 +266,7 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
                 if v != 0, known[Int(v)] { mask[y * mw + x] = v }
             }
         }
-        return CatchOutlineTracer.outlines(mask: mask, width: mw, height: mh, limit: limit)
+        return (mask: mask, width: mw, height: mh)
     }
 
     /// Renders the cut-outs of the first `limit` instances into the cache. Called off the main thread while the AI

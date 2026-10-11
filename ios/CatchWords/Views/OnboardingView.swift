@@ -17,8 +17,8 @@ struct OnboardingView: View {
     @State private var step: Int = 0
     @State private var forward: Bool = true
     @State private var uiLanguage: String = L10n.lang
-    /// Never the display language itself (a zh-TW device starts on English).
-    @State private var targetLanguage: String = L10n.lang == "zh-TW" ? "en" : "zh-TW"
+    /// Never the display language itself (a zh-TW device starts on English while the step is shown).
+    @State private var targetLanguage: String = OnboardingView.showsTargetStep && L10n.lang == "zh-TW" ? "en" : OnboardingView.fixedTarget
     @State private var minutes: Int = 10
     @State private var goals: Set<String> = []
     @State private var interests: Set<String> = []
@@ -52,6 +52,24 @@ struct OnboardingView: View {
     static var targets: [(id: String, label: String, native: String, flag: String)] { [
         ("zh-TW", L("繁體字（台灣）"), "繁體字（台灣）", "🇹🇼"), ("en", L("英語"), "English", "🇺🇸"), ("ja", L("日本語"), "日本語", "🇯🇵")  // l10n-ignore (autonyms)
     ] }
+    /// The learning-language question (step 1). Hidden while only 繁體字（台灣） is offered (owner 2026-10-11: 「新規
+    /// ユーザーの質問の学習言語の選択のものをコードから隠して。コードを削除する必要はない」): every new account learns
+    /// `fixedTarget`, and the display languages offered are the others (the two are never the same). Turn it back on
+    /// when another learning language is offered.
+    static let showsTargetStep = false
+    /// The learning language while the question is hidden.
+    static let fixedTarget = "zh-TW"
+
+    /// The questions asked, in order (step numbers: 0 display, 1 learning language, 2 time, 3 goals, 4 interests).
+    static var questionSteps: [Int] { showsTargetStep ? [0, 1, 2, 3, 4] : [0, 2, 3, 4] }
+    /// Every screen the progress bar counts: the questions, the reminders and the ready screen.
+    static var totalSteps: Int { questionSteps.count + 2 }
+
+    /// The display languages offered: never the learning language itself.
+    static var uiChoices: [(id: String, label: String, native: String, flag: String)] {
+        showsTargetStep ? uiLanguages : uiLanguages.filter { $0.id != fixedTarget }
+    }
+
     /// The learning languages offered (only 繁體字（台灣） for now: `ProfileStore.offeredTargets`), never the display
     /// language itself. Someone whose display language is the only offered one still gets a choice (the hidden
     /// ones) instead of an empty step.
@@ -79,6 +97,14 @@ struct OnboardingView: View {
         .animation(.spring(response: 0.45, dampingFraction: 0.88), value: stage)
         .animation(.spring(response: 0.45, dampingFraction: 0.88), value: step)
         .sheet(isPresented: $showMenu) { menu.presentationDetents([.large]) }
+        .onAppear {
+            // A phone set to the learning language itself (繁體中文) starts the guide in English: the display
+            // language is never the one being learned, and only that one is learned for now.
+            if !Self.showsTargetStep, uiLanguage == Self.fixedTarget {
+                uiLanguage = "en"
+                L10n.set("en")
+            }
+        }
     }
 
     // MARK: - Intro
@@ -116,8 +142,12 @@ struct OnboardingView: View {
 
     private var questions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            progressHeader(index: step + 1) {
-                if step == 0 { go(.intro, step: 0, back: true) } else { go(.questions, step: step - 1, back: true) }
+            progressHeader(index: (Self.questionSteps.firstIndex(of: step) ?? 0) + 1) {
+                if let i = Self.questionSteps.firstIndex(of: step), i > 0 {
+                    go(.questions, step: Self.questionSteps[i - 1], back: true)
+                } else {
+                    go(.intro, step: 0, back: true)
+                }
             }
             Text(questionTitle)
                 .scaledFont(size: 28, weight: .heavy)
@@ -136,7 +166,11 @@ struct OnboardingView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             PrimaryButton(title: L("次へ"), icon: "arrow.right") {
-                if step < 4 { go(.questions, step: step + 1) } else { go(.notifications, step: 0) }
+                if let i = Self.questionSteps.firstIndex(of: step), i + 1 < Self.questionSteps.count {
+                    go(.questions, step: Self.questionSteps[i + 1])
+                } else {
+                    go(.notifications, step: 0)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
@@ -157,7 +191,7 @@ struct OnboardingView: View {
         switch step {
         case 0:
             VStack(spacing: 10) {
-                ForEach(Self.uiLanguages, id: \.id) { l in
+                ForEach(Self.uiChoices, id: \.id) { l in
                     ChoiceRow(leading: .flag(l.flag), title: l.label, sub: l.native == l.label ? nil : l.native, isOn: uiLanguage == l.id) {
                         uiLanguage = l.id
                         if !Self.targetChoices(ui: l.id).contains(where: { $0.id == targetLanguage }) {
@@ -229,7 +263,7 @@ struct OnboardingView: View {
 
     private var notifications: some View {
         VStack(alignment: .leading, spacing: 0) {
-            progressHeader(index: 6) { go(.questions, step: 4, back: true) }
+            progressHeader(index: Self.questionSteps.count + 1) { go(.questions, step: Self.questionSteps.last ?? 4, back: true) }
             Text(L("学習の通知を\n設定しますか？"))
                 .scaledFont(size: 28, weight: .heavy)
                 .padding(.horizontal, 24).padding(.top, 20)
@@ -259,7 +293,7 @@ struct OnboardingView: View {
 
     private var ready: some View {
         VStack(spacing: 0) {
-            progressHeader(index: 7) { go(.notifications, step: 0, back: true) }
+            progressHeader(index: Self.totalSteps) { go(.notifications, step: 0, back: true) }
             Spacer()
             OnboardingPrint(name: "first_catch_ready", label: targetLanguage == "en" ? "sea" : "海", ratio: 1)  // l10n-ignore (target word)
                 .frame(width: 230)
@@ -298,12 +332,12 @@ struct OnboardingView: View {
             GeometryReader { geo in
                 Capsule().fill(Theme.secondary)
                     .overlay(alignment: .leading) {
-                        Capsule().fill(Theme.brandGradient).frame(width: geo.size.width * CGFloat(index) / 7)
+                        Capsule().fill(Theme.brandGradient).frame(width: geo.size.width * CGFloat(index) / CGFloat(Self.totalSteps))
                     }
             }
             .frame(height: 8)
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: index)
-            Text("\(index) / 7").font(AppFont.mono(13, weight: .semibold)).foregroundStyle(Theme.muted)
+            Text("\(index) / \(Self.totalSteps)").font(AppFont.mono(13, weight: .semibold)).foregroundStyle(Theme.muted)
             Button { showMenu = true } label: {
                 Image(systemName: "gearshape").font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.muted).frame(width: 44, height: 44)
@@ -331,10 +365,12 @@ struct OnboardingView: View {
                         }
                         L10n.set(picked)
                     })) {
-                        ForEach(Self.uiLanguages, id: \.id) { Text($0.native).tag($0.id) }
+                        ForEach(Self.uiChoices, id: \.id) { Text($0.native).tag($0.id) }
                     }
-                    Picker(L("学ぶ言語"), selection: $targetLanguage) {
-                        ForEach(Self.targetChoices(ui: uiLanguage), id: \.id) { Text($0.label).tag($0.id) }
+                    if Self.showsTargetStep {
+                        Picker(L("学ぶ言語"), selection: $targetLanguage) {
+                            ForEach(Self.targetChoices(ui: uiLanguage), id: \.id) { Text($0.label).tag($0.id) }
+                        }
                     }
                     // The same choices as 設定 › 発音表記 for each learning language (English has none).
                     if targetLanguage == "zh-TW" {

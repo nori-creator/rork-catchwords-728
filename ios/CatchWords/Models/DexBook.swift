@@ -86,11 +86,17 @@ enum DexBook {
         return DexCatalog.category(forKey: s.categoryKey)
     }
 
-    /// The landing word while its light is on the way: drawn as its shadow (or an empty square). Once it lands
-    /// the gallery is redrawn at once (prototype `addEntry` + `renderDex`): the word joins the caught group by
-    /// No. and a new shadow refills the category (owner decision 2026-10-03).
+    /// The landing word while its light is on the way. Owner 2026-10-11 (「ナンバーが小さいものをキャッチしたときに、
+    /// 古い単語を横切るアニメーションではなく、図鑑に追加するときに、事前にもとの古い番号が高い単語の位置を1つ右に移動し、
+    /// 新しい単語はその左に入るようにして」): the star no longer lands after the caught words and the word then jumps
+    /// to its place by No. across them. First (`room` false, while the dex page rises) the gallery is drawn as it was
+    /// before the catch; then the room is made (`room` true, animated by DexView): the words numbered after it move
+    /// one square to the right, its shadow fades from the shadows and the next one refills (as after the landing), and
+    /// its own square waits at its place (its silhouette, or an empty square). The star lands in that square, which
+    /// then simply fills (same id, same place).
     struct Hold: Equatable {
         let stickerId: String
+        var room: Bool = false
     }
 
     /// One sticker per word, newest first (the prototype's `addEntry` keeps one entry per word: `S.dex`).
@@ -119,6 +125,10 @@ enum DexBook {
         }
         let heldCategory = held.map { category(of: $0, lang: lang) }
         let heldItem = held.flatMap { DexCatalog.item(headword: $0.word?.headword, lang: lang) }
+        // Room made: the word already counts as caught for the shadows (its own shadow goes, the next one refills),
+        // exactly as they will be once it has landed — so nothing moves when it lands.
+        let room = held != nil && hold?.room == true
+        if room, let it = heldItem { caughtItems.insert(it.id) }
 
         return DexCatalog.categories.map { c in
             let caught = (byCategory[c.no] ?? []).sorted {
@@ -126,15 +136,18 @@ enum DexBook {
                 return a != b ? a < b : $0.takenAt < $1.takenAt
             }
             var slots = caught.map { DexSlot(id: $0.id, no: numbers[$0.id], kind: .caught($0)) }
-            var shadows = c.items.filter { !caughtItems.contains($0.id) }.prefix(shadowCount).map {
+            let shadows = c.items.filter { !caughtItems.contains($0.id) }.prefix(shadowCount).map {
                 DexSlot(id: "i:\($0.id)", no: $0.baseNo, kind: .shadow($0))
             }
-            if let held, heldCategory == c.no {
-                if let it = heldItem, let i = shadows.firstIndex(where: { $0.id == "i:\(it.id)" }) {
-                    shadows[i] = DexSlot(id: held.id, no: numbers[held.id] ?? it.baseNo, kind: .shadow(it))
-                } else {
-                    slots.append(DexSlot(id: held.id, no: numbers[held.id], kind: .pending))
-                }
+            if room, let held, heldCategory == c.no {
+                // Its square where the sort above will put it (after the words with the same or a lower No., as the
+                // newest of them); the words numbered after it are one square to the right. It waits as its grey
+                // silhouette (a word outside the catalog: an empty square) under its own id, so the light lands in it
+                // and it fills in place.
+                let no = numbers[held.id] ?? Int.max
+                let at = caught.firstIndex { (numbers[$0.id] ?? Int.max) > no } ?? caught.count
+                let waiting: DexSlot.Kind = heldItem.map { DexSlot.Kind.shadow($0) } ?? .pending
+                slots.insert(DexSlot(id: held.id, no: numbers[held.id] ?? heldItem?.baseNo, kind: waiting), at: at)
             }
             slots += shadows
             // "n / m" counts words: one caught slot per word (`mine.length / mine.length + shadows (+ pending)`).

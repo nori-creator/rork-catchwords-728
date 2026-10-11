@@ -29,16 +29,46 @@ struct DexCoverFlow: View {
         return max(0, min(stickers.count - 1, spring.index))
     }
 
+    // MARK: Layout (owner 2026-10-11: 「スライドの図鑑のカードの上が見切れてる。また下にまた余白があるから、
+    // カード自体を大きくして。」)
+
+    /// Air between the header and the card's top edge. The header's material fades out over the 18 pt under
+    /// it; the card used to start 16 pt down, its top edge under that fade.
+    static let cardTop: CGFloat = 26
+    /// The floor band kept under the card for its reflection, as a share of the card's height. It was 0.18 —
+    /// mostly an empty strip, as the reflection is faint — so that room now goes to the card itself.
+    static let reflectionBand: CGFloat = 0.1
+    /// Where the reflection has faded out (share of the card's height): inside the band, so the clipped ring
+    /// never cuts it off with a visible edge.
+    static let reflectionFade: CGFloat = 0.085
+    /// The dots row (24 + 4 pt) and the photo row (64 pt, only from two cards up).
+    static let dotsHeight: CGFloat = 28
+    static let thumbsHeight: CGFloat = 64
+    /// The floating tab bar (58 + 4 pt) is drawn over the dex's last points, plus a little air above it. The
+    /// old reserve of 120 pt left an empty strip between the photo row and the bar.
+    static let bottomReserve: CGFloat = 74
+
+    /// The card's width: as big as the height under the header allows (the card, its reflection band, the
+    /// dots, the photo row and the tab bar's room), at most 80% of the width so the neighbours still peek
+    /// (web: `--cf-w` for the gallery theme).
+    static func cardWidth(in size: CGSize, cards: Int) -> CGFloat {
+        let below = dotsHeight + (cards >= 2 ? thumbsHeight : 0) + bottomReserve
+        let byHeight = (size.height - cardTop - below) / (1.48 * (1 + reflectionBand))
+        return min(size.width * 0.8, 340, max(150, byHeight))
+    }
+
+    /// The ring's height for a card width: the air above the card, the card and its reflection band.
+    static func stageHeight(cardWidth w: CGFloat) -> CGFloat {
+        cardTop + w * 1.48 * (1 + reflectionBand)
+    }
+
     var body: some View {
         GeometryReader { geo in
-            // Card width: big and up front, but the card, its reflection, the dots and the photo row
-            // must stay clear of the tab bar (web: `--cf-w` for the gallery theme).
-            let w = min(geo.size.width * 0.72, 310,
-                        max(128, (geo.size.height - 16 - 24 - 64 - 120) / (1.48 * 1.18)))
+            let w = Self.cardWidth(in: geo.size, cards: stickers.count)
             VStack(spacing: 0) {
                 CoverFlowStage(spring: spring, stickers: stickers, stageWidth: geo.size.width, cardWidth: w,
                                reduceMotion: reduceMotion, onOpen: onOpen, bring: bring)
-                    .frame(height: 16 + w * 1.48 * 1.18)
+                    .frame(height: Self.stageHeight(cardWidth: w))
                 dots
                 thumbnails
                 Spacer(minLength: 0)
@@ -179,16 +209,12 @@ private struct CoverFlowStage: View {
         let w = cardWidth
         let width = stageWidth
         let ch = w * 1.48
-        let stageH = 16 + ch * 1.18
+        let top = DexCoverFlow.cardTop
+        let stageH = DexCoverFlow.stageHeight(cardWidth: w)
         let step = w * CarouselPose.step
         let pos = spring.value
         let range = visibleRange(around: pos)
         return ZStack(alignment: .topLeading) {
-            // The white light pooled at the middle card's feet (no pedestal — R15).
-            EllipticalGradient(colors: [.white.opacity(0.95), .white.opacity(0)], center: .center)
-                .frame(width: w * 2.2, height: w * 0.5)
-                .position(x: width / 2, y: 16 + ch - w * 0.12 + w * 0.25)
-                .allowsHitTesting(false)
             ForEach(range, id: \.self) { i in
                 // `stickers` can shrink (a delete) between computing the range and drawing it.
                 if stickers.indices.contains(i) {
@@ -199,6 +225,15 @@ private struct CoverFlowStage: View {
         .frame(width: width, height: stageH, alignment: .topLeading)
         .contentShape(Rectangle())
         .clipped()
+        // The white light pooled at the middle card's feet (no pedestal — R15). Behind the clipped ring rather
+        // than inside it: with the shorter reflection band the clip would cut the light off in a straight line,
+        // so it spreads on under the dots as before.
+        .background(alignment: .topLeading) {
+            EllipticalGradient(colors: [.white.opacity(0.95), .white.opacity(0)], center: .center)
+                .frame(width: w * 2.2, height: w * 0.5)
+                .position(x: width / 2, y: top + ch - w * 0.12 + w * 0.25)
+                .allowsHitTesting(false)
+        }
         .gesture(
             DragGesture(minimumDistance: 6)
                 .onChanged { g in
@@ -259,7 +294,7 @@ private struct CoverFlowStage: View {
         let z = p.z * w
         let scale = perspective / (perspective - z)
         let originY = stageHeight * 0.45
-        let cardCenterY = 16 + ch / 2
+        let cardCenterY = DexCoverFlow.cardTop + ch / 2
         let isCenter = i == center
         return CarouselCard(sticker: s, width: w, mirror: abs(rel) <= 3)
             .contentShape(Rectangle())
@@ -326,12 +361,13 @@ private struct CarouselCard: View {
             }
     }
 
-    /// The card upside down under itself, faint at its feet and gone within a quarter of its height.
+    /// The card upside down under itself, faint at its feet and gone within the ring's reflection band.
     private var reflection: some View {
         CarouselCardFace(sticker: sticker, width: width)
             .clipShape(.rect(cornerRadius: 14, style: .continuous))
             .scaleEffect(x: 1, y: -1)
-            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.24)],
+            .mask(LinearGradient(stops: [.init(color: .black, location: 0),
+                                         .init(color: .clear, location: DexCoverFlow.reflectionFade)],
                                  startPoint: .top, endPoint: .bottom))
             .opacity(0.22)
             .offset(y: width * 1.48 + 3)
@@ -343,7 +379,6 @@ private struct CarouselCard: View {
 /// The card's printed face. Its inputs (the sticker and the width) don't change while the ring turns, so
 /// SwiftUI keeps the built face and the per-frame work is only the transforms around it.
 private struct CarouselCardFace: View {
-    @Environment(DexStore.self) private var dex
     let sticker: Sticker
     let width: CGFloat
 
@@ -354,8 +389,14 @@ private struct CarouselCardFace: View {
         let s = sticker
         let h = width * 1.48
         return VStack(alignment: .leading, spacing: 0) {
+            // The photo takes up to 64% of the card but is the one that gives way: with the higher layout
+            // priority it gets the card minus the words' own height, so the word, meaning and date always fit
+            // (web DexCoverFlow: photo `h-[64%] min-h-0 shrink`, text `shrink-0`). It used to be a fixed 64%: on a
+            // narrow card the text ran over, and the centred face lost its top — the photo's top and the
+            // category chip (owner 2026-10-11: 「スライドの図鑑のカードの上が見切れてる」).
             Color.black.opacity(0.05)
-                .frame(width: width, height: h * 0.64)
+                .frame(width: width)
+                .frame(maxHeight: h * 0.64)
                 .overlay {
                     DexThumb(sticker: s, inset: 10).allowsHitTesting(false)
                 }
@@ -376,9 +417,8 @@ private struct CarouselCardFace: View {
                         .overlay(Capsule().stroke(Color(hex: cat.b2), lineWidth: 1))
                         .padding(8)
                 }
-                .overlay(alignment: .topTrailing) {
-                    if let p = dex.memoryPercent(for: s) { MemoryBadge(percent: p).padding(8) }
-                }
+                // No memory % in the top right corner any more (owner 2026-10-11: 「右上の%消して」).
+                .layoutPriority(1)
             VStack(alignment: .leading, spacing: 4) {
                 DexFitWidth {
                     ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 22, weight: .bold,
@@ -386,6 +426,9 @@ private struct CarouselCardFace: View {
                 }
                 Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Self.ink.opacity(0.9))
                     .lineLimit(1).minimumScaleFactor(0.7)
+                    // Shrinks for a long meaning's width only, never for height: its full line is part of the
+                    // words' height the photo makes room for.
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 HStack(spacing: 6) {
                     Text(JPDate.monthDay(s.takenAt)).monospacedDigit()
@@ -404,7 +447,8 @@ private struct CarouselCardFace: View {
             .frame(width: width, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .top)
         }
-        .frame(width: width, height: h)
+        // Top-aligned: should the words still not fit (a tiny card), the date line goes, never the photo's top.
+        .frame(width: width, height: h, alignment: .top)
         .background(.white)
     }
 }

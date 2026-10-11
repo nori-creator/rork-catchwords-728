@@ -12,7 +12,10 @@ struct ForgettingCurveSheet: View {
     /// Set when shown as the centred card on the review screen (instead of a system sheet).
     var onClose: (() -> Void)? = nil
 
-    @State private var history: [ReviewHistoryRow] = []
+    /// This word's reviews, oldest first; nil until known. Seeded from the rows the review screen has already read,
+    /// so the real curve is drawn at once — never a stand-in line first (owner 2026-10-11: 「グラフを開くときに関係のない
+    /// 青いグラフが瞬間的に表示される」).
+    @State private var history: [ReviewHistoryRow]?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appReduceMotion) private var reduceMotion
     /// The day under the finger while tracing the curve (nil when not touching).
@@ -22,10 +25,20 @@ struct ForgettingCurveSheet: View {
     @State private var reveal: CGFloat = 0
 
     private struct Pt: Identifiable {
-        let id = UUID()
         let date: Date
         let value: Double
         let series: String
+        /// Stable across redraws (the same point keeps its identity when the rows are read again).
+        var id: String { "\(series)-\(date.timeIntervalSince1970)" }
+    }
+
+    init(sticker: Sticker, store: ReviewStore, onReviewNow: @escaping () -> Void, onClose: (() -> Void)? = nil) {
+        self.sticker = sticker
+        self.store = store
+        self.onReviewNow = onReviewNow
+        self.onClose = onClose
+        let known = store.allHistory.filter { $0.stickerId == sticker.id }.sorted { $0.reviewedAt < $1.reviewedAt }
+        _history = State(initialValue: store.historyLoaded || !known.isEmpty ? known : nil)
     }
 
     private var review: ReviewState? { dex.reviews[sticker.id] }
@@ -37,7 +50,12 @@ struct ForgettingCurveSheet: View {
             sheetContent(pct: pct, lv: lv)
             ScrollView { sheetContent(pct: pct, lv: lv) }
         }
-        .task { history = await store.history(stickerId: sticker.id) }
+        .task(id: sticker.id) {
+            // The word's own read (newer than the screen's when it was just reviewed). An empty answer can also mean
+            // the read failed, so it never replaces rows already shown.
+            let fresh = await store.history(stickerId: sticker.id)
+            if !fresh.isEmpty || history == nil { history = fresh }
+        }
     }
 
     private func close() {
@@ -63,15 +81,23 @@ struct ForgettingCurveSheet: View {
                     .foregroundStyle(Theme.memoryLevels[lv].mix(with: Theme.foreground, by: 0.3))
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(Theme.memoryLevels[lv].opacity(0.14), in: Capsule())
-                    Text(LocalizedStringKey(L("復習 **\(history.count)** 回"))).scaledFont(size: 15).foregroundStyle(Theme.muted)
+                    Text(LocalizedStringKey(L("復習 **\(history?.count ?? 0)** 回"))).scaledFont(size: 15).foregroundStyle(Theme.muted)
                 }
                 Text(L("縦軸＝いま思い出せる確率（写真の右上の%と同じ）")).scaledFont(size: 13).foregroundStyle(Theme.muted)
                 MemoryChartLegend(reviews: true)
 
-                chart.frame(height: Self.chartHeight)
-                    .onAppear {
-                        if reduceMotion { reveal = 1 } else { withAnimation(.easeOut(duration: 0.9).delay(0.1)) { reveal = 1 } }
+                Group {
+                    if let history {
+                        chart(history)
+                            .onAppear {
+                                if reduceMotion { reveal = 1 } else { withAnimation(.easeOut(duration: 0.9).delay(0.1)) { reveal = 1 } }
+                            }
+                    } else {
+                        // Nothing until the word's reviews are known (the curve depends on every one of them).
+                        Color.clear
                     }
+                }
+                .frame(height: Self.chartHeight)
                 Text(L("グラフを指でなぞると、その日の記憶率が見られます"))
                     .scaledFont(size: 12).foregroundStyle(Theme.muted)
 
@@ -84,7 +110,7 @@ struct ForgettingCurveSheet: View {
 
     private typealias CurveData = (past: [Pt], future: [Pt], reviews: [Pt], jumps: [Pt], today: Pt)
 
-    private var curveData: CurveData {
+    private func curveData(_ history: [ReviewHistoryRow]) -> CurveData {
         let now = Date()
         let origin = sticker.takenAt
         var past: [Pt] = []
@@ -130,8 +156,8 @@ struct ForgettingCurveSheet: View {
         return pts.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
     }
 
-    private var chart: some View {
-        let d = curveData
+    private func chart(_ history: [ReviewHistoryRow]) -> some View {
+        let d = curveData(history)
         let picked = scrubDate.flatMap { value(at: $0, in: d) }
         let scrubbing = picked != nil
         var values: [Double] = d.past.map { $0.value }
@@ -139,6 +165,10 @@ struct ForgettingCurveSheet: View {
         values = values.filter { $0 > 0 }
         values.append(d.today.value)
         let yMin = MemoryChartStyle.yMin(values)
+        // Room above 100 %: the review points, the rises and today's dot sit exactly on 100 % right after a review,
+        // and the 「100%」 label is centred on that line — at the very top edge they were cut in half (2026-10-11:
+        // 「記憶の状態の100％付近のグラフが見切れてる」).
+        let yTop = 100 + max(3, (100 - yMin) * 0.08)
         let bands = MemoryChartStyle.bands(yMin: yMin)
         let ticks = MemoryChartStyle.ticks(yMin: yMin)
         let start = d.past.first?.date ?? sticker.takenAt
@@ -202,12 +232,16 @@ struct ForgettingCurveSheet: View {
             let day = Calendar.current.ordinality(of: .day, in: .era, for: new)
             if day != lastScrubDay { Haptics.selection(); lastScrubDay = day }
         }
+        // The curve draws itself from left to right; the mask only hides sideways (it reaches past the top and the
+        // bottom, so nothing at the edges is cut).
         .mask(alignment: .leading) {
             GeometryReader { geo in
-                Rectangle().frame(width: geo.size.width * reveal)
+                Rectangle()
+                    .frame(width: geo.size.width * reveal, height: geo.size.height + 48)
+                    .offset(y: -24)
             }
         }
-        .chartYScale(domain: yMin...100)
+        .chartYScale(domain: yMin...yTop)
         .chartYAxis {
             AxisMarks(position: .leading, values: ticks) { v in
                 AxisValueLabel {

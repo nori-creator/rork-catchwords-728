@@ -1,7 +1,5 @@
 /* 權限說明（繁體中文） */
 "NSCameraUsageDescription" = "CatchWords 會使用相機拍下身邊的東西，收集成你正在學的語言的單字，也用來拍攝附在單字上的自拍。";
-"NSMicrophoneUsageDescription" = "CatchWords 會使用麥克風用語音查單字。";
-"NSSpeechRecognitionUsageDescription" = "CatchWords 會使用語音辨識把你說的話轉成文字來查單字。";
 "NSLocationWhenInUseUsageDescription" = "CatchWords 會記錄拍照地點的名稱，讓你連同回憶一起記住單字。開啟「地點提醒」後，也會在你靠近曾拍下單字的地點時通知你。";
 "NSPhotoLibraryAddUsageDescription" = "CatchWords 也會把拍的照片存到照片 App。";
 "NSPhotoLibraryUsageDescription" = "CatchWords 會使用照片 App 裡的圖片來找單字。";

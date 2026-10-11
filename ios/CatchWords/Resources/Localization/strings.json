@@ -787,10 +787,6 @@
   "en": "Camera access is not allowed",
   "zh-TW": "尚未允許使用相機"
  },
- "カメラやスキャンで撮った写真は、単語を見つけるために外部のAIサービスに送られます。AIへのデータ送信に同意すると、カメラ・スキャン・単語の検索が使えます。": {
-  "en": "Photos taken with the camera or scan are sent to third-party AI services to find words. Agree to sending data to AI to use the camera, scanning and word search.",
-  "zh-TW": "用相機或掃描拍下的照片，會傳送給外部的 AI 服務來找出單字。同意將資料傳送給 AI 後，即可使用相機、掃描與單字搜尋。"
- },
  "カメラを起動できませんでした": {
   "en": "Couldn't start the camera",
   "zh-TW": "無法啟動相機"
@@ -3195,29 +3191,9 @@
   "en": "Tap “Add to collection” to keep the word with your photo in your collection.",
   "zh-TW": "按下「加入圖鑑」，這個單字就會和你拍的照片一起放進圖鑑。"
  },
- "CatchWords は、写真から単語を見つけたり、単語カードを作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
-  "en": "CatchWords uses third-party AI services to find words in your photos and write word cards. Before you start, please check what is sent and choose whether you agree.",
-  "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字、製作單字卡。開始使用前，請確認傳送的內容，並選擇是否同意。"
- },
- "カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。": {
-  "en": "Features that use AI, such as the camera, scanning and making word cards, are unavailable (nothing is sent). You can still view your words and review them. You can agree, or withdraw your consent, later in Settings.",
-  "zh-TW": "相機、掃描、製作單字卡等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回同意。"
- },
- "写っている物の判定、単語カード・解説・例文の作成のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。": {
-  "en": "Only to recognize what is in a photo and to write word cards, notes and example sentences. We never use your photos or the text you enter to train AI.",
-  "zh-TW": "只用於辨識照片中的物品，以及製作單字卡、解說與例句。我們不會把你的照片或輸入的文字用於訓練 AI。"
- },
- "取り消すと、カメラ・スキャン・単語カードの作成など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。": {
-  "en": "Features that use AI, such as the camera, scanning and making word cards, will stop working. Your words and reviews stay available.",
-  "zh-TW": "撤回後，相機、掃描、製作單字卡等使用 AI 的功能將無法使用。收集的單字與複習仍可照常使用。"
- },
  "同意していません。カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません。": {
   "en": "You have not agreed. Features that use AI, such as the camera, scanning and making word cards, are unavailable.",
   "zh-TW": "尚未同意。相機、掃描、製作單字卡等使用 AI 的功能無法使用。"
- },
- "撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
-  "en": "Photos you take, images you pick from the Photos app, scan frames, words you look up, text you enter (report notes), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
-  "zh-TW": "你拍的照片、從照片 App 選的圖片、掃描的畫面、查詢的單字、輸入的文字（回報的備註）、用語音查詢的詞（轉成的文字，不會傳送聲音本身），以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
  },
  "撮った写真の候補": {
   "en": "Photo word candidates",
@@ -4338,5 +4314,53 @@
  "開発用ビルド": {
   "en": "Development build",
   "zh-TW": "開發用組建"
+ },
+ "日常のすべてが\n学びになる": {
+  "en": "Every moment\nbecomes a lesson",
+  "zh-TW": "生活中\n處處都是學習"
+ },
+ "街で出会う言葉を、ステッカーに。": {
+  "en": "Turn the words you meet around town into stickers.",
+  "zh-TW": "把街上遇見的單字，變成貼紙。"
+ },
+ "または": {
+  "en": "or",
+  "zh-TW": "或"
+ },
+ "メールでログイン": {
+  "en": "Sign in with email",
+  "zh-TW": "使用電子郵件登入"
+ },
+ "初めての方は": {
+  "en": "New here?",
+  "zh-TW": "第一次使用？"
+ },
+ "記録に失敗しました\n{1}": {
+  "en": "Couldn't record that\n{1}",
+  "zh-TW": "紀錄失敗\n{1}"
+ },
+ "撮った写真、写真アプリから選んだ画像、「違う単語を入力」で入力した単語、誤りを報告するときに書いたメモ、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
+  "en": "Photos you take, images you pick from the Photos app, words you type with “Type a different word”, notes you write when reporting a mistake, and settings such as your learning language and level. Your email address and name are not sent.",
+  "zh-TW": "你拍的照片、從照片 App 選的圖片、用「輸入別的單字」輸入的單字、回報錯誤時寫的備註，以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
+ },
+ "写っている物や入力した単語の判定、単語の解説と例文の作成、報告された誤りの修正のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。": {
+  "en": "Only to recognize what is in a photo or the word you typed, to write word explanations and example sentences, and to fix mistakes you report. We never use your photos or the text you enter to train AI.",
+  "zh-TW": "只用於辨識照片中的物品或輸入的單字、製作單字的解說與例句，以及修正回報的錯誤。我們不會把你的照片或輸入的文字用於訓練 AI。"
+ },
+ "カメラ、写真アプリの画像、「違う単語を入力」、単語の解説と例文の作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。": {
+  "en": "Features that use AI — the camera, images from the Photos app, “Type a different word”, and writing word explanations and example sentences — are unavailable (nothing is sent). You can still view your words and review them. You can agree, or withdraw your consent, later in Settings.",
+  "zh-TW": "相機、照片 App 的圖片、「輸入別的單字」、製作單字的解說與例句等使用 AI 的功能將無法使用（不會傳送任何資料）。瀏覽收集的單字與複習仍可照常使用。之後也可以在「設定」中同意或撤回同意。"
+ },
+ "CatchWords は、写真から単語を見つけたり、単語の解説や例文を作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。": {
+  "en": "CatchWords uses third-party AI services to find words in your photos and to write word explanations and example sentences. Before you start, please check what is sent and choose whether you agree.",
+  "zh-TW": "CatchWords 會使用外部的 AI 服務，從照片找出單字，並製作單字的解說與例句。開始使用前，請確認傳送的內容，並選擇是否同意。"
+ },
+ "カメラで撮った写真や写真アプリから選んだ画像は、単語を見つけるために外部のAIサービスに送られます。AIへのデータ送信に同意すると、カメラ、写真アプリの画像、「違う単語を入力」、単語の解説と例文の作成が使えます。": {
+  "en": "Photos you take with the camera and images you pick from the Photos app are sent to third-party AI services to find words. Agree to sending data to AI to use the camera, images from the Photos app, “Type a different word”, and word explanations and example sentences.",
+  "zh-TW": "用相機拍的照片和從照片 App 選的圖片，會傳送給外部的 AI 服務來找出單字。同意將資料傳送給 AI 後，即可使用相機、照片 App 的圖片、「輸入別的單字」，以及製作單字的解說與例句。"
+ },
+ "取り消すと、カメラ、写真アプリの画像、「違う単語を入力」、単語の解説と例文の作成など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。": {
+  "en": "Features that use AI — the camera, images from the Photos app, “Type a different word”, and writing word explanations and example sentences — will stop working. Your words and reviews stay available.",
+  "zh-TW": "撤回後，相機、照片 App 的圖片、「輸入別的單字」、製作單字的解說與例句等使用 AI 的功能將無法使用。收集的單字與複習仍可照常使用。"
  }
 }

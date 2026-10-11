@@ -54,9 +54,8 @@ final class CaptureViewModel {
 
     // Re-encounter ("再会！")
     var owned: OwnedWord?
+    /// Set the moment the re-encounter screen hands the photo to its background save (ReencounterView).
     var reencCount: Int?
-    var reencPhotoSaved: Bool = false
-    var reencFailed: Bool = false
 
     /// runToken: "cancel" only discards stale results; in-flight work is never killed mid-save.
     private var runToken: Int = 0
@@ -113,10 +112,12 @@ final class CaptureViewModel {
         masksTask?.cancel()
         masksTask = Task<InstanceMasks?, Never> { await CutoutService.instanceMasks(from: image) }
         // Every instance's cut-out is rendered while the AI is still naming the things (they used to be rendered
-        // after the server answered, between the answer and the words on screen).
+        // after the server answered, between the answer and the words on screen). The tags' places inside the
+        // instances (`InstanceMasks.anchors`, quick) are measured first.
         let masksForCuts = masksTask
         Task.detached(priority: .utility) {
             guard let masks = await masksForCuts?.value else { return }
+            _ = masks.anchors()
             masks.prerenderCuts()
         }
         // The scan's outlines, traced from the same masks while the AI is naming the things.
@@ -322,8 +323,9 @@ final class CaptureViewModel {
         if let cut = object?.cut {
             cutout = cut
         } else {
-            // No Vision instance for this object (or a typed word): lift the subject near its point.
-            startCutout(near: object?.point)
+            // No cut-out for this object (or a typed word): lift the subject under its tag (`anchor`: inside its Vision
+            // instance when it has one, else the AI's point), so the sticker is the thing the tag was on.
+            startCutout(near: object?.anchor)
         }
         isCheckingOwned = true
         loadDetails(for: word)
@@ -342,8 +344,6 @@ final class CaptureViewModel {
             if let o = found?.owned {
                 owned = o
                 reencCount = nil
-                reencFailed = false
-                reencPhotoSaved = false
                 // An owned word gets no card: stop generating it (the request is cancelled with its task).
                 let key = Self.detailsKey(word)
                 detailsCache[key]?.cancel()
@@ -476,9 +476,9 @@ final class CaptureViewModel {
         restoredPendingId = nil
     }
 
-    /// 「図鑑に追加」: the dex opens before the save has finished. The queued photo is handed to that background
-    /// save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」 meanwhile; the
-    /// save removes it when done, or shows it again when it fails.
+    /// 「図鑑に追加」 (and a re-encounter's record): the dex opens before the save has finished. The queued photo is
+    /// handed to that background save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」
+    /// meanwhile; the save removes it when done, or shows it again when it fails.
     func detachPendingForSave() -> String? {
         let pid = pendingId
         pendingId = nil
@@ -553,8 +553,6 @@ final class CaptureViewModel {
         failedOffline = false
         owned = nil
         reencCount = nil
-        reencFailed = false
-        reencPhotoSaved = false
         withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { step = .camera }
     }
 

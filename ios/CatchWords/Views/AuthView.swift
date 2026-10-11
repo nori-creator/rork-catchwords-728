@@ -8,6 +8,9 @@ struct AuthView: View {
     @State private var password: String = ""
     @State private var isSignUp: Bool = false
     @State private var showMail: Bool = false
+    /// Opened from the welcome screen's 「メールでログイン」 / 「新規登録」: only the mail form (Google and Apple are on
+    /// the welcome screen itself).
+    @State private var mailOnly: Bool = false
     @State private var appeared: Bool = false
     /// Nudges the form sideways when sign-in fails, like a head shake.
     @State private var shake: CGFloat = 0
@@ -17,7 +20,8 @@ struct AuthView: View {
 
     private enum Field { case email, password }
 
-    /// The web's welcome screen comes first (`WelcomeView`); 「はじめる」 and 「ログイン」 open the sign-in options.
+    /// The welcome screen comes first (`WelcomeView`, with Google and Apple); its 「メールでログイン」 and 「新規登録」 open
+    /// this screen with the mail form.
     @State private var showOptions: Bool
 
     init(startOnOptions: Bool = false) {
@@ -30,7 +34,7 @@ struct AuthView: View {
                 options
                     .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             } else {
-                WelcomeView(onStart: { openOptions(signUp: true) }, onSignIn: { openOptions(signUp: false) })
+                WelcomeView(onMail: { openMail(signUp: false) }, onSignUp: { openMail(signUp: true) })
                     .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
             }
         }
@@ -43,9 +47,13 @@ struct AuthView: View {
         }
     }
 
-    private func openOptions(signUp: Bool) {
+    private func openMail(signUp: Bool) {
         Haptics.selection()
         isSignUp = signUp
+        mailOnly = true
+        showMail = true
+        auth.errorMessage = nil
+        // No keyboard yet: the screen is read first (the address field is one tap away, as before).
         showOptions = true
     }
 
@@ -56,6 +64,8 @@ struct AuthView: View {
                     Button {
                         focused = nil
                         showOptions = false
+                        mailOnly = false
+                        showMail = false
                     } label: {
                         Image(systemName: "chevron.left")
                             .scaledFont(size: 17, weight: .semibold)
@@ -75,60 +85,7 @@ struct AuthView: View {
                     .offset(y: appeared ? 0 : 18)
 
                 VStack(spacing: 12) {
-                    // Google and Apple go through the web app's sign-in (same account as the web).
-                    Button {
-                        Task { await auth.signInWithWeb(provider: "google") }
-                    } label: {
-                        HStack(spacing: 10) {
-                            GoogleMark(size: 20)
-                            Text(L("Googleで続ける")).scaledFont(size: 17, weight: .semibold)
-                        }
-                        .foregroundStyle(Color(hex: 0x1F1F1F))
-                        .frame(maxWidth: .infinity, minHeight: 54)
-                        .background(.white, in: .rect(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0x747775), lineWidth: 1))
-                    }
-                    .buttonStyle(PressableStyle())
-                    .disabled(auth.isBusy)
-                    .accessibilityIdentifier("auth.google")
-
-                    if AppConfig.nativeAppleSignIn {
-                        SignInWithAppleButton(.signIn) { req in
-                            auth.prepareApple(req)
-                        } onCompletion: { result in
-                            Task { await auth.completeApple(result) }
-                        }
-                        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)  // HIG: white on a dark screen
-                        .frame(height: 54)
-                        .clipShape(.rect(cornerRadius: 16))
-                    } else {
-                        // Apple's own button (HIG: the system draws the logo, title and proportions), but the tap
-                        // runs the web sign-in so the account is the same as on the web.
-                        AppleIDWebButton(style: colorScheme == .dark ? .white : .black, isEnabled: !auth.isBusy) {
-                            Task { await auth.signInWithWeb(provider: "apple") }
-                        }
-                        .id(colorScheme)  // the button's style is fixed at creation; rebuild it when the scheme flips
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .accessibilityIdentifier("auth.apple")
-                    }
-
-                    Button {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showMail.toggle() }
-                        if showMail {
-                            Task { try? await Task.sleep(for: .milliseconds(350)); focused = .email }
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "envelope.fill")
-                            Text(L("メールアドレスで続ける")).scaledFont(size: 17, weight: .semibold)
-                        }
-                        .foregroundStyle(Theme.foreground)
-                        .frame(maxWidth: .infinity, minHeight: 54)
-                        .glassCard(16)
-                    }
-                    .buttonStyle(PressableStyle())
-                    .accessibilityIdentifier("auth.mail")
+                    if !mailOnly { providers }
 
                     if showMail { mailForm.offset(x: shake).transition(.opacity.combined(with: .move(edge: .top))) }
 
@@ -195,6 +152,65 @@ struct AuthView: View {
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.85).delay(0.05)) { appeared = true }
         }
+    }
+
+    /// Google, Apple and 「メールアドレスで続ける」 (which opens the mail form under them).
+    @ViewBuilder
+    private var providers: some View {
+        // Google and Apple go through the web app's sign-in (same account as the web).
+        Button {
+            Task { await auth.signInWithWeb(provider: "google") }
+        } label: {
+            HStack(spacing: 10) {
+                GoogleMark(size: 20)
+                Text(L("Googleで続ける")).scaledFont(size: 17, weight: .semibold)
+            }
+            .foregroundStyle(Color(hex: 0x1F1F1F))
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(.white, in: .rect(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0x747775), lineWidth: 1))
+        }
+        .buttonStyle(PressableStyle())
+        .disabled(auth.isBusy)
+        .accessibilityIdentifier("auth.google")
+
+        if AppConfig.nativeAppleSignIn {
+            SignInWithAppleButton(.signIn) { req in
+                auth.prepareApple(req)
+            } onCompletion: { result in
+                Task { await auth.completeApple(result) }
+            }
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)  // HIG: white on a dark screen
+            .frame(height: 54)
+            .clipShape(.rect(cornerRadius: 16))
+        } else {
+            // Apple's own button (HIG: the system draws the logo, title and proportions), but the tap
+            // runs the web sign-in so the account is the same as on the web.
+            AppleIDWebButton(style: colorScheme == .dark ? .white : .black, isEnabled: !auth.isBusy) {
+                Task { await auth.signInWithWeb(provider: "apple") }
+            }
+            .id(colorScheme)  // the button's style is fixed at creation; rebuild it when the scheme flips
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .accessibilityIdentifier("auth.apple")
+        }
+
+        Button {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showMail.toggle() }
+            if showMail {
+                Task { try? await Task.sleep(for: .milliseconds(350)); focused = .email }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "envelope.fill")
+                Text(L("メールアドレスで続ける")).scaledFont(size: 17, weight: .semibold)
+            }
+            .foregroundStyle(Theme.foreground)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .glassCard(16)
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityIdentifier("auth.mail")
     }
 
     private var hero: some View {
@@ -288,17 +304,20 @@ struct AuthView: View {
 /// The system "Sign in with Apple" button (`ASAuthorizationAppleIDButton`, so the look follows the HIG) with our
 /// own tap action. `SignInWithAppleButton` always starts the native ASAuthorization flow, so it can't be used
 /// while Apple sign-in goes through the web app (`AppConfig.nativeAppleSignIn == false`).
-private struct AppleIDWebButton: UIViewRepresentable {
+struct AppleIDWebButton: UIViewRepresentable {
+    var type: ASAuthorizationAppleIDButton.ButtonType = .signIn
     var style: ASAuthorizationAppleIDButton.Style
+    var cornerRadius: CGFloat = 16
+    var identifier: String = "auth.apple"
     var isEnabled: Bool
     var action: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(action: action) }
 
     func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: style)
-        button.cornerRadius = 16
-        button.accessibilityIdentifier = "auth.apple"
+        let button = ASAuthorizationAppleIDButton(authorizationButtonType: type, authorizationButtonStyle: style)
+        button.cornerRadius = cornerRadius
+        button.accessibilityIdentifier = identifier
         button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
         return button
     }
@@ -318,7 +337,7 @@ private struct AppleIDWebButton: UIViewRepresentable {
 
 /// Google's standard four-colour "G" (Sign in with Google branding guidelines), as vectors: the official
 /// logo's path data (48 × 48 view box) scaled to the frame, so it stays crisp at any size.
-private struct GoogleMark: View {
+struct GoogleMark: View {
     var size: CGFloat
 
     var body: some View {

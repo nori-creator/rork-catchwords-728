@@ -161,13 +161,11 @@ struct HomeView: View {
     }
 }
 
+/// Plain white, like the other screens (owner 2026-10-11: 「ホーム画面の背景画面も白色にして」); the cut-outs and their
+/// beige word tags stand on it.
 struct HomeBackground: View {
     var body: some View {
-        ZStack {
-            LinearGradient(colors: [Color(hex: 0xF7F9FC), Color(hex: 0xEFE6D8)], startPoint: .top, endPoint: .init(x: 0.5, y: 0.35))
-            RadialGradient(colors: [Color(hex: 0xFFFFFF, opacity: 0.5), .clear], center: .center, startRadius: 20, endRadius: 500)
-        }
-        .ignoresSafeArea()
+        Color.white.ignoresSafeArea()
     }
 }
 
@@ -190,8 +188,9 @@ struct AlbumDay: Identifiable, Equatable {
     }
 }
 
-/// The album as one plain vertical list: a month heading where the month changes, then each day's date
-/// and its photos. Any day's photos can be rearranged with a long press (as on the web).
+/// The album as one plain vertical list: each day's date (no month headings, owner 2026-10-11: 「◯月のアルバムいらない
+/// から、日付だけにして、日付の大きさを少し大きく」) and its photos. Any day's photos can be rearranged with a long
+/// press (as on the web).
 struct HomeAlbum: View {
     let days: [AlbumDay]
     let onOpen: (Sticker) -> Void
@@ -202,46 +201,28 @@ struct HomeAlbum: View {
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(Array(days.enumerated()), id: \.element.id) { i, d in
-                let startsMonth = i == 0 || !Calendar.current.isDate(days[i - 1].day, equalTo: d.day, toGranularity: .month)
-                VStack(alignment: .leading, spacing: 10) {
-                    if startsMonth {
-                        monthHeading(d.day)
-                            .padding(.top, i == 0 ? 0 : 18)
-                    }
-                    daySection(d)
-                }
-                .padding(.bottom, 22)
-                .tourAnchor(.album, if: i == 0)
+                daySection(d)
+                    .padding(.bottom, 24)
+                    .tourAnchor(.album, if: i == 0)
             }
         }
     }
 
-    private func monthHeading(_ month: Date) -> some View {
+    /// 10月11日(日); a day of another year says its year too (2025年10月11日(土)).
+    private static func dayTitle(_ day: Date) -> String {
         let cal = Calendar.current
-        let year = cal.component(.year, from: month)
-        let otherYear = year != cal.component(.year, from: Date())
-        return VStack(alignment: .leading, spacing: 0) {
-            if otherYear {
-                Text(String(year))
-                    .scaledFont(size: 12, weight: .semibold)
-                    .foregroundStyle(Color(hex: 0x33291F, opacity: 0.55))
-            }
-            Text(L("\(JPDate.month(month))のアルバム"))
-                .scaledFont(size: 20, weight: .heavy)
-                .foregroundStyle(Color(hex: 0x33291F))
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-        .padding(.horizontal, 10)
+        let sameYear = cal.component(.year, from: day) == cal.component(.year, from: Date())
+        return sameYear ? JPDate.monthDayWeek(day) : JPDate.yearMonthDayWeek(day)
     }
 
     private func daySection(_ d: AlbumDay) -> some View {
         let isToday = Calendar.current.isDateInToday(d.day)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(JPDate.monthDayWeek(d.day))
-                    .scaledFont(size: 16, weight: .bold)
+                Text(Self.dayTitle(d.day))
+                    .scaledFont(size: 20, weight: .heavy)
                     .foregroundStyle(Color(hex: 0x33291F))
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 if !d.items.isEmpty {
                     Text(L("\(d.items.count)語"))

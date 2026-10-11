@@ -37,7 +37,7 @@ nonisolated enum L10n {
             if l.hasPrefix("zh-hant") || l.hasPrefix("zh-tw") || l.hasPrefix("zh-hk") || l.hasPrefix("zh-mo") { return "zh-TW" }
             if l.hasPrefix("en") { return "en" }
         }
-        return "ja"
+        return "en"
     }
 
     static func set(_ code: String) {

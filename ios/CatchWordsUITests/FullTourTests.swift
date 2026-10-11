@@ -246,7 +246,7 @@ final class FullTourTests: XCTestCase {
         // The dialog's button is reported twice (button inside button): take the first.
         let confirm = app.buttons["settings.signOut.confirm"].firstMatch
         if confirm.waitForExistence(timeout: 3) { confirm.tap() }
-        // Signed out: the welcome screen first (as on the web), then 「ログイン」 opens the sign-in options.
+        // Signed out: the welcome screen first, then 「メールでログイン」 opens the sign-in screen with the mail form.
         let signIn = app.buttons["welcome.signin"]
         guard signIn.waitForExistence(timeout: 10) else {
             XCTFail("[\(display)/\(learning)] the welcome screen did not appear after signing out")
@@ -255,15 +255,12 @@ final class FullTourTests: XCTestCase {
         settle(2)
         snap("welcome")
         signIn.tap()
-        let mail = app.buttons["auth.mail"]
-        guard mail.waitForExistence(timeout: 10) else {
-            XCTFail("[\(display)/\(learning)] the sign-in screen did not open from the welcome screen")
+        guard app.textFields["auth.email"].waitForExistence(timeout: 10) else {
+            XCTFail("[\(display)/\(learning)] the mail form did not open from the welcome screen")
             return
         }
         settle(1)
         snap("auth")
-        mail.tap()
-        settle(1)
         // A wrong password first: the error must be in the display language.
         fill("auth.email", "demo@catchwords.test")
         fill("auth.password", "wrong")

@@ -11,7 +11,23 @@ struct ReviewCard: Identifiable, Hashable {
 struct QuizChoice: Identifiable, Hashable {
     let headword: String
     let zhuyin: String?
+    /// Drawn instead of the zhuyin when the learner chose ピンイン (設定 › 発音表記); a Japanese word's is its romaji.
+    var pinyin: String? = nil
     var id: String { headword }
+
+    /// This choice with the pinyin it shows: spelled from its zhuyin as the web spells it (Utilities/PinyinZhuyin.swift),
+    /// else the word's own (trimmed). Owner 2026-10-11 「設定でピン音にしても復習で注音が表示される。」: the choices carried
+    /// no pinyin, so all four kept the zhuyin whatever the setting said. All four are spelled the same way: the bundled
+    /// pool (Models/QuizPool.swift) has zhuyin only, and a learner's own pinyin is often written joined ("mángguǒ")
+    /// where the spelled one is spaced ("píng guǒ"), which would tell the pool's distractors from the learner's word.
+    /// A reading that cannot be spelled and no pinyin of its own: nil, and that word keeps its zhuyin.
+    func withPinyin() -> QuizChoice {
+        var out = self
+        let own = (pinyin ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        out.pinyin = PinyinZhuyin.pinyin(fromZhuyin: zhuyin, want: headword.filter(ZhuyinLayout.isHan).count)
+            ?? (own.isEmpty ? nil : own)
+        return out
+    }
 }
 
 /// Today's review queue — reads `reviews` (due_at <= now), grades with srs.ts, writes `reviews` + `review_history`.
@@ -39,6 +55,9 @@ final class ReviewStore {
     var dueRemaining: Int = 0
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
+    /// `allHistory` was read from the server (the queue can load while the history read fails: then the empty list
+    /// is not this account's history, and the forgetting curve waits for its own read instead of drawing it).
+    private(set) var historyLoaded: Bool = false
     /// When the queue was last read: one older than 5 minutes is read again when the review tab opens on its first
     /// card (a word caught meanwhile comes due 10 minutes after its catch).
     private(set) var loadedAt: Date?
@@ -70,6 +89,7 @@ final class ReviewStore {
         doneToday = 0
         streak = 0
         allHistory = []
+        historyLoaded = false
         missed = []
         isRetry = false
         moreAvailable = false
@@ -217,6 +237,7 @@ final class ReviewStore {
         let mine = Set(dex.stickers.map(\.id))
         if dex.hasLoaded { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
+        historyLoaded = true
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)
         let today = SRS.taipeiDay(Date())
@@ -236,10 +257,11 @@ final class ReviewStore {
     }
 
     private func makeChoices(for card: ReviewCard, dex: DexStore) -> [QuizChoice] {
-        let correct = QuizChoice(headword: card.sticker.word?.headword ?? "", zhuyin: card.sticker.word?.readingZhuyin)
+        let correct = QuizChoice(headword: card.sticker.word?.headword ?? "", zhuyin: card.sticker.word?.readingZhuyin,
+                                 pinyin: card.sticker.word?.pinyin)
         let others = dex.stickers.compactMap { s -> (QuizChoice, Bool)? in
             guard let w = s.word, w.headword != correct.headword else { return nil }
-            return (QuizChoice(headword: w.headword, zhuyin: w.readingZhuyin), s.categoryKey == card.sticker.categoryKey)
+            return (QuizChoice(headword: w.headword, zhuyin: w.readingZhuyin, pinyin: w.pinyin), s.categoryKey == card.sticker.categoryKey)
         }
         let same = others.filter(\.1).map(\.0).shuffled()
         let rest = others.filter { !$0.1 }.map(\.0).shuffled()
@@ -250,7 +272,8 @@ final class ReviewStore {
             out.append(c)
             if out.count == 3 { break }
         }
-        return ([correct] + out).shuffled()
+        // Pinyin for the four drawn only (spelling it for the whole pool on every card would be wasted work).
+        return ([correct] + out).map { $0.withPinyin() }.shuffled()
     }
 
     /// Graded by the web's own `gradeReview` (reviews.functions.ts): the same scoring (correct=5,

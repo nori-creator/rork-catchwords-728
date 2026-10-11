@@ -153,7 +153,7 @@ enum ScanFixtures {
     }
 
     /// The label mask (a quarter of the photo's size): 1 mango, 2 plate, 3 cup — the mango in front of the plate.
-    static let outlines: [CatchOutline] = {
+    private static let labels: (mask: [UInt8], width: Int, height: Int) = {
         let w = Int(size.width / 4), h = Int(size.height / 4)
         var mask = [UInt8](repeating: 0, count: w * h)
         func inEllipse(_ r: CGRect, _ p: CGPoint) -> Bool {
@@ -173,8 +173,14 @@ enum ScanFixtures {
                 mask[y * w + x] = v
             }
         }
-        return CatchOutlineTracer.outlines(mask: mask, width: w, height: h)
+        return (mask: mask, width: w, height: h)
     }()
+
+    static let outlines: [CatchOutline] = CatchOutlineTracer.outlines(mask: labels.mask, width: labels.width,
+                                                                      height: labels.height)
+
+    /// Where each thing's tag sits, by label, as `InstanceMasks.anchors` measures it from Vision's mask on a phone.
+    static let anchors: [Int: CGPoint] = CatchAnchor.anchors(mask: labels.mask, width: labels.width, height: labels.height)
 
     /// What the AI "names": the mango (two names), the plate and the cup, each on its thing (0–1000 of the photo).
     static func candidates() -> [Candidate] {
@@ -220,8 +226,12 @@ private struct ScanPreview: View {
         try? await Task.sleep(for: .seconds(max(0, namesAfter - 0.25)))
         let found = ScanFixtures.candidates()
         var objects = CatchObject.build(candidates: found, masks: nil, photoSize: ScanFixtures.size)
-        // The instances under each thing, as `CatchObject.build` finds them from Vision's mask on a phone.
-        for k in objects.indices { objects[k].instance = k + 1 }
+        // The instances under each thing and the tags' places inside them, as `CatchObject.build` finds them from
+        // Vision's mask on a phone.
+        for k in objects.indices {
+            objects[k].instance = k + 1
+            if let a = ScanFixtures.anchors[k + 1] { objects[k].anchor = a }
+        }
         vm.objects = objects
         session.setNames(objects, at: Date())
         vm.candidates = found
