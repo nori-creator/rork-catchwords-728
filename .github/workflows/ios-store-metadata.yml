@@ -1,0 +1,89 @@
+# App Store の文言を App Store Connect に入れる（説明文・キーワード・サブタイトル・審査メモ）
+#
+# 何をするか:
+#   ios/metadata の文言（説明文・キーワード・サブタイトル・宣伝文・サポート URL など）と、
+#   docs/app-store/review-notes.en.txt（審査メモ = App Review Information の Notes）を、
+#   App Store Connect の版 1.0.0 に入れる（scripts/asc_push_metadata.py）。
+#   審査用アカウント・連絡先・ビルド・価格・配信国には触らず、審査にも出さない。
+#
+# 使い方: GitHub → Actions →「App Store metadata（文言を入れる）」→ Run workflow
+#   - apply を空のまま実行 → 何が変わるかを出すだけ（書き込まない）
+#   - apply にチェック → 書き込む
+#   PR でこのファイルや文言を変えると、試すだけの実行が自動で動き、変わる所を ci-previews の
+#   runs/store-metadata/plan.md に置く。
+name: App Store metadata（文言を入れる）
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "App Store Connect に書き込む（空のままなら、変わる所を出すだけ）"
+        type: boolean
+        required: false
+        default: false
+      notes:
+        description: "審査メモ（Notes）も入れる"
+        type: boolean
+        required: false
+        default: true
+  pull_request:
+    paths:
+      - ios/metadata/**
+      - docs/app-store/review-notes.en.txt
+      - scripts/asc_push_metadata.py
+      - .github/workflows/ios-store-metadata.yml
+
+concurrency:
+  group: ios-store-metadata
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: API キーを一時ファイルに置く
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          if [ -n "$ASC_KEY_P8" ]; then
+            printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          elif [ -n "$ASC_KEY_P8_BASE64" ]; then
+            echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          else
+            echo "::error::Secrets の ASC_KEY_P8 がありません（docs/self-managing-ios.md の手順 2-4）"; exit 1
+          fi
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: 文言を入れる（または変わる所を出す）
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLY: ${{ github.event_name == 'workflow_dispatch' && inputs.apply }}
+          NOTES: ${{ github.event_name != 'workflow_dispatch' || inputs.notes }}
+        run: |
+          set +e -o pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          extra=""
+          [ "$NOTES" = "true" ] && extra="--notes docs/app-store/review-notes.en.txt"
+          [ "$APPLY" = "true" ] && extra="$extra --apply"
+          ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" python3 scripts/asc_push_metadata.py com.nori.catchwords ios/metadata 1.0.0 $extra \
+            | tee "$RUNNER_TEMP/out/plan.md"
+          status=$?
+          cat "$RUNNER_TEMP/out/plan.md" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/AuthKey.p8"
+          exit $status
+
+      - name: ci-previews ブランチに置く
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/out/plan.md" ] || exit 0
+          echo "${{ github.sha }} ${{ github.event_name }}" > "$RUNNER_TEMP/out/COMMIT"
+          bash scripts/push_ci_previews.sh "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            runs/store-metadata "store metadata plan @ ${{ github.sha }}" "$RUNNER_TEMP/out/plan.md" "$RUNNER_TEMP/out/COMMIT"

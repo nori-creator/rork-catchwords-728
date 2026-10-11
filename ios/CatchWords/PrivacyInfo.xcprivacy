@@ -4,7 +4,8 @@
 <dict>
 	<!-- App Store privacy manifest. No tracking. "Required reason" APIs the app uses: UserDefaults
 	     (the app's own settings, CA92.1; the App Group shared with the widgets, group.com.nori.catchwords,
-	     1C8F.1) and file timestamps (the pronunciation cache's own files, C617.1). Keep in step with docs/self-managing-ios.md 6-3.
+	     1C8F.1) and file timestamps (the pronunciation and picture caches' own files, C617.1). Keep in step with
+	     docs/app-store/store-answers.ja.md (App Privacy).
 	     Audio is not listed: "search by voice" (Services/SpeechService.swift) never sends audio to our
 	     server. It is recognised on device, or by Apple's speech recognition, and Apple's App Privacy
 	     Details say data processed only on device is not "collected" and data collected by Apple need
@@ -143,8 +144,8 @@
 				<string>1C8F.1</string>
 			</array>
 		</dict>
-		<!-- File timestamps: the pronunciation cache (SoundService) reads and sets the modification date of
-		     its own files in the app container to keep its size capped (C617.1). -->
+		<!-- File timestamps: the pronunciation cache (SoundService) and the picture cache (ImageCache) read and
+		     set the modification date of their own files in the app container to keep their size capped (C617.1). -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
