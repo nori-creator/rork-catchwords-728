@@ -38,7 +38,7 @@ struct ForgettingCurveSheet: View {
         self.onReviewNow = onReviewNow
         self.onClose = onClose
         let known = store.allHistory.filter { $0.stickerId == sticker.id }.sorted { $0.reviewedAt < $1.reviewedAt }
-        _history = State(initialValue: store.hasLoaded || !known.isEmpty ? known : nil)
+        _history = State(initialValue: store.historyLoaded || !known.isEmpty ? known : nil)
     }
 
     private var review: ReviewState? { dex.reviews[sticker.id] }

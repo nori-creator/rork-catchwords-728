@@ -55,6 +55,9 @@ final class ReviewStore {
     var dueRemaining: Int = 0
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
+    /// `allHistory` was read from the server (the queue can load while the history read fails: then the empty list
+    /// is not this account's history, and the forgetting curve waits for its own read instead of drawing it).
+    private(set) var historyLoaded: Bool = false
     /// When the queue was last read: one older than 5 minutes is read again when the review tab opens on its first
     /// card (a word caught meanwhile comes due 10 minutes after its catch).
     private(set) var loadedAt: Date?
@@ -86,6 +89,7 @@ final class ReviewStore {
         doneToday = 0
         streak = 0
         allHistory = []
+        historyLoaded = false
         missed = []
         isRetry = false
         moreAvailable = false
@@ -233,6 +237,7 @@ final class ReviewStore {
         let mine = Set(dex.stickers.map(\.id))
         if dex.hasLoaded { rows = rows.filter { $0.stickerId.map(mine.contains) ?? false } }
         allHistory = rows
+        historyLoaded = true
         let days = Set(rows.map { SRS.taipeiDay($0.reviewedAt) })
         streak = SRS.streak(days: days)
         let today = SRS.taipeiDay(Date())

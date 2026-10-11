@@ -22,22 +22,20 @@ struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var appeared: Bool = false
 
+    /// The stickers' least height.
+    private static let minStage: CGFloat = 150
+
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            // The stickers take the height the rest leaves.
-            WelcomeStickers(appeared: appeared, animate: !reduceMotion)
-                .frame(minHeight: 150, maxHeight: .infinity)
-                .layoutPriority(-1)
-                .padding(.horizontal, -24)
-            copy
-                .padding(.top, 4)
-            ways
-                .padding(.top, 18)
+        // One screen, the stickers taking the height the rest leaves. When even the smallest stickers leave too little
+        // room (a large text size on a small phone, an error under the buttons), the page scrolls instead, so
+        // 「新規登録」 and the agreement can always be reached.
+        ViewThatFits(in: .vertical) {
+            page(scrolls: false)
+            ScrollView {
+                page(scrolls: true)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 4)
-        .padding(.bottom, 8)
         .background {
             WelcomeBackdrop()
                 .ignoresSafeArea()
@@ -49,6 +47,23 @@ struct WelcomeView: View {
                 withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.7)) { appeared = true }
             }
         }
+    }
+
+    private func page(scrolls: Bool) -> some View {
+        VStack(spacing: 0) {
+            header
+            WelcomeStickers(appeared: appeared, animate: !reduceMotion)
+                .frame(minHeight: Self.minStage, maxHeight: scrolls ? Self.minStage : .infinity)
+                .layoutPriority(-1)
+                .padding(.horizontal, -24)
+            copy
+                .padding(.top, 4)
+            ways
+                .padding(.top, 18)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
     }
 
     private var header: some View {
