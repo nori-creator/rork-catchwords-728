@@ -4,14 +4,14 @@
 - 他社の素材の宣言（contentRightsDeclaration）: USES_THIRD_PARTY_CONTENT
 
 ## App 情報
-- 状態 PREPARE_FOR_SUBMISSION、年齢区分 FOUR_PLUS、カテゴリ EDUCATION / REFERENCE
+- 状態 WAITING_FOR_REVIEW、年齢区分 FOUR_PLUS、カテゴリ EDUCATION / REFERENCE
   - en-US: 名前「CatchWords: Photo Vocabulary」 サブタイトル「Learn Taiwanese Mandarin words」 プライバシーポリシー https://catchwords.lovable.app/privacy
   - ja: 名前「CatchWords」 サブタイトル「撮って集める、台湾華語の単語図鑑」 プライバシーポリシー https://catchwords.lovable.app/privacy
   - 年齢区分の答え（NONE / いいえ 以外）: （すべて NONE / いいえ）
   - 年齢区分の未回答: developerAgeRatingInfoUrl, gracRatingClassificationNumber, kidsAgeBand
 
 ## バージョン
-- 1.0.0: 状態 **PREPARE_FOR_SUBMISSION**（PREPARE_FOR_SUBMISSION）、ビルド 1024
+- 1.0.0: 状態 **WAITING_FOR_REVIEW**（WAITING_FOR_REVIEW）、ビルド 1024
   - 審査の情報: 連絡先の名前 True・電話 True・メール True、デモアカウント必要 True・ID True・パスワード True、メモ 2894 字
   - ja: 説明 785 字（「身の回りの物を撮るだけで、台湾華語（繁体字）の単語が集まる図鑑アプリです。単語は、自分で撮った写真から切り抜いたステッカーになって図鑑に並びます。
 
@@ -29,7 +29,9 @@
 - 1.0.0 (1017): VALID、送った日 2026-10-08T22:34:29-07:00、期限切れ False、最低 iOS 18.0
 
 ## 審査への提出
-- UNRESOLVED_ISSUES（提出 2026-10-04T10:57:40.361Z）
+- READY_FOR_REVIEW（提出 None）
+- WAITING_FOR_REVIEW（提出 2026-10-11T15:09:52.688Z）
+- COMPLETE（提出 2026-10-04T10:57:40.361Z）
 
 ## アプリ内課金
 - {"inAppPurchases": [], "subscriptionGroups": []}

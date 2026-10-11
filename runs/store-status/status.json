@@ -12,7 +12,7 @@
  "appInfos": [
   {
    "id": "d1dec511-432b-48c5-aeb0-e9b74265ea84",
-   "state": "PREPARE_FOR_SUBMISSION",
+   "state": "WAITING_FOR_REVIEW",
    "ageRating": "FOUR_PLUS",
    "kidsAgeBand": null,
    "localizations": [
@@ -69,8 +69,8 @@
   {
    "id": "5132cbbf-3786-4ee7-b227-b02466c1acea",
    "version": "1.0.0",
-   "state": "PREPARE_FOR_SUBMISSION",
-   "appStoreState": "PREPARE_FOR_SUBMISSION",
+   "state": "WAITING_FOR_REVIEW",
+   "appStoreState": "WAITING_FOR_REVIEW",
    "releaseType": "AFTER_APPROVAL",
    "copyright": "2026 近藤範之",
    "createdDate": "2026-10-01T04:24:38-07:00",
@@ -188,7 +188,17 @@
  ],
  "reviewSubmissions": [
   {
-   "state": "UNRESOLVED_ISSUES",
+   "state": "READY_FOR_REVIEW",
+   "submittedDate": null,
+   "platform": "IOS"
+  },
+  {
+   "state": "WAITING_FOR_REVIEW",
+   "submittedDate": "2026-10-11T15:09:52.688Z",
+   "platform": "IOS"
+  },
+  {
+   "state": "COMPLETE",
    "submittedDate": "2026-10-04T10:57:40.361Z",
    "platform": "IOS"
   }
