@@ -130,6 +130,11 @@ struct DexView: View {
         }
     }
 
+    /// A search, category or date is narrowing the words (the same test as `filtered`).
+    private var isFiltering: Bool {
+        categoryFilter != nil || dayFilter != nil || !query.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
@@ -215,14 +220,10 @@ struct DexView: View {
                 .tourAnchor(.dexModes)
             }
             .padding(.horizontal, 2)
-            // The app's own search and filters (not in the prototype) stay for カード / 地図 / リスト, in one row.
-            if mode != .grid {
-                HStack(spacing: 8) {
-                    searchField
-                    filterPills
-                }
+            // The app's own search and filters (not in the prototype), in every view — the gallery too, which
+            // follows them (owner 2026-10-11: 「図鑑のすべての種類で上の検索バー、カテゴリー、日付の選択欄を表示して。」).
+            filterRow
                 .zIndex(1)
-            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
@@ -244,21 +245,44 @@ struct DexView: View {
         }
     }
 
-    private var filterPills: some View {
+    /// Search, category and date. One row while the pills fit at their full width beside a search field that
+    /// still has room to type; otherwise (a long category picked, English, large text) the search field gets
+    /// its own row and the pills go on the row under it. The pills are never cut short: in one row they used
+    /// to get half of it and showed 「カテゴ…」 (owner 2026-10-11: 「カテゴリーの文字が見切れないように調整して」).
+    private var filterRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                searchField
+                    .frame(minWidth: 120, idealWidth: 150, maxWidth: .infinity)
+                filterPills(stretch: false)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(spacing: 8) {
+                searchField
+                filterPills(stretch: true)
+            }
+        }
+    }
+
+    /// The category and date pills. `stretch`: the two-row layout, where the category pill takes all the row
+    /// the date pill leaves (a long category name keeps its room) and the menus open from the row's outer
+    /// edges, so they always stay on screen.
+    private func filterPills(stretch: Bool) -> some View {
         HStack(spacing: 8) {
             Button { toggleMenu(.category) } label: {
                 pill(categoryFilter.map { categoryTitle($0) } ?? L("カテゴリー"),
-                     active: categoryFilter != nil, open: openMenu == .category)
+                     active: categoryFilter != nil, open: openMenu == .category, stretch: stretch)
             }
             .buttonStyle(PressableStyle(scale: 0.95))
-            .overlay(alignment: .topTrailing) {
-                if openMenu == .category { categoryMenu.offset(x: 30, y: 52) }
+            .overlay(alignment: stretch ? Alignment.topLeading : Alignment.topTrailing) {
+                if openMenu == .category { categoryMenu.offset(x: stretch ? 0 : 30, y: 52) }
             }
             .zIndex(openMenu == .category ? 2 : 0)
             Button { toggleMenu(.day) } label: {
                 pill(dayFilter.map { JPDate.mmdd($0) } ?? L("日付"), active: dayFilter != nil, open: openMenu == .day)
             }
             .buttonStyle(PressableStyle(scale: 0.95))
+            .fixedSize(horizontal: true, vertical: false)  // short (日付 / 10/11): always whole
             .overlay(alignment: .topTrailing) {
                 if openMenu == .day { dayMenu.offset(y: 52) }
             }
@@ -269,7 +293,8 @@ struct DexView: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
-            TextField("", text: $query, prompt: Text(L("単語・読み・意味で検索")).foregroundStyle(Theme.muted))
+            // Just 「検索」 (owner 2026-10-11: 「検索バーのなかに検索とだけ書いて」).
+            TextField("", text: $query, prompt: Text(L("検索")).foregroundStyle(Theme.muted))
                 .scaledFont(size: 16)
                 .foregroundStyle(Theme.foreground)
                 .submitLabel(.search)
@@ -340,7 +365,7 @@ struct DexView: View {
         }
     }
 
-    private func pill(_ text: String, active: Bool, open: Bool) -> some View {
+    private func pill(_ text: String, active: Bool, open: Bool, stretch: Bool = false) -> some View {
         HStack(spacing: 4) {
             Text(text).lineLimit(1)
             Image(systemName: "chevron.down").scaledFont(size: 10, weight: .semibold)
@@ -349,7 +374,7 @@ struct DexView: View {
         .scaledFont(size: 14, weight: .medium)
         .foregroundStyle(active ? .white : Theme.foreground)
         .padding(.horizontal, 12)
-        .frame(minHeight: 44)
+        .frame(maxWidth: stretch ? CGFloat.infinity : nil, minHeight: 44)
         .background(active ? AnyShapeStyle(Theme.primary) : AnyShapeStyle(Theme.secondary), in: Capsule())
     }
 
@@ -365,11 +390,13 @@ struct DexView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dex.isLoading && !dex.hasLoaded {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if mode == .grid {
-            // The gallery always shows its shadows, even before the first catch (prototype renderDex grid).
+        } else if mode == .grid && !(isFiltering && dex.hasLoaded && filtered.isEmpty) {
+            // The gallery always shows its shadows, even before the first catch (prototype renderDex grid) —
+            // unless a search or filter is on: then only the words that match, and when none does, the same
+            // empty state as the other views.
             gallery
         } else if dex.hasLoaded && filtered.isEmpty {
-            EmptyDexView(isFiltered: categoryFilter != nil || dayFilter != nil || !query.isEmpty,
+            EmptyDexView(isFiltered: isFiltering,
                          onCamera: { router.tab = .camera },
                          onClearFilters: {
                              withAnimation(.snappy) {
@@ -392,8 +419,9 @@ struct DexView: View {
     // MARK: ギャラリー (category shadows)
 
     private var gallery: some View {
+        // The No. always come from the whole dex: narrowing the words never renumbers them.
         let numbers = DexNumbering.assign(dex.stickers, lang: lang, uid: SupabaseClient.shared.userId)
-        let sections = DexBook.sections(stickers: dex.stickers, numbers: numbers, lang: lang, hold: galleryHold)
+        let sections = gallerySections(numbers: numbers)
         return ScrollViewReader { proxy in
             ScrollView {
                 // .dex-body: padding 4 18 40 (each .dcat adds its 12 pt margin on top)
@@ -441,6 +469,27 @@ struct DexView: View {
                     if focus?.fillStart == start { focus = nil }
                 }
             }
+        }
+    }
+
+    /// The gallery's category cards. While a search or filter is on, they are built from the matching words
+    /// only, without shadows (a word not caught yet matches no search) and without the categories left empty —
+    /// like the web (`dexSections` with `shadows: false`). The gallery used to ignore the filters (owner
+    /// 2026-10-11: 「図鑑の一覧にそれない」). DexBook builds the cards as ever; the shadows are dropped here.
+    private func gallerySections(numbers: [String: Int]) -> [DexSection] {
+        guard isFiltering else {
+            return DexBook.sections(stickers: dex.stickers, numbers: numbers, lang: lang, hold: galleryHold)
+        }
+        let held = galleryHold?.stickerId
+        let all = DexBook.sections(stickers: filtered, numbers: numbers, lang: lang, hold: galleryHold)
+        return all.compactMap { (sec: DexSection) -> DexSection? in
+            // Caught words only — and a landing word on its way (a landing clears the filters, so only a guard).
+            let slots = sec.slots.filter { (slot: DexSlot) -> Bool in
+                if case .caught = slot.kind { return true }
+                return slot.id == held
+            }
+            guard !slots.isEmpty else { return nil }
+            return DexSection(category: sec.category, slots: slots, caughtCount: sec.caughtCount)
         }
     }
 
@@ -698,8 +747,13 @@ struct DexListRow: View {
 }
 
 /// DexDayMap.tsx: one day at a time — round photo pins, a timeline panel, and a day bar (calendar / ‹ ›).
+/// Scrolling the timeline walks the map through the day like the web: the word on the reading line is the
+/// current word, its stop's pin rises wearing it and the map follows — no tap needed (owner 2026-10-11:
+/// 「マップの図鑑、WEB版のようにタイムラインをスクロールしたら、下の単語に移動して。１日のタイムラインをスクロールしたら、
+/// その日撮った写真すべてが地図上での反応があるようにして。わざわざ単語をタップしなくても。」).
 struct DexMapView: View {
     @Environment(DexStore.self) private var dex
+    @Environment(\.appReduceMotion) private var reduceMotion
     let stickers: [Sticker]
     let onOpen: (Sticker) -> Void
 
@@ -709,6 +763,21 @@ struct DexMapView: View {
     @State private var position: MapCameraPosition = .automatic
     @State private var showDatePicker: Bool = false
     @State private var visibleRegion: MKCoordinateRegion?
+    /// A list move asked for by code — a pin tap (that stop's rows) or a new day (the top). Taken once.
+    @State private var listJump: String?
+    /// Until then the reading line ignores the rows passing it: the list is being moved by code, not by the
+    /// user (web `programmatic`), so the list and the map never fight the user's own scroll.
+    @State private var quietUntil: Date = .distantPast
+
+    /// The timeline panel's height (kept low so the pins above it stay in view).
+    private static let panelHeight: CGFloat = 250
+    /// The reading line, from the panel's top: the row on it is the current word (web `onListScroll`: 35%).
+    private static let readingLine: CGFloat = panelHeight * 0.35
+    /// Room under the last row, so the last words too can be scrolled up to the reading line (web
+    /// `dex-daymap__timeline-tail`).
+    private static let timelineTail: CGFloat = panelHeight * 0.4
+    private static let timelineSpace = "dex.map.timeline"
+    private static let timelineTop = "dex.map.timeline.top"
 
     private var days: [Date] {
         let cal = Calendar.current
@@ -771,6 +840,8 @@ struct DexMapView: View {
         }
         .onChange(of: day) { _, _ in
             selectedId = dayItems.first?.id
+            // A new day starts at its first word, the list at its top (it kept the last day's place).
+            jumpList(to: Self.timelineTop)
             focus()
         }
         // A search or filter can leave the shown day with no words: move to the newest day that has some.
@@ -839,121 +910,200 @@ struct DexMapView: View {
         focus(anchor: s)
     }
 
+    /// The row on the reading line, brought there by the user's own scroll: it becomes the current word — its
+    /// stop's pin rises wearing it, and the map moves there when it is out of view (web `onListScroll`).
+    private func read(_ s: Sticker) {
+        guard Date() >= quietUntil, s.id != selectedId else { return }
+        withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8)) { selectedId = s.id }
+        focusOn(s)
+    }
+
+    /// Asks the timeline to bring a stop's rows (or its top) up. The rows that move past the reading line on
+    /// the way are ignored for a moment, so the move never picks a word of its own.
+    private func jumpList(to id: String) {
+        quietUntil = Date().addingTimeInterval(0.8)
+        listJump = id
+    }
+
+    /// Carries out a list move (in a just-opened panel, once it has laid out).
+    private func scrollList(to id: String, _ proxy: ScrollViewProxy) {
+        listJump = nil
+        Task {
+            await Task.yield()
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.35)) { proxy.scrollTo(id, anchor: .top) }
+        }
+    }
+
+    /// A stop's round photo pin (web `StopPin`). The stop of the word being read rises and grows with a spring
+    /// (web `.dex-pin[data-active]`: translateY(-10px) scale(1.45)), wears that word's photo and shows that
+    /// word's own time; the day's other pins stay as they are. The pin keeps one layout size in either state
+    /// (the annotation stands on its bottom edge), so only the drawing moves and the map never re-places it.
     private func pin(_ v: MapVisit) -> some View {
-        let selected = v.items.first { $0.id == selectedId }
-        let isOn = selected != nil
-        let s = selected ?? v.items[0]
+        let current = v.items.first { $0.id == selectedId }
+        let isOn = current != nil
+        let s = current ?? v.items[0]
+        let lift: CGFloat = isOn ? 1.36 : 1
+        let rise: CGFloat = isOn ? -10 : 0
+        let shadowOpacity: Double = isOn ? 0.35 : 0.25
+        let shadowRadius: CGFloat = isOn ? 8 : 5
+        let shadowY: CGFloat = isOn ? 6 : 2
         return Button {
             Haptics.selection()
+            let wasOpen = panelOpen
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedId = s.id; panelOpen = true }
+            // A pin tap is the one selection the list follows: it brings that stop's rows up to the reading line.
+            if !isOn || !wasOpen { jumpList(to: v.id) }
             focusOn(s)
         } label: {
-            VStack(spacing: 4) {
-                Theme.secondary.frame(width: isOn ? 64 : 48, height: isOn ? 64 : 48)
-                    .overlay { DexThumb(sticker: s, inset: isOn ? 7 : 5).allowsHitTesting(false) }
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(isOn ? Theme.primary : .white, lineWidth: isOn ? 4 : 3))
-                    .overlay(alignment: .topTrailing) {
-                        if v.items.count > 1 {
-                            Text("\(v.items.count)")
-                                .scaledFont(size: 12, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
-                                .frame(minWidth: 22, minHeight: 22)
-                                .background(Theme.primary, in: Circle())
-                                .overlay(Circle().stroke(.white, lineWidth: 2))
-                                .offset(x: 6, y: -6)
-                        }
+            Theme.secondary.frame(width: 48, height: 48)
+                .overlay { DexThumb(sticker: s, inset: 5).allowsHitTesting(false) }
+                .clipShape(Circle())
+                .overlay(Circle().stroke(isOn ? Theme.primary : .white, lineWidth: 3))
+                .overlay(alignment: .topTrailing) {
+                    if v.items.count > 1 {
+                        Text("\(v.items.count)")
+                            .scaledFont(size: 12, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
+                            .frame(minWidth: 22, minHeight: 22)
+                            .background(Theme.primary, in: Circle())
+                            .overlay(Circle().stroke(.white, lineWidth: 2))
+                            .offset(x: 6, y: -6)
                     }
-                    .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
-                if isOn {
-                    Text(JPDate.time(v.start))
-                        .scaledFont(size: 13, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Theme.primary, in: Capsule())
                 }
-            }
+                .shadow(color: .black.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+                .scaleEffect(lift, anchor: .bottom)
+                .offset(y: rise)
+                .overlay(alignment: .bottom) {
+                    if isOn {
+                        // The current word's own time (not the stop's), just under the risen face.
+                        Text(JPDate.time(s.takenAt))
+                            .scaledFont(size: 13, weight: .bold, monospacedDigit: true).foregroundStyle(.white)
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Theme.primary, in: Capsule())
+                            .fixedSize()
+                            .alignmentGuide(.bottom) { d in d[.top] }
+                            .offset(y: -7)
+                    }
+                }
+                .frame(width: 64, height: 76, alignment: .bottom)
         }
         .buttonStyle(.plain)
         .zIndex(isOn ? 1 : 0)
+        .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.58), value: isOn)
+        .accessibilityLabel(s.word?.headword ?? "")
     }
 
     private func timeline(_ visits: [MapVisit]) -> some View {
-        ScrollViewReader { proxy in
+        let line = Self.readingLine
+        let space = Self.timelineSpace
+        let words = visits.reduce(0) { $0 + $1.items.count }
+        return ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(visits) { v in
-                        let groupOn = v.items.contains { $0.id == selectedId }
-                        HStack(alignment: .top, spacing: 14) {
-                            VStack(spacing: 0) {
-                                Circle().fill(groupOn ? Theme.primary : Theme.muted.opacity(0.5)).frame(width: groupOn ? 14 : 11, height: groupOn ? 14 : 11).padding(.top, 5)
-                                Rectangle().fill(Theme.border).frame(width: 2)
-                            }
-                            .frame(width: 16)
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack(spacing: 8) {
-                                    Text(v.timeLabel)
-                                        .scaledFont(size: 17, weight: .bold, monospacedDigit: true)
-                                        .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
-                                    if v.coordinate != nil || v.placeName != nil {
-                                        Label {
-                                            LocalizedPlaceText(lat: v.coordinate?.latitude, lng: v.coordinate?.longitude, saved: v.placeName)
-                                        } icon: {
-                                            Image(systemName: "mappin")
-                                        }
-                                        .scaledFont(size: 12).foregroundStyle(Theme.muted).lineLimit(1)
-                                    }
-                                }
-                                ForEach(v.items) { s in
-                                    row(s)
-                                }
-                            }
-                            .padding(.bottom, 16)
+                    Color.clear.frame(height: 0).id(Self.timelineTop)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(visits) { v in
+                            visitRows(v, line: line, space: space)
+                                .id(v.id)
                         }
-                        .id(v.id)
+                    }
+                    .padding(18)
+                    // From two words up, every word can be scrolled onto the reading line — the last ones too.
+                    if words >= 2 {
+                        Color.clear.frame(height: Self.timelineTail)
                     }
                 }
-                .padding(18)
             }
-            .frame(maxHeight: 250)
+            .coordinateSpace(NamedCoordinateSpace.named(space))
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: Self.panelHeight)
             .background(Theme.card.opacity(0.94), in: .rect(cornerRadius: 26, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Theme.border, lineWidth: 1))
             .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
-            .onChange(of: selectedId) { _, id in
-                guard let id, let v = visits.first(where: { $0.items.contains { $0.id == id } }) else { return }
-                withAnimation { proxy.scrollTo(v.id, anchor: .top) }
+            // Only a pin tap or a new day moves the list (`jumpList`): a word picked by scrolling or by tapping
+            // its row never scrolls it under the user's finger.
+            .onAppear {
+                if let id = listJump { scrollList(to: id, proxy) }
             }
+            .onChange(of: listJump) { _, id in
+                if let id { scrollList(to: id, proxy) }
+            }
+        }
+    }
+
+    /// One stop: its place, then each word with its own time. Each row watches the reading line; the row that
+    /// reaches it is read (`read`) — no tap needed.
+    private func visitRows(_ v: MapVisit, line: CGFloat, space: String) -> some View {
+        let groupOn = v.items.contains { $0.id == selectedId }
+        return HStack(alignment: .top, spacing: 14) {
+            VStack(spacing: 0) {
+                Circle().fill(groupOn ? Theme.primary : Theme.muted.opacity(0.5)).frame(width: groupOn ? 14 : 11, height: groupOn ? 14 : 11).padding(.top, 5)
+                Rectangle().fill(Theme.border).frame(width: 2)
+            }
+            .frame(width: 16)
+            VStack(alignment: .leading, spacing: 10) {
+                // The stop keeps its place only; the time range is gone — each word shows its own time (owner
+                // 2026-10-11: 「同じ場所で撮ったものは今みたいに同じ幅としてまとめていいけど、それぞれの単語に細かい時間を
+                // 割り当てて。時間の幅ではなく。」).
+                if v.coordinate != nil || v.placeName != nil {
+                    Label {
+                        LocalizedPlaceText(lat: v.coordinate?.latitude, lng: v.coordinate?.longitude, saved: v.placeName)
+                    } icon: {
+                        Image(systemName: "mappin")
+                    }
+                    .scaledFont(size: 14, weight: .semibold)
+                    .foregroundStyle(groupOn ? Theme.primaryInk : Theme.foreground)
+                    .lineLimit(1)
+                }
+                ForEach(v.items) { s in
+                    row(s)
+                        .onGeometryChange(for: Bool.self) { geo in
+                            let f = geo.frame(in: NamedCoordinateSpace.named(space))
+                            return f.minY <= line && f.maxY >= line
+                        } action: { onLine in
+                            if onLine { read(s) }
+                        }
+                }
+            }
+            .padding(.bottom, 16)
         }
     }
 
     private func row(_ s: Sticker) -> some View {
         let isOn = s.id == selectedId
         return Button {
-                                    if isOn { onOpen(s) } else {
-                                        Haptics.selection()
-                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
-                                        focusOn(s)
-                                    }
-                                } label: {
-                                    HStack(spacing: 14) {
-                                        DexThumb(sticker: s, inset: 2, cornerRadius: 14)
-                                            .frame(width: 64, height: 64)
-                                            .allowsHitTesting(false)
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
-                                                .lineLimit(1).minimumScaleFactor(0.45)
-                                            if let cap = s.caption, !cap.isEmpty {
-                                                Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
-                                            } else {
-                                                Text(s.word?.meaningJa ?? "").scaledFont(size: 15).foregroundStyle(Theme.muted).lineLimit(1)
-                                            }
-                                        }
-                                        Spacer(minLength: 0)
-                                    }
-                                    .padding(isOn ? 8 : 0)
-                                    .background(isOn ? Theme.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 20, style: .continuous))
-                                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isOn ? Theme.primary.opacity(0.35) : .clear, lineWidth: 1))
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(PressableStyle(scale: 0.98))
+            if isOn { onOpen(s) } else {
+                Haptics.selection()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedId = s.id }
+                focusOn(s)
+            }
+        } label: {
+            HStack(spacing: 14) {
+                DexThumb(sticker: s, inset: 2, cornerRadius: 14)
+                    .frame(width: 64, height: 64)
+                    .allowsHitTesting(false)
+                VStack(alignment: .leading, spacing: 2) {
+                    // The word's own time, to the minute.
+                    Text(JPDate.time(s.takenAt))
+                        .scaledFont(size: 13, weight: .semibold, monospacedDigit: true)
+                        .foregroundStyle(isOn ? Theme.primaryInk : Theme.muted)
+                    Text(s.word?.headword ?? "").scaledFont(size: 17, weight: .medium).foregroundStyle(Theme.foreground)
+                        .lineLimit(1).minimumScaleFactor(0.45)
+                    if let cap = s.caption, !cap.isEmpty {
+                        Text(cap).font(AppFont.hand(15)).foregroundStyle(Theme.muted).lineLimit(1)
+                    } else {
+                        Text(s.word?.meaningJa ?? "").scaledFont(size: 15).foregroundStyle(Theme.muted).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            // The same padding on or off: a row never changes size as it passes the reading line (it used to
+            // grow when picked, which would push the rows under it across the line while scrolling).
+            .padding(6)
+            .background(isOn ? Theme.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isOn ? Theme.primary.opacity(0.35) : .clear, lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.98))
     }
 
     private var dayBar: some View {
@@ -961,6 +1111,10 @@ struct DexMapView: View {
         return HStack(spacing: 10) {
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { panelOpen.toggle() }
+                // Opened again: back at the word being read (a new list would start at the top and read its first).
+                if panelOpen, let v = groups.first(where: { $0.items.contains { $0.id == selectedId } }) {
+                    jumpList(to: v.id)
+                }
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.background)  // not white: the disc is light in dark mode
@@ -1005,12 +1159,11 @@ struct DexMapView: View {
     }
 }
 
-/// One stop on the day map: catches taken close together in time and place.
+/// One stop on the day map: catches taken close together in time and place. It has no time of its own: the
+/// timeline and the pin show each word's time (owner 2026-10-11).
 struct MapVisit: Identifiable {
     var items: [Sticker]
     var id: String { items.first?.id ?? "visit-empty" }
-    var start: Date { items.first?.takenAt ?? Date() }
-    var end: Date { items.last?.takenAt ?? Date() }
 
     var coordinate: CLLocationCoordinate2D? {
         let pts = items.compactMap { s -> (Double, Double)? in
@@ -1023,11 +1176,6 @@ struct MapVisit: Identifiable {
     }
 
     var placeName: String? { items.compactMap(\.locationName).first { !$0.isEmpty } }
-
-    var timeLabel: String {
-        let a = JPDate.time(start), b = JPDate.time(end)
-        return a == b ? a : "\(a)–\(b)"
-    }
 
     static func isNear(_ visit: MapVisit, _ b: Sticker) -> Bool {
         guard let c = visit.coordinate, let lb = b.lat, let lob = b.lng else { return true }
