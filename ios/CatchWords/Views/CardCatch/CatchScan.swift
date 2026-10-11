@@ -452,6 +452,15 @@ final class CatchScanSession {
         if next == .done, !settled, t >= max(drawEnd + CatchScanSpec.penOut, lastTag) + 0.6 { settled = true }
     }
 
+    /// Everything is up and nothing moves any more — no named outline to pulse (or reduced motion): the overlay stops
+    /// redrawing, so the words screen is still again, as it was before the scan (it used to redraw an empty frame 30
+    /// times a second for as long as the words were on screen).
+    func idle(reduceMotion: Bool) -> Bool {
+        guard settled else { return false }
+        guard !reduceMotion, let plan else { return true }
+        return plan.shapes.indices.allSatisfy { unnamed.contains($0) }
+    }
+
     /// Plays an event once when its moment comes; one already well past (the app was away) is skipped silently.
     private func fire(_ id: String, due: Double, now t: Double, _ action: () -> Void) {
         guard t >= due, !fired.contains(id) else { return }
@@ -785,14 +794,15 @@ nonisolated enum ScanEase {
     static func inOutSine(_ u: Double) -> Double { -(cos(.pi * min(1, max(0, u))) - 1) / 2 }
 }
 
-/// The scan over the photo: redrawn every frame while it moves, then slowly for the outlines' pulse.
+/// The scan over the photo: redrawn every frame while it moves, then slowly for the outlines' pulse, and not at all
+/// once nothing moves (`idle`).
 struct CatchScanOverlay: View {
     let scan: CatchScanSession
     let photo: CGSize
     let reduceMotion: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: scan.settled ? 1.0 / 30 : nil, paused: reduceMotion && scan.settled)) { ctx in
+        TimelineView(.animation(minimumInterval: scan.settled ? 1.0 / 30 : nil, paused: scan.idle(reduceMotion: reduceMotion))) { ctx in
             Canvas { g, size in
                 scan.draw(&g, size: size, photo: photo, now: ctx.date, reduceMotion: reduceMotion)
             }

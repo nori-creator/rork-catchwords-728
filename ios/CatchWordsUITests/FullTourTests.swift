@@ -135,6 +135,8 @@ final class FullTourTests: XCTestCase {
         }
         settle(1.5)
         snap("candidates")
+        // What the tap aimed at, for the failure message below (CI keeps no other log of the screen).
+        let aimed = first.exists ? "candidate.0 hittable \(first.isHittable), frame \(first.frame)" : "candidate.0 gone"
         first.tap()
         let catchButton = app.buttons["card.catch"]
         let again = app.buttons["reencounter.dex"]
@@ -150,7 +152,12 @@ final class FullTourTests: XCTestCase {
             return
         }
         guard catchButton.exists else {
-            XCTFail("[\(display)/\(learning)] the celebration did not open after tapping a word")
+            // The buttons the screen holds now and where (identifier @ centre), so the failure explains itself.
+            let buttons = app.buttons.allElementsBoundByIndex.prefix(12).map { b in
+                "\(b.identifier.isEmpty ? b.label : b.identifier)@\(Int(b.frame.midX)),\(Int(b.frame.midY))"
+            }
+            XCTFail("[\(display)/\(learning)] the celebration did not open after tapping a word (\(aimed); " +
+                    "now: \(buttons.joined(separator: " "))")
             snap("pick-failed")
             return
         }
