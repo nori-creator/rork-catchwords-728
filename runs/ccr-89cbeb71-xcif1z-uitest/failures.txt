@@ -1,1 +1,7 @@
-
+CatchWords / test_1_ja_zh(): FullTourTests.swift:153: failed - [ja/zh-TW] the celebration did not open after tapping a word
+CatchWords / test_1_ja_zh(): FullTourTests.swift:263: failed - [ja/zh-TW] tab.review not found
+CatchWords / test_1_ja_zh(): FullTourTests.swift:263: failed - [ja/zh-TW] tab.settings not found
+CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.native missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.target missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.current missing
+CatchWords / test_1_ja_zh(): FullTourTests.swift:194: failed - [ja/zh-TW] settings.wheel.goal missing
