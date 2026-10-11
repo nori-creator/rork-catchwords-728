@@ -1,0 +1,10 @@
+10:47:19.964 launch uiDemo=zh-TW lang=ja
+10:47:30.504 touch began @201,747 window=UIWindow level=0 key=true view=_UIHostingView<ModifiedContent<AnyView, RootModifier>> recognizers=[UIKitResponderGestureRecognizer#0 UIKitResponderGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0] windows=[UIWindow:0 UIWindow:1n] app=0
+10:47:30.552 touch began handled @201,747 window=UIWindow level=0 key=true view=nil recognizers=[UIKitResponderGestureRecognizer(Button<ResolvedButtonStyleBody<PressableStyle>>)#1 _UISystemGestureGateGestureRecognizer#0]
+10:47:30.570 touch ended handled @201,747 window=UIWindow level=0 key=true view=nil recognizers=[_UISystemGestureGateGestureRecognizer#0]
+10:47:36.024 touch began @201,537 window=UIWindow level=0 key=true view=PlatformGroupContainer recognizers=[UIScrollViewDelayedTouchesBeganGestureRecognizer#0 UIScrollViewPanGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0] windows=[UIWindow:0 UIWindow:1n] app=0
+10:47:36.024 touch began handled @201,537 window=UIWindow level=0 key=true view=PlatformGroupContainer recognizers=[UIScrollViewDelayedTouchesBeganGestureRecognizer#0 UIScrollViewPanGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0]
+10:47:36.225 touch ended handled @201,337 window=UIWindow level=0 key=true view=nil recognizers=[]
+10:47:40.138 touch began @127,807 window=UIWindow level=0 key=true view=_UIHostingView<ModifiedContent<AnyView, RootModifier>> recognizers=[UIKitResponderGestureRecognizer#0 UIKitResponderGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0 _UISystemGestureGateGestureRecognizer#0] windows=[UIWindow:0 UIWindow:1n] app=0
+10:47:40.140 touch began handled @127,807 window=UIWindow level=0 key=true view=nil recognizers=[UIKitResponderGestureRecognizer(Button<ResolvedButtonStyleBody<PressableStyle>>)#1 _UISystemGestureGateGestureRecognizer#0]
+10:47:41.182 touch ended handled @127,807 window=UIWindow level=0 key=true view=nil recognizers=[_UISystemGestureGateGestureRecognizer#0]
