@@ -197,7 +197,7 @@ App Store Connect で「審査へ提出」
 | 年齢 | 4+（ユーザー生成コンテンツは本人だけが見るため。暴力・性的表現なし） |
 | プライバシーポリシー URL | https://catchwords.lovable.app/privacy |
 | サポート URL | https://catchwords.lovable.app（問い合わせ先のページがあればそちら） |
-| 著作権 | 2026 Noriyuki Kondo |
+| 著作権 | 2026 近藤範之 |
 | スクリーンショット | iPhone 6.9 インチ（必須）と 6.5 インチ。実機の画面（ホーム・撮影・図鑑のスライド・単語の詳細・復習）。CI の見本画像は仮の写真なので使わない |
 | iPad | 不要（iPhone 専用） |
 

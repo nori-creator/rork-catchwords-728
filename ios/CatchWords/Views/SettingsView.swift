@@ -255,8 +255,6 @@ struct SettingsView: View {
                         SaveStatus.shared.saved()
                     })
                 )
-                Text(L("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。"))
-                    .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 Divider().overlay(Theme.border).padding(.top, 8)
                 // A switch, as on the web (owner 2026-10-11: 「アニメーションはスライドのON/OFFに」): it shows what moves
                 // now — the iPhone's Reduce Motion until it is used — and then keeps 見せる (on) or 減らす (off).

@@ -75,22 +75,23 @@ final class ProfileStore {
 
     func load() async {
         guard let uid = client.userId else { isLoaded = true; return }
-        let full = "display_name,avatar_url,native_language,ui_language,target_language,level_goal,current_level,review_daily_limit,onboarded,created_at"
-        var data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=\(full)")
-        if data == nil, !Task.isCancelled, client.userId == uid {
-            data = try? await client.rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,native_language,target_language,level_goal")
-        }
+        let row = await client.myProfileRow(uid: uid)
         // Signed out (or into another account), or cancelled, while reading: this answer is not for the
         // account on screen now — touch nothing (isLoaded / loadFailed included); its own load fills them.
         guard !Task.isCancelled, client.userId == uid else { return }
         defer { isLoaded = true }
-        guard let data, let row = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]])?.first else {
+        guard let row else {
             loadFailed = true
             return
         }
         loadFailed = false
         displayName = row["display_name"] as? String ?? ""
         avatarURL = row["avatar_url"] as? String
+        onboarded = row["onboarded"] as? Bool ?? false
+        if let s = row["created_at"] as? String { createdAt = SupabaseDate.parse(s) }
+        // The private settings come only with the full row (`get_my_profile`); the public columns alone must not
+        // reset them to defaults.
+        guard row.keys.contains("target_language") else { return }
         nativeLanguage = row["native_language"] as? String ?? "ja"
         ReaderLanguage.native = (row["native_language"] as? String).map { L10n.normalize($0) }
         // The display language follows the account (set on the web or another device too).
@@ -102,8 +103,6 @@ final class ProfileStore {
         if let v = row["current_level"] as? String, !v.isEmpty { currentLevel = v }
         if let v = row["level_goal"] as? String, !v.isEmpty { levelGoal = v }
         if let v = row["review_daily_limit"] as? Int, v >= 0 { reviewDailyLimit = v }
-        onboarded = row["onboarded"] as? Bool ?? false
-        if let s = row["created_at"] as? String { createdAt = SupabaseDate.parse(s) }
     }
 
     /// Signing out: the next account starts from a blank profile (its own is read on sign-in). The
@@ -148,11 +147,12 @@ final class ProfileStore {
             try await client.upload(jpeg, path: path, bucket: "avatars")
             guard let url = client.publicURL(bucket: "avatars", path: path) else { return }
             let previous = avatarURL
-            await update(["avatar_url": url])
-            let saved = message == nil
+            // Shown only once the profile points at it: a photo the profile does not keep would be gone on the
+            // next launch.
+            guard await update(["avatar_url": url]) else { return }
             avatarURL = url
             // The photo it replaced leaves the public bucket too (once the profile points at the new one).
-            if saved { await removeAvatarFile(previous) }
+            await removeAvatarFile(previous)
         } catch {
             message = L("写真を保存できませんでした。")
         }
@@ -227,5 +227,33 @@ struct AvatarView: View {
             .clipShape(Circle())
             .overlay(Circle().stroke(.white, lineWidth: 2))
             .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+    }
+}
+
+extension SupabaseClient {
+    /// This account's own `profiles` row, or nil when it could not be read.
+    ///
+    /// Read through `get_my_profile()` (SECURITY DEFINER, only `auth.uid()`'s row), as the web's `getMyProfile` does:
+    /// the private columns (languages, levels, review settings, plan) are not granted to signed-in users, so a plain
+    /// select that names any of them fails as a whole (403 "permission denied for table profiles"). That failure
+    /// used to leave the name and the photo blank on every launch even though they were saved (owner 2026-10-11:
+    /// 「プロフィールの名前と画像が保存されない…アプリを閉じると白紙になる」). Without the function, only the columns
+    /// every account may read come back (no language keys).
+    func myProfileRow(uid: String) async -> [String: Any]? {
+        if let data = try? await rest("POST", "rpc/get_my_profile", body: [String: Any]()),
+           let row = Self.firstObject(data), row["id"] is String {
+            return row
+        }
+        guard !Task.isCancelled, userId == uid,
+              let data = try? await rest("GET", "profiles?id=eq.\(uid)&select=display_name,avatar_url,onboarded,created_at")
+        else { return nil }
+        return Self.firstObject(data)
+    }
+
+    /// A function returning one row answers with an object; a table read with an array.
+    nonisolated static func firstObject(_ data: Data) -> [String: Any]? {
+        let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+        if let row = json as? [String: Any] { return row }
+        return (json as? [[String: Any]])?.first
     }
 }

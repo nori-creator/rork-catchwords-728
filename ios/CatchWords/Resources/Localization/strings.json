@@ -4338,5 +4338,25 @@
  "開発用ビルド": {
   "en": "Development build",
   "zh-TW": "開發用組建"
+ },
+ "日常のすべてが\n学びになる": {
+  "en": "Every moment\nbecomes a lesson",
+  "zh-TW": "生活中\n處處都是學習"
+ },
+ "街で出会う言葉を、ステッカーに。": {
+  "en": "Turn the words you meet around town into stickers.",
+  "zh-TW": "把街上遇見的單字，變成貼紙。"
+ },
+ "または": {
+  "en": "or",
+  "zh-TW": "或"
+ },
+ "メールでログイン": {
+  "en": "Sign in with email",
+  "zh-TW": "使用電子郵件登入"
+ },
+ "初めての方は": {
+  "en": "New here?",
+  "zh-TW": "第一次使用？"
  }
 }

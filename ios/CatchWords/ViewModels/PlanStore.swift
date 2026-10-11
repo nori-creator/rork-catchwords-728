@@ -87,9 +87,11 @@ final class PlanStore {
 
     func refreshServerPlan() async {
         guard let uid = SupabaseClient.shared.userId else { isServerPro = false; return }
-        guard let data = try? await SupabaseClient.shared.rest("GET", "profiles?id=eq.\(uid)&select=plan"),
-              let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-        let plan = (rows.first?["plan"] as? String) ?? "free"
+        // `plan` is a private column: read through `get_my_profile()` (a plain select of it is refused, which left
+        // a web Pro subscription unseen here). A row without it (the public columns only) changes nothing.
+        guard let row = await SupabaseClient.shared.myProfileRow(uid: uid), row.keys.contains("plan"),
+              SupabaseClient.shared.userId == uid else { return }
+        let plan = (row["plan"] as? String) ?? "free"
         isServerPro = plan == "pro" || plan == "premium"
     }
 

@@ -1,16 +1,23 @@
 import SwiftUI
+import UIKit
 
 /// One day of the home album, laid out exactly like the web (`AlbumLayout.layoutDayAlbum`, a port of
 /// album-day-layout.ts): photos placed by hand stay where they were put; the rest settle around them.
 /// Positions are shared with the web through the same columns, so the page looks the same on both.
 ///
-/// Each photo is the picture chosen in 設定 › ホームに表示する写真 (`AlbumPhoto`): the cut-out alone by default.
+/// Each photo is the picture chosen in 設定 › ホームに表示する写真 (`AlbumPhoto`): the cut-out alone by default, with
+/// the word on a beige paper tag stuck across its lower edge (owner 2026-10-11, the welcome mock's tags).
 ///
 /// Rearranging (web DayCollage, owner 2026-10-11: 「ホームの画像を長押ししたら、WEB版のように画像が揺れ出して、大きさや
-/// 配置を自由自在に変更できるように。並べ替えボタンはけして」): a long press (0.55 s) on any photo starts it — every
+/// 配置を自由自在に変更できるように。並べ替えボタンはけして」): a long press (0.5 s) on any photo starts it — every
 /// photo wiggles, the one under the finger is lifted and follows it at once. Then any photo can be dragged, pinched
 /// to any size and twisted (two fingers anywhere on it), its ✕ takes it off the album, and 「完了」 (HomeView) saves.
 /// Near level a photo snaps straight with a tick; the one you touch comes to the front.
+///
+/// A finger that moves before the long press is recognised scrolls the page (the press is UIKit's, which gives way
+/// to the scroll view; 2026-10-11: 「単語のうえで上下にスクロールすると反応しない」). While a photo moves, only that
+/// photo is redrawn (`CollagePiece` keeps the finger's change to itself); the page is laid out again when it is let go
+/// (「長押ししたときの単語の動きがカクカク」).
 struct CollageBoard: View {
     let items: [Sticker]
     let editable: Bool
@@ -29,19 +36,29 @@ struct CollageBoard: View {
     @State private var saving = false
     /// Something moved since editing began (「完了」 without a change saves nothing).
     @State private var changed = false
-    /// While editing: placements changed by the fingers (not saved yet) and the front-to-back order.
+    /// While editing: placements set by the fingers (not saved yet) and the front-to-back order.
     @State private var live: [String: AlbumPlacement] = [:]
     @State private var front: [String] = []
     @State private var grabbed: String?
-    @State private var grabBase: AlbumPlacement?
-    @State private var snapped = false
 
     var body: some View {
         let layout = computeLayout()
         ZStack(alignment: .topLeading) {
             ForEach(layout.items.sorted { z($0) < z($1) }, id: \.id) { item in
                 if let s = items.first(where: { $0.id == item.id }) {
-                    piece(s, item: item)
+                    CollagePiece(
+                        sticker: s,
+                        item: item,
+                        boardW: boardW,
+                        editing: editing,
+                        canEdit: editable && !autoOnly,
+                        isGrabbed: grabbed == s.id,
+                        reduceMotion: reduceMotion,
+                        onOpen: { onOpen(s) },
+                        onGrab: { grab(s.id) },
+                        onRelease: { place in release(s.id, at: place) },
+                        onRemove: { remove(s.id) }
+                    )
                 }
             }
         }
@@ -97,100 +114,6 @@ struct CollageBoard: View {
         return item.z
     }
 
-    // MARK: A photo on the page
-
-    @ViewBuilder
-    private func piece(_ s: Sticker, item: DayLayoutItem) -> some View {
-        let p = item.place
-        let size = AlbumLayout.sizePx(p, boardW: Double(boardW), ratio: item.ratio)
-        let hasHero = AlbumPhoto.path(for: s) != nil
-        let captionH = hasHero ? AlbumLayout.dayExtra(DayLayoutSticker(id: s.id, caption: s.caption), hasHero: true, boardW: Double(boardW)) * Double(boardW) : 0
-        let isGrabbed = grabbed == s.id
-        let wiggles = editing && !reduceMotion && !isGrabbed
-        TimelineView(.animation(minimumInterval: nil, paused: !wiggles)) { ctx in
-            let w = wiggles ? Self.wiggle(s.id, at: ctx.date) : (rot: 0.0, lift: 0.0)
-            card(s, hasHero: hasHero, size: size, captionH: captionH, isGrabbed: isGrabbed)
-                .overlay(alignment: .topLeading) {
-                    if editing && !autoOnly { removeButton(s) }
-                }
-                .scaleEffect(isGrabbed ? 1.08 : 1)
-                .rotationEffect(.degrees(p.rot + w.rot))
-                .offset(y: w.lift)
-        }
-        // The photo's own area takes the touches — set before it is positioned, so a tap on 地瓜 can never open the
-        // photo drawn above it (`.position` makes a view as big as the whole page; 2026-10-11).
-        .contentShape(.rect)
-        .onTapGesture { if !editing { onOpen(s) } }
-        .gesture(grabToEdit(s.id, current: p), including: editable && !autoOnly && (!editing || isGrabbed) ? .all : .subviews)
-        .simultaneousGesture(manipulate(s.id, current: p), including: editing ? .all : .subviews)
-        .position(x: p.x * Double(boardW), y: p.y * Double(boardW) + captionH / 2)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(s.word?.headword ?? "")
-        .accessibilityHint(editing ? L("ドラッグで移動、2本指で大きさと傾き") : L("単語をひらく"))
-        .accessibilityAction(named: L("配置を変える")) { if editable && !autoOnly && !editing { startEditing() } }
-    }
-
-    @ViewBuilder
-    private func card(_ s: Sticker, hasHero: Bool, size: (w: Double, h: Double), captionH: Double, isGrabbed: Bool) -> some View {
-        VStack(spacing: 4) {
-            if hasHero {
-                AlbumPhoto(sticker: s, width: size.w, height: size.h, lifted: isGrabbed)
-                VStack(spacing: 1) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(s.word?.headword ?? "").font(.system(size: 15, weight: .bold)).foregroundStyle(Color(hex: 0x241C14))
-                        Text(JPDate.time(s.takenAt)).font(.system(size: 11)).foregroundStyle(Color(hex: 0x241C14).opacity(0.55))
-                    }
-                    if let c = s.caption, !c.isEmpty {
-                        Text(c).font(AppFont.hand(15, fixed: true)).foregroundStyle(Color(hex: 0x33291F).opacity(0.85)).lineLimit(2)
-                    }
-                }
-                .frame(width: max(size.w, Double(boardW) * 0.3), height: max(0, captionH - 4))
-            } else {
-                VStack(spacing: 2) {
-                    Text(s.word?.headword ?? "").font(.system(size: 24, weight: .bold)).foregroundStyle(Color(hex: 0x33291F))
-                    Text(JPDate.time(s.takenAt)).font(.system(size: 11)).foregroundStyle(Color(hex: 0x33291F).opacity(0.55))
-                }
-                .frame(width: size.w, height: max(size.h, 44))
-            }
-        }
-    }
-
-    /// The red ✕ while rearranging: the photo leaves the album (it stays in the dex; 「アルバムから外した写真」 has it).
-    private func removeButton(_ s: Sticker) -> some View {
-        Button {
-            Haptics.impact(.light)
-            Task {
-                let ok = await dex.setAlbumHidden(s.id, hidden: true)
-                if !ok { Haptics.warning() }
-            }
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 11, weight: .heavy))
-                .foregroundStyle(.white)
-                .frame(width: 24, height: 24)
-                .background(Color(hex: 0xE5484D), in: Circle())
-                .overlay(Circle().stroke(.white, lineWidth: 2))
-                .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-        }
-        .buttonStyle(PressableStyle(scale: 0.9))
-        .offset(x: -16, y: -16)
-        .accessibilityLabel(L("アルバムから外す"))
-        .transition(.scale.combined(with: .opacity))
-    }
-
-    /// The web's jiggle (album-drag.ts JIGGLE): ±1.1° and ±0.9 pt, a 240–300 ms cycle that differs per photo and
-    /// starts at a different point, so the page shivers instead of swaying in step.
-    private static func wiggle(_ id: String, at date: Date) -> (rot: Double, lift: Double) {
-        let h = AlbumLayout.idHash(id)
-        let period = 0.24 + Double((h >> 8) % 60) / 1000
-        let delay = Double(h % 240) / 1000
-        let phase = (date.timeIntervalSinceReferenceDate + delay) / period * 2 * Double.pi
-        let v = sin(phase)
-        return (v * 1.1, v * 0.9)
-    }
-
     // MARK: Rearranging
 
     /// Freezes the day's positions (automatic ones included) so moving one photo never shuffles the others.
@@ -206,9 +129,13 @@ struct CollageBoard: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { editing = true }
     }
 
-    private func bringToFront(_ id: String) {
+    /// A finger took this photo (a long press, or a touch while rearranging): it is lifted and comes to the front.
+    private func grab(_ id: String) {
+        if !editing { startEditing() }
+        guard grabbed != id else { return }
+        grabbed = id
+        Haptics.impact(.soft)
         guard front.last != id else { return }
-        Haptics.selection()
         changed = true
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             front.removeAll { $0 == id }
@@ -216,62 +143,23 @@ struct CollageBoard: View {
         }
     }
 
-    /// The long press that starts rearranging; the same finger then carries the photo (web: grabbed at once).
-    private func grabToEdit(_ id: String, current: AlbumPlacement) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.55, maximumDistance: 10)
-            .sequenced(before: DragGesture(minimumDistance: 0))
-            .onChanged { value in
-                guard case .second(true, let drag) = value else { return }
-                if !editing { startEditing() }
-                if grabbed != id { grab(id, current: current) }
-                if let drag {
-                    move(id, delta: AlbumDelta(dx: drag.translation.width, dy: drag.translation.height, scale: 1, rot: 0))
-                }
-            }
-            .onEnded { _ in release(id) }
-    }
-
-    /// Drag + pinch + twist at the same time (web album-place.ts gestureDelta / applyDelta / settle).
-    private func manipulate(_ id: String, current: AlbumPlacement) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .simultaneously(with: MagnifyGesture())
-            .simultaneously(with: RotateGesture())
-            .onChanged { v in
-                if grabbed != id { grab(id, current: current) }
-                let t = v.first?.first?.translation ?? .zero
-                move(id, delta: AlbumDelta(dx: t.width, dy: t.height,
-                                           scale: Double(v.first?.second?.magnification ?? 1),
-                                           rot: v.second?.rotation.degrees ?? 0))
-            }
-            .onEnded { _ in release(id) }
-    }
-
-    private func grab(_ id: String, current: AlbumPlacement) {
-        grabbed = id
-        grabBase = live[id] ?? current
-        bringToFront(id)
-        Haptics.impact(.soft)
-    }
-
-    private func move(_ id: String, delta: AlbumDelta) {
-        guard let base = grabBase else { return }
-        let next = AlbumLayout.applyDelta(base, delta, boardW: Double(boardW), maxY: 8)
-        let nearLevel = abs(AlbumLayout.normalizeDeg(next.rot)) <= AlbumLayout.ROT_SNAP_DEG
-        if nearLevel != snapped {
-            snapped = nearLevel
-            if nearLevel && delta.rot != 0 { Haptics.selection() }
+    /// The finger let go where `place` says: kept (straightened when near level) until 「完了」 saves the page.
+    private func release(_ id: String, at place: AlbumPlacement) {
+        let settled = AlbumLayout.settle(place)
+        if live[id] != settled { changed = true }
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.7)) {
+            live[id] = settled
+            grabbed = nil
         }
-        if live[id] != next { changed = true }
-        live[id] = next
     }
 
-    private func release(_ id: String) {
-        if let p = live[id] {
-            withAnimation(.spring(response: 0.26, dampingFraction: 0.7)) { live[id] = AlbumLayout.settle(p) }
+    /// The red ✕ while rearranging: the photo leaves the album (it stays in the dex; 「アルバムから外した写真」 has it).
+    private func remove(_ id: String) {
+        Haptics.impact(.light)
+        Task {
+            let ok = await dex.setAlbumHidden(id, hidden: true)
+            if !ok { Haptics.warning() }
         }
-        grabbed = nil
-        grabBase = nil
-        snapped = false
     }
 
     /// 「完了」: saves what moved and stops rearranging.
@@ -308,6 +196,269 @@ struct CollageBoard: View {
                 front = []
             }
             changed = false
+        }
+    }
+}
+
+/// One photo on the album page. While a finger moves it, the change lives here (`press` from the long press,
+/// `pinch` from the fingers while rearranging) and only this view is redrawn; the board takes the final place when
+/// the finger lets go.
+private struct CollagePiece: View {
+    let sticker: Sticker
+    let item: DayLayoutItem
+    let boardW: CGFloat
+    let editing: Bool
+    /// This board can be rearranged (not the memorial album).
+    let canEdit: Bool
+    let isGrabbed: Bool
+    let reduceMotion: Bool
+    let onOpen: () -> Void
+    let onGrab: () -> Void
+    let onRelease: (AlbumPlacement) -> Void
+    let onRemove: () -> Void
+
+    /// The long press's finger since it was recognised (it keeps carrying the photo until it lifts).
+    @State private var press: AlbumDelta?
+    /// Drag, pinch and twist while rearranging.
+    @GestureState private var pinch: AlbumDelta? = nil
+    /// Near level right now (a tick when it snaps straight).
+    @State private var snapped = false
+
+    private var delta: AlbumDelta? { pinch ?? press }
+
+    /// Where the photo is drawn now: its place on the page, moved by the finger.
+    private var shown: AlbumPlacement {
+        guard let delta else { return item.place }
+        return AlbumLayout.applyDelta(item.place, delta, boardW: Double(boardW), maxY: 8)
+    }
+
+    var body: some View {
+        let p = shown
+        let size = AlbumLayout.sizePx(p, boardW: Double(boardW), ratio: item.ratio)
+        let hasHero = AlbumPhoto.path(for: sticker) != nil
+        let captionH = hasHero ? AlbumLayout.dayExtra(DayLayoutSticker(id: sticker.id, caption: sticker.caption), hasHero: true, boardW: Double(boardW)) * Double(boardW) : 0
+        let lifted = isGrabbed || delta != nil
+        let wiggles = editing && !reduceMotion && !lifted
+        TimelineView(.animation(minimumInterval: nil, paused: !wiggles)) { ctx in
+            let w = wiggles ? Self.wiggle(sticker.id, at: ctx.date) : (rot: 0.0, lift: 0.0)
+            card(hasHero: hasHero, size: size, captionH: captionH, lifted: lifted)
+                .overlay(alignment: .topLeading) {
+                    if editing && canEdit { removeButton }
+                }
+                .scaleEffect(lifted ? 1.06 : 1)
+                .rotationEffect(.degrees(p.rot + w.rot))
+                .offset(y: w.lift)
+        }
+        // The photo's own area takes the touches — set before it is positioned, so a tap on 地瓜 can never open the
+        // photo drawn above it (`.position` makes a view as big as the whole page; 2026-10-11).
+        .contentShape(.rect)
+        .onTapGesture { if !editing { onOpen() } }
+        // Stays on while rearranging (turning it off would cancel the very press that started it); presses then
+        // are left to the fingers' own gestures (`began`).
+        .gesture(LongPressGrab(enabled: canEdit, onBegan: began, onMoved: moved, onEnded: ended))
+        .simultaneousGesture(manipulate, including: editing && canEdit ? .all : .subviews)
+        .position(x: p.x * Double(boardW), y: p.y * Double(boardW) + captionH / 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(sticker.word?.headword ?? "")
+        .accessibilityHint(editing ? L("ドラッグで移動、2本指で大きさと傾き") : L("単語をひらく"))
+        .accessibilityAction(named: L("配置を変える")) { if canEdit && !editing { onGrab() } }
+    }
+
+    // MARK: The long press (starts rearranging, then carries the photo)
+
+    private func began() {
+        // While rearranging, a finger on a photo is the drag below, not a new press.
+        guard !editing else { return }
+        onGrab()
+        press = AlbumDelta(dx: 0, dy: 0, scale: 1, rot: 0)
+    }
+
+    private func moved(_ t: CGSize) {
+        guard press != nil else { return }
+        press = AlbumDelta(dx: t.width, dy: t.height, scale: 1, rot: 0)
+    }
+
+    private func ended(_ t: CGSize?) {
+        guard press != nil else { return }
+        let final = t.map { AlbumLayout.applyDelta(item.place, AlbumDelta(dx: $0.width, dy: $0.height, scale: 1, rot: 0),
+                                                   boardW: Double(boardW), maxY: 8) } ?? item.place
+        press = nil
+        onRelease(final)
+    }
+
+    // MARK: Drag + pinch + twist while rearranging (web album-place.ts gestureDelta / applyDelta / settle)
+
+    private var manipulate: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .simultaneously(with: MagnifyGesture())
+            .simultaneously(with: RotateGesture())
+            .updating($pinch) { v, state, _ in
+                state = Self.delta(of: v)
+            }
+            .onChanged { v in
+                if !isGrabbed { onGrab() }
+                let rot = v.second?.rotation.degrees ?? 0
+                let near = abs(AlbumLayout.normalizeDeg(item.place.rot + rot)) <= AlbumLayout.ROT_SNAP_DEG
+                if near != snapped {
+                    snapped = near
+                    if near && rot != 0 { Haptics.selection() }
+                }
+            }
+            .onEnded { v in
+                snapped = false
+                onRelease(AlbumLayout.applyDelta(item.place, Self.delta(of: v), boardW: Double(boardW), maxY: 8))
+            }
+    }
+
+    private static func delta(of v: SimultaneousGesture<SimultaneousGesture<DragGesture, MagnifyGesture>, RotateGesture>.Value) -> AlbumDelta {
+        let t = v.first?.first?.translation ?? .zero
+        return AlbumDelta(dx: t.width, dy: t.height,
+                          scale: Double(v.first?.second?.magnification ?? 1),
+                          rot: v.second?.rotation.degrees ?? 0)
+    }
+
+    // MARK: Drawing
+
+    @ViewBuilder
+    private func card(hasHero: Bool, size: (w: Double, h: Double), captionH: Double, lifted: Bool) -> some View {
+        let word = sticker.word?.headword ?? ""
+        if hasHero {
+            VStack(spacing: 0) {
+                AlbumPhoto(sticker: sticker, width: size.w, height: size.h, lifted: lifted)
+                    .overlay(alignment: .bottom) {
+                        // The tag hangs across the photo's lower edge, into the strip kept under it (CAP_ROW_PX).
+                        if !word.isEmpty {
+                            WordTag(text: word, tilt: Self.tagTilt(sticker.id))
+                                .offset(x: Self.tagShift(sticker.id) * size.w, y: WordTag.height / 2)
+                        }
+                    }
+                // The strip under the photo: the tag's lower half, then the one-liner when there is one.
+                Group {
+                    if let c = sticker.caption, !c.isEmpty {
+                        Text(c)
+                            .font(AppFont.hand(15, fixed: true))
+                            .foregroundStyle(Color(hex: 0x33291F).opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .padding(.top, WordTag.height / 2 + 6)
+                    }
+                }
+                .frame(width: max(size.w, Double(boardW) * 0.3), height: max(0, captionH), alignment: .top)
+            }
+        } else {
+            // A word looked up from text (no photo): its tag alone.
+            WordTag(text: word, tilt: Self.tagTilt(sticker.id), size: 22)
+                .frame(width: size.w, height: max(size.h, 44))
+        }
+    }
+
+    /// The red ✕ while rearranging: takes the photo off the album.
+    private var removeButton: some View {
+        Button(action: onRemove) {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(width: 24, height: 24)
+                .background(Color(hex: 0xE5484D), in: Circle())
+                .overlay(Circle().stroke(.white, lineWidth: 2))
+                .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressableStyle(scale: 0.9))
+        .offset(x: -16, y: -16)
+        .accessibilityLabel(L("アルバムから外す"))
+        .transition(.scale.combined(with: .opacity))
+    }
+
+    /// The web's jiggle (album-drag.ts JIGGLE): ±1.1° and ±0.9 pt, a 240–300 ms cycle that differs per photo and
+    /// starts at a different point, so the page shivers instead of swaying in step.
+    private static func wiggle(_ id: String, at date: Date) -> (rot: Double, lift: Double) {
+        let h = AlbumLayout.idHash(id)
+        let period = 0.24 + Double((h >> 8) % 60) / 1000
+        let delay = Double(h % 240) / 1000
+        let phase = (date.timeIntervalSinceReferenceDate + delay) / period * 2 * Double.pi
+        let v = sin(phase)
+        return (v * 1.1, v * 0.9)
+    }
+
+    /// Each tag leans its own way (−6°…6°, from the id, so it never changes between draws).
+    private static func tagTilt(_ id: String) -> Double {
+        Double(Int(AlbumLayout.idHash(id) % 121) - 60) / 10
+    }
+
+    /// …and sits a little left or right of the middle (−18 %…18 % of the photo's width).
+    private static func tagShift(_ id: String) -> Double {
+        Double(Int((AlbumLayout.idHash(id) >> 7) % 37) - 18) / 100
+    }
+}
+
+/// The word on a beige paper tag (the welcome mock's label: 咖啡 / 植物 under the stickers).
+struct WordTag: View {
+    let text: String
+    var tilt: Double = 0
+    var size: CGFloat = 15
+
+    /// The tag's height at the default size (the album keeps half of it under the photo).
+    static let height: CGFloat = 28
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: size, weight: .bold))
+            .foregroundStyle(Color(hex: 0x4A3A28))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.horizontal, 12)
+            .frame(minHeight: Self.height * size / 15)
+            .background(Color(hex: 0xF6E4C8), in: .rect(cornerRadius: 3, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).stroke(Color(hex: 0xE6CFA8), lineWidth: 0.5))
+            .shadow(color: Color(hex: 0x5A4630).opacity(0.22), radius: 2.5, y: 1.5)
+            .rotationEffect(.degrees(tilt))
+            .allowsHitTesting(false)
+    }
+}
+
+/// A long press that keeps following the finger once recognised (UIKit). Until it is recognised it leaves the
+/// scroll view alone — a finger that moves first scrolls the page — and once it is, the page stays still and the
+/// finger carries the photo. Translations are in points, measured in the window.
+private struct LongPressGrab: UIGestureRecognizerRepresentable {
+    var enabled: Bool
+    let onBegan: () -> Void
+    let onMoved: (CGSize) -> Void
+    /// The finger's last translation, or nil when the press was cancelled.
+    let onEnded: (CGSize?) -> Void
+
+    final class Recognizer: UILongPressGestureRecognizer {
+        var start: CGPoint = .zero
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> Recognizer {
+        let r = Recognizer()
+        r.minimumPressDuration = 0.5
+        r.allowableMovement = 10
+        r.isEnabled = enabled
+        return r
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: Recognizer, context: Context) {
+        recognizer.isEnabled = enabled
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: Recognizer, context: Context) {
+        let point = recognizer.location(in: recognizer.view?.window)
+        let t = CGSize(width: point.x - recognizer.start.x, height: point.y - recognizer.start.y)
+        switch recognizer.state {
+        case .began:
+            recognizer.start = point
+            onBegan()
+        case .changed:
+            onMoved(t)
+        case .ended:
+            onEnded(t)
+        case .cancelled, .failed:
+            onEnded(nil)
+        default:
+            break
         }
     }
 }

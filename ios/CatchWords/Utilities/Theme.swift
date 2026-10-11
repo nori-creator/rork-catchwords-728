@@ -92,6 +92,8 @@ enum JPDate {
     static func weekday(_ d: Date) -> String { fmt("EEEE").string(from: d) }
     /// 9月28日(月) · Mon, Sep 28
     static func monthDayWeek(_ d: Date) -> String { fmt("MMMdE").string(from: d) }
+    /// 2025年9月28日(日) · Sun, Sep 28, 2025
+    static func yearMonthDayWeek(_ d: Date) -> String { fmt("yMMMdE").string(from: d) }
     /// 9/28
     static func slash(_ d: Date) -> String { fmt("M/d", fixed: true).string(from: d) }
     /// 15:36
