@@ -109,6 +109,22 @@ final class FullTourTests: XCTestCase {
         if close.exists { app.swipeDown(velocity: .fast) }
     }
 
+    /// The celebration's 図鑑に追加, or the re-encounter card for a word already in the dex.
+    private func waitForCatch(_ catchButton: XCUIElement, _ again: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !catchButton.exists && !again.exists && Date() < deadline { settle(0.5) }
+        return catchButton.exists || again.exists
+    }
+
+    /// UTC wall-clock time, matching the app's trace (uitest-trace.txt).
+    private static let clock: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+
     private func waitGone(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
         return XCTWaiter().wait(for: [gone], timeout: timeout) == .completed
@@ -137,28 +153,36 @@ final class FullTourTests: XCTestCase {
         snap("candidates")
         // What the tap aimed at, for the failure message below (CI keeps no other log of the screen).
         let aimed = first.exists ? "candidate.0 hittable \(first.isHittable), frame \(first.frame)" : "candidate.0 gone"
+        let tappedAt = Self.clock.string(from: Date())
         first.tap()
         let catchButton = app.buttons["card.catch"]
         let again = app.buttons["reencounter.dex"]
         // A word already in the dex opens the re-encounter card instead of the celebration.
-        let deadline = Date().addingTimeInterval(30)
-        while !catchButton.exists && !again.exists && Date() < deadline { settle(0.5) }
+        if !waitForCatch(catchButton, again, timeout: 20) {
+            // The buttons the screen holds now and where (identifier @ centre), so the failure explains itself.
+            let buttons = app.buttons.allElementsBoundByIndex.prefix(12).map { b in
+                "\(b.identifier.isEmpty ? b.label : b.identifier)@\(Int(b.frame.midX)),\(Int(b.frame.midY))"
+            }
+            snap("pick-failed")
+            // Diagnosis only — the tour has failed either way: does a second tap on the same word open it? That tells
+            // a tap the words screen never took from a screen that stopped answering. The app's own trace of both taps
+            // (where each touch landed, which gestures took it) is trace.txt next to the screenshots.
+            let retappedAt = Self.clock.string(from: Date())
+            let second = first.exists && first.isHittable
+            if second { first.tap() }
+            let secondOpened = second && waitForCatch(catchButton, again, timeout: 20)
+            let outcome = secondOpened ? "opened it" : (second ? "did not open it either" : "was not possible")
+            let now = buttons.joined(separator: " ")
+            XCTFail("[\(display)/\(learning)] the celebration did not open after tapping a word at \(tappedAt) UTC " +
+                    "(\(aimed); now: \(now); a second tap at \(retappedAt) UTC \(outcome))")
+            guard secondOpened else { return }
+        }
         if again.exists && !catchButton.exists {
             settle(1)
             snap("reencounter")
             again.tap()
             settle(3)
             snap("dex-after-reencounter")
-            return
-        }
-        guard catchButton.exists else {
-            // The buttons the screen holds now and where (identifier @ centre), so the failure explains itself.
-            let buttons = app.buttons.allElementsBoundByIndex.prefix(12).map { b in
-                "\(b.identifier.isEmpty ? b.label : b.identifier)@\(Int(b.frame.midX)),\(Int(b.frame.midY))"
-            }
-            XCTFail("[\(display)/\(learning)] the celebration did not open after tapping a word (\(aimed); " +
-                    "now: \(buttons.joined(separator: " "))")
-            snap("pick-failed")
             return
         }
         settle(2)

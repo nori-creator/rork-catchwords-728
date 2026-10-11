@@ -20,6 +20,7 @@ struct CatchWordsApp: App {
     init() {
         #if DEBUG
         DemoBackend.install()  // -uiDemo: every request answered offline (UI tests on CI)
+        UITestTrace.start()    // -uiDemo: the touches and the catch's steps, for CI (uitest-trace.txt)
         // -uiPreview: the screens are photographed as an account that agreed to the AI consent sees them
         // (the consent screen itself is the "aiconsent" scene).
         if UIPreview.parsed != nil {

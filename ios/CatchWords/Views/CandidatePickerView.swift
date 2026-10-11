@@ -15,6 +15,7 @@ struct CandidatePickerView: View {
     @State private var typed: String = ""
     @FocusState private var inputFocused: Bool
     @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     private let ink = Color(hex: 0x0B121A)
 
@@ -131,6 +132,7 @@ struct CandidatePickerView: View {
         GeometryReader { geo in
             let size = geo.size
             let placedTags = placed(in: size)
+            let _ = UITestTrace.log(traceStage(size, placedTags))
             ZStack(alignment: .topLeading) {
                 if let photo = vm.photo {
                     Image(uiImage: photo)
@@ -151,10 +153,20 @@ struct CandidatePickerView: View {
             }
             .frame(width: size.width, height: size.height)
             .contentShape(.rect)
-            .onTapGesture { inputFocused = false }
+            .onTapGesture {
+                UITestTrace.log("stage.tap")
+                inputFocused = false
+            }
             .onChange(of: size, initial: true) { _, s in layoutScan(s) }
             .onChange(of: vm.scan.map { ObjectIdentifier($0) }) { _, _ in layoutScan(size) }
         }
+    }
+
+    /// The UI tests' trace of a render of the stage (`UITestTrace`, DEBUG + `-uiDemo` only): what it shows and can take.
+    private func traceStage(_ size: CGSize, _ placedTags: [Placed]) -> String {
+        let shown = placedTags.filter { vm.scan?.revealed.contains($0.tag.object.id) ?? true }.map(\.id)
+        let state = "step=\(vm.step) checking=\(vm.isCheckingOwned) enabled=\(isEnabled)"
+        return "picker.stage \(Int(size.width))x\(Int(size.height)) \(state) shown=\(shown)"
     }
 
     /// Tells the scan where the photo sits on the stage (it draws in the stage's points).
@@ -216,7 +228,10 @@ struct CandidatePickerView: View {
         let motion: Animation? = scanned
             ? (reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.42, dampingFraction: 0.68).delay(t.main ? 0 : 0.06))
             : (reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.7).delay(delay))
-        return Button { vm.choose(t.word, object: t.object) } label: {
+        return Button {
+            UITestTrace.log("tag.action \(t.id) shown=\(shown) checking=\(vm.isCheckingOwned) step=\(vm.step)")
+            vm.choose(t.word, object: t.object)
+        } label: {
             HStack(spacing: 7) {
                 Circle()
                     .fill(t.main ? Color(hex: 0x2A9BFF) : Color(hex: 0x9AA6B5))

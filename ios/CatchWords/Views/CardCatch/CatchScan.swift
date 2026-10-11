@@ -348,6 +348,8 @@ final class CatchScanSession {
     /// Object id → the rank of its drawn outline; the drawn outlines that got no name.
     @ObservationIgnored private var rankOf: [Int: Int] = [:]
     @ObservationIgnored private var unnamed: Set<Int> = []
+    /// The UI tests' trace: when a frame was last noted (about twice a second while frames are drawn).
+    @ObservationIgnored private var drawNoted: Double = -1
 
     /// The scan's clock starts (once) when the photo first shows.
     func begin(now: Date) {
@@ -431,6 +433,7 @@ final class CatchScanSession {
                 lastTag = max(lastTag, due)
                 if t >= due, !revealed.contains(o.id) {
                     revealed.insert(o.id)
+                    UITestTrace.log("scan.reveal \(o.id) t=\(String(format: "%.2f", t)) due=\(String(format: "%.2f", due))")
                     if t - due < 0.25 {
                         SoundService.shared.playLayered(.ccPop)
                         Haptics.impact(.light)
@@ -448,8 +451,14 @@ final class CatchScanSession {
         } else {
             next = .naming
         }
-        if next != phase { phase = next }
-        if next == .done, !settled, t >= max(drawEnd + CatchScanSpec.penOut, lastTag) + 0.6 { settled = true }
+        if next != phase {
+            phase = next
+            UITestTrace.log("scan.phase \(next) t=\(String(format: "%.2f", t))")
+        }
+        if next == .done, !settled, t >= max(drawEnd + CatchScanSpec.penOut, lastTag) + 0.6 {
+            settled = true
+            UITestTrace.log("scan.settled t=\(String(format: "%.2f", t)) shapes=\(plan.shapes.count)")
+        }
     }
 
     /// Everything is up and nothing moves any more — no named outline to pulse (or reduced motion): the overlay stops
@@ -498,6 +507,10 @@ final class CatchScanSession {
     func draw(_ g: inout GraphicsContext, size: CGSize, photo: CGSize, now: Date, reduceMotion: Bool) {
         guard let started else { return }
         let t = now.timeIntervalSince(started)
+        if t - drawNoted >= 0.5 || t < drawNoted {
+            drawNoted = t
+            UITestTrace.log("scan.draw t=\(String(format: "%.2f", t))")
+        }
         let m = moments(reduceMotion: reduceMotion)
         let names = m?.names
         if !reduceMotion {
@@ -802,6 +815,7 @@ struct CatchScanOverlay: View {
     let reduceMotion: Bool
 
     var body: some View {
+        let _ = UITestTrace.log("scan.overlay settled=\(scan.settled) paused=\(scan.idle(reduceMotion: reduceMotion))")
         TimelineView(.animation(minimumInterval: scan.settled ? 1.0 / 30 : nil, paused: scan.idle(reduceMotion: reduceMotion))) { ctx in
             Canvas { g, size in
                 scan.draw(&g, size: size, photo: photo, now: ctx.date, reduceMotion: reduceMotion)

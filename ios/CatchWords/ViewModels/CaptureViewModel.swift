@@ -305,6 +305,7 @@ final class CaptureViewModel {
     }
 
     func choose(_ word: Candidate, object: CatchObject?) {
+        UITestTrace.log("choose \(word.headword) checking=\(isCheckingOwned) step=\(step) token=\(runToken)")
         guard !isCheckingOwned else { return }
         let token = runToken
         logPick(word, object: object)
@@ -335,6 +336,8 @@ final class CaptureViewModel {
                 ownedChecks[word.headword] = nil
                 found = await ownedCheck(for: word.headword).value
             }
+            UITestTrace.log("choose.checked \(word.headword) owned=\(found?.owned != nil) failed=\(found == nil)"
+                            + " sameRun=\(token == runToken) samePick=\(picked == word)")
             guard token == runToken, picked == word else { return }
             isCheckingOwned = false
             if let o = found?.owned {
