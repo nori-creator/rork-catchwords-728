@@ -23,12 +23,6 @@
      "privacyPolicyUrl": "https://catchwords.lovable.app/privacy"
     },
     {
-     "locale": "zh-Hant",
-     "name": "CatchWords",
-     "subtitle": "拍下身邊的東西，學會單字",
-     "privacyPolicyUrl": "https://catchwords.lovable.app/privacy"
-    },
-    {
      "locale": "ja",
      "name": "CatchWords",
      "subtitle": "撮って集める、台湾華語の単語図鑑",
@@ -113,17 +107,6 @@
      ]
     },
     {
-     "locale": "zh-Hant",
-     "descriptionLength": 394,
-     "descriptionStart": "只要拍下街上看到的東西，就會變成你正在學的語言的單字卡。支援台灣華語、英語、日語。\n\n■ 拍照收集\n・從照片中的物品提出單字候選，加上讀音和意思收進圖鑑\n・把拍",
-     "keywords": "華語,中文,單字,英文,日文,日語,語言學習,圖鑑,照片,貼紙,複習,台灣",
-     "promotionalText": null,
-     "supportUrl": "https://catchwords.lovable.app/support",
-     "marketingUrl": null,
-     "whatsNew": null,
-     "screenshots": []
-    },
-    {
      "locale": "en-US",
      "descriptionLength": 1631,
      "descriptionStart": "Take a photo of things around you and collect their words in Taiwanese Mandarin ",
@@ -138,6 +121,14 @@
   }
  ],
  "builds": [
+  {
+   "build": "1023",
+   "version": "1.0.0",
+   "processingState": "VALID",
+   "uploadedDate": "2026-10-11T05:54:52-07:00",
+   "expired": false,
+   "minOsVersion": "18.0"
+  },
   {
    "build": "1022",
    "version": "1.0.0",
@@ -191,14 +182,6 @@
    "version": "1.0.0",
    "processingState": "VALID",
    "uploadedDate": "2026-10-08T19:40:12-07:00",
-   "expired": false,
-   "minOsVersion": "18.0"
-  },
-  {
-   "build": "1015",
-   "version": "1.0.0",
-   "processingState": "VALID",
-   "uploadedDate": "2026-10-04T03:44:13-07:00",
    "expired": false,
    "minOsVersion": "18.0"
   }
