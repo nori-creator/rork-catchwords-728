@@ -54,9 +54,8 @@ final class CaptureViewModel {
 
     // Re-encounter ("再会！")
     var owned: OwnedWord?
+    /// Set the moment the re-encounter screen hands the photo to its background save (ReencounterView).
     var reencCount: Int?
-    var reencPhotoSaved: Bool = false
-    var reencFailed: Bool = false
 
     /// runToken: "cancel" only discards stale results; in-flight work is never killed mid-save.
     private var runToken: Int = 0
@@ -345,8 +344,6 @@ final class CaptureViewModel {
             if let o = found?.owned {
                 owned = o
                 reencCount = nil
-                reencFailed = false
-                reencPhotoSaved = false
                 // An owned word gets no card: stop generating it (the request is cancelled with its task).
                 let key = Self.detailsKey(word)
                 detailsCache[key]?.cancel()
@@ -479,9 +476,9 @@ final class CaptureViewModel {
         restoredPendingId = nil
     }
 
-    /// 「図鑑に追加」: the dex opens before the save has finished. The queued photo is handed to that background
-    /// save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」 meanwhile; the
-    /// save removes it when done, or shows it again when it fails.
+    /// 「図鑑に追加」 (and a re-encounter's record): the dex opens before the save has finished. The queued photo is
+    /// handed to that background save (this screen no longer owns it, so `reset` keeps it) and hidden from 「解析待ち」
+    /// meanwhile; the save removes it when done, or shows it again when it fails.
     func detachPendingForSave() -> String? {
         let pid = pendingId
         pendingId = nil
@@ -556,8 +553,6 @@ final class CaptureViewModel {
         failedOffline = false
         owned = nil
         reencCount = nil
-        reencFailed = false
-        reencPhotoSaved = false
         withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) { step = .camera }
     }
 

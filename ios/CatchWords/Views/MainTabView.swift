@@ -53,8 +53,6 @@ final class AppRouter {
     var detailZoomed: Bool = false
     /// The camera tab's icon is still flying into the shutter: the real shutter waits hidden until it lands.
     var shutterFlying: Bool = false
-    /// A word tapped while its catch was still being saved (a provisional dex entry): opened once it is saved.
-    var detailAfterSave: String?
     /// A word page's 「いま復習する」: the review tab brings this sticker in as the next card, due or not.
     var reviewNow: String?
     /// A one-line notice over every tab (a catch's background save reports a failure here: the camera
@@ -73,13 +71,10 @@ final class AppRouter {
         }
     }
 
-    /// Open a word's sheet; `zoom` only when the tapped tile carries `detailZoomSource(_:)`.
+    /// Open a word's sheet; `zoom` only when the tapped tile carries `detailZoomSource(_:)`. A catch still being
+    /// saved opens at once too (owner 2026-10-11: 「キャッチしたてのときその単語の詳細に進めない」): its page waits
+    /// for the save by itself and turns into the saved word in place (WordDetailView, `DexStore.current`).
     func openDetail(_ sticker: Sticker, zoom: Bool) {
-        // Still being saved: it has no server id yet, so its page opens as soon as the save finishes.
-        if DexStore.isProvisional(sticker.id) {
-            detailAfterSave = sticker.id
-            return
-        }
         detailZoomed = zoom && detailZoom != nil
         detailSticker = sticker
     }
@@ -220,13 +215,6 @@ struct MainTabView: View {
             if tab == .camera { router.advanceTour(from: .tapCamera, to: .shoot) }
         }
         .onChange(of: router.detailSticker) { old, s in
-            // A word still being saved has no page yet (every way in goes through here): it opens once saved.
-            if let s, DexStore.isProvisional(s.id) {
-                router.detailAfterSave = s.id
-                router.detailSticker = nil
-                return
-            }
-            if s == nil, let old, DexStore.isProvisional(old.id) { return }   // never shown: no closing sound
             if s != nil { router.advanceTour(from: .dexOpen, to: .word) }
             // Every way into a word (dex, home, review, a reminder) pons open; closing it pons back.
             if old == nil, s != nil { SoundService.shared.pon(open: true) }

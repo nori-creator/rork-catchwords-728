@@ -172,6 +172,14 @@ final class DexStore {
 
     func sticker(id: String) -> Sticker? { stickers.first { $0.id == id } }
 
+    /// Provisional id → the saved sticker that took its place (`save(replacing:)`).
+    private var adoptedIds: [String: String] = [:]
+
+    /// The sticker now standing for `id`: a page opened on a catch still being saved keeps its provisional id, and
+    /// becomes the saved word in place once the save is done (owner 2026-10-11: 「キャッチしたてのときその単語の
+    /// 詳細に進めない」 — the page now opens at once).
+    func current(_ id: String) -> Sticker? { sticker(id: adoptedIds[id] ?? id) }
+
     /// When reviews come due (for おまかせ reminders).
     /// This learning language's cards only (R1).
     var upcomingDueTimes: [Date] {
@@ -359,6 +367,9 @@ final class DexStore {
 
     /// sticker id → the pictures of its re-encounters (`encounters`), oldest first: the cut-out when there is one.
     var encounterPhotos: [String: [DexPicture]] = [:]
+    /// sticker id → the picture of a re-encounter just recorded on this phone: its word's square shows it first,
+    /// as the star flies it in (owner 2026-10-11: 「同じ単語でも図鑑に追加するアニメーションを追加して」).
+    private var freshEncounters: [String: DexPicture] = [:]
 
     /// One read of every re-encounter photo of this account (RLS: the owner's own rows), signed together.
     /// A server without the photo columns, or no connection, leaves the squares on their one picture.
@@ -383,13 +394,17 @@ final class DexStore {
     }
 
     /// Every picture of the word this square stands for (web `DexCyclingPhoto`): the square's own first, then the
-    /// word's other catches, then the re-encounters — each the cut-out where there is one. At most 8.
+    /// word's other catches, then the re-encounters — each the cut-out where there is one. At most 8. A re-encounter
+    /// just recorded on this phone comes before all of them (`freshEncounters`).
     func dexPictures(for sticker: Sticker) -> [DexPicture] {
         let key = DexCatalog.norm(sticker.word?.headword ?? "", lang: language)
         let others = key.isEmpty ? [] : stickers.filter {
             $0.id != sticker.id && DexCatalog.norm($0.word?.headword ?? "", lang: language) == key
         }.sorted { $0.takenAt < $1.takenAt }
         var out: [DexPicture] = []
+        for s in [sticker] + others {
+            if let p = freshEncounters[s.id], !out.contains(where: { $0.path == p.path }) { out.append(p) }
+        }
         for s in [sticker] + others {
             let own = s.dexImagePath.map { [DexPicture(path: $0, isCutout: s.dexShowsCutout)] } ?? []
             for p in own + (encounterPhotos[s.id] ?? []) where !out.contains(where: { $0.path == p.path }) {
@@ -474,6 +489,7 @@ final class DexStore {
         guard client.userId == uid else { throw Self.accountChanged }
         stickers.removeAll { $0.id == sticker.id }
         savedSinceLoad.insert(sticker.id)
+        if let provisionalId { adoptedIds[provisionalId] = sticker.id }
         if let provisionalId, let i = stickers.firstIndex(where: { $0.id == provisionalId }) {
             stickers[i] = sticker
         } else {
@@ -763,35 +779,59 @@ final class DexStore {
 
     /// Re-encounter (web `recordReencounter`): this photo is added to the word you already own,
     /// with where you met it again. No quiz, and the review interval is not moved (`recalled: null`).
-    /// If the photo upload fails the encounter itself is still recorded.
+    ///
+    /// Owner 2026-10-11 (「同じ単語の画像を撮ったときに、追加するまでに時間が無駄にかかる」): the dex shows the photo at
+    /// once — it is put in the image cache under the names it is uploaded to and comes first in its word's square
+    /// (`freshEncounters`) — while the uploads (the cut-out at 800 px: it is only drawn in the small dex square) and
+    /// the record run; the sticker is no longer read back afterwards. The caller runs this behind the screens
+    /// (ReencounterView). A failure takes the photo out of the square again and is thrown. A failed cut-out never
+    /// blocks the record; a photo that cannot be uploaded does (it stays in 「解析待ち」).
     func recordEncounter(owned: OwnedWord, photo: UIImage?, cutout: UIImage?,
                          location: CLLocation?, placeName: String?) async throws -> (count: Int, photoSaved: Bool) {
         guard let uid = client.userId else { throw APIError.unauthorized }
-        let ts = Int(Date().timeIntervalSince1970 * 1000)
-        async let imagePath: String? = uploadJPEG(photo, uid: uid, ts: ts, kind: "encounter")
-        async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "encounter-cutout")
-        let image = try await imagePath
-        let cut = await cutoutPath
-        if photo != nil && image == nil { throw APIError.message(L("記録に失敗しました")) }
+        let ts = Self.uploadStamp()
+        let sid = owned.stickerId
+        // The very paths `uploadJPEG` / `uploadPNG` write below.
+        let imageName: String? = photo == nil ? nil : "\(uid)/\(ts)-encounter.jpg"
+        let cutoutName: String? = cutout == nil ? nil : "\(uid)/\(ts)-encounter-cutout.png"
+        cacheLocal(path: imageName, image: photo)
+        cacheLocal(path: cutoutName, image: cutout)
+        let shown: DexPicture? = (cutoutName ?? imageName).map { DexPicture(path: $0, isCutout: cutoutName != nil) }
+        if let shown {
+            encounterPhotos[sid, default: []].append(shown)
+            freshEncounters[sid] = shown
+        }
         struct Recorded: Decodable {
             let encounterCount: Int?
             enum CodingKeys: String, CodingKey { case encounterCount = "encounter_count" }
         }
-        let res = try await NativeAPI.call("recordEncounter", [
-            "sticker_id": owned.stickerId,
-            "recalled": NSNull(),
-            "lat": orNull(location?.coordinate.latitude),
-            "lng": orNull(location?.coordinate.longitude),
-            "location_name": orNull(placeName),
-            "image_path": orNull(image),
-            "cutout_path": orNull(cut),
-        ], as: Recorded.self, timeout: 30)
-        cacheLocal(path: image, image: photo)
-        StickerPhoto.invalidate(owned.stickerId)
-        if let fresh = try? await fetchSticker(id: owned.stickerId) {
-            replace(owned.stickerId) { _ in fresh }
+        do {
+            async let imagePath: String? = uploadJPEG(photo, uid: uid, ts: ts, kind: "encounter")
+            async let cutoutPath: String? = uploadPNG(cutout, uid: uid, ts: ts, kind: "encounter-cutout", maxSide: 800)
+            let image = try await imagePath
+            let cut = await cutoutPath
+            if photo != nil && image == nil { throw APIError.message(L("記録に失敗しました")) }
+            let res = try await NativeAPI.call("recordEncounter", [
+                "sticker_id": sid,
+                "recalled": NSNull(),
+                "lat": orNull(location?.coordinate.latitude),
+                "lng": orNull(location?.coordinate.longitude),
+                "location_name": orNull(placeName),
+                "image_path": orNull(image),
+                "cutout_path": orNull(cut),
+            ], as: Recorded.self, timeout: 30, asUser: uid)
+            StickerPhoto.invalidate(sid)
+            return (res.encounterCount ?? owned.encounterCount + 1, image != nil || cut != nil)
+        } catch {
+            // Signed out (or into another account) meanwhile: that account's dex is gone already; nothing is told.
+            guard client.userId == uid else { throw Self.accountChanged }
+            // Not added: the square goes back to the pictures it had.
+            if let shown {
+                encounterPhotos[sid]?.removeAll { $0.path == shown.path }
+                if freshEncounters[sid]?.path == shown.path { freshEncounters[sid] = nil }
+            }
+            throw error
         }
-        return (res.encounterCount ?? owned.encounterCount + 1, image != nil || cut != nil)
     }
 
     private func uploadJPEG(_ image: UIImage?, uid: String, ts: Int, kind: String) async throws -> String? {
@@ -803,9 +843,9 @@ final class DexStore {
     }
 
     /// Cutout failures never block the catch.
-    private func uploadPNG(_ image: UIImage?, uid: String, ts: Int, kind: String) async -> String? {
+    private func uploadPNG(_ image: UIImage?, uid: String, ts: Int, kind: String, maxSide: CGFloat = 1200) async -> String? {
         guard let image,
-              let png = await Task.detached(priority: .userInitiated, operation: { ImageTools.resized(image, maxSide: 1200).pngData() }).value
+              let png = await Task.detached(priority: .userInitiated, operation: { ImageTools.resized(image, maxSide: maxSide).pngData() }).value
         else { return nil }
         let path = "\(uid)/\(ts)-\(kind).png"
         do {
@@ -1096,6 +1136,8 @@ final class DexStore {
         prefetchTask?.cancel()
         stickers = []
         encounterPhotos = [:]
+        freshEncounters = [:]
+        adoptedIds = [:]
         signedAt = [:]
         forcedAt = [:]
         sharedWords = [:]
