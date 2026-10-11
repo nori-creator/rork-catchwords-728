@@ -1,0 +1,121 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 1.02,
+  "cue": "edge wave (static, spreading)",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "continuous 0.1 noise-like 1s (sharpness 0.9)"
+ },
+ {
+  "t": 1.97,
+  "cue": "outline closes: cup",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 2.13,
+  "cue": "outline closes: scooter",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 2.134,
+  "cue": "corner features",
+  "bus": "sfx",
+  "gain_db": -34,
+  "haptic": null
+ },
+ {
+  "t": 2.29,
+  "cue": "outline closes: sign",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 2.39,
+  "cue": "lifted out",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.35/0.7"
+ },
+ {
+  "t": 2.55,
+  "cue": "lifted out",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.35/0.7"
+ },
+ {
+  "t": 2.71,
+  "cue": "lifted out",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.35/0.7"
+ },
+ {
+  "t": 2.79,
+  "cue": "waiting for the names (soft bed, opens slowly)",
+  "bus": "sfx",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 3.72,
+  "cue": "tag: cup",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 3.82,
+  "cue": "tag: scooter",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 3.92,
+  "cue": "tag: plant",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 4.02,
+  "cue": "tag: sign",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 4.1,
+  "cue": "all words in (resolve)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 4.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

@@ -1,0 +1,149 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 1.08,
+  "cue": "light runs round the outline: cup",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "continuous 0.12→0.3 600ms (sharpness 0.4)"
+ },
+ {
+  "t": 1.12,
+  "cue": "lifts off the photo",
+  "bus": "sfx",
+  "gain_db": -31,
+  "haptic": null
+ },
+ {
+  "t": 1.42,
+  "cue": "sheen",
+  "bus": "sfx",
+  "gain_db": -33,
+  "haptic": null
+ },
+ {
+  "t": 1.52,
+  "cue": "light runs round the outline: scooter",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "continuous 0.12→0.3 600ms (sharpness 0.4)"
+ },
+ {
+  "t": 1.56,
+  "cue": "lifts off the photo",
+  "bus": "sfx",
+  "gain_db": -31,
+  "haptic": null
+ },
+ {
+  "t": 1.68,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 1.86,
+  "cue": "sheen",
+  "bus": "sfx",
+  "gain_db": -33,
+  "haptic": null
+ },
+ {
+  "t": 1.96,
+  "cue": "light runs round the outline: sign",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "continuous 0.12→0.3 600ms (sharpness 0.4)"
+ },
+ {
+  "t": 2.0,
+  "cue": "lifts off the photo",
+  "bus": "sfx",
+  "gain_db": -31,
+  "haptic": null
+ },
+ {
+  "t": 2.12,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 2.3,
+  "cue": "sheen",
+  "bus": "sfx",
+  "gain_db": -33,
+  "haptic": null
+ },
+ {
+  "t": 2.56,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 2.66,
+  "cue": "waiting for the names (soft bed, opens slowly)",
+  "bus": "sfx",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 3.72,
+  "cue": "tag: cup",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 3.82,
+  "cue": "tag: scooter",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 3.92,
+  "cue": "tag: plant",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 4.02,
+  "cue": "tag: sign",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 4.1,
+  "cue": "all words in (resolve)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 4.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

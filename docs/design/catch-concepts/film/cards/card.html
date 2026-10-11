@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:J;font-weight:500;src:url(../fonts/NotoSansJP-500-sub.ttf)}@font-face{font-family:J;font-weight:800;src:url(../fonts/NotoSansJP-800-sub.ttf)}
+@font-face{font-family:I;font-weight:700;src:url(../fonts/Inter-700.ttf)}@font-face{font-family:I;font-weight:500;src:url(../fonts/Inter-500.ttf)}
+html,body{margin:0}canvas{display:block}</style></head><body><canvas id=c width=1080 height=2340></canvas><script>
+const x=document.getElementById('c').getContext('2d');
+window.draw=async(k,d)=>{await document.fonts.load('800 80px J');await document.fonts.load('500 40px J');await document.fonts.load('700 80px I');await document.fonts.load('500 52px I');
+ const g=x.createLinearGradient(0,0,0,2340);g.addColorStop(0,'#071022');g.addColorStop(1,'#0E1C38');x.fillStyle=g;x.fillRect(0,0,1080,2340);
+ const r=x.createRadialGradient(540,900,0,540,900,900);r.addColorStop(0,'rgba(0,131,255,0.28)');r.addColorStop(1,'rgba(0,131,255,0)');x.fillStyle=r;x.fillRect(0,0,1080,2340);
+ x.textAlign='center';x.fillStyle='#fff';x.font='700 360px I';x.fillText(k,540,1010);
+ x.font='800 104px J';x.fillText(d[0],540,1230);x.fillStyle='rgba(255,255,255,0.6)';x.font='500 52px I';x.fillText(d[1],540,1320);
+ x.fillStyle='rgba(255,255,255,0.88)';x.font='500 46px J';x.fillText(d[2],540,1480);
+ x.fillStyle='#7CC0FF';x.font='500 42px J';x.fillText(d[3],540,1570);
+ x.fillStyle='rgba(255,255,255,0.45)';x.font='500 34px J';x.fillText('キャッチ演出 v5 ・ スキャンと待ち時間（音あり）',540,2160);
+ return document.getElementById('c').toDataURL('image/png');}
+</script></body></html>

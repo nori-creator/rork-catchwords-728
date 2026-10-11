@@ -168,9 +168,11 @@ final class SupabaseClient {
     /// expired) means the login is over: the session is dropped, `.sessionExpired` is posted so the app
     /// returns to the login screen, and `APIError.unauthorized` is thrown. A network or server error keeps
     /// the session — the caller goes on with the current token and may simply be offline.
-    func refreshIfNeeded(force: Bool = false) async throws {
+    /// `within`: refresh when the token expires within this many seconds (the camera refreshes earlier, so the
+    /// photo's request never waits for a refresh — `NativeAPI.warmUp`).
+    func refreshIfNeeded(force: Bool = false, within: TimeInterval = 120) async throws {
         guard let current = session else { throw APIError.unauthorized }
-        guard force || current.expiresAt.timeIntervalSinceNow < 120 else { return }
+        guard force || current.expiresAt.timeIntervalSinceNow < within else { return }
         // One refresh at a time: refresh tokens rotate, so two concurrent refreshes would make the
         // second one fail as "already used" and log the user out for nothing.
         if let running = refreshTask { return try await running.value }

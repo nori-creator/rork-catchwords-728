@@ -419,8 +419,30 @@ final class DexStore {
         // The word's exam level is not used on iOS (owner 2026-10-03). The server's own value from `generateCard`
         // is handed back untouched when there is one: without it saveSticker would store its default "TOCFL-2"
         // (stickers.functions.ts SaveStickerInput), which is wrong for English and Japanese words.
-        if let lv = raw?["level"]?.string, !lv.isEmpty { word["level"] = lv }
+        if let lv = raw?["level"]?.string, !lv.isEmpty {
+            word["level"] = lv
+        } else if raw == nil {
+            // Saved before its card arrived (`CaptureViewModel.provisionalDetails`): an empty level is stored as none
+            // (never the "TOCFL-2" default), and the card fills it in later (`fillCard`).
+            word["level"] = ""
+        }
         return word
+    }
+
+    /// A catch saved before its card arrived (「図鑑に追加」 no longer waits for it, owner 2026-10-10): the card's notes
+    /// go to the reader's explanation and fill the word's empty shared columns (`updateWordExtras` — the same path as
+    /// the detail page's `generateExplanation`; it never overwrites what is already there).
+    func fillCard(wordId: String, card: CardDetails) async {
+        guard let raw = card.raw, case .object = raw else { return }
+        let fields = raw.foundation as? [String: Any] ?? [:]
+        guard let extras = fields["extras"] as? [String: Any] else { return }
+        var data: [String: Any] = ["word_id": wordId, "extras": extras]
+        var patch: [String: Any] = [:]
+        for k in ["reading_zhuyin", "pinyin", "part_of_speech", "level", "example_sentence", "example_translation", "meaning_ja"] {
+            if let v = fields[k] as? String, !v.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { patch[k] = v }
+        }
+        if !patch.isEmpty { data["patch"] = patch }
+        _ = try? await NativeAPI.call("updateWordExtras", data, timeout: 30)
     }
 
     /// A `Word` made from the fields sent to `saveSticker` (shown until the server's row is read).

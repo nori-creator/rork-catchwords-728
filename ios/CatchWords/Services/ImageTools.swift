@@ -221,6 +221,13 @@ nonisolated final class InstanceMasks: @unchecked Sendable {
         return CutoutService.rankedInstances(in: observation.instanceMask, to: point).filter { all.contains($0.label) }
     }
 
+    /// Renders the cut-outs of the first `limit` instances into the cache. Called off the main thread while the AI
+    /// is still naming the things, so the words screen only picks finished cut-outs (they used to be rendered after
+    /// the server answered, on the way to the words — owner 2026-10-10: 「ただ待たされる時間は苦痛」).
+    func prerenderCuts(limit: Int = 6) {
+        for label in observation.allInstances.prefix(limit) { _ = cut(instance: label) }
+    }
+
     /// Heavy (renders a full-size mask): call off the main thread.
     func cut(instance label: Int) -> Cut? {
         lock.lock()

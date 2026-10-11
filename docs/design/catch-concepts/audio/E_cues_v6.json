@@ -1,0 +1,58 @@
+[
+ {
+  "t": 0.52,
+  "cue": "tap the new word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ },
+ {
+  "t": 0.62,
+  "cue": "page zooms out of the slot",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 1.05,
+  "cue": "music music_D2 from 0.0s",
+  "bus": "music",
+  "gain_db": -17,
+  "haptic": null
+ },
+ {
+  "t": 1.13,
+  "cue": "pronunciation 珍奶 (zh-TW, prefetched — no wait)",
+  "bus": "voice",
+  "gain_db": -3,
+  "haptic": null
+ },
+ {
+  "t": 6.37,
+  "cue": "line written (section 1)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "transient 0.2/0.7"
+ },
+ {
+  "t": 6.63,
+  "cue": "line written (section 2)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "transient 0.2/0.7"
+ },
+ {
+  "t": 6.89,
+  "cue": "line written (section 3)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "transient 0.2/0.7"
+ },
+ {
+  "t": 7.504,
+  "cue": "all written: A→D (resolve)",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": "success"
+ }
+]

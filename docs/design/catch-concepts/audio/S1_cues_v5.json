@@ -1,0 +1,114 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 1.22,
+  "cue": "slot appears (No.???): cup",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.3,
+  "cue": "slot appears (No.???): scooter",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.38,
+  "cue": "slot appears (No.???): plant",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 1.46,
+  "cue": "slot appears (No.???): sign",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 2.0,
+  "cue": "shine (waiting)",
+  "bus": "sfx",
+  "gain_db": -37,
+  "haptic": null
+ },
+ {
+  "t": 3.76,
+  "cue": "slot filled (DexFillIn): cup",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.6/0.6"
+ },
+ {
+  "t": 3.9,
+  "cue": "slot filled (DexFillIn): scooter",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.6/0.6"
+ },
+ {
+  "t": 4.04,
+  "cue": "slot filled (DexFillIn): plant",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.6/0.6"
+ },
+ {
+  "t": 4.17,
+  "cue": "NEW",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.18,
+  "cue": "slot filled (DexFillIn): sign",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.6/0.6"
+ },
+ {
+  "t": 4.31,
+  "cue": "NEW",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.59,
+  "cue": "NEW",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.64,
+  "cue": "all slots filled",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 4.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

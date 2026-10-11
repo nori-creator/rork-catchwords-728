@@ -200,6 +200,8 @@ struct CaptureView: View {
     /// The real camera; never under `-uiDemo` (its sample photo stands in, `demoCamera`).
     private func startCamera() async {
         guard !demoCamera else { return }
+        // The connection for the photo's request is opened while the learner frames the shot.
+        NativeAPI.warmUp()
         await camera.start()
     }
 
@@ -498,8 +500,10 @@ struct CaptureView: View {
 
     /// 「図鑑に追加」. The dex opens at once (`CatchLanding`) on a provisional entry while the catch is saved behind
     /// it through the app's own path (photo and cut-out uploads, saveSticker): the learner never waits on the
-    /// network after the tap (owner report 2026-10-04). Only the card's details and the cut-out are awaited
-    /// here (both started at the tap on the word, so usually ready).
+    /// network after the tap (owner report 2026-10-04). Only the cut-out is awaited here (started at the tap on the
+    /// word, so usually ready). The card's details are no longer waited for (owner 2026-10-10: 「ただ待たされる
+    /// 時間は苦痛」 — the card took several seconds and sometimes failed, which stopped the catch): a card not here
+    /// yet is saved from the word's own fields and filled in behind the dex when it arrives (`DexStore.fillCard`).
     /// Safety kept: the photo stays in 「解析待ち」 (hidden) until the save is done; a failed save removes the
     /// provisional entry, gives the catch back to the plan, shows the photo in 「解析待ち」 again and says why.
     private func addToDex() async -> Bool {
@@ -508,11 +512,11 @@ struct CaptureView: View {
         defer { saveInFlight = false }
         // Cut-out mode: the sticker is cut before it goes into the dex (never a half-done cut).
         await vm.awaitCutout()
-        let details = await vm.awaitDetails()
         // Another word was chosen (or the screen left) meanwhile: this tap belongs to the old one.
         guard vm.picked == want, vm.step == .celebrate else { return false }
-        guard let d = details, let draft = vm.draft(details: d) else {
-            vm.showToast(L("カード生成に失敗しました"))
+        let cardLater = vm.cardStillComing
+        guard let d = vm.details ?? vm.provisionalDetails(), let draft = vm.draft(details: d) else {
+            vm.showToast(L("保存に失敗しました"))
             return false
         }
         guard let local = dex.addProvisional(draft) else {
@@ -541,7 +545,7 @@ struct CaptureView: View {
         }
         Task {
             await Self.finishSave(draft, provisional: local.sticker.id, ts: local.ts, pendingId: pendingId,
-                                  dex: store, plan: planStore, router: nav)
+                                  cardLater: cardLater, dex: store, plan: planStore, router: nav)
         }
         return true
     }
@@ -549,12 +553,19 @@ struct CaptureView: View {
     /// The save, behind the dex. Success: the provisional entry becomes the saved sticker (the landing, the
     /// tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is left behind,
     /// the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
+    /// `cardLater`: the card still being generated when it was saved from the word's own fields; its notes are
+    /// filled into the saved word when it arrives (a card that fails leaves the word as saved — the detail page
+    /// writes the notes when it is opened, as for any word without them).
     private static func finishSave(_ draft: CatchDraft, provisional: String, ts: Int, pendingId: String?,
+                                   cardLater: Task<CardDetails?, Never>? = nil,
                                    dex: DexStore, plan: PlanStore, router: AppRouter) async {
         do {
             let outcome = try await dex.save(draft, ts: ts, replacing: provisional) { saved in
                 if let l = router.landing, l.stickerId == provisional { l.stickerId = saved.id }
                 if router.tourStickerId == provisional { router.tourStickerId = saved.id }
+            }
+            if let cardLater, case .created(let saved) = outcome, !saved.wordId.isEmpty {
+                Task { if let card = await cardLater.value { await dex.fillCard(wordId: saved.wordId, card: card) } }
             }
             if let pid = pendingId {
                 PendingQueue.shared.remove(id: pid)

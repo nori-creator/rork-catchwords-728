@@ -1,0 +1,317 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 1.441,
+  "cue": "bracket locks (カチャッ): cup",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "selection (UISelectionFeedbackGenerator, as the old screen)"
+ },
+ {
+  "t": 1.483,
+  "cue": "light runs round the outline: cup (pan follows the light)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "continuous 0.12 600ms (sharpness 0.2)"
+ },
+ {
+  "t": 1.821,
+  "cue": "bracket locks (カチャッ): scooter",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "selection (UISelectionFeedbackGenerator, as the old screen)"
+ },
+ {
+  "t": 1.863,
+  "cue": "light runs round the outline: scooter (pan follows the light)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "continuous 0.12 600ms (sharpness 0.2)"
+ },
+ {
+  "t": 2.083,
+  "cue": "outline closes: cup",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 2.201,
+  "cue": "bracket locks (カチャッ): sign",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "selection (UISelectionFeedbackGenerator, as the old screen)"
+ },
+ {
+  "t": 2.243,
+  "cue": "light runs round the outline: sign (pan follows the light)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": "continuous 0.12 600ms (sharpness 0.2)"
+ },
+ {
+  "t": 2.463,
+  "cue": "outline closes: scooter",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 2.843,
+  "cue": "outline closes: sign",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": "transient 0.25/0.6"
+ },
+ {
+  "t": 3.243,
+  "cue": "waiting for the names (steady pad, no wobble)",
+  "bus": "sfx",
+  "gain_db": -37,
+  "haptic": null
+ },
+ {
+  "t": 6.72,
+  "cue": "tag: cup",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 6.82,
+  "cue": "tag: scooter",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 6.92,
+  "cue": "tag: plant",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 7.02,
+  "cue": "tag: sign",
+  "bus": "sfx",
+  "gain_db": -23,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 7.1,
+  "cue": "all words in (resolve)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 7.99,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ },
+ {
+  "t": 8.01,
+  "cue": "photo clears into the page",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": null
+ },
+ {
+  "t": 8.42,
+  "cue": "float",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 8.47,
+  "cue": "music music_D1 from 0.0s",
+  "bus": "music",
+  "gain_db": -18,
+  "haptic": null
+ },
+ {
+  "t": 8.52,
+  "cue": "NEW chip",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 8.65,
+  "cue": "ways to say it",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": null
+ },
+ {
+  "t": 9.68,
+  "cue": "choose 珍奶",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": "transient 0.55/0.8"
+ },
+ {
+  "t": 9.73,
+  "cue": "check",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 9.81,
+  "cue": "the stage lights up (warm chord)",
+  "bus": "sfx",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 9.85,
+  "cue": "the cup glides onto the stage",
+  "bus": "sfx",
+  "gain_db": -32,
+  "haptic": null
+ },
+ {
+  "t": 9.91,
+  "cue": "card folds away",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 10.25,
+  "cue": "pronunciation 珍奶 (zh-TW, prefetched — no wait)",
+  "bus": "voice",
+  "gain_db": -3,
+  "haptic": null
+ },
+ {
+  "t": 10.98,
+  "cue": "CATCH: 新しいことばをキャッチ！ (D6–F#6–A6–D7)",
+  "bus": "sfx",
+  "gain_db": -17,
+  "haptic": "success (UINotificationFeedbackGenerator)"
+ },
+ {
+  "t": 12.67,
+  "cue": "図鑑 opens",
+  "bus": "sfx",
+  "gain_db": -16,
+  "haptic": "transient 0.3/0.3"
+ },
+ {
+  "t": 12.72,
+  "cue": "scroll",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 12.97,
+  "cue": "anticipation riser",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "continuous 0.1→0.45"
+ },
+ {
+  "t": 13.09,
+  "cue": "flies into its slot",
+  "bus": "sfx",
+  "gain_db": -18,
+  "haptic": null
+ },
+ {
+  "t": 13.487,
+  "cue": "impact texture",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": null
+ },
+ {
+  "t": 13.49,
+  "cue": "IMPACT: D major chord",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 1.0/0.6 + continuous 0.5→0 150ms"
+ },
+ {
+  "t": 13.49,
+  "cue": "impact weight",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": null
+ },
+ {
+  "t": 13.5,
+  "cue": "shockwave air",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 13.52,
+  "cue": "sparkle",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 13.59,
+  "cue": "NEW badge",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": "transient 0.55/0.95"
+ },
+ {
+  "t": 13.79,
+  "cue": "category 6→7 / 19",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": null
+ },
+ {
+  "t": 13.91,
+  "cue": "129→130枚",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 13.99,
+  "cue": "影 37→38",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 14.34,
+  "cue": "goal toast",
+  "bus": "sfx",
+  "gain_db": -28,
+  "haptic": null
+ },
+ {
+  "t": 14.39,
+  "cue": "goal: E→A (one more to complete)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": null
+ }
+]

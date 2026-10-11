@@ -1,0 +1,182 @@
+[
+ {
+  "file": "shutter",
+  "role": "foley",
+  "dur_ms": 220,
+  "note": "capture; the real app keeps the system shutter (required in Japan) — use this only for the freeze accent"
+ },
+ {
+  "file": "found_1",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "object found #1 — climbs D pentatonic (D6) so progress is audible"
+ },
+ {
+  "file": "found_2",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "object found #2 — climbs D pentatonic (E6) so progress is audible"
+ },
+ {
+  "file": "found_3",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "object found #3 — climbs D pentatonic (F#6) so progress is audible"
+ },
+ {
+  "file": "found_4",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "object found #4 — climbs D pentatonic (A6) so progress is audible"
+ },
+ {
+  "file": "found_5",
+  "role": "ui",
+  "dur_ms": 320,
+  "note": "object found #5 — climbs D pentatonic (B6) so progress is audible"
+ },
+ {
+  "file": "tag_tap",
+  "role": "ui",
+  "dur_ms": 90,
+  "note": "tap a word tag"
+ },
+ {
+  "file": "catch_motif",
+  "role": "earcon",
+  "dur_ms": 1210,
+  "note": "signature: rising D–F#–A on glass bells (the moment a word is caught)"
+ },
+ {
+  "file": "catch_motif_short",
+  "role": "earcon",
+  "dur_ms": 1045,
+  "note": "short signature for the Instant flow"
+ },
+ {
+  "file": "arrival",
+  "role": "reward",
+  "dur_ms": 1800,
+  "note": "added to 図鑑: A→D resolves to the tonic, with low weight (harmonics carry it on phone speakers)"
+ },
+ {
+  "file": "badge_tick",
+  "role": "ui",
+  "dur_ms": 60,
+  "note": "図鑑 badge / counter +1"
+ },
+ {
+  "file": "lift",
+  "role": "motion",
+  "dur_ms": 500,
+  "note": "A: sticker lifts off the photo"
+ },
+ {
+  "file": "rim_trace",
+  "role": "motion",
+  "dur_ms": 450,
+  "note": "A: light runs round the outline"
+ },
+ {
+  "file": "fly_to_dex",
+  "role": "motion",
+  "dur_ms": 440,
+  "note": "sticker flies to the 図鑑 tab (falls in pitch, pans left)"
+ },
+ {
+  "file": "die_cut",
+  "role": "foley",
+  "dur_ms": 520,
+  "note": "B: cut line round the sticker"
+ },
+ {
+  "file": "holo",
+  "role": "earcon",
+  "dur_ms": 620,
+  "note": "B: holographic flash, in-key glissando"
+ },
+ {
+  "file": "peel",
+  "role": "foley",
+  "dur_ms": 680,
+  "note": "B: peeling off the backing"
+ },
+ {
+  "file": "peel_free",
+  "role": "foley",
+  "dur_ms": 120,
+  "note": "B: sticker comes free"
+ },
+ {
+  "file": "sheet_up",
+  "role": "foley",
+  "dur_ms": 360,
+  "note": "B: album sheet slides up"
+ },
+ {
+  "file": "stick_press",
+  "role": "foley",
+  "dur_ms": 100,
+  "note": "B: pressed into the album slot"
+ },
+ {
+  "file": "pop",
+  "role": "ui",
+  "dur_ms": 184,
+  "note": "C: in-place pop (tuned to D5)"
+ },
+ {
+  "file": "melt",
+  "role": "motion",
+  "dur_ms": 641,
+  "note": "D: photo melts into the page (reverse swell, tuned F→F#)"
+ },
+ {
+  "file": "type_1",
+  "role": "ui",
+  "dur_ms": 500,
+  "note": "D: character 1 of the word appears (D5)"
+ },
+ {
+  "file": "type_2",
+  "role": "ui",
+  "dur_ms": 500,
+  "note": "D: character 2 of the word appears (F#5)"
+ },
+ {
+  "file": "type_3",
+  "role": "ui",
+  "dur_ms": 500,
+  "note": "D: character 3 of the word appears (A5)"
+ },
+ {
+  "file": "type_4",
+  "role": "ui",
+  "dur_ms": 500,
+  "note": "D: character 4 of the word appears (D6)"
+ },
+ {
+  "file": "confirm",
+  "role": "ui",
+  "dur_ms": 107,
+  "note": "D: 図鑑に追加 button"
+ },
+ {
+  "file": "card_slot",
+  "role": "foley",
+  "dur_ms": 330,
+  "note": "D: files into its slot"
+ },
+ {
+  "file": "twinkle",
+  "role": "earcon",
+  "dur_ms": 300,
+  "note": "slot sparkle"
+ },
+ {
+  "file": "amb_street_loop",
+  "role": "bed",
+  "dur_ms": 10000,
+  "note": "concept films only: Taipei street ambience (seamless loop)"
+ }
+]

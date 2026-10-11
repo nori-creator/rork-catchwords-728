@@ -1,0 +1,74 @@
+{
+ "Version": 1.0,
+ "Metadata": {
+  "Project": "CatchWords",
+  "Created": "2026-10-10",
+  "Description": "names_inked (v3; t=0 is the named moment)"
+ },
+ "Pattern": [
+  {
+   "Event": {
+    "Time": 0.0,
+    "EventType": "HapticTransient",
+    "EventParameters": [
+     {
+      "ParameterID": "HapticIntensity",
+      "ParameterValue": 0.3
+     },
+     {
+      "ParameterID": "HapticSharpness",
+      "ParameterValue": 0.6
+     }
+    ]
+   }
+  },
+  {
+   "Event": {
+    "Time": 0.085,
+    "EventType": "HapticTransient",
+    "EventParameters": [
+     {
+      "ParameterID": "HapticIntensity",
+      "ParameterValue": 0.35
+     },
+     {
+      "ParameterID": "HapticSharpness",
+      "ParameterValue": 0.7
+     }
+    ]
+   }
+  },
+  {
+   "Event": {
+    "Time": 0.17,
+    "EventType": "HapticTransient",
+    "EventParameters": [
+     {
+      "ParameterID": "HapticIntensity",
+      "ParameterValue": 0.4
+     },
+     {
+      "ParameterID": "HapticSharpness",
+      "ParameterValue": 0.8
+     }
+    ]
+   }
+  },
+  {
+   "Event": {
+    "Time": 0.255,
+    "EventType": "HapticTransient",
+    "EventParameters": [
+     {
+      "ParameterID": "HapticIntensity",
+      "ParameterValue": 0.45
+     },
+     {
+      "ParameterID": "HapticSharpness",
+      "ParameterValue": 0.9
+     }
+    ]
+   }
+  }
+ ]
+}

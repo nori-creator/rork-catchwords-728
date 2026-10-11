@@ -1,0 +1,170 @@
+[
+ {
+  "t": 0.64,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ },
+ {
+  "t": 0.74,
+  "cue": "rim light round the cup",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": null
+ },
+ {
+  "t": 0.94,
+  "cue": "lift",
+  "bus": "sfx",
+  "gain_db": -17,
+  "haptic": "continuous 0.3→0.6 300ms"
+ },
+ {
+  "t": 1.12,
+  "cue": "CATCH motif D–F#–A",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": null
+ },
+ {
+  "t": 1.22,
+  "cue": "ways to say it appear",
+  "bus": "sfx",
+  "gain_db": -28,
+  "haptic": null
+ },
+ {
+  "t": 2.12,
+  "cue": "music music_A2 from 0.0s",
+  "bus": "music",
+  "gain_db": -12,
+  "haptic": null
+ },
+ {
+  "t": 2.23,
+  "cue": "choose 珍奶 (list)",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": "transient 0.55/0.8"
+ },
+ {
+  "t": 2.28,
+  "cue": "check",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 2.3,
+  "cue": "pronunciation 珍奶 (zh-TW, prefetched — no wait)",
+  "bus": "voice",
+  "gain_db": -3,
+  "haptic": null
+ },
+ {
+  "t": 2.92,
+  "cue": "図鑑 opens",
+  "bus": "sfx",
+  "gain_db": -16,
+  "haptic": "transient 0.3/0.3"
+ },
+ {
+  "t": 3.07,
+  "cue": "scroll",
+  "bus": "sfx",
+  "gain_db": -27,
+  "haptic": null
+ },
+ {
+  "t": 3.62,
+  "cue": "anticipation riser",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "continuous 0.1→0.45"
+ },
+ {
+  "t": 3.8,
+  "cue": "flies into its slot",
+  "bus": "sfx",
+  "gain_db": -18,
+  "haptic": null
+ },
+ {
+  "t": 4.117,
+  "cue": "impact texture",
+  "bus": "sfx",
+  "gain_db": -19,
+  "haptic": null
+ },
+ {
+  "t": 4.12,
+  "cue": "IMPACT: D major chord",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 1.0/0.6 + continuous 0.5→0 150ms"
+ },
+ {
+  "t": 4.12,
+  "cue": "impact weight",
+  "bus": "sfx",
+  "gain_db": -14,
+  "haptic": null
+ },
+ {
+  "t": 4.13,
+  "cue": "shockwave air",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.15,
+  "cue": "sparkle",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 4.22,
+  "cue": "NEW badge",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": "transient 0.55/0.95"
+ },
+ {
+  "t": 4.42,
+  "cue": "category 6→7 / 19",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": null
+ },
+ {
+  "t": 4.54,
+  "cue": "129→130枚",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.62,
+  "cue": "影 37→38",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ },
+ {
+  "t": 4.97,
+  "cue": "goal toast",
+  "bus": "sfx",
+  "gain_db": -28,
+  "haptic": null
+ },
+ {
+  "t": 5.02,
+  "cue": "goal: E→A (one more to complete)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": null
+ }
+]

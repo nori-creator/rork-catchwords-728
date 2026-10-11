@@ -1,0 +1,121 @@
+[
+ {
+  "t": 0.62,
+  "cue": "shutter press",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": null
+ },
+ {
+  "t": 0.71,
+  "cue": "shutter",
+  "bus": "sfx",
+  "gain_db": -7,
+  "haptic": "transient 0.8/0.6"
+ },
+ {
+  "t": 0.82,
+  "cue": "AI on: the screen edge lights (soft chord blooms)",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": "continuous 0.15 rising 0.4s (sharpness 0.2)"
+ },
+ {
+  "t": 1.099,
+  "cue": "pen draws (1/3)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 2.07,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "transient 0.4/0.6"
+ },
+ {
+  "t": 2.363,
+  "cue": "pen draws (2/3)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 3.23,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "transient 0.4/0.6"
+ },
+ {
+  "t": 3.522,
+  "cue": "pen draws (3/3)",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "transient 0.25/0.5"
+ },
+ {
+  "t": 4.09,
+  "cue": "outline closes",
+  "bus": "sfx",
+  "gain_db": -20,
+  "haptic": "transient 0.4/0.6"
+ },
+ {
+  "t": 4.39,
+  "cue": "waiting: a low pad under it",
+  "bus": "loop",
+  "gain_db": -37,
+  "haptic": null
+ },
+ {
+  "t": 4.69,
+  "cue": "waiting: kalimba broken chord with the patrol light",
+  "bus": "loop",
+  "gain_db": -29,
+  "haptic": null
+ },
+ {
+  "t": 12.2,
+  "cue": "names arrive: the edge light flares, a chord resolves",
+  "bus": "sfx",
+  "gain_db": -21,
+  "haptic": "success"
+ },
+ {
+  "t": 12.24,
+  "cue": "tag: cup (kalimba)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.34,
+  "cue": "tag: scooter (kalimba)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.44,
+  "cue": "tag: plant (kalimba)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 12.54,
+  "cue": "tag: sign (kalimba)",
+  "bus": "sfx",
+  "gain_db": -22,
+  "haptic": "transient 0.35/0.8"
+ },
+ {
+  "t": 13.49,
+  "cue": "tap the word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ }
+]

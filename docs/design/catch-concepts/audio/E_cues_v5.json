@@ -1,0 +1,100 @@
+[
+ {
+  "t": 0.52,
+  "cue": "tap the new word",
+  "bus": "sfx",
+  "gain_db": -15,
+  "haptic": "transient 0.5/0.7"
+ },
+ {
+  "t": 0.62,
+  "cue": "page zooms out of the slot",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": null
+ },
+ {
+  "t": 1.05,
+  "cue": "music music_D2 from 0.0s",
+  "bus": "music",
+  "gain_db": -17,
+  "haptic": null
+ },
+ {
+  "t": 1.13,
+  "cue": "pronunciation 珍奶 (zh-TW, prefetched — no wait)",
+  "bus": "voice",
+  "gain_db": -3,
+  "haptic": null
+ },
+ {
+  "t": 1.37,
+  "cue": "section 1 breaks into particles (L→R)",
+  "bus": "sfx",
+  "gain_db": -27.0,
+  "haptic": "transient train ×3 (0.15/0.9)"
+ },
+ {
+  "t": 1.47,
+  "cue": "section 2 breaks into particles (L→R)",
+  "bus": "sfx",
+  "gain_db": -28.5,
+  "haptic": null
+ },
+ {
+  "t": 1.57,
+  "cue": "section 3 breaks into particles (L→R)",
+  "bus": "sfx",
+  "gain_db": -30.0,
+  "haptic": null
+ },
+ {
+  "t": 1.87,
+  "cue": "the cloud while the AI writes (a breath of grain)",
+  "bus": "sfx",
+  "gain_db": -35,
+  "haptic": null
+ },
+ {
+  "t": 4.65,
+  "cue": "status: almost done",
+  "bus": "sfx",
+  "gain_db": -31,
+  "haptic": null
+ },
+ {
+  "t": 6.45,
+  "cue": "section 1: particles form the text (L→R)",
+  "bus": "sfx",
+  "gain_db": -24,
+  "haptic": "transient train ×4 (0.25/0.8)"
+ },
+ {
+  "t": 6.61,
+  "cue": "section 2: particles form the text (L→R)",
+  "bus": "sfx",
+  "gain_db": -25,
+  "haptic": "transient train ×4 (0.25/0.8)"
+ },
+ {
+  "t": 6.77,
+  "cue": "section 3: particles form the text (L→R)",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": "transient train ×4 (0.25/0.8)"
+ },
+ {
+  "t": 7.17,
+  "cue": "written: A→D (resolve)",
+  "bus": "sfx",
+  "gain_db": -17,
+  "haptic": "success"
+ },
+ {
+  "t": 7.67,
+  "cue": "sparkle",
+  "bus": "sfx",
+  "gain_db": -26,
+  "haptic": null
+ }
+]
