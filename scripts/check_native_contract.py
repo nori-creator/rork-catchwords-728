@@ -37,6 +37,13 @@ PENDING_WEB_DEPLOY = {
     # Add an entry here as "name": "where the web patch is" when iOS calls a function ahead of its deploy.
     # storeAppleAuthCode (Sign in with Apple revocation, audit R7-03) is on the web's main now.
     # The developer "AI settings" (admin*, docs/admin-ai-api.md) are on the web's main now (PR #168).
+    # Speed and accuracy by model + the fixed-photo test (developer settings) and the candidate rank log.
+    # The iOS side shows the server's 404 as "not published yet" (AdminAiStatsCard) and ignores a failed
+    # logCandidatePick (CaptureViewModel.logPick).
+    "adminGetAiStats": "Lovable-catch-words-app PR #176 (src/lib/admin-ai.functions.ts)",
+    "adminGetAiTestPhotos": "Lovable-catch-words-app PR #176 (src/lib/admin-ai.functions.ts)",
+    "adminTestPhotoCandidates": "Lovable-catch-words-app PR #176 (src/lib/ai.functions.ts)",
+    "logCandidatePick": "Lovable-catch-words-app PR #176 (src/lib/native-fn.ts → candidate-pick.functions.ts)",
 }
 
 

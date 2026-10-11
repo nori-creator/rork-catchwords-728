@@ -94,6 +94,7 @@ struct UIPreviewRoot: View {
             case "endetail": LanguageCardPreview(kind: .en)
             case "settings": SettingsView()
             case "aisettings": AdminAiSettingsPreview()
+            case "aistats": AdminAiStatsPreview()
             case "auth": AuthView()
             case "signin": AuthView(startOnOptions: true)
             case "onboarding": OnboardingView {}
@@ -533,6 +534,23 @@ private struct ReviewPreview: View {
     }
 }
 
+/// The speed and accuracy card of the AI settings on its own (the whole screen is taller than one screenshot).
+private struct AdminAiStatsPreview: View {
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                if let settings = AdminAiSettingsPreview.settings {
+                    AdminAiStatsCard(settings: settings, preview: AdminAiSettingsPreview.stats)
+                        .padding(16)
+                } else {
+                    Text("AdminAiSettings mock did not decode")
+                }
+            }
+            .background(AppBackground())
+        }
+    }
+}
+
 /// 設定 → 開発者 →「AI の設定（開発者）」 with made-up settings (no server, no admin check):
 /// scan on auto, diary correction moved to OpenRouter, one feature whose provider lost its key.
 private struct AdminAiSettingsPreview: View {
@@ -604,10 +622,42 @@ private struct AdminAiSettingsPreview: View {
 
     static let settings: AdminAiSettings? = try? JSONDecoder().decode(AdminAiSettings.self, from: Data(json.utf8))
 
+    /// The speed and accuracy numbers (web `adminGetAiStats`): the scan compares Flash-Lite with Claude Haiku.
+    static let statsJSON = """
+    {
+      "isAdmin": true, "truncated": false, "days": 7, "mine": false,
+      "tasks": [
+        { "task": "photo_candidates", "feature": "scan", "models": [
+          { "model": "google:gemini-3.8-flash-lite", "calls": 9, "ok": 8, "failed": 0, "timeouts": 1, "cancelled": 2,
+            "okPct": 88.9, "p50": 2200, "p90": 3400, "avgIn": 1850, "avgOut": 320, "costUsd": null,
+            "unusable": { "n": 1, "of": 8, "pct": 12.5 },
+            "picks": { "n": 7, "top1": 4, "top3": 6, "nativeSearch": 1, "top1Pct": 57.1, "top3Pct": 85.7 } },
+          { "model": "anthropic:claude-haiku-5-5", "calls": 4, "ok": 4, "failed": 0, "timeouts": 0, "cancelled": 0,
+            "okPct": 100, "p50": 1600, "p90": 2600, "avgIn": 1850, "avgOut": 320, "costUsd": 0.000345,
+            "unusable": { "n": 0, "of": 3, "pct": 0 },
+            "picks": { "n": 3, "top1": 2, "top3": 3, "nativeSearch": 0, "top1Pct": 66.7, "top3Pct": 100 } }
+        ] },
+        { "task": "card", "feature": "card", "models": [
+          { "model": "google:gemini-3.8-flash", "calls": 4, "ok": 4, "failed": 0, "timeouts": 0, "cancelled": 0,
+            "okPct": 100, "p50": 15800, "p90": 21000, "avgIn": 10200, "avgOut": 2050, "costUsd": 0.0153,
+            "unusable": null, "picks": null }
+        ] }
+      ],
+      "tests": [
+        { "task": "photo_candidates", "model": "google:gemini-3.8-flash-lite", "n": 33, "ok": 33, "top1": 23,
+          "top3": 30, "top1Pct": 69.7, "top3Pct": 90.9, "p50": 2100, "p90": 2900, "costUsd": null },
+        { "task": "photo_candidates", "model": "anthropic:claude-haiku-5-5", "n": 33, "ok": 32, "top1": 21,
+          "top3": 28, "top1Pct": 63.6, "top3Pct": 84.8, "p50": 1600, "p90": 2300, "costUsd": 0.0003 }
+      ]
+    }
+    """
+
+    static let stats: AdminAiStats? = try? JSONDecoder().decode(AdminAiStats.self, from: Data(statsJSON.utf8))
+
     var body: some View {
         NavigationStack {
             if let settings = Self.settings {
-                AdminAiSettingsView(preview: settings)
+                AdminAiSettingsView(preview: settings, previewStats: Self.stats)
             } else {
                 Text("AdminAiSettings mock did not decode")
             }

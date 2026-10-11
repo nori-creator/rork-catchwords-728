@@ -3218,5 +3218,221 @@
  "撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。": {
   "en": "Photos you take, images you pick from the Photos app, scan frames, words you look up, text you enter (report notes), words you look up by voice (as text; the audio itself is not sent), and settings such as your learning language and level. Your email address and name are not sent.",
   "zh-TW": "你拍的照片、從照片 App 選的圖片、掃描的畫面、查詢的單字、輸入的文字（回報的備註）、用語音查詢的詞（轉成的文字，不會傳送聲音本身），以及學習語言、程度等設定。不會傳送電子郵件地址和名字。"
+ },
+ "撮った写真の候補": {
+  "en": "Photo word candidates",
+  "zh-TW": "拍照的單字候選"
+ },
+ "チュートリアルの写真の候補": {
+  "en": "Tutorial photo candidates",
+  "zh-TW": "教學照片的候選"
+ },
+ "母語で調べた語の候補": {
+  "en": "Candidates for a typed word",
+  "zh-TW": "用母語查詢的候選"
+ },
+ "スキャンの物・文字の検出": {
+  "en": "Scan: objects and text",
+  "zh-TW": "掃描：物品與文字偵測"
+ },
+ "「+細かく」の部分の検出": {
+  "en": "\"More detail\": parts",
+  "zh-TW": "「+更細」的部位偵測"
+ },
+ "語の絵の意味を決める": {
+  "en": "Picture sense for a word",
+  "zh-TW": "決定單字圖片的意思"
+ },
+ "語の絵を確かめる": {
+  "en": "Checking word pictures",
+  "zh-TW": "確認單字圖片"
+ },
+ "単語帳の読み取り": {
+  "en": "Reading wordbook pages",
+  "zh-TW": "讀取單字本"
+ },
+ "単語カード（解説）": {
+  "en": "Word card (explanation)",
+  "zh-TW": "單字卡（解說）"
+ },
+ "チュートリアルのカード": {
+  "en": "Tutorial card",
+  "zh-TW": "教學的單字卡"
+ },
+ "フレーズカード": {
+  "en": "Phrase card",
+  "zh-TW": "片語卡"
+ },
+ "項目の作り直し": {
+  "en": "Regenerating a section",
+  "zh-TW": "重新產生項目"
+ },
+ "読む人の言語での意味": {
+  "en": "Meaning in the reader's language",
+  "zh-TW": "讀者語言的意思"
+ },
+ "4択の誤答の作り置き": {
+  "en": "Quiz distractors",
+  "zh-TW": "四選一的錯誤選項"
+ },
+ "日記の添削": {
+  "en": "Diary correction",
+  "zh-TW": "日記批改"
+ },
+ "日記の書き出しの質問": {
+  "en": "Diary prompts",
+  "zh-TW": "日記的寫作提問"
+ },
+ "報告された項目の特定": {
+  "en": "Locating a reported item",
+  "zh-TW": "找出被回報的項目"
+ },
+ "読みの突き合わせ（1人目）": {
+  "en": "Reading check (1st)",
+  "zh-TW": "讀音核對（第一位）"
+ },
+ "作り直しの判定": {
+  "en": "Judging a correction",
+  "zh-TW": "判斷是否重新產生"
+ },
+ "読みの突き合わせ（2人目）": {
+  "en": "Reading check (2nd)",
+  "zh-TW": "讀音核對（第二位）"
+ },
+ "辞書の点検": {
+  "en": "Dictionary audit",
+  "zh-TW": "辭典檢查"
+ },
+ "生きた例文の生成": {
+  "en": "Generating live examples",
+  "zh-TW": "產生實用例句"
+ },
+ "利用者の報告の検証": {
+  "en": "Checking user reports",
+  "zh-TW": "驗證使用者回報"
+ },
+ "棚の分類の付け直し": {
+  "en": "Re-sorting shelves",
+  "zh-TW": "重新分類書架"
+ },
+ "iOS の自由文の窓口": {
+  "en": "iOS free-form AI",
+  "zh-TW": "iOS 的自由文字窗口"
+ },
+ "速さと正確さ（モデルごと）": {
+  "en": "Speed and accuracy by model",
+  "zh-TW": "各模型的速度與準確度"
+ },
+ "固定の写真で試す": {
+  "en": "Test with fixed photos",
+  "zh-TW": "用固定照片測試"
+ },
+ "実際に使われた分から数えます（機能 → 用途 → モデル）。モデルを切り替えると行が増えるので、前後を見比べられます。時間は AI に頼んでから答えが返るまで。写真・語・文は記録しません。": {
+  "en": "Counted from real use (feature → task → model). Switching a model adds a new row, so you can compare before and after. Time runs from the request to the AI until its answer arrives. Photos, words and text are not recorded.",
+  "zh-TW": "依實際使用統計（功能 → 用途 → 模型）。切換模型後會多出一列，可以比較前後。時間是從向 AI 提出請求到回答傳回為止。不記錄照片、單字與文字。"
+ },
+ "1日": {
+  "en": "1 day",
+  "zh-TW": "1 天"
+ },
+ "7日": {
+  "en": "7 days",
+  "zh-TW": "7 天"
+ },
+ "30日": {
+  "en": "30 days",
+  "zh-TW": "30 天"
+ },
+ "自分の分だけ": {
+  "en": "Only my own use",
+  "zh-TW": "只看自己的使用"
+ },
+ "記録が多いため、一部だけで数えています。": {
+  "en": "Too many records — counted from part of them.",
+  "zh-TW": "紀錄太多，只用其中一部分計算。"
+ },
+ "この期間の記録はまだありません。AI を使う機能を使うと、ここに数が出ます（この画面ができた後の分から）。": {
+  "en": "No records for this period yet. Numbers appear here once AI features are used (counting starts with this update).",
+  "zh-TW": "這段期間還沒有紀錄。使用 AI 功能後，數字會出現在這裡（從這次更新之後開始計算）。"
+ },
+ "いま": {
+  "en": "Now",
+  "zh-TW": "目前"
+ },
+ "候補の当たり: 1番目 {1}% · 3番目まで {2}%（選んだ {3} 回）": {
+  "en": "Picks: 1st {1}% · top 3 {2}% ({3} picks)",
+  "zh-TW": "候選命中：第 1 個 {1}% · 前 3 個 {2}%（選了 {3} 次）"
+ },
+ "使えない返事 {1}%（{2}/{3}）": {
+  "en": "Unusable replies {1}% ({2}/{3})",
+  "zh-TW": "無法使用的回應 {1}%（{2}/{3}）"
+ },
+ "{1}回 · 成功 {2}% · 中央値 {3}秒 · 90% {4}秒": {
+  "en": "Calls {1} · {2}% OK · median {3}s · 90% {4}s",
+  "zh-TW": "{1} 次 · 成功 {2}% · 中位數 {3} 秒 · 90% {4} 秒"
+ },
+ "時間切れ {1}": {
+  "en": "Timed out {1}",
+  "zh-TW": "逾時 {1}"
+ },
+ "失敗 {1}": {
+  "en": "Failed {1}",
+  "zh-TW": "失敗 {1}"
+ },
+ "追いかけで取り消し {1}": {
+  "en": "Cancelled (hedge) {1}",
+  "zh-TW": "因並行而取消 {1}"
+ },
+ "1回 約 ${1}": {
+  "en": "~${1} per call",
+  "zh-TW": "每次約 ${1}"
+ },
+ "入力 {1} · 出力 {2} トークン": {
+  "en": "{1} in · {2} out tokens",
+  "zh-TW": "輸入 {1} · 輸出 {2} 個 token"
+ },
+ "固定の写真の試し（モデルごと）": {
+  "en": "Fixed-photo tests by model",
+  "zh-TW": "固定照片測試（各模型）"
+ },
+ "正解が1番目 {1}% · 3番目まで {2}%（{3} 枚）": {
+  "en": "Correct 1st {1}% · top 3 {2}% ({3} photos)",
+  "zh-TW": "正解在第 1 個 {1}% · 前 3 個 {2}%（{3} 張）"
+ },
+ "中央値 {1}秒 · 90% {2}秒": {
+  "en": "median {1}s · 90% {2}s",
+  "zh-TW": "中位數 {1} 秒 · 90% {2} 秒"
+ },
+ "本番の設定は変えずに、選んだモデルへ正解の付いた写真を流し、撮った後の候補と同じ指示で、正解が何番目に出るかと時間を測ります。利用者には影響しません。1日 300 枚まで。": {
+  "en": "Without changing the live setting, sends labelled photos to the chosen model with the same prompt as photo candidates, and measures where the right answer ranks and how long it takes. Users are not affected. Up to 300 photos a day.",
+  "zh-TW": "不改變正式設定，把附有正解的照片送給選擇的模型，用與拍照候選相同的指示，測量正解排第幾與所需時間。不影響使用者。每天最多 300 張。"
+ },
+ "試しています… {1}/{2}": {
+  "en": "Testing… {1}/{2}",
+  "zh-TW": "測試中… {1}/{2}"
+ },
+ "止める": {
+  "en": "Stop",
+  "zh-TW": "停止"
+ },
+ "試す": {
+  "en": "Run test",
+  "zh-TW": "開始測試"
+ },
+ "いまのスキャンの AI": {
+  "en": "Current scan AI",
+  "zh-TW": "目前的掃描 AI"
+ },
+ "試すモデル": {
+  "en": "Model to test",
+  "zh-TW": "要測試的模型"
+ },
+ "正解": {
+  "en": "Expected",
+  "zh-TW": "正解"
+ },
+ "サーバがまだこの機能に対応していません（Web の更新を公開すると使えます）。": {
+  "en": "The server doesn't support this yet (it works once the web update is published).",
+  "zh-TW": "伺服器尚未支援此功能（發布網頁更新後即可使用）。"
  }
 }

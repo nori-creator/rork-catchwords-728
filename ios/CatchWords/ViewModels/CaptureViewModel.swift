@@ -268,9 +268,34 @@ final class CaptureViewModel {
     /// already answered, `prefetchOwnedChecks`) decides between the celebration and the re-encounter; the card's
     /// details are generated from the tap on and never waited for (`provisionalDetails`). The sticker is the
     /// object's cut-out (cut-out mode on), else the photo.
+    /// Which candidate was picked (web `logCandidatePick`): its place in the server's order and how many there
+    /// were — never the word. The developer settings count Top-1 / Top-3 per AI model from it. A word from the
+    /// photo's tags is `photo`; a word found by typing after the photo is `native_search` (the photo's words
+    /// missed it). Nothing waits for it and a failure is ignored.
+    private func logPick(_ word: Candidate, object: CatchObject?) {
+        let via: String
+        let rank: Int
+        let count: Int
+        if object != nil, let i = candidates.firstIndex(where: { AIService.sameSuggestion($0, word) }) {
+            via = "photo"
+            rank = i + 1
+            count = candidates.count
+        } else if object == nil, photo != nil {
+            via = "native_search"
+            rank = (typedCandidates.firstIndex(where: { $0.headword == word.headword }) ?? 0) + 1
+            count = max(typedCandidates.count, rank)
+        } else {
+            return
+        }
+        let r = min(rank, 50)
+        let n = min(max(count, rank), 50)
+        Task { _ = try? await NativeAPI.call("logCandidatePick", ["via": via, "rank": r, "n": n], timeout: 15) }
+    }
+
     func choose(_ word: Candidate, object: CatchObject?) {
         guard !isCheckingOwned else { return }
         let token = runToken
+        logPick(word, object: object)
         picked = word
         details = nil
         detailsTask = nil
