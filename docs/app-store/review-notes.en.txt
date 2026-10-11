@@ -1,7 +1,7 @@
 CatchWords helps people learn Taiwanese Mandarin (Traditional Chinese) words from photos of everyday things. Free, no in-app purchases, no ads.
 
 SIGN IN
-Use the demo account in "Sign-in information" above: on the first screen, tap "Sign in with email", enter the email and password, and tap "Sign in". The account has finished the first-run setup and the AI consent, already has words, and shows the app in English (Settings > Language > Your language switches between English and Japanese). Sign in with Apple and Google are also offered on the first screen; "New here? Sign up" creates an account with email.
+Use the demo account in "Sign-in information" above: on the first screen, tap "Sign in with email", enter the email and password, and tap "Sign in". The account has finished the first-run setup and the AI consent, already has words, and shows the app in English (Settings > Language > Your language switches between English and Japanese). On a new device the consent screen "Sending data to AI" may appear once; tap "Agree and start". Sign in with Apple and Google are also offered on the first screen; "New here? Sign up" creates an account with email.
 
 MAIN FLOW
 1. Camera tab: photograph any object (cup, bottle, chair), or pick a photo with the Photos button. Word tags appear on the objects after a few seconds.
