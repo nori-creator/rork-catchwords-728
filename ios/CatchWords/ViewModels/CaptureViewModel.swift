@@ -48,6 +48,9 @@ final class CaptureViewModel {
     /// the candidates screen puts each word on its object, the celebration shows the object's cut-out.
     var objects: [CatchObject] = []
     private var masksTask: Task<InstanceMasks?, Never>?
+    /// This photo's catch scan (v10: bracket, light pen, tags as the names come). Kept for the run, so going back
+    /// from the celebration shows the words as they were instead of replaying it. nil = no scan (a preview).
+    var scan: CatchScanSession?
 
     // Re-encounter ("再会！")
     var owned: OwnedWord?
@@ -116,6 +119,14 @@ final class CaptureViewModel {
             guard let masks = await masksForCuts?.value else { return }
             masks.prerenderCuts()
         }
+        // The scan's outlines, traced from the same masks while the AI is naming the things.
+        let session = CatchScanSession()
+        scan = session
+        Task {
+            let masks = await masksForCuts?.value
+            let lines = await Task.detached(priority: .userInitiated) { masks?.outlines() ?? [] }.value
+            session.setOutlines(lines, at: Date())
+        }
         // A photo restored from the queue is never queued again (one entry per photo, not per retry).
         // Every new photo gets its own entry (an earlier photo's entry stays in 「解析待ち」).
         if let rid = restoredPendingId {
@@ -144,6 +155,7 @@ final class CaptureViewModel {
                 }.value
                 guard token == runToken else { return }
                 objects = built
+                scan?.setNames(built, at: Date())
                 detectOutcome = .success(found)
                 prefetchOwnedChecks(found)
             } catch {
@@ -190,7 +202,7 @@ final class CaptureViewModel {
         switch outcome {
         case .success(let found):
             candidates = found
-            Haptics.impact(.medium)
+            // No tap here: the scan sounds and taps each tag as it comes up (`CatchScanSession`).
             withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { step = .select }
         case .failure(let error):
             let retryable = (error as? APIError)?.isRetryable ?? true
@@ -514,6 +526,7 @@ final class CaptureViewModel {
         masksTask?.cancel()
         masksTask = nil
         objects = []
+        scan = nil
         if let pid = pendingId {
             PendingQueue.shared.remove(id: pid)
             PendingRetry.shared.forget(pid)

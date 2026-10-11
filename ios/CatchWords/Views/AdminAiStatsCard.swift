@@ -193,12 +193,13 @@ struct AdminAiStatsCard: View {
                 .foregroundStyle(Theme.foreground)
             ForEach(Array(tests.enumerated()), id: \.offset) { _, x in
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(x.variant == "thinking-off" ? x.model + " · " + L("考えない") : x.model)
+                    Text(Self.testTitle(x))
                         .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(Theme.foreground)
                         .textSelection(.enabled)
                     line(L("正解が1番目 \(Self.pct(x.top1Pct))% · 3番目まで \(Self.pct(x.top3Pct))%（\(x.n) 枚）"), strong: true)
-                    line(L("中央値 \(Self.sec(x.p50))秒 · 90% \(Self.sec(x.p90))秒")
+                    line(L("答えた写真の時間: 中央値 \(Self.sec(x.p50))秒 · 90% \(Self.sec(x.p90))秒")
+                         + (x.failed > 0 ? " · " + L("答えなし \(x.failed) 枚（時間切れ・失敗。時間には入れず、正解の率では外れ）") : "")
                          + (Self.usd(x.costUsd).map { " · " + L("1回 約 $\($0)") } ?? ""), strong: false)
                 }
                 .padding(12)
@@ -206,6 +207,20 @@ struct AdminAiStatsCard: View {
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
             }
         }
+    }
+
+    /// The model, how it was called and the language its photos were tested in (each its own row).
+    private static func testTitle(_ x: AdminAiTestStat) -> String {
+        var parts = [x.model]
+        if x.variant == "thinking-off" { parts.append(L("考えない")) }
+        switch x.lang {
+        case "zh-TW"?: parts.append(L("台湾華語"))
+        case "en"?: parts.append(L("英語"))
+        case "ja"?: parts.append(L("日本語"))
+        case let other?: parts.append(other)
+        case nil: break
+        }
+        return parts.joined(separator: " · ")
     }
 
     private func load() async {
@@ -325,15 +340,24 @@ struct AdminAiStatsCard: View {
         }
     }
 
+    /// The rates count the photos the server answered (as it records them, a failed answer included); a photo that
+    /// never got there (loading, the network, a refusal) is not the model's miss, so it is only counted apart.
     private var testRowsView: some View {
         let answered = testRows.filter { $0.result != nil }
         let top1 = answered.filter { $0.result?.rank == 1 }.count
         let top3 = answered.filter { ($0.result?.rank ?? Int.max) <= 3 }.count
-        let n = testRows.count
+        let n = answered.count
+        let unsent = testRows.count - n
         return VStack(alignment: .leading, spacing: 4) {
             Text(L("正解が1番目 \(Self.share(top1, of: n))% · 3番目まで \(Self.share(top3, of: n))%（\(n) 枚）"))
                 .scaledFont(size: 14, weight: .semibold)
                 .foregroundStyle(Theme.foreground)
+            if unsent > 0 {
+                Text(L("届かなかった \(unsent) 枚は数えていません（写真の読み込み・通信・権限の失敗。下の ! の行）"))
+                    .scaledFont(size: 12)
+                    .foregroundStyle(Theme.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             ForEach(testRows) { row in
                 Text(rowText(row))
                     .scaledFont(size: 12)

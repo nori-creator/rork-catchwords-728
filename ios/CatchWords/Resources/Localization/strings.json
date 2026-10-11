@@ -3446,5 +3446,29 @@
  "選ばないと、Claude 5 は考えてから答えます（いまの本番の呼び方と同じ）。": {
   "en": "Unchecked, Claude 5 thinks before answering (the same way the live app calls it now).",
   "zh-TW": "不勾選時，Claude 5 會先思考再回答（與目前正式版的呼叫方式相同）。"
+ },
+ "写真をスキャンしています": {
+  "en": "Scanning the photo",
+  "zh-TW": "正在掃描照片"
+ },
+ "名前を調べています": {
+  "en": "Looking up the names",
+  "zh-TW": "正在查詢名稱"
+ },
+ "答えた写真の時間: 中央値 {1}秒 · 90% {2}秒": {
+  "en": "Answered photos: median {1}s · 90% {2}s",
+  "zh-TW": "有回應的照片：中位數 {1} 秒 · 90% {2} 秒"
+ },
+ "答えなし {1} 枚（時間切れ・失敗。時間には入れず、正解の率では外れ）": {
+  "en": "{1} without an answer (timeout or error; not in the times, counted as misses)",
+  "zh-TW": "沒有回應 {1} 張（逾時或失敗；不計入時間，正解率中算答錯）"
+ },
+ "届かなかった {1} 枚は数えていません（写真の読み込み・通信・権限の失敗。下の ! の行）": {
+  "en": "Not counted: {1} photos that didn't get through (loading, network or permission error; the ! rows below)",
+  "zh-TW": "未計入：{1} 張沒有送達（照片載入、連線或權限失敗；下方的 ! 列）"
+ },
+ "チュートリアルのレッスン": {
+  "en": "Tutorial lesson",
+  "zh-TW": "教學的課程"
  }
 }

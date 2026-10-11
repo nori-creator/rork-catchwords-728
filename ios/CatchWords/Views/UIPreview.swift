@@ -77,9 +77,8 @@ struct UIPreviewRoot: View {
             case "enpicker": PickerPreview(learning: "en")
             case "tabbar": TabBarPreview()
             case "reward": CelebrationPreview()
-            case "analyzing":
-                AnalyzingView(photo: PreviewFixtures.photo) {}
-                    .uiReady("preview")
+            case "analyzing": ScanPreview(namesAfter: 2.4).uiReady("preview")
+            case "scanslow": ScanPreview(namesAfter: 6.0).uiReady("preview")
             case "hero": HeroPickerPreview()
             case "memorial": MemorialPreview()
             case "carousel": CarouselPreview()
@@ -117,7 +116,117 @@ struct UIPreviewRoot: View {
         .environment(router)
     }
 
-    private static let marksOwnElement: Set<String> = ["analyzing", "quiz", "answer", "jaquiz", "enanswer", "webimg"]
+    private static let marksOwnElement: Set<String> = ["analyzing", "scanslow", "quiz", "answer", "jaquiz", "enanswer", "webimg"]
+}
+
+/// The catch scan's photo for the simulator (Vision's cut-out does not run there): a mango on a plate and a cup,
+/// drawn from the same shapes as its label mask, so the outlines traced from the mask (`CatchOutlineTracer`, the
+/// app's own code) sit on the things in the photo.
+enum ScanFixtures {
+    static let size = CGSize(width: 900, height: 1200)
+
+    private static let mango = CGRect(x: 280, y: 500, width: 340, height: 270)
+    private static let plate = CGRect(x: 150, y: 640, width: 600, height: 180)
+    private static let cup = CGRect(x: 640, y: 380, width: 160, height: 210)
+    private static let handle = CGRect(x: 780, y: 430, width: 70, height: 90)
+
+    static let photo: UIImage = UIGraphicsImageRenderer(size: size).image { ctx in
+        let c = ctx.cgContext
+        let colors = [UIColor(red: 0.72, green: 0.84, blue: 0.93, alpha: 1).cgColor,
+                      UIColor(red: 0.95, green: 0.9, blue: 0.82, alpha: 1).cgColor] as CFArray
+        if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+            c.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: size.height * 0.55), options: [])
+        }
+        UIColor(red: 0.66, green: 0.5, blue: 0.36, alpha: 1).setFill()
+        c.fill(CGRect(x: 0, y: size.height * 0.55, width: size.width, height: size.height * 0.45))
+        UIColor(white: 0.97, alpha: 1).setFill()
+        c.fillEllipse(in: plate)
+        UIColor(red: 0.2, green: 0.45, blue: 0.85, alpha: 1).setFill()
+        c.fill(cup)
+        c.setStrokeColor(UIColor(red: 0.2, green: 0.45, blue: 0.85, alpha: 1).cgColor)
+        c.setLineWidth(22)
+        c.strokeEllipse(in: handle.insetBy(dx: 11, dy: 11))
+        UIColor(red: 1, green: 0.72, blue: 0.16, alpha: 1).setFill()
+        c.fillEllipse(in: mango)
+        UIColor(red: 0.95, green: 0.45, blue: 0.2, alpha: 1).setFill()
+        c.fillEllipse(in: CGRect(x: 470, y: 530, width: 120, height: 100))
+    }
+
+    /// The label mask (a quarter of the photo's size): 1 mango, 2 plate, 3 cup — the mango in front of the plate.
+    static let outlines: [CatchOutline] = {
+        let w = Int(size.width / 4), h = Int(size.height / 4)
+        var mask = [UInt8](repeating: 0, count: w * h)
+        func inEllipse(_ r: CGRect, _ p: CGPoint) -> Bool {
+            let dx = (p.x - r.midX) / (r.width / 2), dy = (p.y - r.midY) / (r.height / 2)
+            return dx * dx + dy * dy <= 1
+        }
+        func inRing(_ r: CGRect, _ p: CGPoint) -> Bool {
+            inEllipse(r, p) && !inEllipse(r.insetBy(dx: 22, dy: 22), p)
+        }
+        for y in 0..<h {
+            for x in 0..<w {
+                let p = CGPoint(x: CGFloat(x) * 4 + 2, y: CGFloat(y) * 4 + 2)
+                var v: UInt8 = 0
+                if inEllipse(plate, p) { v = 2 }
+                if cup.contains(p) || inRing(handle, p) { v = 3 }
+                if inEllipse(mango, p) { v = 1 }
+                mask[y * w + x] = v
+            }
+        }
+        return CatchOutlineTracer.outlines(mask: mask, width: w, height: h)
+    }()
+
+    /// What the AI "names": the mango (two names), the plate and the cup, each on its thing (0–1000 of the photo).
+    static func candidates() -> [Candidate] {
+        let i = L10n.lang == "en" ? 1 : L10n.lang == "zh-TW" ? 2 : 0
+        func c(_ head: String, _ zy: String, _ meaning: [String], _ register: String?, _ group: Int, _ x: Double, _ y: Double) -> Candidate {
+            Candidate(kind: "object", headword: head, zhuyin: zy, pinyin: "", meaningJa: meaning[i], pos: NativeAPI.defaultPos,
+                      point: [x, y], confidence: 0.9, alternatives: [], distinction: "", register: register, group: group)
+        }
+        return [c("芒果", "ㄇㄤˊ ㄍㄨㄛˇ", ["マンゴー", "mango", "芒果"], "common", 0, 500, 530),
+                c("愛文芒果", "ㄞˋ ㄨㄣˊ ㄇㄤˊ ㄍㄨㄛˇ", ["アーウィンマンゴー", "Irwin mango", "愛文芒果"], "specific", 0, 500, 530),
+                c("盤子", "ㄆㄢˊ ㄗ˙", ["お皿", "plate", "盤子"], nil, 1, 500, 665),
+                c("杯子", "ㄅㄟ ㄗ˙", ["カップ", "cup", "杯子"], nil, 2, 800, 400)]
+    }
+}
+
+/// The catch scan (v10) from the shutter: the outlines come 0.25 s in, the names `namesAfter` s in (2.4 s: the pen
+/// catches up; 6.0 s: the drawing ends first and the small light goes round). Replayed every `namesAfter + 5` s.
+private struct ScanPreview: View {
+    var namesAfter: Double
+    @State private var vm = CaptureViewModel()
+    @State private var round = 0
+
+    var body: some View {
+        CandidatePickerView(vm: vm)
+            .id(round)
+            .task(id: round) {
+                await play()
+                try? await Task.sleep(for: .seconds(5))
+                round += 1
+            }
+    }
+
+    private func play() async {
+        NativeAPI.targetLanguage = "zh-TW"
+        let session = CatchScanSession()
+        vm.photo = ScanFixtures.photo
+        vm.objects = []
+        vm.candidates = []
+        vm.scan = session
+        vm.step = .processing
+        try? await Task.sleep(for: .milliseconds(250))
+        session.setOutlines(ScanFixtures.outlines, at: Date())
+        try? await Task.sleep(for: .seconds(max(0, namesAfter - 0.25)))
+        let found = ScanFixtures.candidates()
+        var objects = CatchObject.build(candidates: found, masks: nil, photoSize: ScanFixtures.size)
+        // The instances under each thing, as `CatchObject.build` finds them from Vision's mask on a phone.
+        for k in objects.indices { objects[k].instance = k + 1 }
+        vm.objects = objects
+        session.setNames(objects, at: Date())
+        vm.candidates = found
+        vm.step = .select
+    }
 }
 
 /// A made-up photo (sky + ground + a round "mango") and its lifted subject, the same size,
@@ -644,10 +753,11 @@ private struct AdminAiSettingsPreview: View {
         ] }
       ],
       "tests": [
-        { "task": "photo_candidates", "model": "google:gemini-3.8-flash-lite", "n": 33, "ok": 33, "top1": 23,
-          "top3": 30, "top1Pct": 69.7, "top3Pct": 90.9, "p50": 2100, "p90": 2900, "costUsd": null },
-        { "task": "photo_candidates", "model": "anthropic:claude-haiku-5-5", "n": 33, "ok": 32, "top1": 21,
-          "top3": 28, "top1Pct": 63.6, "top3Pct": 84.8, "p50": 1600, "p90": 2300, "costUsd": 0.0003 }
+        { "task": "photo_candidates", "model": "google:gemini-3.8-flash-lite", "lang": "zh-TW", "n": 33, "ok": 33,
+          "failed": 0, "top1": 23, "top3": 30, "top1Pct": 69.7, "top3Pct": 90.9, "p50": 2100, "p90": 2900, "costUsd": null },
+        { "task": "photo_candidates", "model": "anthropic:claude-haiku-5-5", "variant": "thinking-off", "lang": "zh-TW",
+          "n": 33, "ok": 32, "failed": 1, "top1": 21, "top3": 28, "top1Pct": 63.6, "top3Pct": 84.8, "p50": 1600,
+          "p90": 2300, "costUsd": 0.0003 }
       ]
     }
     """

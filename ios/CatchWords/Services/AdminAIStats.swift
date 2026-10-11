@@ -116,21 +116,28 @@ nonisolated struct AdminAiTestStat: Decodable, Sendable {
     var model: String
     /// `thinking-off`: measured with Claude told not to think (nil: the live way of calling).
     var variant: String?
+    /// The learning language the photos were tested in (`zh-TW` / `en` / `ja`; each its own row). nil = older rows.
+    var lang: String?
     var n: Int
+    /// Photos that got no answer (timeouts, the provider's errors): misses in the rates, left out of the times.
+    var failed: Int
     var top1Pct: Double?
     var top3Pct: Double?
+    /// The times of the photos that got an answer.
     var p50: Double?
     var p90: Double?
     var costUsd: Double?
 
-    enum CodingKeys: String, CodingKey { case task, model, variant, n, top1Pct, top3Pct, p50, p90, costUsd }
+    enum CodingKeys: String, CodingKey { case task, model, variant, lang, n, failed, top1Pct, top3Pct, p50, p90, costUsd }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         task = c.statStr(.task)
         model = c.statStr(.model)
         variant = c.statOptStr(.variant)
+        lang = c.statOptStr(.lang)
         n = Int(c.statNum(.n) ?? 0)
+        failed = Int(c.statNum(.failed) ?? 0)
         top1Pct = c.statNum(.top1Pct)
         top3Pct = c.statNum(.top3Pct)
         p50 = c.statNum(.p50)
@@ -230,6 +237,7 @@ enum AdminAiTest {
         case "wordbook": return L("単語帳の読み取り")
         case "card": return L("単語カード（解説）")
         case "tutorial_card": return L("チュートリアルのカード")
+        case "tutorial_lesson": return L("チュートリアルのレッスン")
         case "phrase_card": return L("フレーズカード")
         case "section_regen": return L("項目の作り直し")
         case "reader_meaning": return L("読む人の言語での意味")
