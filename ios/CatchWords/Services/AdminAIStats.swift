@@ -114,6 +114,8 @@ nonisolated struct AdminAiPicks: Decodable, Sendable {
 nonisolated struct AdminAiTestStat: Decodable, Sendable {
     var task: String
     var model: String
+    /// `thinking-off`: measured with Claude told not to think (nil: the live way of calling).
+    var variant: String?
     var n: Int
     var top1Pct: Double?
     var top3Pct: Double?
@@ -121,12 +123,13 @@ nonisolated struct AdminAiTestStat: Decodable, Sendable {
     var p90: Double?
     var costUsd: Double?
 
-    enum CodingKeys: String, CodingKey { case task, model, n, top1Pct, top3Pct, p50, p90, costUsd }
+    enum CodingKeys: String, CodingKey { case task, model, variant, n, top1Pct, top3Pct, p50, p90, costUsd }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         task = c.statStr(.task)
         model = c.statStr(.model)
+        variant = c.statOptStr(.variant)
         n = Int(c.statNum(.n) ?? 0)
         top1Pct = c.statNum(.top1Pct)
         top3Pct = c.statNum(.top3Pct)
@@ -193,7 +196,10 @@ nonisolated struct AdminAiTestResult: Decodable, Sendable {
 enum AdminAiTest {
     /// One labelled photo through the chosen model (`value`: "auto" or "provider:model"). The live setting is
     /// not changed; the server keeps the result for the stats.
-    static func run(photo: AdminAiTestPhoto, value: String, language: String) async throws -> AdminAiTestResult {
+    /// `thinkingOff`: Claude is told not to think (ignored for other providers) — Claude 5 thinks before it answers
+    /// unless told otherwise, which is how the live app calls it now.
+    static func run(photo: AdminAiTestPhoto, value: String, language: String,
+                    thinkingOff: Bool) async throws -> AdminAiTestResult {
         let path = photo.path.hasPrefix("/") ? String(photo.path.dropFirst()) : photo.path
         let url = AppConfig.webBaseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
@@ -206,6 +212,7 @@ enum AdminAiTest {
             "value": value,
             "photo": photo.id,
             "targetLanguage": language,
+            "thinking": thinkingOff ? "off" : "default",
             "imageBase64": "data:image/jpeg;base64,\(data.base64EncodedString())",
         ], as: AdminAiTestResult.self, timeout: 60)
     }

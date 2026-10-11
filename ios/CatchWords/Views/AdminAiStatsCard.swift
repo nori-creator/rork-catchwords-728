@@ -19,6 +19,7 @@ struct AdminAiStatsCard: View {
 
     @State private var testValue: String = "auto"
     @State private var testLanguage: String = NativeAPI.targetLanguage
+    @State private var testNoThinking: Bool = false
     @State private var testRunning: Bool = false
     @State private var testStop: Bool = false
     @State private var testTotal: Int = 0
@@ -192,7 +193,7 @@ struct AdminAiStatsCard: View {
                 .foregroundStyle(Theme.foreground)
             ForEach(Array(tests.enumerated()), id: \.offset) { _, x in
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(x.model)
+                    Text(x.variant == "thinking-off" ? x.model + " · " + L("考えない") : x.model)
                         .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(Theme.foreground)
                         .textSelection(.enabled)
@@ -245,6 +246,14 @@ struct AdminAiStatsCard: View {
                 .disabled(testRunning)
             }
             .frame(minHeight: 44)
+            if testIsClaude {
+                Toggle(L("Claude に考えさせない（速い方）"), isOn: $testNoThinking)
+                    .scaledFont(size: 15)
+                    .tint(Theme.primary)
+                    .frame(minHeight: 44)
+                    .disabled(testRunning)
+                caption(L("選ばないと、Claude 5 は考えてから答えます（いまの本番の呼び方と同じ）。"))
+            }
             if testRunning {
                 HStack(spacing: 10) {
                     actionButton(L("試しています… \(testRows.count)/\(testTotal)"), busy: true, disabled: true) {}
@@ -263,6 +272,11 @@ struct AdminAiStatsCard: View {
                 testRowsView
             }
         }
+    }
+
+    /// A Claude 5 model is chosen (the Opus 5 models always think, so they get no switch).
+    private var testIsClaude: Bool {
+        testValue.hasPrefix("anthropic:claude-") && !testValue.hasPrefix("anthropic:claude-opus-5")
     }
 
     private var testModelMenu: some View {
@@ -358,11 +372,13 @@ struct AdminAiStatsCard: View {
         testTotal = photos.count
         let value = testValue
         let language = testLanguage
+        let thinkingOff = testIsClaude && testNoThinking
         var i = 0
         // Two at a time: the free tier's per-minute limit is rarely reached, and a run of 33 takes about a minute.
         while i < photos.count, !testStop {
-            async let a = Self.attempt(photos[i], value: value, language: language)
-            async let b = Self.attempt(i + 1 < photos.count ? photos[i + 1] : nil, value: value, language: language)
+            async let a = Self.attempt(photos[i], value: value, language: language, thinkingOff: thinkingOff)
+            async let b = Self.attempt(i + 1 < photos.count ? photos[i + 1] : nil, value: value, language: language,
+                                       thinkingOff: thinkingOff)
             let done = await [a, b].compactMap { $0 }
             testRows.append(contentsOf: done)
             // A refusal for every photo (the daily limit, not an admin, no key) stops the run.
@@ -372,10 +388,11 @@ struct AdminAiStatsCard: View {
         await load()
     }
 
-    private static func attempt(_ photo: AdminAiTestPhoto?, value: String, language: String) async -> TestRow? {
+    private static func attempt(_ photo: AdminAiTestPhoto?, value: String, language: String,
+                                thinkingOff: Bool) async -> TestRow? {
         guard let photo else { return nil }
         do {
-            let r = try await AdminAiTest.run(photo: photo, value: value, language: language)
+            let r = try await AdminAiTest.run(photo: photo, value: value, language: language, thinkingOff: thinkingOff)
             return TestRow(photo: photo.id, result: r, error: nil)
         } catch {
             return TestRow(photo: photo.id, result: nil, error: message(error))

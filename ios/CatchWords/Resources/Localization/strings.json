@@ -3434,5 +3434,17 @@
  "サーバがまだこの機能に対応していません（Web の更新を公開すると使えます）。": {
   "en": "The server doesn't support this yet (it works once the web update is published).",
   "zh-TW": "伺服器尚未支援此功能（發布網頁更新後即可使用）。"
+ },
+ "考えない": {
+  "en": "no thinking",
+  "zh-TW": "不思考"
+ },
+ "Claude に考えさせない（速い方）": {
+  "en": "Don't let Claude think (faster)",
+  "zh-TW": "不讓 Claude 思考（較快）"
+ },
+ "選ばないと、Claude 5 は考えてから答えます（いまの本番の呼び方と同じ）。": {
+  "en": "Unchecked, Claude 5 thinks before answering (the same way the live app calls it now).",
+  "zh-TW": "不勾選時，Claude 5 會先思考再回答（與目前正式版的呼叫方式相同）。"
  }
 }
