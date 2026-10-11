@@ -175,50 +175,74 @@ jobs:
           </dict>
           </plist>
           PLIST
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/CatchWords.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            | tee "$RUNNER_TEMP/export.log" | grep -E "error:|EXPORT (SUCCEEDED|FAILED)|Upload|upload" || true
-          grep -q "EXPORT SUCCEEDED" "$RUNNER_TEMP/export.log" || { echo "::error::配布用の署名に失敗しました（export.log を見てください）"; exit 1; }
-          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
-          echo "ipa: $IPA"
-          # 配布用で署名されたか・Apple でサインインの権限が残っているかを記録に出す
-          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa" && unzip -q "$IPA" -d "$RUNNER_TEMP/ipa"
-          APP=$(ls -d "$RUNNER_TEMP"/ipa/Payload/*.app | head -1)
-          codesign -dvv "$APP" 2>&1 | grep -E "Authority|TeamIdentifier" || true
-          codesign -d --entitlements :- "$APP" 2>/dev/null | tee "$RUNNER_TEMP/entitlements.plist" | grep -A3 "applesignin" || echo "::warning::Apple でサインインの権限が入っていません（この版では「Appleでサインイン」が使えません。メールでのログインは使えます）"
-          # ウィジェット（CatchWordsWidgets.appex）も配布用で署名され、App Group が入っているか。
-          # App Group（group.com.nori.catchwords）を自動で登録できなかった場合は、アプリは動くが
-          # ウィジェットが空のまま（「写真を撮って単語を集めよう」）になる。直し方: Apple Developer →
-          # Identifiers → App Groups に group.com.nori.catchwords を作り、com.nori.catchwords と
-          # com.nori.catchwords.widgets の両方で App Groups を有効にしてその group を選ぶ。
-          grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/entitlements.plist" || echo "::warning::アプリに App Group（group.com.nori.catchwords）が入っていません。ウィジェットに単語・復習の数が出ません（Apple Developer で App Group を登録して有効にしてください）"
-          APPEX="$APP/PlugIns/CatchWordsWidgets.appex"
-          if [ -d "$APPEX" ]; then
-            codesign -dvv "$APPEX" 2>&1 | grep -E "Identifier=|Authority=Apple Distribution|TeamIdentifier" || true
-            codesign -d --entitlements :- "$APPEX" 2>/dev/null > "$RUNNER_TEMP/widget-entitlements.plist" || true
-            grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/widget-entitlements.plist" || echo "::warning::ウィジェットに App Group（group.com.nori.catchwords）が入っていません。ウィジェットが空のまま表示されます（Apple Developer で com.nori.catchwords.widgets にも App Group を有効にしてください）"
-            APP_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Info.plist" 2>/dev/null)
-            APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP/Info.plist" 2>/dev/null)
-            EXT_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APPEX/Info.plist" 2>/dev/null)
-            EXT_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APPEX/Info.plist" 2>/dev/null)
-            echo "app $APP_VER ($APP_BUILD) / widgets $EXT_VER ($EXT_BUILD)"
-            [ "$APP_VER" = "$EXT_VER" ] && [ "$APP_BUILD" = "$EXT_BUILD" ] || echo "::warning::アプリとウィジェットの版・ビルド番号が違います（project.pbxproj の MARKETING_VERSION を両方のターゲットでそろえてください）"
-          else
-            echo "::warning::IPA にウィジェット（CatchWordsWidgets.appex）が入っていません"
-          fi
-          # App Store Connect へ送る（API キーは altool が決まった場所から読む）
+          ARCHIVE="$RUNNER_TEMP/CatchWords.xcarchive"
+          # altool は API キーを決まった場所から読む。途中で止まっても消す
           mkdir -p "$HOME/.appstoreconnect/private_keys"
           cp "$RUNNER_TEMP/AuthKey.p8" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload.log"
-          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          grep -qiE "No errors uploading|UPLOAD SUCCEEDED" "$RUNNER_TEMP/upload.log" || { echo "::error::App Store Connect への送信に失敗しました（upload.log を見てください）"; exit 1; }
-          echo "::notice::App Store Connect に送りました。処理が終わると TestFlight に表示されます（10〜30 分）。"
+          trap 'rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"' EXIT
+          : > "$RUNNER_TEMP/upload.log"
+          # Rork など別の所から同じころにビルドが送られると、アーカイブの時に決めた番号を先に使われる
+          # （App Store Connect が「Redundant Binary Upload」で断る。2026-10-11 の実行 #23）。その時は
+          # 次の空いている番号に書き換え、配布用の署名からやり直して送る（3 回まで）。
+          for attempt in 1 2 3; do
+            rm -rf "$RUNNER_TEMP/export"
+            xcodebuild -exportArchive \
+              -archivePath "$ARCHIVE" \
+              -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+              -exportPath "$RUNNER_TEMP/export" \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+              -authenticationKeyID "$ASC_KEY_ID" \
+              -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+              | tee "$RUNNER_TEMP/export.log" | grep -E "error:|EXPORT (SUCCEEDED|FAILED)|Upload|upload" || true
+            grep -q "EXPORT SUCCEEDED" "$RUNNER_TEMP/export.log" || { echo "::error::配布用の署名に失敗しました（export.log を見てください）"; exit 1; }
+            IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+            echo "ipa: $IPA"
+            # 配布用で署名されたか・Apple でサインインの権限が残っているかを記録に出す
+            rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa" && unzip -q "$IPA" -d "$RUNNER_TEMP/ipa"
+            APP=$(ls -d "$RUNNER_TEMP"/ipa/Payload/*.app | head -1)
+            codesign -dvv "$APP" 2>&1 | grep -E "Authority|TeamIdentifier" || true
+            codesign -d --entitlements :- "$APP" 2>/dev/null | tee "$RUNNER_TEMP/entitlements.plist" | grep -A3 "applesignin" || echo "::warning::Apple でサインインの権限が入っていません（この版では「Appleでサインイン」が使えません。メールでのログインは使えます）"
+            # ウィジェット（CatchWordsWidgets.appex）も配布用で署名され、App Group が入っているか。
+            # App Group（group.com.nori.catchwords）を自動で登録できなかった場合は、アプリは動くが
+            # ウィジェットが空のまま（「写真を撮って単語を集めよう」）になる。直し方: Apple Developer →
+            # Identifiers → App Groups に group.com.nori.catchwords を作り、com.nori.catchwords と
+            # com.nori.catchwords.widgets の両方で App Groups を有効にしてその group を選ぶ。
+            grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/entitlements.plist" || echo "::warning::アプリに App Group（group.com.nori.catchwords）が入っていません。ウィジェットに単語・復習の数が出ません（Apple Developer で App Group を登録して有効にしてください）"
+            APP_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Info.plist" 2>/dev/null)
+            APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP/Info.plist" 2>/dev/null)
+            APPEX="$APP/PlugIns/CatchWordsWidgets.appex"
+            if [ -d "$APPEX" ]; then
+              codesign -dvv "$APPEX" 2>&1 | grep -E "Identifier=|Authority=Apple Distribution|TeamIdentifier" || true
+              codesign -d --entitlements :- "$APPEX" 2>/dev/null > "$RUNNER_TEMP/widget-entitlements.plist" || true
+              grep -q "group.com.nori.catchwords" "$RUNNER_TEMP/widget-entitlements.plist" || echo "::warning::ウィジェットに App Group（group.com.nori.catchwords）が入っていません。ウィジェットが空のまま表示されます（Apple Developer で com.nori.catchwords.widgets にも App Group を有効にしてください）"
+              EXT_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APPEX/Info.plist" 2>/dev/null)
+              EXT_BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APPEX/Info.plist" 2>/dev/null)
+              echo "app $APP_VER ($APP_BUILD) / widgets $EXT_VER ($EXT_BUILD)"
+              [ "$APP_VER" = "$EXT_VER" ] && [ "$APP_BUILD" = "$EXT_BUILD" ] || echo "::warning::アプリとウィジェットの版・ビルド番号が違います（project.pbxproj の MARKETING_VERSION を両方のターゲットでそろえてください）"
+            else
+              echo "::warning::IPA にウィジェット（CatchWordsWidgets.appex）が入っていません"
+            fi
+            # 失敗しても止めずに、記録の中身で次を決める（altool は失敗すると 0 以外で終わる）
+            xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload-try.log" || true
+            cat "$RUNNER_TEMP/upload-try.log" >> "$RUNNER_TEMP/upload.log"
+            if grep -qiE "No errors uploading|UPLOAD SUCCEEDED" "$RUNNER_TEMP/upload-try.log"; then
+              echo "::notice::App Store Connect に送りました（ビルド $APP_VER ($APP_BUILD)）。処理が終わると TestFlight に表示されます（10〜30 分）。"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ] && grep -qiE "Redundant Binary Upload|bundle version must be higher" "$RUNNER_TEMP/upload-try.log"; then
+              NEXT=$(ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" python3 scripts/asc_next_build.py com.nori.catchwords $(( ${APP_BUILD:-0} + 1 )))
+              echo "::warning::ビルド番号 $APP_BUILD は、同じころに別の所（Rork など）から送られたビルドが先に使っていました。$NEXT に変えて送り直します"
+              # アプリとウィジェットの番号を書き換える（配布用の署名は書き換えた後にやり直すので、署名は壊れない）
+              for INFO in "$ARCHIVE"/Products/Applications/*.app/Info.plist "$ARCHIVE"/Products/Applications/*.app/PlugIns/*.appex/Info.plist; do
+                if [ -f "$INFO" ]; then plutil -replace CFBundleVersion -string "$NEXT" "$INFO"; fi
+              done
+              plutil -replace ApplicationProperties.CFBundleVersion -string "$NEXT" "$ARCHIVE/Info.plist"
+              continue
+            fi
+            echo "::error::App Store Connect への送信に失敗しました（upload.log を見てください）"
+            exit 1
+          done
 
       - name: この実行で増えた開発用証明書を消す
         if: always()
