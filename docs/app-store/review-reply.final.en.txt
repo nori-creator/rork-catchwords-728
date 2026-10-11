@@ -1,4 +1,4 @@
-Thank you for your review. Please find the requested information below. A screen recording captured on a physical iPad running the latest iPadOS is attached. The build for review is 1.0.0 (1023).
+Thank you for your review. Please find the requested information below. A screen recording captured on a physical iPad running the latest iPadOS is attached. The build for review is 1.0.0 (1024).
 
 1. Screen recording
 Attached. It starts by launching the app and shows: creating a new account with email, the first-run setup and the consent screen for sending data to AI, the main flow (photograph an object, word tags appear on the objects, tap a word, its sticker, word and pronunciation appear and it is added to the collection), the collection and a word's details with pronunciation, a review question, signing out and signing in again, and deleting the account in the app (Settings > Delete account).
