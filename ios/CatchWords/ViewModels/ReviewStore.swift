@@ -15,18 +15,17 @@ struct QuizChoice: Identifiable, Hashable {
     var pinyin: String? = nil
     var id: String { headword }
 
-    /// This choice with the pinyin it shows: the word's own (trimmed) or, when it has none — the bundled pool
-    /// (Models/QuizPool.swift) never does — one spelled from its zhuyin as the web spells it (Utilities/PinyinZhuyin.swift).
-    /// Owner 2026-10-11 「設定でピン音にしても復習で注音が表示される。」: the choices carried no pinyin, so all four kept the
-    /// zhuyin whatever the setting said. A reading that cannot be spelled stays nil, and that word keeps its zhuyin.
+    /// This choice with the pinyin it shows: spelled from its zhuyin as the web spells it (Utilities/PinyinZhuyin.swift),
+    /// else the word's own (trimmed). Owner 2026-10-11 「設定でピン音にしても復習で注音が表示される。」: the choices carried
+    /// no pinyin, so all four kept the zhuyin whatever the setting said. All four are spelled the same way: the bundled
+    /// pool (Models/QuizPool.swift) has zhuyin only, and a learner's own pinyin is often written joined ("mángguǒ")
+    /// where the spelled one is spaced ("píng guǒ"), which would tell the pool's distractors from the learner's word.
+    /// A reading that cannot be spelled and no pinyin of its own: nil, and that word keeps its zhuyin.
     func withPinyin() -> QuizChoice {
         var out = self
         let own = (pinyin ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if own.isEmpty {
-            out.pinyin = PinyinZhuyin.pinyin(fromZhuyin: zhuyin, want: headword.filter(ZhuyinLayout.isHan).count)
-        } else {
-            out.pinyin = own
-        }
+        out.pinyin = PinyinZhuyin.pinyin(fromZhuyin: zhuyin, want: headword.filter(ZhuyinLayout.isHan).count)
+            ?? (own.isEmpty ? nil : own)
         return out
     }
 }
