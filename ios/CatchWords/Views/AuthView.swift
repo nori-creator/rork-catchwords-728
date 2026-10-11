@@ -53,11 +53,8 @@ struct AuthView: View {
         mailOnly = true
         showMail = true
         auth.errorMessage = nil
+        // No keyboard yet: the screen is read first (the address field is one tap away, as before).
         showOptions = true
-        Task {
-            try? await Task.sleep(for: .milliseconds(450))
-            if showOptions { focused = .email }
-        }
     }
 
     private var options: some View {
