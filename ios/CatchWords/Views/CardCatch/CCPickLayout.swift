@@ -2,9 +2,10 @@ import UIKit
 
 /// Where each word's tag sits over the photo, and which object a tap on the photo means.
 /// Every tag starts at its object (the card catch prototype: the object's top centre; the candidates screen:
-/// the AI's point on the object). With several objects close together (or two names for one thing) the tags
-/// covered each other and some could not be chosen: a tag only moves (up or down) when it would overlap
-/// another one.
+/// centred on `CatchObject.anchor`, deep inside the object's Vision instance — the AI's point only without one).
+/// With several objects close together (or two names for one thing) the tags covered each other and some could
+/// not be chosen: a tag only moves (up or down) when it would overlap another one. However near the photo's edge
+/// its object is, a tag stays inside the area (`anchor(at:size:in:)`; one wider than the area is centred).
 enum CCPickLayout {
     /// The space the tags live in: its width, and where a tag's bottom edge may go.
     struct Area {

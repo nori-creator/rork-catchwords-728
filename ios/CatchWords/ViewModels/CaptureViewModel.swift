@@ -113,10 +113,12 @@ final class CaptureViewModel {
         masksTask?.cancel()
         masksTask = Task<InstanceMasks?, Never> { await CutoutService.instanceMasks(from: image) }
         // Every instance's cut-out is rendered while the AI is still naming the things (they used to be rendered
-        // after the server answered, between the answer and the words on screen).
+        // after the server answered, between the answer and the words on screen). The tags' places inside the
+        // instances (`InstanceMasks.anchors`, quick) are measured first.
         let masksForCuts = masksTask
         Task.detached(priority: .utility) {
             guard let masks = await masksForCuts?.value else { return }
+            _ = masks.anchors()
             masks.prerenderCuts()
         }
         // The scan's outlines, traced from the same masks while the AI is naming the things.
@@ -322,8 +324,9 @@ final class CaptureViewModel {
         if let cut = object?.cut {
             cutout = cut
         } else {
-            // No Vision instance for this object (or a typed word): lift the subject near its point.
-            startCutout(near: object?.point)
+            // No cut-out for this object (or a typed word): lift the subject under its tag (`anchor`: inside its Vision
+            // instance when it has one, else the AI's point), so the sticker is the thing the tag was on.
+            startCutout(near: object?.anchor)
         }
         isCheckingOwned = true
         loadDetails(for: word)

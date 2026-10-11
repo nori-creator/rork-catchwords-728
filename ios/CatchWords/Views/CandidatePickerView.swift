@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// After the shot: the photo with each word the AI found as a tag ON its object (the AI's point; Vision's
-/// instance when it found one), and "違う単語を入力" underneath for a word that is not among them.
+/// After the shot: the photo with each word the AI found as a tag ON its object — deep inside the Vision instance
+/// its outline goes round (`CatchObject.anchor`; owner 2026-10-11 「しっかりもののうえに名前タグをおいて」), the AI's
+/// point only when Vision found no instance for it — and "違う単語を入力" underneath for a word that is not among them.
 /// A tap on a tag goes straight to the celebration (owner 2026-10-09: shoot → words → tap → done).
 /// - Each object's everyday name is the bold tag; its other names (砕けた / くわしい / 固有名詞) sit just
-///   above or below it, lighter. Tags never cover each other (`CCPickLayout`).
-/// - Without a position (the AI gave none) the words gather at the photo's centre, still one per line.
+///   above or below it, lighter. Tags never cover each other (`CCPickLayout`), and stay inside the photo.
+/// - Without a position (the AI gave none) and no Vision instance there, the words gather at the photo's centre,
+///   still one per line.
 /// - From the shutter on (`.processing`) the same screen runs the catch scan over the photo (v10, owner 2026-10-11:
 ///   bracket, light pen, `CatchScan.swift`), and each tag comes up where it is tapped, when the scan brings it up.
 ///   Typing a word waits until the names are in.
@@ -211,7 +213,10 @@ struct CandidatePickerView: View {
                                      maxBottom: max(tallest + 6, size.height - 6), sideClamp: 0)
         var anchors: [CGPoint] = []
         for (i, t) in list.enumerated() {
-            let p = CGPoint(x: fill.minX + t.object.point.x * fill.width, y: fill.minY + t.object.point.y * fill.height)
+            // Centred on the object's own place inside its Vision instance, put on the stage exactly as the scan puts
+            // that instance's outline (`CatchScanShape`: the same `fill`), so the tag lands inside its own outline.
+            let a = t.object.anchor
+            let p = CGPoint(x: fill.minX + a.x * fill.width, y: fill.minY + a.y * fill.height)
             anchors.append(CCPickLayout.anchor(at: p, size: sizes[i], in: area))
         }
         let spots = CCPickLayout.layout(anchors: anchors, sizes: sizes, in: area)

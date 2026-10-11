@@ -41,6 +41,82 @@ final class CardCatchPickTests: XCTestCase {
         XCTAssertNotEqual(objs[0].box, objs[1].box)
     }
 
+    // MARK: Where a tag sits (owner 2026-10-11: 「しっかりもののうえに名前タグをおいて」)
+
+    private func mask(_ w: Int, _ h: Int, _ fill: (Int, Int) -> UInt8) -> [UInt8] {
+        var m = [UInt8](repeating: 0, count: w * h)
+        for y in 0..<h { for x in 0..<w { m[y * w + x] = fill(x, y) } }
+        return m
+    }
+
+    func testWithoutAVisionInstanceTheTagSitsOnTheAIsPoint() {
+        let objs = CatchObject.build(candidates: [cand("杯子", group: 0, point: [300, 600])], masks: nil,
+                                     photoSize: CGSize(width: 1000, height: 1000))
+        XCTAssertEqual(objs[0].anchor, CGPoint(x: 0.3, y: 0.6))
+        XCTAssertEqual(objs[0].anchor, objs[0].point)
+    }
+
+    func testATagSitsInTheMiddleOfAPlainThing() throws {
+        let m = mask(40, 30) { x, y in (10..<30).contains(x) && (5..<25).contains(y) ? 5 : 0 }
+        let all = CatchAnchor.anchors(mask: m, width: 40, height: 30)
+        XCTAssertEqual(Set(all.keys), [5])
+        let p = try XCTUnwrap(all[5])
+        XCTAssertEqual(p.x, 0.5, accuracy: 1.0 / 40)
+        XCTAssertEqual(p.y, 0.5, accuracy: 1.0 / 30)
+    }
+
+    func testACupsTagSitsOnItsBodyNotByItsHandle() throws {
+        // The body is 24 × 40 px; the handle is a ring on its right.
+        let m = mask(60, 60) { x, y in
+            if (10..<34).contains(x) && (10..<50).contains(y) { return 3 }
+            let r2 = (x - 40) * (x - 40) + (y - 30) * (y - 30)
+            return x >= 34 && (36...100).contains(r2) ? 3 : 0
+        }
+        let p = try XCTUnwrap(CatchAnchor.anchors(mask: m, width: 60, height: 60)[3])
+        let x = Int(p.x * 60), y = Int(p.y * 60)
+        XCTAssertTrue((16..<28).contains(x), "on the body, well clear of its sides: x \(x)")
+        XCTAssertTrue((22..<38).contains(y), "about half way down: y \(y)")
+    }
+
+    func testAPlateBehindAMangoGetsItsTagOnThePlate() throws {
+        // The middle of the plate's box is on the mango in front of it — where its tag used to go.
+        let m = mask(60, 40) { x, y in
+            if (x - 30) * (x - 30) + (y - 16) * (y - 16) <= 121 { return 1 }
+            let dx = Double(x - 30) / 27, dy = Double(y - 26) / 11
+            return dx * dx + dy * dy <= 1 ? 2 : 0
+        }
+        XCTAssertEqual(m[26 * 60 + 30], 1)
+        let all = CatchAnchor.anchors(mask: m, width: 60, height: 40)
+        XCTAssertEqual(Set(all.keys), [1, 2])
+        for (label, p) in all {
+            let x = Int(p.x * 60), y = Int(p.y * 40)
+            XCTAssertEqual(m[y * 60 + x], UInt8(label), "thing \(label)'s tag is on that thing")
+        }
+    }
+
+    func testAThingCutByThePhotosEdgeGetsItsTagInsideThePicture() throws {
+        let m = mask(40, 20) { x, y in x < 16 && (2..<18).contains(y) ? 4 : 0 }
+        let p = try XCTUnwrap(CatchAnchor.anchors(mask: m, width: 40, height: 20)[4])
+        XCTAssertEqual(p.x, 8.0 / 40, accuracy: 1.5 / 40, "the middle of what shows, not the photo's edge")
+        XCTAssertEqual(p.y, 0.5, accuracy: 1.0 / 20)
+    }
+
+    func testAThingSplitInTwoGetsItsTagOnThePieceTheScanOutlines() throws {
+        // One instance in two pieces: a C open to the right (the larger piece, the one `CatchOutlineTracer` outlines)
+        // and a block in its hollow, nearer the middle of the whole — where the tag would go if every piece counted.
+        let m = mask(40, 30) { x, y in
+            let square = x < 30 && y < 30
+            let hollow = (8..<22).contains(x) && (8..<22).contains(y)
+            let mouth = x >= 22 && (8..<22).contains(y)
+            let block = (12..<20).contains(x) && (11..<19).contains(y)
+            return (square && !hollow && !mouth) || block ? 6 : 0
+        }
+        let p = try XCTUnwrap(CatchAnchor.anchors(mask: m, width: 40, height: 30)[6])
+        let x = Int(p.x * 40), y = Int(p.y * 30)
+        XCTAssertEqual(m[y * 40 + x], 6)
+        XCTAssertFalse((12..<20).contains(x) && (11..<19).contains(y), "on the C, not on the block: \(x), \(y)")
+    }
+
     // MARK: Same name, two objects
 
     func testSameNameInTwoGroupsStaysTwoObjects() {

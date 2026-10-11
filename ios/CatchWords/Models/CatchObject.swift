@@ -2,15 +2,21 @@ import UIKit
 
 /// Card catch: one object in the photo = the candidates that share `group` (the server's per-object
 /// grouping; a candidate without a group is an object of its own), up to 3 words in the server's order.
-/// Its tap point is the first word's `point`; its cut-out and box come from Vision's foreground instance
-/// under that point (one mask request per photo, `InstanceMasks`).
+/// Its tap point is the first word's `point`; its cut-out, box and tag place come from Vision's foreground
+/// instance under that point (one mask request per photo, `InstanceMasks`).
 nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
     let id: Int
     let words: [Candidate]
-    /// 0–1 of the photo, top-left origin.
+    /// 0–1 of the photo, top-left origin: the AI's point for the thing (the server's `point`, [x, y] in 0–1000 — the
+    /// middle of the box the AI drew round it on the 768 px upload, web `suggestion-position.ts`). It only finds the
+    /// thing's Vision instance; the tag goes to `anchor`.
     let point: CGPoint
     /// 0–1 of the photo: the cut-out's alpha bounding box, or `fallbackBox` when Vision found no instance.
     let box: CGRect
+    /// 0–1 of the photo, top-left origin: where the thing's name tag sits — deep inside its Vision instance's mask
+    /// (`CatchAnchor`), so the tag is on the very thing its outline goes round and its cut-out shows; the AI's
+    /// `point` when Vision found no instance for it.
+    var anchor: CGPoint
     /// The subject on transparency, cropped exactly to `box`; nil = the prototype's "no cutImg" path.
     let cut: UIImage?
     /// Vision's instance under this object (nil = none, `fallbackBox`). The catch scan waits for that instance's
@@ -41,6 +47,10 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
     /// same instance used to get the same cut-out and box, so their outlines, hitboxes and tags sat on top of
     /// each other and only the top one could be tapped. The one left without an instance gets the box
     /// around its own point.
+    /// Its tag sits inside that same instance (`InstanceMasks.anchors`). Owner 2026-10-11: 「カメラ撮ったあとの単語の
+    /// 名前のタグが、その該当のもののうえに配置されてない。しっかりもののうえに名前タグをおいて。」 — the tags sat on the
+    /// AI's point, the middle of the AI's own rough box, which often lies beside the thing, between its parts or on
+    /// what stands in front of it, while the outline drawn round the thing (the same instance) was right.
     static func build(candidates: [Candidate], masks: InstanceMasks?, photoSize: CGSize) -> [CatchObject] {
         let list = groups(candidates)
         let points = list.map { words -> CGPoint in
@@ -54,13 +64,16 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
         } else {
             labels = Array(repeating: nil, count: points.count)
         }
+        let inside = masks?.anchors() ?? [:]
         return list.enumerated().map { (i, words) -> CatchObject in
             let p = points[i]
+            let deep = labels[i].flatMap { inside[$0] }
             if let masks, let label = labels[i], let cut = masks.cut(instance: label) {
-                return CatchObject(id: i, words: words, point: p, box: cut.box, cut: cut.image, instance: label)
+                return CatchObject(id: i, words: words, point: p, box: cut.box,
+                                   anchor: deep ?? CGPoint(x: cut.box.midX, y: cut.box.midY), cut: cut.image, instance: label)
             }
-            return CatchObject(id: i, words: words, point: p, box: fallbackBox(at: p, photoSize: photoSize), cut: nil,
-                               instance: labels[i])
+            return CatchObject(id: i, words: words, point: p, box: fallbackBox(at: p, photoSize: photoSize),
+                               anchor: deep ?? p, cut: nil, instance: labels[i])
         }
     }
 
@@ -99,5 +112,127 @@ nonisolated struct CatchObject: Identifiable, @unchecked Sendable {
         let w = min(1, side / max(s.width, 1)), h = min(1, side / max(s.height, 1))
         let x = min(max(0, p.x - w / 2), 1 - w), y = min(max(0, p.y - h / 2), 1 - h)
         return CGRect(x: x, y: y, width: w, height: h)
+    }
+}
+
+/// Where a thing's name tag sits on its Vision instance (`CatchObject.anchor`; owner 2026-10-11
+/// 「しっかりもののうえに名前タグをおいて」): a pixel deep inside the instance's mask, as near the middle of the thing
+/// as its shape allows. A cup's tag sits on its body, not between the body and the handle; a plate half hidden behind
+/// a mango gets its tag on the plate, not on the mango; a thing cut by the photo's edge gets its tag inside the
+/// picture (the photo's edge counts as an edge, so the tag stays clear of the parts the screen crops).
+/// Pure (no Vision): a label mask in, points out, so CardCatchPickTests checks it on made-up masks.
+nonisolated enum CatchAnchor {
+    /// "Deep inside": at least this share of the deepest pixel's distance from the edge.
+    static let depth = 0.6
+
+    /// Every instance's tag point in a label mask (one byte per pixel, row after row, `width` bytes each,
+    /// 0 = background), by label: the centre of one of its pixels, 0–1 of the mask, top-left origin.
+    static func anchors(mask: [UInt8], width w: Int, height h: Int) -> [Int: CGPoint] {
+        guard w > 0, h > 0, mask.count >= w * h else { return [:] }
+        // Each label's bounding box (one pass over the mask), so each label is measured only where it is.
+        var minX = [Int](repeating: w, count: 256), minY = [Int](repeating: h, count: 256)
+        var maxX = [Int](repeating: -1, count: 256), maxY = [Int](repeating: -1, count: 256)
+        for y in 0..<h {
+            for x in 0..<w {
+                let l = Int(mask[y * w + x])
+                guard l != 0 else { continue }
+                if x < minX[l] { minX[l] = x }
+                if x > maxX[l] { maxX[l] = x }
+                if y < minY[l] { minY[l] = y }
+                if y > maxY[l] { maxY[l] = y }
+            }
+        }
+        var out: [Int: CGPoint] = [:]
+        for l in 1..<256 where maxX[l] >= 0 {
+            out[l] = anchor(mask: mask, width: w, height: h, label: UInt8(l),
+                            x0: minX[l], y0: minY[l], x1: maxX[l], y1: maxY[l])
+        }
+        return out
+    }
+
+    /// `label`'s tag point, measured inside its bounding box `x0...x1` × `y0...y1` (mask pixels) on its largest
+    /// 8-connected piece — the piece the scan outlines (`CatchOutlineTracer.boundary`), so a thing split in two by
+    /// something in front of it gets its tag inside its outline: of that piece's pixels at least `depth` × the
+    /// deepest one's distance from the edge, the one nearest the piece's centroid. Deep alone is not enough (a long
+    /// thing is equally deep all along its middle) and the centroid alone can lie outside the thing (a C shape, a
+    /// ring, a plate with a mango in front of it).
+    private static func anchor(mask: [UInt8], width w: Int, height h: Int, label: UInt8,
+                               x0: Int, y0: Int, x1: Int, y1: Int) -> CGPoint? {
+        // The grid: the box with a 1-pixel frame round it that is never the label (nothing outside the box is the
+        // label, and outside the photo counts as an edge too). The label's pixels start "far" from any edge.
+        let gw = x1 - x0 + 3, gh = y1 - y0 + 3
+        var d = [Int32](repeating: 0, count: gw * gh)
+        let far = Int32.max / 4
+        for y in y0...y1 {
+            for x in x0...x1 where mask[y * w + x] == label {
+                d[(y - y0 + 1) * gw + (x - x0 + 1)] = far
+            }
+        }
+        // Its pieces (8-connected, found in reading order like the tracer's); the first largest is kept. A pixel of
+        // the label is never on the frame, so its 8 neighbours are always inside the grid.
+        let around = [-gw - 1, -gw, -gw + 1, -1, 1, gw - 1, gw, gw + 1]
+        var piece = [Int32](repeating: 0, count: gw * gh)
+        var stack: [Int] = []
+        var id: Int32 = 0, kept: Int32 = 0
+        var keptSize = 0
+        for start in d.indices where d[start] != 0 && piece[start] == 0 {
+            id += 1
+            piece[start] = id
+            stack.append(start)
+            var size = 0
+            while let j = stack.popLast() {
+                size += 1
+                for o in around where d[j + o] != 0 && piece[j + o] == 0 {
+                    piece[j + o] = id
+                    stack.append(j + o)
+                }
+            }
+            if size > keptSize {
+                keptSize = size
+                kept = id
+            }
+        }
+        guard keptSize > 0 else { return nil }
+        // Chamfer distance (3 a step, 4 a diagonal step) of each of the label's pixels from the nearest pixel that is
+        // not the label: forward, then backward.
+        for y in 1..<(gh - 1) {
+            for x in 1..<(gw - 1) {
+                let i = y * gw + x
+                guard d[i] != 0 else { continue }
+                let a = d[i - 1] + 3, b = d[i - gw] + 3, c = d[i - gw - 1] + 4, e = d[i - gw + 1] + 4
+                d[i] = min(d[i], min(min(a, b), min(c, e)))
+            }
+        }
+        for y in stride(from: gh - 2, through: 1, by: -1) {
+            for x in stride(from: gw - 2, through: 1, by: -1) {
+                let i = y * gw + x
+                guard d[i] != 0 else { continue }
+                let a = d[i + 1] + 3, b = d[i + gw] + 3, c = d[i + gw + 1] + 4, e = d[i + gw - 1] + 4
+                d[i] = min(d[i], min(min(a, b), min(c, e)))
+            }
+        }
+        // Deep enough, then as central as the piece allows (grid coordinates throughout).
+        var deepest: Int32 = 0
+        var sumX = 0.0, sumY = 0.0
+        for i in d.indices where piece[i] == kept {
+            deepest = max(deepest, d[i])
+            sumX += Double(i % gw)
+            sumY += Double(i / gw)
+        }
+        let enough = Double(deepest) * depth
+        let cx = sumX / Double(keptSize), cy = sumY / Double(keptSize)
+        var best = -1
+        var bestDistance = Double.greatestFiniteMagnitude
+        for i in d.indices where piece[i] == kept && Double(d[i]) >= enough {
+            let dx = Double(i % gw) - cx, dy = Double(i / gw) - cy
+            let squared = dx * dx + dy * dy
+            if squared < bestDistance {
+                bestDistance = squared
+                best = i
+            }
+        }
+        guard best >= 0 else { return nil }
+        let px = best % gw - 1 + x0, py = best / gw - 1 + y0
+        return CGPoint(x: (CGFloat(px) + 0.5) / CGFloat(w), y: (CGFloat(py) + 0.5) / CGFloat(h))
     }
 }
