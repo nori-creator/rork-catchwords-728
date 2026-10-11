@@ -83,14 +83,7 @@ jobs:
       - name: ci-previews ブランチに置く
         if: always()
         run: |
-          set -uo pipefail
           [ -f "$RUNNER_TEMP/out/plan.md" ] || exit 0
-          DEST="$RUNNER_TEMP/previews-branch"
-          git clone --quiet --depth 1 --branch ci-previews "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$DEST"
-          cd "$DEST"
-          mkdir -p runs/store-metadata
-          cp "$RUNNER_TEMP/out/plan.md" runs/store-metadata/plan.md
-          echo "${{ github.sha }} ${{ github.event_name }}" > runs/store-metadata/COMMIT
-          git add -A
-          git -c user.name="ios-store-metadata" -c user.email="ios-store-metadata@users.noreply.github.com" commit --quiet -m "store metadata plan @ ${{ github.sha }}" || exit 0
-          for i in 1 2 3; do git pull --quiet --rebase origin ci-previews 2>/dev/null; git push --quiet origin ci-previews && break; sleep 3; done
+          echo "${{ github.sha }} ${{ github.event_name }}" > "$RUNNER_TEMP/out/COMMIT"
+          bash scripts/push_ci_previews.sh "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            runs/store-metadata "store metadata plan @ ${{ github.sha }}" "$RUNNER_TEMP/out/plan.md" "$RUNNER_TEMP/out/COMMIT"
