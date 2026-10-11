@@ -1,6 +1,1 @@
-CatchWords / test_1_ja_zh(): FullTourTests.swift:343: failed - [ja/zh-TW] auth: English word "Continue" on a screen without English — 「Continue」
-CatchWords / test_1_ja_zh(): FullTourTests.swift:343: failed - [ja/zh-TW] auth: English word "Speed" on a screen without English — 「Speed up your typing by sliding your finger across the letters to compose a word」
-CatchWords / test_6_zh_ja(): FullTourTests.swift:343: failed - [zh-TW/ja] auth: English word "Passwords" on a screen without English — 「Passwords」
-CatchWords / test_6_zh_ja(): FullTourTests.swift:343: failed - [zh-TW/ja] auth: English word "Padding" on a screen without English — 「Padding-Right」
-CatchWords / test_6_zh_ja(): FullTourTests.swift:343: failed - [zh-TW/ja] auth: English word "Padding" on a screen without English — 「Padding-Left」
-CatchWords / test_6_zh_ja(): FullTourTests.swift:343: failed - [zh-TW/ja] auth: English word "Emoji" on a screen without English — 「Emoji」
+(could not read results: Expecting value: line 1 column 1 (char 0))
