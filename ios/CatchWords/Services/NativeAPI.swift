@@ -122,21 +122,20 @@ enum NativeAPI {
         }
     }
 
-    /// Opens the connection to the server while the camera is on screen, before the shutter (measured 2026-10-10:
-    /// the photo's request otherwise also pays for setting up the connection, and for a token refresh when the token
-    /// is about to expire). Nothing about the user is sent: a call to no function, which the server answers with
-    /// 404 before running anything or reading the account. At most once a minute.
+    /// Warms the photo's path on the server while the camera is on screen, before the shutter. Measured 2026-10-11:
+    /// the first photo after the server sat idle took 5.5 s from the phone (the daily-limit check alone 4.0 s), the
+    /// next one 2.8 s. `warmUpCapture` (web `ai.functions.ts`) runs the photo request's own groundwork — sign-in,
+    /// consent, the caller's tier, which AI to call, the reading dictionary — so it is warm when the shutter goes;
+    /// it calls no AI, counts nothing against the daily limit and writes nothing. A token that expires within 10
+    /// minutes is refreshed first. Signed in only, at most once a minute; a failure changes nothing.
     static func warmUp() {
         guard Date().timeIntervalSince(lastWarmUp) > 60 else { return }
         lastWarmUp = Date()
         Task {
             // A token that expires within 10 minutes is refreshed now, not in front of the photo's request.
             try? await SupabaseClient.shared.refreshIfNeeded(within: 600)
-            var req = URLRequest(url: AppConfig.webBaseURL.appendingPathComponent("api/native-fn"), timeoutInterval: 10)
-            req.httpMethod = "POST"
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = Data(#"{"fn":"warmup"}"#.utf8)
-            _ = try? await URLSession.shared.data(for: req)
+            guard SupabaseClient.shared.userId != nil else { return }
+            _ = try? await NativeAPI.call("warmUpCapture", [:], timeout: 10)
         }
     }
 
