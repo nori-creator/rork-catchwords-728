@@ -7,6 +7,7 @@
   docs/app-store/review-notes.en.txt   App Review Information の Notes（--notes を付けた時だけ）
 
 触らないもの: 審査用アカウント（メール・パスワード）、連絡先、ビルド、価格、配信国、審査への提出。
+App Store Connect にあって `ios/metadata` に無い言語は、一覧に出すだけ（消さない。消すのは App Store Connect の画面で）。
 
 既定は「試すだけ」（何が変わるかを出すだけ）。--apply を付けた時だけ書き込む。
 このリポジトリは公開なので、App Store Connect に今入っている審査メモの本文は出さない（長さだけ）。
@@ -117,6 +118,11 @@ def main():
             failures += 1
             print(f"  - **書き込めませんでした**: {label}（HTTP {e.code} {error_detail(e)}）")
 
+    def report_extra(have: dict, want: dict):
+        """Languages App Store Connect has but ios/metadata does not: listed only, never removed here."""
+        for loc in sorted(set(have) - set(want)):
+            print(f"- {loc}: `ios/metadata` に無い言語。ここでは消さない（消すなら App Store Connect の画面で）")
+
     def create(kind: str, attrs: dict, rel_name: str, rel_type: str, rel_id: str, label: str):
         nonlocal failures
         if not apply:
@@ -150,6 +156,7 @@ def main():
         changes += 1
         print(f"- {loc}: " + "、".join(f"{k}「{cur['attributes'].get(k) or ''}」→「{v}」" for k, v in diff.items()))
         patch("appInfoLocalizations", cur["id"], diff, f"App 情報 {loc}")
+    report_extra(have, want_info)
 
     # The version's text.
     versions = get_all(f"{API}/apps/{app['id']}/appStoreVersions?filter[platform]=IOS&filter[versionString]={version}")
@@ -184,6 +191,7 @@ def main():
                          else f"{k}「{old or ''}」→「{v}」")
         print(f"- {loc}: " + "、".join(parts))
         patch("appStoreVersionLocalizations", cur["id"], diff, f"説明文 {loc}")
+    report_extra(have, want_ver)
 
     # Review notes only (never the demo account or the contact).
     if notes is not None:
