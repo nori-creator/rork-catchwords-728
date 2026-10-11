@@ -1,0 +1,22 @@
+CatchWords helps people learn Taiwanese Mandarin (Traditional Chinese) words from photos of everyday things. Free, no in-app purchases, no ads.
+
+SIGN IN
+Use the demo account in "Sign-in information" above: Sign in > "Continue with email". It has finished the first-run setup and the AI consent and already has words. Sign in with Apple and Google are also offered.
+
+MAIN FLOW
+1. Camera tab: photograph any object (cup, bottle, chair), or pick a photo with the Photos button. Word tags appear on the objects after a few seconds.
+2. Tap a word: its sticker (cut out of the photo), the word and its pronunciation appear, and the word is added to the collection. A word that is not shown can be looked up with "Type a different word".
+3. Collection tab: tap a word for zhuyin, pinyin, meaning, pronunciation (speaker button) and example sentences.
+4. Review tab: 4-choice questions with the user's own photos.
+5. Settings: languages, level, notifications, Legal (Terms, Privacy Policy, consent to send data to AI), Sign out, and Delete account at the bottom (deletes the account and its data on our server).
+
+DATA AND AI
+Photos and typed words go only to our server (catchwords.lovable.app). Our server sends them to a third-party AI service (Google Gemini, with Lovable AI Gateway relaying to Gemini as a backup; the operator may switch a feature to another provider named in the privacy policy, e.g. Anthropic Claude) only after the user agrees on the in-app screen "Sending data to AI", shown before the first AI feature. Without consent nothing is sent and the camera stays off; collected words and review still work. Consent can be withdrawn in Settings > Legal. Pronunciation of Taiwanese Mandarin: Microsoft Azure AI Speech (text only). Optional replacement photos for a word: Unsplash / Wikimedia Commons, with credit.
+
+WHY SIGN-IN IS REQUIRED
+Photos, collected words and review history are saved per account on our server, and the AI features have a per-account daily limit to prevent abuse, so almost nothing works without an account. The same account works on the CatchWords website.
+
+OTHER
+- Camera, photo library, location and notification permissions are optional and asked only when the feature is used.
+- Some diagnostic screens in Settings are shown only to the developer's own account; they do not appear for other users or the demo account.
+- The app works the same in every territory where it is offered.
