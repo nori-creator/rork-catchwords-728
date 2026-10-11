@@ -44,9 +44,10 @@ final class ProfileStore {
         allTargetOptions.filter { offeredTargets.contains($0.value) }
     }
     /// The choices for someone learning `current`: the offered ones, plus `current` itself when it is a hidden one
-    /// (an account that already learns English keeps seeing — and can keep — its own language).
+    /// (an account that already learns English keeps seeing — and can keep — its own language). Never the display
+    /// language (the two are never the same, as in onboarding), so the 設定 row and its wheel agree on the count.
     static func targetChoices(current: String) -> [(value: String, label: String)] {
-        allTargetOptions.filter { offeredTargets.contains($0.value) || $0.value == current }
+        allTargetOptions.filter { (offeredTargets.contains($0.value) || $0.value == current) && $0.value != L10n.lang }
     }
     /// The learning language's name as the 設定 row shows it.
     static func targetLabel(_ code: String) -> String {

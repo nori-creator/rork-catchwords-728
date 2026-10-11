@@ -744,7 +744,7 @@ struct WheelCard: View {
     private var options: [(value: String, label: String)] {
         switch field {
         case .native: ProfileStore.nativeOptions.filter { $0.value != profile.targetLanguage }
-        case .target: ProfileStore.targetChoices(current: profile.targetLanguage).filter { $0.value != L10n.lang }
+        case .target: ProfileStore.targetChoices(current: profile.targetLanguage)
         case .current, .goal: ProfileStore.levels(for: profile.targetLanguage)
         }
     }
