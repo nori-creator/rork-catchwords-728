@@ -86,10 +86,10 @@ struct DexView: View {
     @State private var openMenu: DexFilterMenu?
     /// The header's height (the content starts under it).
     @State private var headerHeight: CGFloat = 120
-    /// The landing word while its light is on the way (drawn as its shadow / an empty square). Cleared the
-    /// moment it lands, so the gallery is redrawn with the word in the caught group (prototype `renderDex`).
+    /// The landing word while its light is on the way: first the gallery as before the catch, then the room made
+    /// for it (its waiting square at its place by No.). Cleared the moment it lands: the square becomes the word.
     @State private var galleryHold: DexBook.Hold?
-    /// The gallery slot being landed on / pointed at (frame reporting, fillIn, blue ring).
+    /// The gallery slot being landed on / pointed at (frame reporting, fillIn). Gone again once the landing is over.
     @State private var focus: DexGalleryFocus?
     @Environment(\.appReduceMotion) private var reduceMotion
 
@@ -172,7 +172,7 @@ struct DexView: View {
         .onChange(of: router.landing?.stickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: router.landingStickerId) { _, id in if id != nil { showGallery() } }
         .onChange(of: mode) { _, _ in
-            // Switching views redraws the gallery (`renderDex`): the `.slot.fill` ring goes.
+            // Switching views redraws the gallery (`renderDex`): the landing's focus goes.
             guard router.landing == nil else { return }
             focus = nil
         }
@@ -408,10 +408,13 @@ struct DexView: View {
             .refreshable { await dex.load() }
             .onAppear { takeLanding(proxy) }
             .onChange(of: router.landing?.stickerId) { old, new in
-                // The landing's provisional entry was saved and got its real id: the hold and the lit slot
-                // follow it (the slot is redrawn at the same place, its fill animation keeps its start time).
+                // The landing's provisional entry was saved and got its real id: the hold (and the room made in
+                // it) and the focused slot follow it (the slot is redrawn at the same place, its fill animation
+                // keeps its start time).
                 if let old, let new, old != new {
-                    if galleryHold?.stickerId == old { galleryHold = DexBook.Hold(stickerId: new) }
+                    if let h = galleryHold, h.stickerId == old {
+                        galleryHold = DexBook.Hold(stickerId: new, room: h.room)
+                    }
                     if var f = focus, f.id == old {
                         f.id = new
                         focus = f
@@ -421,29 +424,58 @@ struct DexView: View {
             }
             .onChange(of: router.landingStickerId) { _, _ in takeLanding(proxy) }
             .onChange(of: router.landing?.fillStart) { _, start in
-                // pon! — addEntry + renderDex: the gallery is redrawn at once (the word joins the caught group by
-                // No., a new shadow refills to 5), and its new slot fills (`.slot.fill`) and is scrolled to.
+                // pon! — addEntry + renderDex: the hold goes and the word's waiting square (the room made before the
+                // flight) becomes the word in place — nothing else moves — and fills, centred.
                 guard let start, let l = router.landing else { return }
                 galleryHold = nil
-                focus = DexGalleryFocus(id: l.stickerId, fillStart: start)
+                let id = landingSlot(l)
+                focus = DexGalleryFocus(id: id, fillStart: start)
                 Task {
-                    await scroll(to: l.stickerId, proxy: proxy)
+                    await scroll(to: id, proxy: proxy)
                     // one more frame so the slot reports its new frame before the burst
                     try? await Task.sleep(for: .milliseconds(16))
                     l.settled = true
+                    // The fill-in (.9 s) has played: the square is an ordinary one again (owner 2026-10-11:
+                    // 「単語をキャッチしたてのとき、青表示しないで、普通に切り抜きの画像だけでいい」).
+                    try? await Task.sleep(for: .seconds(1))
+                    if focus?.fillStart == start { focus = nil }
                 }
             }
         }
     }
 
-    /// A card-catch landing: hold the word as its shadow (or an empty square) and centre its slot (the
-    /// prototype sets `scrollTop` at once); CatchLandingController flies the star there. Any other landing
-    /// (re-encounter, a catch from search or scan): centre the word and light its slot.
+    /// A card-catch landing: hold the word back (the gallery as before the catch), centre the page on its place by
+    /// No. (the prototype sets `scrollTop` at once), then make room for it (`makeRoom`); CatchLandingController flies
+    /// the star there once the room is made. A re-encounter's landing: centre the word's own square, no hold.
+    /// Without a landing controller (`landingStickerId`): centre the word and pop its slot.
     private func takeLanding(_ proxy: ScrollViewProxy) {
-        if let l = router.landing, l.fillStart == nil, galleryHold?.stickerId != l.stickerId {
-            galleryHold = DexBook.Hold(stickerId: l.stickerId)
-            focus = DexGalleryFocus(id: l.stickerId, fillStart: nil)
-            Task { await scroll(to: l.stickerId, proxy: proxy) }
+        if let l = router.landing, l.fillStart == nil {
+            let id = landingSlot(l)
+            if l.alreadyCaught {
+                guard focus?.id != id else { return }
+                focus = DexGalleryFocus(id: id, fillStart: nil)
+                Task {
+                    await scroll(to: id, proxy: proxy)
+                    // one more frame so the square reports where it is before the star leaves
+                    try? await Task.sleep(for: .milliseconds(32))
+                    l.roomReady = true
+                }
+            } else if galleryHold?.stickerId != id {
+                // Reduce Motion (or a gallery drawn again mid-flight): the room is there from the start.
+                let room = l.roomReady || reduceMotion
+                galleryHold = DexBook.Hold(stickerId: id, room: room)
+                focus = DexGalleryFocus(id: id, fillStart: nil)
+                let anchor = room ? id : roomAnchor(for: id)
+                Task {
+                    await scroll(to: anchor, proxy: proxy, word: id)
+                    if room {
+                        try? await Task.sleep(for: .milliseconds(32))
+                        l.roomReady = true
+                    } else {
+                        await makeRoom(for: l)
+                    }
+                }
+            }
         } else if router.landing == nil, let id = router.landingStickerId {
             router.landingStickerId = nil
             galleryHold = nil
@@ -451,17 +483,68 @@ struct DexView: View {
             Task {
                 await scroll(to: id, proxy: proxy)
                 try? await Task.sleep(for: .milliseconds(200))
-                focus = DexGalleryFocus(id: id, fillStart: CCClock.now)
+                let start = CCClock.now
+                focus = DexGalleryFocus(id: id, fillStart: start)
                 SoundService.shared.play(.landBounce)
                 HapticPatterns.shared.land()
+                // Only for the pop: no mark left on the square afterwards (owner 2026-10-11).
+                try? await Task.sleep(for: .seconds(1))
+                if focus?.fillStart == start { focus = nil }
             }
         }
     }
 
-    /// Centre a word's slot: first its category card (the gallery is lazy), then the slot itself.
-    private func scroll(to id: String, proxy: ScrollViewProxy) async {
+    /// Owner 2026-10-11 (「事前にもとの古い番号が高い単語の位置を1つ右に移動し、新しい単語はその左に入るようにして」):
+    /// as the page comes to rest, the words numbered after the new one move one square to the right (its shadow
+    /// fades, the next one comes in) and its square opens at its place; the star leaves when that is done.
+    private func makeRoom(for l: CatchLandingController) async {
+        try? await Task.sleep(for: .milliseconds(300))
+        guard router.landing === l, l.fillStart == nil,
+              let hold = galleryHold, hold.stickerId == l.stickerId, !hold.room else {
+            l.roomReady = true
+            return
+        }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) {
+            galleryHold = DexBook.Hold(stickerId: hold.stickerId, room: true)
+        } completion: {
+            l.roomReady = true
+        }
+    }
+
+    /// The square a landing goes to. A re-encounter's sticker may not be the one its word's square stands for (one
+    /// square per word: the newest catch of it), so it lands on its word's square.
+    private func landingSlot(_ l: CatchLandingController) -> String {
+        guard l.alreadyCaught, let s = dex.sticker(id: l.stickerId) else { return l.stickerId }
+        let key = DexCatalog.norm(s.word?.headword ?? "", lang: lang)
+        guard !key.isEmpty else { return s.id }
+        let square = DexBook.words(dex.stickers, lang: lang).first { DexCatalog.norm($0.word?.headword ?? "", lang: lang) == key }
+        return square?.id ?? s.id
+    }
+
+    /// The square standing at a held word's place by No. before the room is made (the first word numbered after it,
+    /// else the first shadow): the page is centred there while it rises, so the room opens mid-screen.
+    private func roomAnchor(for id: String) -> String {
+        guard let s = dex.sticker(id: id) else { return id }
+        let numbers = DexNumbering.assign(dex.stickers, lang: lang, uid: SupabaseClient.shared.userId)
+        let held = DexBook.sections(stickers: dex.stickers, numbers: numbers, lang: lang,
+                                    hold: DexBook.Hold(stickerId: id))
+        let category = DexBook.category(of: s, lang: lang)
+        guard let slots = held.first(where: { $0.category.no == category })?.slots, let last = slots.last else {
+            return id
+        }
+        let no = numbers[id] ?? Int.max
+        let at = slots.firstIndex { slot in
+            guard case .caught(_) = slot.kind else { return true }
+            return (slot.no ?? Int.max) > no
+        }
+        return at.map { slots[$0].id } ?? last.id
+    }
+
+    /// Centre a word's slot: first its category card (the gallery is lazy), then the slot itself. `word`: the
+    /// sticker whose category card comes first when `id` is another square of it (a held word's place).
+    private func scroll(to id: String, proxy: ScrollViewProxy, word: String? = nil) async {
         await Task.yield()
-        if let s = dex.sticker(id: id) {
+        if let s = dex.sticker(id: word ?? id) {
             proxy.scrollTo("dexcat-\(DexBook.category(of: s, lang: lang))", anchor: .center)
             try? await Task.sleep(for: .milliseconds(30))
         }

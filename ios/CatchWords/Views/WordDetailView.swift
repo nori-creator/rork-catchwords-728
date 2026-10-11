@@ -55,7 +55,12 @@ struct WordDetailView: View {
     @State private var confirmWeb: WebImageCandidate?
     @Environment(\.appReduceMotion) private var reduceMotion
 
-    private var current: Sticker { dex.stickers.first { $0.id == sticker.id } ?? sticker }
+    /// The word as the dex has it now. A page opened on a catch still being saved (owner 2026-10-11: 「キャッチしたての
+    /// ときその単語の詳細に進めない」 — it now opens at once) becomes the saved word in place when the save is done.
+    private var current: Sticker { dex.current(sticker.id) ?? sticker }
+    /// Still being saved: no id on the server yet, so nothing here asks the server about it and the edits wait
+    /// (「保存しています…」 in the top bar). A word without its word id yet waits the same way for its notes.
+    private var isProvisional: Bool { DexStore.isProvisional(current.id) }
     private var word: Word? { current.word }
     private var extras: WordExtras? { word?.extras }
     private var headword: String { word?.headword ?? "" }
@@ -75,7 +80,7 @@ struct WordDetailView: View {
                     if !photos.isEmpty { photoHero }
                     metaCard
                     heroCard
-                    EncounterHistoryView(stickerId: current.id)
+                    if !isProvisional { EncounterHistoryView(stickerId: current.id) }
                     // Web WordCard: no frequency/register meters and no separate "使う場面" card
                     // (owner: メーターいらない). Register is a chip word in the header only.
                     ForEach(visibleSections.filter { hasContent($0) || isFilling($0) }) { section in
@@ -115,17 +120,19 @@ struct WordDetailView: View {
                 }
             }
         }
+        // Keyed on the word id and the sticker id: a catch saved while its page is open runs these once it is saved.
         .task(id: current.wordId + "|" + L10n.lang) { await autoFill() }
-        .task(id: current.id) { await dex.autoHero(current) }
+        .task(id: current.id) { if !isProvisional { await dex.autoHero(current) } }
         // Every picture is cut out (owner 2026-10-11): a photo without a cut-out yet gets one now, behind the page
-        // (the scissors button is gone).
+        // (the scissors button is gone). Never for a catch still being saved (`needsCutout`).
         .task(id: current.id + "|cutout") {
             if CutoutBackfill.needsCutout(current) { await CutoutBackfill.shared.make(for: current, dex: dex) }
         }
-        .task(id: current.id + "|play") {
-            // The word is read once when its page opens (web WordCard autoplay, 400 ms).
-            guard autoplayed != current.id else { return }
-            autoplayed = current.id
+        .task(id: sticker.id + "|play") {
+            // The word is read once when its page opens (web WordCard autoplay, 400 ms) — keyed on the page's own
+            // sticker, so a catch saved while its page is open is not read a second time.
+            guard autoplayed != sticker.id else { return }
+            autoplayed = sticker.id
             try? await Task.sleep(for: .milliseconds(400))
             if !Task.isCancelled { SoundService.shared.speak(headword) }
         }
@@ -201,6 +208,15 @@ struct WordDetailView: View {
             Text(headword)
                 .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Theme.muted)
+            if isProvisional {
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.mini)
+                    Text(L("保存しています…"))
+                }
+                .scaledFont(size: 12, weight: .semibold)
+                .foregroundStyle(Theme.muted)
+                .accessibilityElement(children: .combine)
+            }
             Spacer()
             Button {
                 Haptics.selection()
@@ -257,7 +273,7 @@ struct WordDetailView: View {
                     .foregroundStyle(Theme.muted)
                     .frame(width: 44, height: 44)
                 }
-                .disabled(isSavingHead)
+                .disabled(isSavingHead || isProvisional)
                 .accessibilityLabel(L("単語を直す"))
                 Spacer(minLength: 8)
                 PronounceCircle(text: headword, size: 50)
@@ -312,7 +328,7 @@ struct WordDetailView: View {
             .background(Theme.secondary, in: Capsule())
             .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
         }
-        .disabled(isFixing)
+        .disabled(isFixing || current.wordId.isEmpty)
         .accessibilityLabel(L("この語の誤りを報告"))
         .accessibilityIdentifier("detail.report")
     }
@@ -387,8 +403,10 @@ struct WordDetailView: View {
                 @unknown default: break
                 }
             }
-            // Keyed on the photo too: a replaced photo reloads the list while the page is open.
+            // Keyed on the photo too: a replaced photo reloads the list while the page is open. A catch still being
+            // saved has no photos on the server yet (the list is read once it is saved).
             .task(id: "\(current.id)|\(current.objectImageUrl ?? "")") {
+                guard !isProvisional else { return }
                 let all = await StickerPhoto.load(stickerId: current.id)
                 laterPhotos = all.filter { !$0.first }
                 heroPage = 0
@@ -527,12 +545,13 @@ struct WordDetailView: View {
             .fullScreenCover(isPresented: $showingOriginal) {
                 OriginalPhotoViewer(path: originalPath, url: dex.url(for: originalPath, preferThumb: false))
             }
-            // 長押し: この単語をどの絵で見せるか選ぶ（Web HeroPhotoPicker）。
+            // 長押し: この単語をどの絵で見せるか選ぶ（Web HeroPhotoPicker）。 Not while the catch is still being saved.
             .onLongPressGesture(minimumDuration: 0.45) {
+                guard !isProvisional else { return }
                 Haptics.impact(.medium)
                 pickingHero = true
             }
-            .accessibilityAction(named: L("表示する写真を選ぶ")) { pickingHero = true }
+            .accessibilityAction(named: L("表示する写真を選ぶ")) { if !isProvisional { pickingHero = true } }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(back ? L("自撮り写真") : L("写真"))
             .accessibilityAction(named: L("元の写真を見る")) {
@@ -615,6 +634,7 @@ struct WordDetailView: View {
                     .contentShape(.rect)
                 }
                 .buttonStyle(PressableStyle(scale: 0.98))
+                .disabled(isProvisional)
                 .accessibilityLabel(L("ひと言を編集"))
             }
         }
@@ -758,9 +778,9 @@ struct WordDetailView: View {
             // so like the web (`WordCard` canRegen = isPro) the button is only offered when the SERVER counts this
             // account as Pro. A StoreKit-only Pro is not enough until the server checks Apple purchases, and
             // while in-app purchase is unavailable web Pro does not unlock it either (`PlanStore.inAppPurchaseAvailable`).
-            .environment(\.sectionRefresh, s.isExternal || !plan.serverGrantsPro ? nil : SectionRefresh(running: refreshing.contains(s)) {
-                regenerate(s)
-            })
+            // Not for a catch still being saved (no word on the server yet).
+            .environment(\.sectionRefresh, s.isExternal || !plan.serverGrantsPro || current.wordId.isEmpty
+                         ? nil : SectionRefresh(running: refreshing.contains(s)) { regenerate(s) })
     }
 
     /// Web 「作り直す」 (regenerateCardSection): this one item is written again at the learner's level.
@@ -895,6 +915,8 @@ struct WordDetailView: View {
     private func autoFill() async {
         // A run cancelled midway (another word / language) returns without clearing: no skeletons left behind.
         filling = []
+        // A catch still being saved has no word on the server yet: this runs again once it has (keyed on its id).
+        guard !current.wordId.isEmpty else { return }
         // First this reader's own explanation (written in their display language); while it is being
         // written, the empty sections show as filling instead of another language's notes.
         let target = word?.language ?? NativeAPI.targetLanguage
@@ -1457,7 +1479,7 @@ struct WordDetailView: View {
                 .contentShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(PressableStyle(scale: 0.95))
-        .disabled(applyingWeb != nil)
+        .disabled(applyingWeb != nil || isProvisional)
         .accessibilityLabel(L("この画像にする"))
     }
 
@@ -1529,7 +1551,7 @@ struct WordDetailView: View {
                         .background(Theme.primary.opacity(0.12), in: .rect(cornerRadius: 16))
                 }
                 .buttonStyle(PressableStyle())
-                .disabled(isAddingSelfie)
+                .disabled(isAddingSelfie || isProvisional)
                 .accessibilityIdentifier("detail.addSelfie")
                 .fullScreenCover(isPresented: $takingSelfie) {
                     SelfieCamera { image in Task { await addSelfie(image) } }
@@ -1555,6 +1577,7 @@ struct WordDetailView: View {
                         .overlay(Capsule().stroke(Theme.destructive.opacity(0.3), lineWidth: 1))
                 }
                 .buttonStyle(PressableStyle(scale: 0.95))
+                .disabled(isProvisional)
             }
         }
         .padding(.top, 6)

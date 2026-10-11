@@ -164,10 +164,19 @@ struct CaptureView: View {
                                  onStickerFrame: { stickerFrame = $0 })
                 .transition(.opacity)
         case .reencounter:
-            ReencounterView(vm: vm, onSeeInDex: { id in
-                vm.reset()
-                router.landingStickerId = id
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { router.tab = .dex }
+            ReencounterView(vm: vm, onSeeInDex: { id, photoFrame in
+                // As for a new word (owner 2026-10-11: 「同じ単語でも図鑑に追加するアニメーションを追加して」): the dex
+                // page rises over this screen and a star flies from the photo into the word's square, which pops
+                // with the new photo first; this screen is put back once the page is up.
+                if let f = photoFrame {
+                    router.catchStar = CatchStar(center: CGPoint(x: f.midX, y: f.midY), size: 52, k: 1)
+                }
+                CatchLanding.land(stickerId: id, router: router, calm: reduceMotion, alreadyCaught: true)
+                let model = vm
+                Task {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    model.reset()
+                }
             })
             .transition(.move(edge: .trailing).combined(with: .opacity))
         case .failed(let reason, let retryable):
@@ -550,9 +559,10 @@ struct CaptureView: View {
         return true
     }
 
-    /// The save, behind the dex. Success: the provisional entry becomes the saved sticker (the landing, the
-    /// tour and a page tapped meanwhile follow it) and the queued photo goes. Failure: no entry is left behind,
-    /// the catch is not counted, and the photo is back in 「解析待ち」 with the reason.
+    /// The save, behind the dex. Success: the provisional entry becomes the saved sticker (the landing and the
+    /// tour follow it; a word page opened on it meanwhile turns into it in place, `DexStore.current`) and the
+    /// queued photo goes. Failure: no entry is left behind (a word page open on it closes), the catch is not
+    /// counted, and the photo is back in 「解析待ち」 with the reason.
     /// `cardLater`: the card still being generated when it was saved from the word's own fields; its notes are
     /// filled into the saved word when it arrives (a card that fails leaves the word as saved — the detail page
     /// writes the notes when it is opened, as for any word without them).
@@ -572,20 +582,18 @@ struct CaptureView: View {
                 PendingRetry.shared.forget(pid)
             }
             dex.refreshPending()
-            if router.detailAfterSave == provisional {
-                router.detailAfterSave = nil
-                router.openDetail(outcome.sticker, zoom: false)
-            }
         } catch let error where DexStore.isAccountChanged(error) {
             // Signed out (or into another account) during the save: the provisional entry and the plan count
             // were cleared with the old account; the new one is told nothing about it.
             dex.discardProvisional(provisional)
+            if router.detailSticker?.id == provisional { router.detailSticker = nil }
             if let pid = pendingId { PendingQueue.shared.setSaving(pid, false) }
         } catch {
             dex.discardProvisional(provisional)
             plan.undoCatch()
             if router.tourStickerId == provisional { router.tourStickerId = nil }
-            if router.detailAfterSave == provisional { router.detailAfterSave = nil }
+            // Its page, opened while it was being saved, has nothing left to show.
+            if router.detailSticker?.id == provisional { router.detailSticker = nil }
             let reason = (error as? LocalizedError)?.errorDescription ?? ""
             if let pid = pendingId {
                 PendingQueue.shared.updateReason(id: pid, reason: L("保存に失敗しました"))

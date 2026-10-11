@@ -6,10 +6,7 @@ import SwiftUI
 
 private enum DexInk {
     static let border = Color(light: 0xE6ECF3, dark: 0x1D2635)
-    static let sart = Color(light: 0xEEF2F7, dark: 0x132032)
     static let sil = Color(light: 0xC5CFDC, dark: 0x34445A)
-    static let caughtTop = Color(light: 0xFFFFFF, dark: 0x1C2A3E)
-    static let caughtEdge = Color(light: 0xE2ECF8, dark: 0x0F1A2A)
     static let no = Color(light: 0x8C96A3, dark: 0x7D8899)
     static let q = Color(light: 0xAEB8C4, dark: 0x5D6B7E)
     static let segBg = Color(light: 0xF1F3F8, dark: 0x132032)
@@ -17,7 +14,8 @@ private enum DexInk {
 }
 
 /// The landing slot's state in the gallery: its `.sart` is reported to the landing (global coordinates), and once
-/// filled it runs `fillIn` with the blue ring.
+/// filled its picture runs `fillIn`. No blue ring or fill around it (owner 2026-10-11: 「単語をキャッチしたてのとき、
+/// 青表示しないで、普通に切り抜きの画像だけでいい」), and the focus goes once the landing is over (DexView).
 struct DexGalleryFocus: Equatable {
     var id: String
     /// `.slot.fill` started (CCClock time); nil = not filled yet.
@@ -165,21 +163,14 @@ private struct DexSlotView: View {
     /// The square a picture or a shadow stands in. No tile or frame behind it any more (owner 2026-10-11:
     /// 「図鑑の一覧のそれぞれの単語の画像は切り抜きで、画像周りの枠は削除して」): the cut-out stands on the card
     /// like a sticker, a shadow is its grey silhouette alone. The landing slot reports its frame; filled, its
-    /// content runs `fillIn` and the blue ring glows for the moment of the landing.
+    /// content runs `fillIn`. The prototype's blue `.slot.fill` ring is gone: with the tile gone it was a filled
+    /// blue square behind the transparent cut-out (owner 2026-10-11: 「単語をキャッチしたてのとき、青表示しないで、
+    /// 普通に切り抜きの画像だけでいい」) — the pop, the burst and the glints mark the landing.
     private func sart<C: View>(caught: Bool, @ViewBuilder content: () -> C) -> some View {
         let inner = content()
         return Color.clear
             .aspectRatio(1, contentMode: .fit)
             .overlay { DexFillIn(start: focus?.fillStart, calm: calm) { inner } }
-            .background {
-                // .slot.fill .sart: box-shadow 0 0 0 2.5px #2A9BFF, 0 0 22px rgba(42,155,255,.6)
-                if focus?.fillStart != nil {
-                    RoundedRectangle(cornerRadius: 18.5, style: .circular)
-                        .fill(Color(hex: 0x2A9BFF))
-                        .padding(-2.5)
-                        .shadow(color: .rgba(42, 155, 255, 0.6), radius: 11)
-                }
-            }
             .background {
                 if let report = onTargetFrame {
                     Color.clear

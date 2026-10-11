@@ -4338,5 +4338,9 @@
  "開発用ビルド": {
   "en": "Development build",
   "zh-TW": "開發用組建"
+ },
+ "記録に失敗しました\n{1}": {
+  "en": "Couldn't record that\n{1}",
+  "zh-TW": "紀錄失敗\n{1}"
  }
 }
