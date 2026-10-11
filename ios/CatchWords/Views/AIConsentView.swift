@@ -18,13 +18,13 @@ struct AIConsentView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         header
                         point(icon: "photo.on.rectangle", title: L("送るもの"),
-                              text: L("撮った写真、写真アプリから選んだ画像、スキャンの画面、調べた単語、入力した文章（報告のメモ）、声で調べた言葉（文字にしたもの。音声そのものは送りません）、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。"))
+                              text: L("撮った写真、写真アプリから選んだ画像、「違う単語を入力」で入力した単語、誤りを報告するときに書いたメモ、学ぶ言語やレベルなどの設定。メールアドレスや名前は送りません。"))
                         point(icon: "network", title: L("送り先"),
                               text: L("当社のサーバを通して、外部のAIサービス（Google など）に送ります。送り先の会社と国は、プライバシーポリシーに書いてあります。"))
                         point(icon: "lightbulb", title: L("使い道"),
-                              text: L("写っている物の判定、単語カード・解説・例文の作成のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。"))
+                              text: L("写っている物や入力した単語の判定、単語の解説と例文の作成、報告された誤りの修正のためだけに使います。当社が写真や入力した文章を AI の学習に使うことはありません。"))
                         point(icon: "hand.raised", title: L("同意しない場合"),
-                              text: L("カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。"))
+                              text: L("カメラ、写真アプリの画像、「違う単語を入力」、単語の解説と例文の作成など、AI を使う機能は使えません（何も送りません）。集めた単語を見ることや復習は、そのまま使えます。あとから「設定」で同意することも、取り消すこともできます。"))
                         Text(LegalLinks.aiConsentDetails())
                             .scaledFont(size: 13)
                             .foregroundStyle(Theme.muted)
@@ -55,7 +55,7 @@ struct AIConsentView: View {
                 .foregroundStyle(Theme.foreground)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(L("CatchWords は、写真から単語を見つけたり、単語カードを作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。"))
+            Text(L("CatchWords は、写真から単語を見つけたり、単語の解説や例文を作ったりするために、外部のAIサービスを使います。使い始める前に、送る内容を確かめて、同意するかを選んでください。"))
                 .scaledFont(size: 15)
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -136,7 +136,7 @@ struct AIConsentGateView: View {
                     .scaledFont(size: 22, weight: .heavy)
                     .foregroundStyle(Theme.foreground)
                     .multilineTextAlignment(.center)
-                Text(L("カメラやスキャンで撮った写真は、単語を見つけるために外部のAIサービスに送られます。AIへのデータ送信に同意すると、カメラ・スキャン・単語の検索が使えます。"))
+                Text(L("カメラで撮った写真や写真アプリから選んだ画像は、単語を見つけるために外部のAIサービスに送られます。AIへのデータ送信に同意すると、カメラ、写真アプリの画像、「違う単語を入力」、単語の解説と例文の作成が使えます。"))
                     .scaledFont(size: 15)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
