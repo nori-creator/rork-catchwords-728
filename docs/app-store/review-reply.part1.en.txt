@@ -1,0 +1,21 @@
+Thank you for your review. Please find the requested information below. A screen recording captured on a physical iPad running the latest iPadOS is attached. The build for review is 1.0.0 (1023).
+
+1. Screen recording
+Attached. It starts by launching the app and shows: creating a new account with email, the first-run setup and the consent screen for sending data to AI, the main flow (photograph an object, word tags appear on the objects, tap a word, its sticker, word and pronunciation appear and it is added to the collection), the collection and a word's details with pronunciation, a review question, signing out and signing in again, and deleting the account in the app (Settings > Delete account).
+The app has no content shared between users (no social features, no messaging) and no paid content: this version is free with no in-app purchases.
+
+2. Purpose and target audience
+CatchWords is a vocabulary app for people learning Taiwanese Mandarin (Traditional Chinese as used in Taiwan), mainly Japanese- and English-speaking teenagers and adults. The learner photographs things around them; the app finds the objects in the photo and shows the Taiwanese Mandarin word on each one, including the different ways people actually say it (for example 面紙 / 衛生紙 for "tissue"), each with a short note on when it is used. The learner taps the word they want; it is saved to their personal collection as a sticker cut out of their own photo, with zhuyin, pinyin, meaning, pronunciation audio and example sentences. Saved words come back in short spaced-repetition review questions that show the learner's own photos.
+The problem it solves: words memorized from lists are quickly forgotten, and textbooks often teach words that differ from what people in Taiwan actually say. Words linked to real objects from the learner's own day, in the variant they choose, are easier to remember and to use.
+
+3. How to access the main features
+The demo account is entered in the App Review Information "Sign-in information" fields. It has finished the first-run setup and the AI consent and already has saved words.
+- Launch the app > on the first screen tap "Sign in with email" > enter the demo account's email and password > "Sign in". The demo account shows the app in English (Settings > Language > Your language switches between English and Japanese).
+- Camera tab: photograph any everyday object (a cup, a bottle, a chair), or pick a photo with the Photos button. Word tags appear on the objects after a few seconds. Tap a word: its sticker, the word and its pronunciation appear and the word is added to the collection. A word that is not shown can be looked up with "Type a different word".
+- Collection tab: tap a word to see its details; tap the speaker button to hear it.
+- Review tab: answer a few 4-choice questions.
+- Settings: languages and level, sounds, notifications, Legal (Terms of Use, Privacy Policy, consent to send data to AI), Sign out, and Delete account at the bottom.
+No sample files are needed. Camera, photo library, location and notification permissions are optional and are asked for only when the related feature is used.
+Some diagnostic screens in Settings are shown only to the developer's own account; they do not appear for other users or the demo account and do not change the app's features.
+
+(Part 1 of 2. Sections 4-6 follow in the next message.)
