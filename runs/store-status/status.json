@@ -19,7 +19,7 @@
     {
      "locale": "en-US",
      "name": "CatchWords: Photo Vocabulary",
-     "subtitle": "Snap things, learn the words",
+     "subtitle": "Learn Taiwanese Mandarin words",
      "privacyPolicyUrl": "https://catchwords.lovable.app/privacy"
     },
     {
@@ -31,7 +31,7 @@
     {
      "locale": "ja",
      "name": "CatchWords",
-     "subtitle": "撮った物が単語カードになる",
+     "subtitle": "撮って集める、台湾華語の単語図鑑",
      "privacyPolicyUrl": "https://catchwords.lovable.app/privacy"
     }
    ],
@@ -93,17 +93,17 @@
     "demoAccountRequired": true,
     "demoAccountName": true,
     "demoAccountPassword": true,
-    "notesLength": 831
+    "notesLength": 2894
    },
    "localizations": [
     {
      "locale": "ja",
-     "descriptionLength": 478,
-     "descriptionStart": "街で見つけた物を撮るだけで、学んでいる言葉の単語カードになります。台湾華語・英語・日本語に対応しています。\n\n■ 撮って集める\n・写真に写った物から単語の候補を",
-     "keywords": "台湾華語,中国語,英語,単語,語学,学習,図鑑,写真,ステッカー,復習,台湾",
-     "promotionalText": null,
+     "descriptionLength": 785,
+     "descriptionStart": "身の回りの物を撮るだけで、台湾華語（繁体字）の単語が集まる図鑑アプリです。単語は、自分で撮った写真から切り抜いたステッカーになって図鑑に並びます。\n\n■ 撮ると",
+     "keywords": "台湾華語,中国語,繁体字,単語帳,発音,ピンイン,注音,写真,図鑑,復習,台湾",
+     "promotionalText": "撮った物に、台湾華語の単語がその場で付きます。言い方が複数ある物は、使い分けの説明つきで選べます。",
      "supportUrl": "https://catchwords.lovable.app/support",
-     "marketingUrl": null,
+     "marketingUrl": "https://catchwords.lovable.app",
      "whatsNew": null,
      "screenshots": [
       {
@@ -125,12 +125,12 @@
     },
     {
      "locale": "en-US",
-     "descriptionLength": 1005,
-     "descriptionStart": "Snap anything you see around you and it becomes a word card in the language you'",
-     "keywords": "Mandarin,Chinese,Taiwan,flashcards,language,sticker,review,Japanese,dictionary,study,vocab,camera",
-     "promotionalText": null,
+     "descriptionLength": 1631,
+     "descriptionStart": "Take a photo of things around you and collect their words in Taiwanese Mandarin ",
+     "keywords": "Mandarin,Chinese,Taiwan,Traditional,vocabulary,flashcards,pinyin,zhuyin,camera,photo,study",
+     "promotionalText": "Words in Taiwanese Mandarin appear right on the things you photograph. When there is more than one way to say it, pick the one you want to learn.",
      "supportUrl": "https://catchwords.lovable.app/support",
-     "marketingUrl": null,
+     "marketingUrl": "https://catchwords.lovable.app",
      "whatsNew": null,
      "screenshots": []
     }
@@ -247,7 +247,6 @@
    "CAN",
    "CHE",
    "CHL",
-   "CHN",
    "CIV",
    "CMR",
    "COD",
@@ -393,6 +392,6 @@
    "ZMB",
    "ZWE"
   ],
-  "count": 175
+  "count": 174
  }
 }
