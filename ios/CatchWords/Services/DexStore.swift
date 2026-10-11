@@ -863,7 +863,7 @@ final class DexStore {
               let word = sticker.word else { return }
         heroTried.insert(sticker.id)
         do {
-            guard let first = try await WebImages.search(headword: word.headword, meaning: word.meaningJa).first else { return }
+            guard let first = try await WebImages.search(word: word).first else { return }
             try await setPlaceholder(sticker, to: first)
         } catch {
             heroTried.remove(sticker.id)

@@ -169,7 +169,10 @@ nonisolated enum LanguageRules {
     /// hero-image.ts heroSearchQuery: the words an image search gets for a word's picture. The first
     /// sense of the reader's meaning (自転車, not 腳踏車 — a Mandarin query returns shop photos and
     /// text), without brackets or 〜 placeholders; the headword when nothing is left; at most 40 characters.
-    static func heroSearchQuery(headword: String?, meaning: String?) -> String {
+    /// The card's own English search words (`extras.image_query`) come first when they are usable.
+    static func heroSearchQuery(headword: String?, meaning: String?, imageQuery: String? = nil) -> String {
+        let preferred = cleanImageQuery(imageQuery)
+        if !preferred.isEmpty { return preferred }
         let head = (headword ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         // Brackets first: 「自転車（口語では腳踏車）」 must not be cut at a 、 inside the brackets.
         let noBrackets = (meaning ?? "").replacingOccurrences(
@@ -178,6 +181,26 @@ nonisolated enum LanguageRules {
         let cleaned = first.replacingOccurrences(of: "[〜～…]", with: " ", options: .regularExpression)
             .split(whereSeparator: \.isWhitespace).joined(separator: " ")
         return String((cleaned.isEmpty ? head : cleaned).prefix(40))
+    }
+
+    /// hero-image.ts cleanImageQuery: `extras.image_query` as search words. Brackets and quotes dropped, spaces
+    /// squeezed, cut at a word boundary within 40 characters. A sentence (。!? inside, or more than 6 words) is not used.
+    static func cleanImageQuery(_ raw: String?) -> String {
+        guard let raw else { return "" }
+        var t = raw.replacingOccurrences(of: "[（(【〈《\\[「][^）)】〉》\\]」]*[）)】〉》\\]」]", with: " ", options: .regularExpression)
+        t = t.replacingOccurrences(of: "[\"'“”‘’「」『』]", with: " ", options: .regularExpression)
+        t = t.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        t = t.replacingOccurrences(of: "[。.]+$", with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty, t.range(of: "[。!?！？]", options: .regularExpression) == nil else { return "" }
+        let words = t.split(separator: " ").map(String.init)
+        guard words.count <= 6 else { return "" }
+        var out = ""
+        for w in words {
+            let next = out.isEmpty ? w : "\(out) \(w)"
+            if next.count > 40 { break }
+            out = next
+        }
+        return out
     }
 
     /// Whether `raw` can be a headword of `target`: Mandarin = Han only; English = Latin letters only;

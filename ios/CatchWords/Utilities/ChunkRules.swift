@@ -126,7 +126,7 @@ nonisolated enum ChunkRules {
     /// - C8: a Mandarin noun + adjective gets its degree word (滷味＋很＋入味).
     /// - C5: a degree word can be swapped (很 → 超・非常・有點・蠻).
     static func tidy(_ parts: [ChunkPart], headword: String, target: String, reader: String) -> [ChunkPart] {
-        var out = parts.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
+        var out = withoutSeparatorParts(parts)
         guard target.hasPrefix("zh") else { return out }
         out = mergeCompounds(out, headword: headword)
         out = withDegree(out)
@@ -140,6 +140,93 @@ nonisolated enum ChunkRules {
             }
             return q
         }
+    }
+
+    // MARK: - C14 Separators are not blocks (chunk-grammar.ts withoutSeparatorParts)
+
+    /// The AI sometimes returns the ＋ of the formula (跟＋男朋友＋吵架) as a block: 牛蒡 [+] 炒.
+    /// Blocks made only of separators (+ ＋ ・ / ／ | and spaces) are dropped, and a block holding a separating
+    /// plus (牛蒡+炒) is split there. A half-width + next to a Latin letter, digit or + is part of the word (C++).
+    static func withoutSeparatorParts(_ parts: [ChunkPart]) -> [ChunkPart] {
+        let separatorOnly = CharacterSet(charactersIn: "+＋・･/／|｜").union(.whitespacesAndNewlines)
+        var out: [ChunkPart] = []
+        for p in parts {
+            if p.text.unicodeScalars.allSatisfy({ separatorOnly.contains($0) }) { continue }
+            let pieces = splitOnSeparatorPlus(p.text)
+            if pieces.isEmpty { continue }
+            if pieces.count == 1 {
+                // Only a + at the edge was dropped (炒+): the block is the same, so its other fields stay.
+                var q = p
+                q.text = pieces[0]
+                out.append(pieces[0] == p.text ? p : q)
+                continue
+            }
+            // Split pieces keep only the part of speech: the swaps and meaning belonged to the whole block.
+            out.append(contentsOf: pieces.map { ChunkPart(text: $0, pos: p.pos) })
+        }
+        return out
+    }
+
+    private static func splitOnSeparatorPlus(_ text: String) -> [String] {
+        let chars = Array(text)
+        func near(_ i: Int) -> Bool {
+            guard i >= 0, i < chars.count else { return false }
+            let c = chars[i]
+            return c == "+" || (c.isASCII && (c.isLetter || c.isNumber))
+        }
+        var out: [String] = []
+        var cur = ""
+        for (i, ch) in chars.enumerated() {
+            if ch == "＋" || (ch == "+" && !near(i - 1) && !near(i + 1)) {
+                out.append(cur)
+                cur = ""
+            } else {
+                cur.append(ch)
+            }
+        }
+        out.append(cur)
+        return out.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
+    // MARK: - C15 Broken patterns (chunk-grammar.ts isBrokenUsageChunk)
+
+    /// Ends that make an object-taking verb no longer bare (賣完・吃光・切好・煮熟): 「名詞＋動詞」 is then a topic form.
+    private static let verbCompletion: Set<Character> = Set("了過著完好掉光到住走開起來去成熟爛死錯對滿夠")  // l10n-ignore (Mandarin characters)
+
+    /// A chunk that is not a real way of saying it, kept narrow (owner report 2026-10-09 「嘴邊肉＋切 / 嘴邊肉をする」):
+    /// 1. Mandarin, exactly two blocks: the learned noun, then a bare object-taking verb (pos `V`, 1–2 characters,
+    ///    not ending in a result / aspect character). 嘴邊肉切 is not Mandarin (切嘴邊肉 or 嘴邊肉切一盤 is).
+    /// 2. Not Japanese: the translation only copies the headword (「嘴邊肉をする」, or the headword itself).
+    static func isBroken(_ chunk: UsageChunk, headword: String, target: String) -> Bool {
+        let head = headword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !head.isEmpty else { return false }
+        let parts = withoutSeparatorParts(chunk.parts).filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
+        if target.hasPrefix("zh"), parts.count == 2 {
+            let noun = parts[0], verb = parts[1]
+            let v = verb.text.trimmingCharacters(in: .whitespaces)
+            if noun.text.contains(head), isNounGroup(noun.pos),
+               verb.pos.trimmingCharacters(in: .whitespaces) == "V",
+               !v.contains(head), v.count <= 2, let last = v.last, !verbCompletion.contains(last) {
+                return true
+            }
+        }
+        guard target != "ja", parts.count >= 2 else { return false }
+        var ja = chunk.ja.replacingOccurrences(of: "[（(][^）)]*[）)]", with: "", options: .regularExpression)
+        ja = ja.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
+        ja = ja.replacingOccurrences(of: "[。．.!！]$", with: "", options: .regularExpression)
+        guard !ja.isEmpty else { return false }
+        if ja == head { return true }
+        let escaped = NSRegularExpression.escapedPattern(for: head)
+        let verbs = "(?:を|に)?(?:する|します|やる|行う|おこなう)$"  // l10n-ignore (matching Japanese translations)
+        if ja.range(of: "^[〜~]?\(escaped)\(verbs)", options: .regularExpression) != nil { return true }
+        if ja.range(of: "^[〜~…]+(?:を|に)?(?:する|します|やる)$", options: .regularExpression) != nil { return true }  // l10n-ignore
+        return false
+    }
+
+    /// pos.ts posGroup(pos) == "n": N…, and not a V / M / Adv / … tag.
+    private static func isNounGroup(_ pos: String) -> Bool {
+        let p = pos.trimmingCharacters(in: .whitespaces)
+        return p.uppercased().hasPrefix("N") || p.contains("名詞")  // l10n-ignore (matching server POS)
     }
 
     /// C7: nouns side by side with the headword make one word in Mandarin (芒果＋冰 → 芒果冰, 台灣＋芒果 → 台灣芒果).

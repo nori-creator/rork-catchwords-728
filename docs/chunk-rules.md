@@ -6,7 +6,7 @@
 - 判定の実装：iOS `ios/CatchWords/Utilities/ChunkRules.swift`（形・入れ替え・訳の差し替え）、`LanguageRules.mentionsHeadword`（学ぶ語が入っているか）
 - 表示：iOS `Views/ChunkLineView.swift`（単語の詳細・復習の答えで同じ部品）
 - Web：作る指示 `src/lib/ai.functions.ts`（`formulaChunkRule` / `specificChunkRule`）、表示前の整形 `src/lib/chunk-grammar.ts`、`src/lib/extras.ts`（`refineUsageChunks`）
-- 試験：`ios/LanguageRules/cases.json`（`tidyChunk` / `swapTranslation` / `mentionsHeadword`）。CI が毎回走らせる
+- 試験：`ios/LanguageRules/cases.json`（`tidyChunk` / `swapTranslation` / `mentionsHeadword` / `brokenChunk`）。CI が毎回走らせる
 
 ## ルール
 
@@ -25,6 +25,8 @@
 | C11 | **どの語にも付く組み合わせ**（買・喜歡・這個 だけを足した型）は出さない | Web `generic-chunks.ts`、指示文 |
 | C12 | 訳は**訳だけ**（説明・括弧書きなし）、読む人の言語で。語を入れ替えたら、訳の中の元の語の部分を入れ替えた語の訳に差し替える。見つからない時は「（很 → 非常: 非常に）」と何を替えたかを添える | `swappedTranslation`、`ReaderLanguage.scrub` |
 | C13 | **操作**：四角を押す → その語の発音。点線の四角を押す → その語の発音と、候補の輪（縦にスクロール）。輪で選ぶ → その語の発音、型と訳が入れ替わる。右端のボタン → 入れ替えた後の型ぜんぶの発音 | `ChunkLineView` |
+| C14 | **区切りの記号を四角にしない**。記号だけの四角（+ ＋ ・ / ／ |、空白）は落とし、「牛蒡+炒」は + で切って別の四角にする。英字・数字に付いた + は語の一部（C++） | `withoutSeparatorParts`（`tidy` の最初）、Web `chunk-grammar.ts`、指示文 |
+| C15 | **崩れた型を出さない**。台湾華語で「学ぶ名詞＋裸の他動詞（1〜2字・結果やアスペクトの字で終わらない）」だけの型（嘴邊肉＋切）と、学ぶ語を写しただけの訳（嘴邊肉をする）を落とす | `isBroken`、Web `isBrokenUsageChunk`、指示文 |
 
 ## チャンクの不具合が起きたときの手順（毎回必ず）
 
@@ -50,3 +52,5 @@
 | CH10 | 2026-10-01 | 「芒果」の型が「很＋甜」だけで、芒果が入っていなかった | 指示文も表示も、学ぶ語の有無を見ていなかった | C1 |
 | CH11 | 2026-10-01 | 「芒果＋冰」と1語が分かれた。iOS では入れ替えができず、程度（とても甘い／少し甘い）も変えられなかった | 1語の判定がなかった。iOS は候補（alts）と訳を読み込んでいなかった。CH7 の「副詞は点線にしない」が程度の語まで禁じていた | C5（改正）, C6, C7, C8 |
 | CH12 | 2026-10-01 | 英語の型「a ripe＋mango」が「a ripemango」と継がれて判定・発音された | 英語の継ぎ目を空白にしていなかった | C1（判定）, C13（発音は `spoken`） |
+| CH13 | 2026-10-08 | 「牛蒡 [+] 炒」と + が1つの四角で出た | 指示文の例の ＋ を AI がパーツとして返し、表示がそのまま描いた | C14 |
+| CH14 | 2026-10-09 | 「嘴邊肉＋切」訳「嘴邊肉をする」— 語順が崩れ、訳が写し | 量詞を含めない決まり（C10）に合わせて「嘴邊肉切一盤」から「一盤」だけを抜いた | C15 |

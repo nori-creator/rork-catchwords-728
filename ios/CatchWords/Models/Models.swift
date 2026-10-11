@@ -96,6 +96,10 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
     var counters: [CounterWord]?
     var wordOrigin: String?
     var japanNote: String?
+    /// English search words for the word's picture, written with the card (`image_query`; empty on old cards).
+    var imageQuery: String?
+    /// English words that mean a wrong picture if they show (`image_avoid`: 蓮藕 → flower, pond).
+    var imageAvoid: [String]?
 
     enum CodingKeys: String, CodingKey {
         case mnemonic, synonyms, antonyms, etymology, radicals, trivia
@@ -122,6 +126,8 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         case usageChunks = "usage_chunks"
         case usageContext = "usage_context"
         case measureWords = "measure_words"
+        case imageQuery = "image_query"
+        case imageAvoid = "image_avoid"
     }
 
     init(frequencyLevel: Int? = nil, registerScale: Int? = nil, registerTag: String? = nil,
@@ -173,6 +179,8 @@ nonisolated struct WordExtras: Codable, Sendable, Hashable {
         counters = (try? c.decodeIfPresent([CounterWord].self, forKey: .counters)).flatMap { $0 }
         wordOrigin = (try? c.decodeIfPresent(String.self, forKey: .wordOrigin)).flatMap { $0 }
         japanNote = (try? c.decodeIfPresent(String.self, forKey: .japanNote)).flatMap { $0 }
+        imageQuery = (try? c.decodeIfPresent(String.self, forKey: .imageQuery)).flatMap { $0 }
+        imageAvoid = (try? c.decodeIfPresent([String].self, forKey: .imageAvoid)).flatMap { $0 }
     }
 
     /// related_words, falling back to the legacy synonyms/antonyms string lists (card-sections.ts).

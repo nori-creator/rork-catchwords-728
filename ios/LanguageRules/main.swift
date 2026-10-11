@@ -76,6 +76,9 @@ for c in cases {
         let out = ChunkRules.swappedTranslation(c.text, original: parts, shown: shown, reader: c.reader ?? "ja")
         got = out == (c.expected ?? "")
         if !got { print("::error::\(c.id) [\(c.rule)] translated \(out), expected \(c.expected ?? "") — \(c.why)") }
+    case "brokenChunk":
+        // text = the chunk translation, chunk = its parts, source = headword, target = learning language.
+        got = ChunkRules.isBroken(UsageChunk(parts: parseChunk(c.chunk ?? ""), ja: c.text), headword: c.source ?? "", target: c.target ?? "")
     case "resolveLanguage": got = LanguageRules.resolveWordLanguage(stored: c.reader, headword: c.text) == c.target
     default:
         print("::error::\(c.id): unknown fn \(c.fn)"); failed += 1; continue

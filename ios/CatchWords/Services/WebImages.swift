@@ -38,21 +38,49 @@ enum WebImages {
 
     /// Search candidates. `round` > 0 is 「別の画像」: the web searches again with the headword added.
     static func search(headword: String, meaning: String?, round: Int = 0) async throws -> [WebImageCandidate] {
-        let base = LanguageRules.heroSearchQuery(headword: headword, meaning: meaning)
+        try await search(headword: headword, meaning: meaning, imageQuery: nil, avoid: nil, category: nil, language: nil, round: round)
+    }
+
+    /// A saved word's pictures: its own English search words, the words that mean a wrong picture, its shelf
+    /// and language go with the search, so the server looks for the thing itself (web use-web-images.ts).
+    static func search(word: Word, round: Int = 0) async throws -> [WebImageCandidate] {
+        try await search(headword: word.headword, meaning: word.meaningJa, imageQuery: word.extras?.imageQuery,
+                         avoid: word.extras?.imageAvoid, category: word.categoryKey,
+                         language: LanguageRules.resolveWordLanguage(stored: word.language, headword: word.headword), round: round)
+    }
+
+    /// The headword and the reader's meaning are sent too: when the query is not English, the server decides the
+    /// English search words and what to avoid from them, and checks the pictures against them (image-sense.ts).
+    static func search(headword: String, meaning: String?, imageQuery: String?, avoid: [String]?, category: String?,
+                       language: String?, round: Int = 0) async throws -> [WebImageCandidate] {
+        let base = LanguageRules.heroSearchQuery(headword: headword, meaning: meaning, imageQuery: imageQuery)
         // Never send an empty search (a word with no headword and no meaning simply has no picture).
         guard !base.isEmpty else { return [] }
-        let query = round == 0 ? base : "\(base) \(headword)"
-        if let hit = cache[query] { return hit }
+        // An English query with the Mandarin headword added finds nothing anywhere: only the meaning-based
+        // query gets the headword on 「別の画像」.
+        let english = !LanguageRules.cleanImageQuery(imageQuery).isEmpty
+        let query = round == 0 || english ? base : "\(base) \(headword)"
+        let avoidList = (avoid ?? []).filter { !$0.isEmpty }.prefix(12).map { String($0.prefix(40)) }
+        let key = [query, avoidList.joined(separator: "|"), category ?? "", language ?? "", String(round)].joined(separator: "\u{1F}")
+        if let hit = seeded[headword] ?? cache[key] { return hit }
+        var body: [String: Any] = ["query": String(query.prefix(120)), "headword": String(headword.prefix(80))]
+        let m = (meaning ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !m.isEmpty { body["meaning"] = String(m.prefix(200)) }
+        if !avoidList.isEmpty { body["avoid"] = Array(avoidList) }
+        if let category, !category.isEmpty { body["category"] = String(category.prefix(40)) }
+        if let language, !language.isEmpty { body["language"] = language }
         struct Res: Decodable { let candidates: [WebImageCandidate] }
-        let r = try await NativeAPI.call("searchImageCandidates", ["query": query], as: Res.self, timeout: 60)
-        cache[query] = r.candidates
+        let r = try await NativeAPI.call("searchImageCandidates", body, as: Res.self, timeout: 60)
+        cache[key] = r.candidates
         return r.candidates
     }
 
     /// Previews only: what a search for this word returns, without the network.
     static func seed(headword: String, meaning: String?, candidates: [WebImageCandidate]) {
-        cache[LanguageRules.heroSearchQuery(headword: headword, meaning: meaning)] = candidates
+        seeded[headword] = candidates
     }
+
+    private static var seeded: [String: [WebImageCandidate]] = [:]
 
     private static var inline: [String: UIImage] = [:]
 

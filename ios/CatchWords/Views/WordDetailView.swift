@@ -832,6 +832,8 @@ struct WordDetailView: View {
             if tooLong(r) || text == headword { continue }
             // R20: a chunk that does not contain the word it teaches ("很+甜" for 芒果) is not shown.
             if !LanguageRules.mentionsHeadword(c.parts.map(\.text).joined(separator: " "), headword: headword, target: learningLang) { continue }
+            // C15: a pattern with a word cut out (嘴邊肉＋切) or a translation that copies the word (嘴邊肉をする).
+            if ChunkRules.isBroken(c, headword: headword, target: learningLang) { continue }
             if text.contains(where: { "。！？!?".contains($0) }) { continue }
             if c.parts.contains(where: { $0.pos.uppercased() == "M" || mwords.contains($0.text) }) { continue }
             if mwords.contains(where: { !$0.isEmpty && text.contains($0) }) { continue }
@@ -1374,7 +1376,11 @@ struct WordDetailView: View {
         guard visibleSections.contains(.webImages), !headword.isEmpty else { return }
         webLoading = true
         defer { webLoading = false }
-        guard let found = try? await WebImages.search(headword: headword, meaning: word?.meaningJa, round: webRound),
+        let search: () async throws -> [WebImageCandidate] = { [word, headword, webRound] in
+            if let word, word.headword == headword { return try await WebImages.search(word: word, round: webRound) }
+            return try await WebImages.search(headword: headword, meaning: word?.meaningJa, round: webRound)
+        }
+        guard let found = try? await search(),
               !Task.isCancelled else { return }
         withAnimation(.snappy) { webCandidates = found }
     }
