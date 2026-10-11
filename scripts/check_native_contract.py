@@ -37,13 +37,8 @@ PENDING_WEB_DEPLOY = {
     # Add an entry here as "name": "where the web patch is" when iOS calls a function ahead of its deploy.
     # storeAppleAuthCode (Sign in with Apple revocation, audit R7-03) is on the web's main now.
     # The developer "AI settings" (admin*, docs/admin-ai-api.md) are on the web's main now (PR #168).
-    # The developer's users and metrics screens (設定 › 開発者, Services/AdminAnalytics.swift): read-only admin
-    # aliases of the web's /admin pages. A server without them answers 404 and the screens say the web needs a Publish.
-    "adminListUsers": "nori-creator/Lovable-catch-words-app#178",
-    "adminGetUserDetail": "nori-creator/Lovable-catch-words-app#178",
-    "adminGetOverview": "nori-creator/Lovable-catch-words-app#178",
-    "adminGetDashboard": "nori-creator/Lovable-catch-words-app#178",
-    "adminGetBetaMetrics": "nori-creator/Lovable-catch-words-app#178",
+    # The developer's users and metrics (adminListUsers … adminGetBetaMetrics, Services/AdminAnalytics.swift) are on
+    # the web's main now (PR #178). Until the web is published they answer 404 and the screens say so.
 }
 
 
