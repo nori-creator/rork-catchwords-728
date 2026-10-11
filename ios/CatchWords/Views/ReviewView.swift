@@ -5,7 +5,8 @@ struct ReviewView: View {
     @Environment(DexStore.self) private var dex
     @Environment(ProfileStore.self) private var profile
     @Environment(AppRouter.self) private var router
-    @State private var store = ReviewStore()
+    /// Kept by the app (not this screen): read and made ready before the tab opens (`ReviewStore.preload`).
+    @Environment(ReviewStore.self) private var store
     @State private var legendOpen: Bool = false
     @State private var curveSticker: Sticker?
     /// Verdict for the current card (nil until a choice is picked).
@@ -17,15 +18,23 @@ struct ReviewView: View {
     @State private var swipeX: CGFloat = 0
     /// The answer sheet's real height (it grows with the explanation): the question scrolls clear of it.
     @State private var panelHeight: CGFloat = 420
-    /// The scroll view's height and the header + memory bar's height: the quiz card is sized from what is left,
-    /// so the photo and all four choices are on screen together when the page opens (even on an iPhone SE).
+    /// The screen's height (inside the safe area) and the header + memory bar's height: the quiz card is sized from
+    /// what is left above the tab bar, so the photo and all four choices fit on screen together, with nothing to
+    /// scroll, on every size (owner 2026-10-11: 「スクロールしなくてもきっちり画面内にぴったり収まるように」).
     @State private var viewportHeight: CGFloat = 0
     @State private var topHeight: CGFloat = 0
     @Environment(\.appReduceMotion) private var reduceMotion
 
+    /// Room kept under the card for the floating tab bar (58 pt + its 4 pt + a little air).
+    private static let tabBarClearance: CGFloat = 70
+
     var body: some View {
         ZStack {
             AppBackground()
+            GeometryReader { geo in
+                Color.clear.onAppear { viewportHeight = geo.size.height }
+                    .onChange(of: geo.size.height) { _, h in viewportHeight = h }
+            }
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
@@ -48,16 +57,13 @@ struct ReviewView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
-                    // Room under the last choice for the whole sheet, however tall its explanation is.
-                    .padding(.bottom, answer == nil ? 120 : panelHeight + 16)
+                    // Unanswered: only the tab bar's room (the card already fits). Answered: room under the last
+                    // choice for the whole sheet, however tall its explanation is.
+                    .padding(.bottom, answer == nil ? Self.tabBarClearance : panelHeight + 16)
                 }
+                // Nothing to scroll while it fits (a very large text size can still scroll).
+                .scrollBounceBehavior(.basedOnSize)
                 .refreshable { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
-                .onGeometryChange(for: CGFloat.self) { geo in
-                    // Only the part clear of the status bar and the home indicator (if the frame reaches under them).
-                    geo.size.height - geo.safeAreaInsets.top - geo.safeAreaInsets.bottom
-                } action: { h in
-                    viewportHeight = h
-                }
                 .statusBarScrim()
                 // A long question (English meanings especially) sat under the sheet that slides up: once
                 // answered, bring the question to the top so all of it stays readable above the sheet.
@@ -131,7 +137,13 @@ struct ReviewView: View {
         }
         .task {
             if store.hasLoaded, store.loadedTarget != NativeAPI.targetLanguage { store.reset() }
-            if !store.hasLoaded { await store.load(dex: dex, limit: profile.effectiveReviewLimit) }
+            if !store.hasLoaded {
+                await store.load(dex: dex, limit: profile.effectiveReviewLimit)
+                await store.prefetchUpcoming(dex: dex)
+            } else {
+                // Read at launch (`preload`): shown at once; a queue read long ago is read again on its first card.
+                await store.refreshIfStale(dex: dex, limit: profile.effectiveReviewLimit)
+            }
             applyReviewNow()
         }
         // 「いま復習する」 on a word's page: that word becomes the next card, due or not.
@@ -191,11 +203,11 @@ struct ReviewView: View {
         if answered { goNext() }
     }
 
-    /// The height the quiz card may take so it ends above the tab bar (58 pt + 4 pt, plus a little air):
-    /// the viewport minus the top padding, the header + memory bar, the gap, and the tab bar. nil until measured.
+    /// The height the quiz card may take so it ends above the tab bar: the screen (inside the safe area) minus the
+    /// top padding, the header + memory bar, the gap, and the tab bar's room. nil until measured.
     private var quizFitHeight: CGFloat? {
         guard viewportHeight > 0, topHeight > 0 else { return nil }
-        return viewportHeight - 8 - topHeight - 10 - 70
+        return viewportHeight - 8 - topHeight - 10 - Self.tabBarClearance
     }
 
     private func closeCurve() {
@@ -412,11 +424,16 @@ struct QuizCard: View {
     private static let cardPadding: CGFloat = 12
     private static let gap: CGFloat = 10
 
+    /// A short screen (an iPhone SE, a large text size, this iPhone app on an iPad): the choices sit a little closer
+    /// so the photo keeps a useful size. Decided from the space alone (never from what is measured inside the card,
+    /// which this changes).
+    private var compact: Bool { (fitHeight ?? 1000) < 460 }
+
     /// The photo's height: what is left of `fitHeight`, kept between a small but readable picture and 300 pt.
     private var photoHeight: CGFloat {
-        guard let fitHeight, lowerHeight > 0 else { return 200 }
+        guard let fitHeight, lowerHeight > 0 else { return compact ? 120 : 200 }
         let left = fitHeight - lowerHeight - Self.gap - Self.cardPadding * 2
-        return min(300, max(84, left))
+        return min(300, max(64, left))
     }
 
     private var correctHead: String { card.sticker.word?.headword ?? "" }
@@ -443,12 +460,15 @@ struct QuizCard: View {
                     if let percent { badge(percent) }
                 }
             } else {
-                let path = card.sticker.heroPath
-                Theme.secondary
+                // The word's cut-out, as in the dex and on its page (owner 2026-10-11); a photo without one keeps its box.
+                let shown = dex.sticker(id: card.sticker.id) ?? card.sticker
+                let path = shown.dexImagePath
+                (shown.dexShowsCutout ? Color.clear : Theme.secondary)
                     .frame(height: photoHeight)
                     .overlay {
                         StickerImage(path: path, url: dex.url(for: path, preferThumb: false), contentMode: .fit)
-                            .padding(6)
+                            .padding(shown.dexShowsCutout ? 2 : 6)
+                            .shadow(color: .black.opacity(shown.dexShowsCutout ? 0.16 : 0), radius: 8, y: 5)
                             .allowsHitTesting(false)
                     }
                     .clipShape(.rect(cornerRadius: 22, style: .continuous))
@@ -467,7 +487,7 @@ struct QuizCard: View {
                     .fixedSize(horizontal: false, vertical: true)   // every line of a long meaning, never "…"
                     .id(Self.questionID)
 
-                VStack(spacing: 8) {
+                VStack(spacing: compact ? 6 : 8) {
                     ForEach(choices) { c in choiceRow(c) }
                 }
                 .offset(x: shake)
@@ -521,11 +541,11 @@ struct QuizCard: View {
             Button { answer(c) } label: {
                 // The speaker (40 pt + 10 trailing) and the ✓/✗ mark sit over the row: the word keeps clear of
                 // both sides, so a long one ("washing machine") wraps or shrinks instead of running under them.
-                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: 28, weight: .bold)
+                ZhuyinWordView(headword: c.headword, zhuyin: c.zhuyin, size: compact ? 25 : 28, weight: .bold)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Self.choiceSideInset)
-                    .padding(.vertical, 5)
-                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .padding(.vertical, compact ? 3 : 5)
+                    .frame(maxWidth: .infinity, minHeight: compact ? 48 : 56)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressableStyle(scale: 0.97))

@@ -39,6 +39,9 @@ final class ReviewStore {
     var dueRemaining: Int = 0
     /// Every review_history row (overall retention line + streak).
     var allHistory: [ReviewHistoryRow] = []
+    /// When the queue was last read: one older than 5 minutes is read again when the review tab opens on its first
+    /// card (a word caught meanwhile comes due 10 minutes after its catch).
+    private(set) var loadedAt: Date?
 
     private let client = SupabaseClient.shared
 
@@ -56,11 +59,12 @@ final class ReviewStore {
     /// The learning language the queue was built for (R5: a switched language must not keep the old cards).
     private(set) var loadedTarget: String = ""
 
-    /// Forget the queue (the learning language changed).
+    /// Forget the queue (the learning language changed, or the account signed out).
     func reset() {
         queue = []
         index = 0
         hasLoaded = false
+        loadedAt = nil
         choiceCache = [:]
         loadedTarget = ""
         doneToday = 0
@@ -104,6 +108,44 @@ final class ReviewStore {
 
     var current: ReviewCard? { index < queue.count ? queue[index] : nil }
 
+    // MARK: - Ready before the tab opens (owner 2026-10-11: 「復習問題も事前に準備し、タップしたらラグなしで」)
+
+    /// True when reading the queue again now would not pull a card from under the learner: nothing answered in this
+    /// round yet (or the round is over), and not a retry of missed words.
+    var canRefresh: Bool { !isRetry && (index == 0 || current == nil) }
+
+    /// Reads today's queue ahead of time (right after the dex is read at launch, and when the app comes back), then
+    /// puts the next cards' pictures and voices on the phone, so the review shows its first card at once.
+    func preload(dex: DexStore, limit: Int) async {
+        guard client.session != nil, !isLoading, canRefresh else { return }
+        if let at = loadedAt, Date().timeIntervalSince(at) < 60, loadedTarget == NativeAPI.targetLanguage { return }
+        await load(dex: dex, limit: limit)
+        await prefetchUpcoming(dex: dex)
+    }
+
+    /// The review tab opened: a queue read more than 5 minutes ago is read again (on its first card only).
+    func refreshIfStale(dex: DexStore, limit: Int) async {
+        guard hasLoaded, canRefresh, let at = loadedAt, Date().timeIntervalSince(at) > 300 else { return }
+        await load(dex: dex, limit: limit)
+        await prefetchUpcoming(dex: dex)
+    }
+
+    /// The next cards' pictures (full size, as the quiz shows them) on disk — the first one decoded into memory —
+    /// and the voices of their words and choices. Choices are drawn here once, so the card shows the same four.
+    func prefetchUpcoming(dex: DexStore, count: Int = 8) async {
+        let upcoming = Array(queue.dropFirst(index).prefix(count))
+        guard !upcoming.isEmpty else { return }
+        for card in upcoming {
+            for c in choices(for: card, dex: dex) { SoundService.shared.prefetch(c.headword) }
+        }
+        let paths = upcoming.compactMap(\.sticker.dexImagePath)
+        if let first = paths.first {
+            if dex.url(for: first, preferThumb: false) == nil { await dex.prefetchPictures([first]) }
+            if let url = dex.url(for: first, preferThumb: false) { _ = await ImageCache.shared.load(url: url, key: first) }
+        }
+        await dex.prefetchPictures(Array(paths.dropFirst()))
+    }
+
     func load(dex: DexStore, limit: Int) async {
         // Local guest (no account): nothing to review, but the screen must leave its spinner.
         guard client.session != nil else {
@@ -113,8 +155,11 @@ final class ReviewStore {
             hasLoaded = true
             return
         }
-        choiceCache = [:]
+        // The card on screen stays on screen with the same four choices when the queue is read again (a refresh
+        // when the tab opens must never swap the card or reshuffle its buttons under the learner's eyes).
+        let shownFirst = index == 0 && !isRetry ? current?.id : nil
         isLoading = true
+        prefetchDex = dex
         defer { isLoading = false }
         async let historyTask = loadHistory(dex: dex)
         do {
@@ -135,7 +180,13 @@ final class ReviewStore {
             await historyTask  // doneToday is now this language's count
             // The daily limit reached: nothing more today (web getDueReviews returns [] then), but say so.
             let room = max(0, limit - doneToday)
-            queue = Array(cards.prefix(room))
+            var next = Array(cards.prefix(room))
+            if let shownFirst, let i = next.firstIndex(where: { $0.id == shownFirst }), i > 0 {
+                next.insert(next.remove(at: i), at: 0)
+            }
+            queue = next
+            let kept = Set(next.map(\.sticker.id))
+            choiceCache = choiceCache.filter { kept.contains($0.key) }
             capped = room == 0 && !cards.isEmpty
             dueRemaining = cards.count - queue.count
             moreAvailable = dueRemaining > 0
@@ -146,6 +197,7 @@ final class ReviewStore {
             correctCount = 0
             loadError = nil
             hasLoaded = true
+            loadedAt = Date()
         } catch is CancellationError {
             await historyTask
         } catch {
@@ -256,7 +308,13 @@ final class ReviewStore {
 
     func advance() {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { index += 1 }
+        // The card after next is made ready while this one is answered.
+        guard let dex = prefetchDex else { return }
+        Task { await prefetchUpcoming(dex: dex, count: 3) }
     }
+
+    /// The dex the queue was read from (for preparing the next cards as the round goes on).
+    @ObservationIgnored private weak var prefetchDex: DexStore?
 
     func history(stickerId: String) async -> [ReviewHistoryRow] {
         guard let data = try? await client.rest(

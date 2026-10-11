@@ -16,11 +16,12 @@ struct SettingsView: View {
     @AppStorage("sound.level") private var soundLevel: String = "subtle"
     @AppStorage("reading.pref") private var readingPref: String = "zhuyin"
     @AppStorage("reading.ja") private var readingJa: String = "kana"
-    @AppStorage("photo.pref") private var photoPref: String = "auto"
+    @AppStorage(Sticker.homePhotoKey) private var photoPref: String = "auto"
     @AppStorage("selfie.mode") private var selfieMode: Bool = false
-    @AppStorage(CaptureViewModel.cutoutModeKey) private var cutoutMode: Bool = true
     @AppStorage("theme.pref") private var themePref: String = "light"
     @AppStorage(MotionPreference.key) private var motionPref: String = MotionPreference.defaultValue
+    /// What actually moves now (the switch shows this: 自動 follows the iPhone until the switch is used).
+    @Environment(\.appReduceMotion) private var reduceMotion
     @AppStorage(ReminderService.modeKey) private var reminderMode: String = "off"
     @AppStorage(ReminderService.timesKey) private var reminderTimes: String = ReminderService.defaultTime
     @AppStorage(ReminderService.placeKey) private var placeRemind: Bool = false
@@ -35,9 +36,9 @@ struct SettingsView: View {
     @State private var isDeleting: Bool = false
     @State private var deleteError: String?
     @State private var confirmSignOut: Bool = false
-    @State private var showAIConsent: Bool = false
-    @State private var confirmWithdrawAI: Bool = false
+    @State private var showAIConsentSettings: Bool = false
     @State private var showAdminAi: Bool = false
+    @State private var adminScreen: AdminScreen?
 
     var body: some View {
         ScrollView {
@@ -48,10 +49,11 @@ struct SettingsView: View {
                 notifySection
                 appearanceSection
                 feelSection
-                aiConsentSection
+                if PlanStore.paywallEnabled { proSection }
+                // The AI consent sits with the terms and the privacy policy, as on the web (owner 2026-10-11).
+                legalSection
                 // Admins only (the server's answer for this account); nobody else ever sees this section.
                 if AdminAccess.shared.isAdmin { developerSection }
-                if PlanStore.paywallEnabled { proSection } else { legalSection }
                 accountButtons
             }
             .padding(.horizontal, 16)
@@ -60,7 +62,10 @@ struct SettingsView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .statusBarScrim()
+        // 「保存しました」 (web SaveStatusPill): top centre, over the scrolled content.
+        .overlay(alignment: .top) { SaveStatusPill() }
         .background(AppBackground())
+        .onDisappear { SaveStatus.shared.clear() }
         .overlay {
             if let wheel {
                 WheelCard(field: wheel, profile: profile) { closeWheel() }
@@ -82,6 +87,16 @@ struct SettingsView: View {
             NavigationStack { AdminAiSettingsView() }
                 .presentationBackground(Theme.background)
         }
+        .sheet(item: $adminScreen) { screen in
+            NavigationStack { screen.view }
+                .presentationBackground(Theme.background)
+        }
+        .sheet(isPresented: $showAIConsentSettings) {
+            AIConsentSettingsSheet()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(32)
+        }
         .onChange(of: profile.displayName) { _, v in if !nameFocused { nameDraft = v } }
         .onChange(of: avatarItem) { _, item in
             guard let item else { return }
@@ -89,6 +104,7 @@ struct SettingsView: View {
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let img = await ImageTools.downsampledInBackground(data, maxSide: 1024) {
                     await profile.uploadAvatar(img)
+                    if profile.message == nil { SaveStatus.shared.saved() }
                 } else {
                     profile.message = L("写真を読み込めませんでした。")
                 }
@@ -148,7 +164,10 @@ struct SettingsView: View {
                 wheelRow(ProfileStore.nativeOptions.first { $0.value == profile.nativeLanguage }?.label ?? L("日本語")) { openWheel(.native) }
                     .accessibilityIdentifier("settings.wheel.native")
                 label(L("学習言語")).padding(.top, 6)
-                wheelRow(ProfileStore.targetOptions.first { $0.value == profile.targetLanguage }?.label ?? L("繁體字（台灣）")) { openWheel(.target) }
+                // Only 繁體字（台灣） is offered for now (ProfileStore.offeredTargets): with nothing else to pick the row
+                // just names it; an account on a hidden language still opens the wheel to switch.
+                wheelRow(ProfileStore.targetLabel(profile.targetLanguage),
+                         interactive: ProfileStore.targetChoices(current: profile.targetLanguage).count > 1) { openWheel(.target) }
                     .accessibilityIdentifier("settings.wheel.target")
                 label(L("今のレベル")).padding(.top, 6)
                 wheelRow(levels.first { $0.value == profile.currentLevel }?.label ?? profile.currentLevel) { openWheel(.current) }
@@ -162,9 +181,9 @@ struct SettingsView: View {
                     .scaledFont(size: 12).foregroundStyle(Theme.muted)
                 if !isEnglish { label(L("発音表記")).padding(.top, 6) }
                 if profile.targetLanguage == "ja" {
-                    ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: $readingJa)
+                    ChoicePills(options: [("kana", L("あ ふりがな")), ("romaji", L("abc ローマ字"))], selection: saving($readingJa))
                 } else if !isEnglish {
-                    ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: $readingPref)
+                    ChoicePills(options: [("zhuyin", L("ㄅㄆㄇ 注音")), ("pinyin", L("abc ピンイン"))], selection: saving($readingPref))
                 }
                 if let m = profile.message {
                     Text(m).font(.footnote).foregroundStyle(Theme.destructive)
@@ -176,15 +195,12 @@ struct SettingsView: View {
     private var studySection: some View {
         SettingsCard(title: L("学習設定")) {
             VStack(alignment: .leading, spacing: 10) {
-                label(L("表示するタイプ"))
-                // Web photo-pref: which picture shows on home, dex and review when a word has no choice of its own.
-                // iOS keeps 切り抜き (cut-out mode is iOS's own).
-                // The default "auto" (never chosen) shows exactly what 切り抜き shows (Sticker.heroPath: cut-out,
-                // else the photo), so it lights 切り抜き instead of leaving no pill selected (R6-10). The web
-                // has no おまかせ button either (removed by the owner 2026-08-26); the stored value is kept until
-                // a pill is tapped.
+                label(L("ホームに表示する写真"))
+                // The home album's picture only (owner 2026-10-11): the dex, the word page and the review always show
+                // the cut-out. The default "auto" (never chosen) is the cut-out, so it lights 切り抜き (R6-10).
                 ChoicePills(options: [("object", L("元の写真")), ("cutout", L("切り抜き")), ("selfie", L("自撮り"))],
-                            selection: Binding(get: { photoPref == "auto" ? "cutout" : photoPref }, set: { photoPref = $0 }))
+                            selection: saving(Binding(get: { photoPref == "auto" ? "cutout" : photoPref }, set: { photoPref = $0 })))
+                    .accessibilityIdentifier("settings.homePhoto")
                 label(L("1日の復習枚数")).padding(.top, 6)
                 ChoicePills(
                     options: [("10", "10"), ("20", "20"), ("30", "30"), ("50", "50"), ("0", L("無制限"))],
@@ -193,16 +209,14 @@ struct SettingsView: View {
                         set: { v in
                             let n = Int(v) ?? 20
                             profile.reviewDailyLimit = n
-                            Task { await profile.update(["review_daily_limit": n]) }
+                            Task { if await profile.update(["review_daily_limit": n]) { SaveStatus.shared.saved() } }
                         }
                     )
                 )
                 Divider().overlay(Theme.border).padding(.top, 8)
-                SettingsToggle(title: L("自撮りモード"), detail: L("単語を撮ったあと、続けてその場の自分を撮る画面に進みます"), isOn: $selfieMode)
+                SettingsToggle(title: L("自撮りモード"), detail: L("単語を撮ったあと、続けてその場の自分を撮る画面に進みます"), isOn: saving($selfieMode))
                 Divider().overlay(Theme.border)
-                SettingsToggle(title: L("カメラロールに保存"), detail: L("撮った写真をスマホの写真アプリにも残します"), isOn: $photoSync)
-                Divider().overlay(Theme.border)
-                SettingsToggle(title: L("切り抜きモード"), detail: L("単語を選ぶと写っている物を切り抜いて、ステッカーにしてから図鑑に入れます。オフにすると写真のまま入れます"), isOn: $cutoutMode)
+                SettingsToggle(title: L("カメラロールに保存"), detail: L("撮った写真をスマホの写真アプリにも残します"), isOn: saving($photoSync))
             }
         }
     }
@@ -238,14 +252,19 @@ struct SettingsView: View {
                     options: [("light", L("ライト")), ("dark", L("ダーク")), ("system", L("システム"))],
                     selection: Binding(get: { themePref }, set: { v in
                         withAnimation(.easeInOut(duration: 0.35)) { themePref = v }
+                        SaveStatus.shared.saved()
                     })
                 )
                 Text(L("ホームのアルバムは、紙の手触りのためいつも明るい色で表示します。"))
                     .scaledFont(size: 12).foregroundStyle(Theme.muted)
-                label(L("アニメーション")).padding(.top, 6)
-                // 自動 follows the iPhone's Reduce Motion, 見せる always moves, 減らす always moves less (MotionPreference).
-                ChoicePills(options: [(MotionPreference.system, L("自動")), (MotionPreference.full, L("見せる")),
-                                      (MotionPreference.reduce, L("減らす"))], selection: $motionPref)
+                Divider().overlay(Theme.border).padding(.top, 8)
+                // A switch, as on the web (owner 2026-10-11: 「アニメーションはスライドのON/OFFに」): it shows what moves
+                // now — the iPhone's Reduce Motion until it is used — and then keeps 見せる (on) or 減らす (off).
+                SettingsToggle(title: L("アニメーション"), detail: nil, isOn: Binding(get: { !reduceMotion }, set: { on in
+                    motionPref = on ? MotionPreference.full : MotionPreference.reduce
+                    SaveStatus.shared.saved()
+                }))
+                .accessibilityIdentifier("settings.motion")
             }
         }
     }
@@ -259,118 +278,79 @@ struct SettingsView: View {
                     selection: Binding(get: { soundLevel }, set: { v in
                         soundLevel = v
                         if v != "off" { SoundService.shared.play(.landBounce) }
+                        SaveStatus.shared.saved()
                     })
                 )
                 SettingsToggle(title: L("振動"), detail: nil, isOn: Binding(get: { haptics }, set: { v in
                     haptics = v
                     if v { Haptics.impact(.medium) }
+                    SaveStatus.shared.saved()
                 }))
                 .padding(.top, 6)
             }
         }
     }
 
-    /// AIへのデータ送信の同意 (AIConsent): its state, reading it again, agreeing later or withdrawing it.
-    private var aiConsentSection: some View {
-        let consent = AIConsent.shared
-        return SettingsCard(title: L("プライバシー")) {
-            VStack(alignment: .leading, spacing: 8) {
-                label(L("AIへのデータ送信の同意"))
-                Text(aiConsentStatus)
-                    .scaledFont(size: 13).foregroundStyle(Theme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("settings.aiConsent.status")
-                HStack(spacing: 18) {
-                    Button(consent.isGranted ? L("内容を見る") : L("内容を確認して同意する")) { showAIConsent = true }
-                        .foregroundStyle(Theme.primaryInk)
-                        .accessibilityIdentifier("settings.aiConsent.review")
-                    if consent.isGranted {
-                        Button(L("同意を取り消す")) { confirmWithdrawAI = true }
-                            .foregroundStyle(Theme.destructive)
-                            .accessibilityIdentifier("settings.aiConsent.withdraw")
-                    }
-                }
-                .scaledFont(size: 14, weight: .semibold)
-                .frame(minHeight: 44)
-            }
-        }
-        .confirmationDialog(L("AIへのデータ送信の同意を取り消しますか？"), isPresented: $confirmWithdrawAI, titleVisibility: .visible) {
-            Button(L("同意を取り消す"), role: .destructive) {
-                AIConsent.shared.decline()
-                Haptics.warning()
-            }
-        } message: {
-            Text(L("取り消すと、カメラ・スキャン・単語カードの作成など、AI を使う機能は使えなくなります。集めた単語と復習はそのまま使えます。"))
-        }
-        .aiConsentSheet(isPresented: $showAIConsent)
-    }
-
-    /// 開発者: the AI settings (web docs/admin-ai-api.md). Shown only while `AdminAccess` says admin.
+    /// 開発者 (admins only, the server's answer for this account): the users and the numbers the web shows its admin
+    /// (owner 2026-10-11: 「開発者の私だけ…web版と同じように、利用者やアプリの詳しい情報、分析が見えるように」),
+    /// this app's own details, and the AI settings (web docs/admin-ai-api.md).
     private var developerSection: some View {
-        SettingsCard(title: L("開発者")) {
-            Button { showAdminAi = true } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "cpu").scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.primary)
-                        .accessibilityHidden(true)
-                    Text(L("AI の設定（開発者）")).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
-                    Spacer()
-                    Image(systemName: "chevron.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
-                        .accessibilityHidden(true)
-                }
-                .frame(minHeight: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("settings.adminAi")
-        }
-    }
-
-    private var aiConsentStatus: String {
-        switch AIConsent.shared.status {
-        case .granted(let date):
-            let day = date.formatted(.dateTime.year().month().day().locale(L10n.locale))
-            return L("同意しています（\(day)）。写真や入力した単語・文章を、当社のサーバを通して外部のAIサービス（Google など）に送ります。")
-        case .declined:
-            return L("同意していません。カメラ・スキャン・単語カードの作成など、AI を使う機能は使えません。")
-        case .undecided:
-            return L("まだ選んでいません。AI を使う機能を使う前に確認します。")
-        }
-    }
-
-    /// Free-only release: support and the legal links (the Pro card has them too).
-    private var legalSection: some View {
-        SettingsCard(title: L("このアプリについて")) {
-            VStack(alignment: .leading, spacing: 6) {
-                supportRow
+        SettingsCard(title: L("開発者専用（あなたにしか表示されません）")) {
+            VStack(spacing: 0) {
+                devRow(icon: "person.2", title: L("利用者ごとの情報"), id: "settings.adminUsers") { adminScreen = .users }
                 Divider().overlay(Theme.border)
-                HStack(spacing: 18) {
-                    Link(L("利用規約"), destination: AppConfig.termsURL)
-                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
-                }
-                .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
-                .frame(minHeight: 44)
-                tokushohoLink
+                devRow(icon: "chart.bar.xaxis", title: L("KPIダッシュボード"), id: "settings.adminMetrics") { adminScreen = .metrics }
+                Divider().overlay(Theme.border)
+                devRow(icon: "waveform.path.ecg", title: L("ベータの指標"), id: "settings.adminBeta") { adminScreen = .beta }
+                Divider().overlay(Theme.border)
+                devRow(icon: "iphone", title: L("アプリの情報"), id: "settings.appInfo") { adminScreen = .appInfo }
+                Divider().overlay(Theme.border)
+                devRow(icon: "cpu", title: L("AI の設定（開発者）"), id: "settings.adminAi") { showAdminAi = true }
             }
         }
     }
 
-    /// お問い合わせ・サポート: the support page on the web app (App Review asks for a way to reach us).
-    private var supportRow: some View {
-        Link(destination: AppConfig.supportURL) {
+    private func devRow(icon: String, title: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: "questionmark.bubble").scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.primary)
-                Text(L("お問い合わせ・サポート")).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
+                Image(systemName: icon).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.primary)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text(title).scaledFont(size: 17, weight: .semibold).foregroundStyle(Theme.foreground)
                 Spacer()
-                Image(systemName: "arrow.up.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
+                Image(systemName: "chevron.right").scaledFont(size: 13, weight: .semibold).foregroundStyle(Theme.muted)
+                    .accessibilityHidden(true)
             }
-            .frame(minHeight: 44).contentShape(Rectangle())
+            .frame(minHeight: 50).contentShape(Rectangle())
         }
-        .accessibilityIdentifier("settings.support")
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 
-    private var tokushohoLink: some View {
-        Link(L("特定商取引法に基づく表記"), destination: AppConfig.tokushohoURL)
-            .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
+    /// 規約と表記 (web `LegalLinksCard`): the terms, the privacy policy, the AI consent right after it (as on the web,
+    /// owner 2026-10-11), the commerce notice and support — one wrapping row of links.
+    private var legalSection: some View {
+        SettingsCard(title: L("規約と表記")) {
+            FlowRow(spacing: 18) {
+                Link(destination: AppConfig.termsURL) { legalLabel(L("利用規約")) }
+                Link(destination: AppConfig.privacyURL) { legalLabel(L("プライバシーポリシー")) }
+                Button { showAIConsentSettings = true } label: { legalLabel(L("AIへのデータ送信")) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.aiConsent")
+                Link(destination: AppConfig.tokushohoURL) { legalLabel(L("特定商取引法に基づく表記")) }
+                Link(destination: AppConfig.supportURL) { legalLabel(L("お問い合わせ・サポート")) }
+                    .accessibilityIdentifier("settings.support")
+            }
+        }
+    }
+
+    private func legalLabel(_ title: String) -> some View {
+        Text(title)
+            .scaledFont(size: 14, weight: .medium)
+            .underline()
+            .foregroundStyle(Theme.primaryInk)
             .frame(minHeight: 44)
+            .contentShape(Rectangle())
     }
 
     private var proSection: some View {
@@ -390,16 +370,10 @@ struct SettingsView: View {
                     }
                     .buttonStyle(PressableStyle())
                 }
-                HStack(spacing: 18) {
-                    Button(L("購入を復元")) { Task { await plan.restore() } }
-                    Link(L("利用規約"), destination: AppConfig.termsURL)
-                    Link(L("プライバシー"), destination: AppConfig.privacyURL)
-                }
-                .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
-                .frame(minHeight: 44)
-                tokushohoLink
-                Divider().overlay(Theme.border)
-                supportRow
+                // The terms, privacy policy and support are in 規約と表記 below.
+                Button(L("購入を復元")) { Task { await plan.restore() } }
+                    .scaledFont(size: 14, weight: .medium).foregroundStyle(Theme.primaryInk)
+                    .frame(minHeight: 44)
                 if let msg = plan.message { Text(msg).font(.footnote).foregroundStyle(Theme.muted) }
             }
         }
@@ -527,12 +501,24 @@ struct SettingsView: View {
             .background(Color(light: 0xFFF5DB, dark: 0x2A2210), in: .rect(cornerRadius: 12))
     }
 
-    private func wheelRow(_ value: String, action: @escaping () -> Void) -> some View {
+    /// A device setting that says 「保存しました」 when it changes (web: `settingsSaveStatus.saved()`).
+    private func saving<T: Equatable>(_ binding: Binding<T>) -> Binding<T> {
+        Binding(get: { binding.wrappedValue }, set: { v in
+            guard v != binding.wrappedValue else { return }
+            binding.wrappedValue = v
+            SaveStatus.shared.saved()
+        })
+    }
+
+    /// `interactive: false`: only one choice exists, so the row names it without a chevron and opens nothing.
+    private func wheelRow(_ value: String, interactive: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Text(value).scaledFont(size: 18).foregroundStyle(Theme.foreground)
                 Spacer()
-                Image(systemName: "chevron.down").scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.muted)
+                if interactive {
+                    Image(systemName: "chevron.down").scaledFont(size: 14, weight: .semibold).foregroundStyle(Theme.muted)
+                }
             }
             .padding(.horizontal, 20).frame(minHeight: 56)
             .background(LinearGradient(colors: [Theme.card, Color(light: 0xEEF5FF, dark: 0x132032)], startPoint: .topLeading, endPoint: .bottomTrailing),
@@ -541,6 +527,7 @@ struct SettingsView: View {
             .shadow(color: Theme.primary.opacity(0.06), radius: 6, y: 3)
         }
         .buttonStyle(PressableStyle(scale: 0.98))
+        .disabled(!interactive)
     }
 
     // MARK: - Actions
@@ -558,7 +545,7 @@ struct SettingsView: View {
         let v = nameDraft.trimmingCharacters(in: .whitespaces)
         guard !v.isEmpty, v != profile.displayName else { return }
         profile.displayName = v
-        Task { await profile.update(["display_name": v]) }
+        Task { if await profile.update(["display_name": v]) { SaveStatus.shared.saved() } }
     }
 
     private func setReminderMode(_ mode: String) {
@@ -571,6 +558,7 @@ struct SettingsView: View {
             }
             notifyDenied = false
             reminderMode = mode
+            SaveStatus.shared.saved()
             let times = ReminderService.parseTimes(reminderTimes)
             await ReminderService.applyReview(mode: mode, times: times, due: dex.upcomingDueTimes)
             await ReminderService.saveToAccount(mode: mode, times: times)
@@ -579,6 +567,7 @@ struct SettingsView: View {
 
     private func saveTimes(_ list: [String]) {
         reminderTimes = list.joined(separator: ",")
+        SaveStatus.shared.saved()
         Task {
             await ReminderService.applyReview(mode: reminderMode, times: list, due: dex.upcomingDueTimes)
             await ReminderService.saveToAccount(mode: reminderMode, times: list)
@@ -593,6 +582,7 @@ struct SettingsView: View {
                 return
             }
             placeRemind = on
+            SaveStatus.shared.saved()
             await ReminderService.applyPlaces(enabled: on, stickers: dex.stickers)
         }
     }
@@ -712,6 +702,22 @@ struct SettingsToggle: View {
     }
 }
 
+/// The developer screens opened from 設定 › 開発者 (each a sheet with its own navigation).
+enum AdminScreen: String, Identifiable {
+    case users, metrics, beta, appInfo
+    var id: String { rawValue }
+
+    @ViewBuilder
+    var view: some View {
+        switch self {
+        case .users: AdminUsersView()
+        case .metrics: AdminMetricsView()
+        case .beta: AdminBetaView()
+        case .appInfo: AppInfoView()
+        }
+    }
+}
+
 enum WheelField: Identifiable {
     case native, target, current, goal
     var id: Self { self }
@@ -738,7 +744,7 @@ struct WheelCard: View {
     private var options: [(value: String, label: String)] {
         switch field {
         case .native: ProfileStore.nativeOptions.filter { $0.value != profile.targetLanguage }
-        case .target: ProfileStore.targetOptions.filter { $0.value != L10n.lang }
+        case .target: ProfileStore.targetChoices(current: profile.targetLanguage).filter { $0.value != L10n.lang }
         case .current, .goal: ProfileStore.levels(for: profile.targetLanguage)
         }
     }
@@ -809,7 +815,7 @@ struct WheelCard: View {
             // and saves both (settings.tsx).
             let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: profile.targetLanguage)
             ReaderLanguage.native = l1
-            Task { await profile.update(["native_language": l1, "ui_language": v]) }
+            Task { if await profile.update(["native_language": l1, "ui_language": v]) { SaveStatus.shared.saved() } }
         case .target:
             profile.targetLanguage = v
             profile.currentLevel = ProfileStore.remap(profile.currentLevel, to: v)
@@ -818,17 +824,18 @@ struct WheelCard: View {
                 // Language first, on its own (web: a rejected level column must not undo the language).
                 let l1 = ReaderLanguage.l1(native: ReaderLanguage.native, target: v)
                 ReaderLanguage.native = l1
-                await profile.update(["native_language": l1, "target_language": v])
+                let saved = await profile.update(["native_language": l1, "target_language": v])
                 await profile.update(["current_level": profile.currentLevel, "level_goal": profile.levelGoal])
+                if saved { SaveStatus.shared.saved() }
                 // The dex, album and review show only the words of the language being learned.
                 await dex.load()
             }
         case .current:
             profile.currentLevel = v
-            Task { await profile.update(["current_level": v]) }
+            Task { if await profile.update(["current_level": v]) { SaveStatus.shared.saved() } }
         case .goal:
             profile.levelGoal = v
-            Task { await profile.update(["level_goal": v]) }
+            Task { if await profile.update(["level_goal": v]) { SaveStatus.shared.saved() } }
         }
     }
 }

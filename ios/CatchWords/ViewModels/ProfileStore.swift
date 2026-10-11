@@ -32,7 +32,26 @@ final class ProfileStore {
     static let cefrOptions: [(value: String, label: String)] = ["A1", "A2", "B1", "B2", "C1", "C2"].map { ($0, "CEFR \($0)") }
     // Language names in their own language (an autonym never changes with the display language).
     static let nativeOptions: [(value: String, label: String)] = [("ja", "日本語"), ("en", "English"), ("zh-TW", "繁體中文")]  // l10n-ignore (autonyms)
-    static let targetOptions: [(value: String, label: String)] = [("zh-TW", "台灣華語"), ("en", "English"), ("ja", "日本語")]  // l10n-ignore (autonyms)
+    /// Every learning language the app can teach. Only 繁體字（台灣） is offered for now (owner 2026-10-11: 「学習言語は
+    /// とりあえず英語はコードを隠して、繁體字(台灣)に絞って。名前も変更して」): English and Japanese stay in the code,
+    /// hidden (`offeredTargets`). The name is the web's (`settings.langZhTw`).
+    static var allTargetOptions: [(value: String, label: String)] {
+        [("zh-TW", L("繁體字（台灣）")), ("en", "English"), ("ja", "日本語")]  // l10n-ignore (autonyms)
+    }
+    /// The learning languages offered on screen (onboarding, 設定).
+    static let offeredTargets: Set<String> = ["zh-TW"]
+    static var targetOptions: [(value: String, label: String)] {
+        allTargetOptions.filter { offeredTargets.contains($0.value) }
+    }
+    /// The choices for someone learning `current`: the offered ones, plus `current` itself when it is a hidden one
+    /// (an account that already learns English keeps seeing — and can keep — its own language).
+    static func targetChoices(current: String) -> [(value: String, label: String)] {
+        allTargetOptions.filter { offeredTargets.contains($0.value) || $0.value == current }
+    }
+    /// The learning language's name as the 設定 row shows it.
+    static func targetLabel(_ code: String) -> String {
+        allTargetOptions.first { $0.value == code }?.label ?? L("繁體字（台灣）")
+    }
     /// level-scale.ts JLPT_SCALE: six steps like TOCFL and CEFR; step 6 is "beyond N1".
     static let jlptOptions: [(value: String, label: String)] = ["N5", "N4", "N3", "N2", "N1", "N1+"].map { ("JLPT-\($0)", "JLPT \($0)") }
 
@@ -102,15 +121,19 @@ final class ProfileStore {
         message = nil
     }
 
-    func update(_ fields: [String: Any]) async {
-        guard let uid = client.userId else { return }
+    /// Saves profile columns. True when the server kept them (設定 then says 「保存しました」).
+    @discardableResult
+    func update(_ fields: [String: Any]) async -> Bool {
+        guard let uid = client.userId else { return false }
         var body = fields
         body["updated_at"] = SupabaseDate.string(Date())
         do {
             _ = try await client.rest("PATCH", "profiles?id=eq.\(uid)", body: body)
             message = nil
+            return true
         } catch {
             message = L("保存できませんでした。通信を確かめてください。")
+            return false
         }
     }
 
