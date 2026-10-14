@@ -13,14 +13,28 @@ android {
         applicationId = "com.nori.catchwords"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        // Play に出すたびに上げる番号。GitHub Actions では実行回数を渡す
+        versionCode = System.getenv("CW_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "1.0.0"
+    }
+
+    // Play 用のアップロード鍵。鍵が渡されないとき（Rork やローカル）はデバッグ鍵で署名する
+    val uploadKeystore = System.getenv("CW_UPLOAD_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (uploadKeystore != null) {
+            create("upload") {
+                storeFile = uploadKeystore
+                storePassword = System.getenv("CW_UPLOAD_PASSWORD")
+                keyAlias = System.getenv("CW_UPLOAD_ALIAS") ?: "upload"
+                keyPassword = System.getenv("CW_UPLOAD_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (uploadKeystore != null) "upload" else "debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

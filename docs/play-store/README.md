@@ -125,7 +125,8 @@ Terms: https://catchwords.lovable.app/terms
 
 1. Google Play Console のデベロッパー アカウントを作る（登録料 25 米ドル・本人確認あり）。
 2. Play Console で「アプリを作成」→ 名前 CatchWords、既定の言語 日本語、アプリ、無料。
-3. Rork の公開ダイアログから Google Play を接続する。
-4. Rork が署名済み AAB を作り、内部テストに出す（パッケージ `com.nori.catchwords`）。
-5. 2023 年 11 月以降に作った個人アカウントは、製品版の前に「クローズド テストで 12 人以上・14 日間連続」が必要。
-6. 掲載情報・スクリーンショット（スマホ 2 枚以上）・フィーチャー グラフィック（1024×500）・データセーフティ・レーティングを入れて、製品版を申請。
+3. GitHub の Secrets に `ANDROID_UPLOAD_KEYSTORE_BASE64`（アップロード鍵 .jks を base64 にしたもの）と `ANDROID_UPLOAD_PASSWORD` を入れる。鍵のファイル本体は GitHub の外にも保管する。
+4. GitHub Actions の「Android リリース」を手動で実行し、成果物の `app-release.aab` を受け取る（versionCode は実行回数）。
+5. Play Console の「テスト › 内部テスト」で新しいリリースを作り、AAB を手でアップロードしてテスターに配る（パッケージ `com.nori.catchwords`）。新しいアプリの最初の 1 本は API ではなく手でアップロードする必要がある。
+6. 2023 年 11 月以降に作った個人アカウントは、製品版の前に「クローズド テストで 12 人以上・14 日間連続」が必要。
+7. 掲載情報・スクリーンショット（スマホ 2 枚以上）・フィーチャー グラフィック（1024×500）・データセーフティ・レーティングを入れて、製品版を申請。

@@ -1,0 +1,66 @@
+name: Android リリース
+
+# 署名済みの AAB を作って、Actions の成果物として置く。Play Console へは手でアップロードする。
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - android/**
+      - .github/workflows/android-release.yml
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: アップロード鍵を用意
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "CW_UPLOAD_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::ANDROID_UPLOAD_KEYSTORE_BASE64 と ANDROID_UPLOAD_PASSWORD を Secrets に入れてください"
+            exit 1
+          else
+            echo "::notice::鍵が無いので、デバッグ鍵で署名して確認だけする"
+          fi
+
+      - name: AAB を作る
+        working-directory: android
+        env:
+          CW_UPLOAD_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          CW_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: 署名を確かめる
+        if: env.CW_UPLOAD_KEYSTORE != ''
+        run: |
+          aab=android/app/build/outputs/bundle/release/app-release.aab
+          keytool -printcert -jarfile "$aab" | tee "$RUNNER_TEMP/cert.txt"
+          if grep -q "Android Debug" "$RUNNER_TEMP/cert.txt"; then
+            echo "::error::デバッグ鍵で署名されています"
+            exit 1
+          fi
+          echo "### versionCode ${{ github.run_number }} の AAB を作りました" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catchwords-android-${{ github.run_number }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
