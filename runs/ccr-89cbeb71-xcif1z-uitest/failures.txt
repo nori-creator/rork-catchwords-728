@@ -1,1 +1,1 @@
-CatchWords / test_1_ja_zh(): FullTourTests.swift:89: Failed to get list of active applications: Accessibility error kAXErrorIPCTimeout from AXUIElementCopyMultipleAttributeValues for 1102
+
