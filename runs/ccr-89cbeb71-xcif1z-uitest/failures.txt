@@ -1,1 +1,4 @@
-CatchWords / test_4_en_ja(): FullTourTests.swift:196: failed - [en/ja] the celebration did not open after tapping a word at 11:53:56.751 UTC (candidate.1 hittable true, frame (281.3333333333333, 281.3333333333333, 108.33333333333337, 41.666666666666686); now: Home@53,807 tab.dex@127,807 tab.camera@201,807 tab.review@275,807 tab.settings@349,807 Cards@236,88 Map@278,88 Gallery@320,88 List@362,88; a second tap at 11:54:10.372 UTC was not possible)
+CatchWords / test_2_ja_en(): FullTourTests.swift:354: failed - [ja/en] settings.wheel.native missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:354: failed - [ja/en] settings.wheel.target missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:354: failed - [ja/en] settings.wheel.current missing
+CatchWords / test_2_ja_en(): FullTourTests.swift:354: failed - [ja/en] settings.wheel.goal missing
