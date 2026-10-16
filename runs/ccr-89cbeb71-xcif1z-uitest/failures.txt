@@ -1,17 +1,6 @@
-CatchWords / test_3_en_zh(): FullTourTests.swift:126: Failed to tap "detail.close" Button: No matches found for Elements matching predicate '"detail.close" IN identifiers' from input {(
-    Button, identifier: 'tab.home', label: 'Home',
-    Button, identifier: 'tab.dex', label: 'Collection',
-    Button, identifier: 'tab.camera', label: 'Camera',
-    Button, identifier: 'tab.review', label: 'Review',
-    Button, identifier: 'tab.settings', label: 'Settings',
-    Button, identifier: 'dex.mode.cover', label: 'Cards',
-    Button, identifier: 'dex.mode.map', label: 'Map',
-    Button, identifier: 'dex.mode.grid', label: 'Gallery', Selected,
-    Button, identifier: 'dex.mode.list', label: 'List',
-    Button, label: 'Category',
-    Button, label: 'Date',
-    Button, identifier: 'dex.cell', label: '珍珠奶茶',
-    Button, identifier: 'dex.cell', label: '便當',
-    Button, identifier: 'dex.cell', label: '鐵板麵',
-    Button, identifier: 'dex.cell', label: '芒果'
-)}
+CatchWords / test_5_zh_en(): FullTourTests.swift:456: failed - [zh-TW/en] tab.review not found
+CatchWords / test_5_zh_en(): FullTourTests.swift:456: failed - [zh-TW/en] tab.settings not found
+CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.native missing
+CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.target missing
+CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.current missing
+CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.goal missing
