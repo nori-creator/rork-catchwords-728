@@ -2,44 +2,44 @@ dorayaki-box-right:
     crop 25% round (0.20,0.35 0.59×0.32): 1 instances, instance 1 whole
     crop 25% round (0.20,0.04 0.60×0.32): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.20,0.04 0.60×0.32): 1 instances, instance 1 cut by the crop's edge
-dorayaki-box-right: 880×1200, Vision instances [1], 2.31 s
+dorayaki-box-right: 880×1200, Vision instances [1], 1.68 s
 dorayaki-box-off:
     crop 25% round (0.43,0.34 0.39×0.29): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.43,0.34 0.39×0.29): 1 instances, none mostly inside the box
-dorayaki-box-off: 880×1200, Vision instances [1], 0.90 s
+dorayaki-box-off: 880×1200, Vision instances [1], 0.84 s
 dorayaki-box-off-carton:
     crop 25% round (0.43,0.34 0.39×0.29): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.43,0.34 0.39×0.29): 1 instances, none mostly inside the box
     crop 25% round (0.20,0.04 0.60×0.32): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.20,0.04 0.60×0.32): 1 instances, instance 1 cut by the crop's edge
-dorayaki-box-off-carton: 880×1200, Vision instances [1], 1.38 s
+dorayaki-box-off-carton: 880×1200, Vision instances [1], 1.44 s
 dorayaki-box-30-smaller:
     crop 25% round (0.30,0.40 0.42×0.22): 1 instances, instance 1 whole
-dorayaki-box-30-smaller: 880×1200, Vision instances [1], 0.59 s
+dorayaki-box-30-smaller: 880×1200, Vision instances [1], 0.70 s
 dorayaki-no-box:
-dorayaki-no-box: 880×1200, Vision instances [1], 0.37 s
+dorayaki-no-box: 880×1200, Vision instances [1], 0.38 s
 dorayaki-point-outside:
     crop 25% round (0.20,0.35 0.59×0.32): 1 instances, instance 1 whole
-dorayaki-point-outside: 880×1200, Vision instances [1], 0.57 s
+dorayaki-point-outside: 880×1200, Vision instances [1], 0.53 s
 dorayaki-exif-rotated:
     crop 25% round (0.43,0.34 0.39×0.29): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.43,0.34 0.39×0.29): 1 instances, none mostly inside the box
-dorayaki-exif-rotated: 880×1200, Vision instances [1], 0.76 s
+dorayaki-exif-rotated: 880×1200, Vision instances [1], 0.69 s
 coffee-cup-saucer-spoon:
     crop 25% round (0.28,0.04 0.38×0.74): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.28,0.04 0.38×0.74): 1 instances, instance 1 whole
     crop 25% round (0.12,0.19 0.68×0.78): 1 instances, instance 1 whole
     crop 25% round (0.54,0.17 0.16×0.65): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.54,0.17 0.16×0.65): 1 instances, instance 1 cut by the crop's edge
-    thing 2: the crop's instance holds most of thing 3 too — not used
     thing 1: the crop's instance holds most of thing 3 too — not used
-coffee-cup-saucer-spoon: 600×400, Vision instances [1], 2.20 s
+    thing 2: the crop's instance holds most of thing 3 too — not used
+coffee-cup-saucer-spoon: 600×400, Vision instances [1], 1.81 s
 coffee-cup-box-small:
     crop 25% round (0.34,0.15 0.26×0.52): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.34,0.15 0.26×0.52): 1 instances, none mostly inside the box
-coffee-cup-box-small: 600×400, Vision instances [1], 0.83 s
+coffee-cup-box-small: 600×400, Vision instances [1], 0.90 s
 chelsea-fills-frame:
-chelsea-fills-frame: 451×300, Vision instances [1], 0.36 s
+chelsea-fills-frame: 451×300, Vision instances [1], 0.32 s
 chelsea-box-small:
 chelsea-box-small: 451×300, Vision instances [1], 0.31 s
 astronaut-helmet:
@@ -49,24 +49,24 @@ astronaut-helmet:
     crop 60% round (0.03,0.03 0.69×0.97): 1 instances, instance 1 whole
     thing 3: the crop's instance holds most of thing 1 too — not used
     crop 25% round (0.69,0.00 0.24×0.56): 1 instances, none mostly inside the box
-astronaut-helmet: 512×512, Vision instances [1], 2.25 s
+astronaut-helmet: 512×512, Vision instances [1], 1.87 s
 cafe-cup-vase:
     crop 25% round (0.78,0.61 0.19×0.17): 1 instances, instance 1 cut by the crop's edge
     crop 25% round (0.50,0.41 0.47×0.23): 1 instances, none mostly inside the box
-cafe-cup-vase: 480×720, Vision instances [1], 2.16 s
+cafe-cup-vase: 480×720, Vision instances [1], 1.70 s
 cat-and-plant:
     crop 25% round (0.00,0.37 0.34×0.63): 1 instances, none mostly inside the box
-cat-and-plant: 720×720, Vision instances [1], 1.06 s
+cat-and-plant: 720×720, Vision instances [1], 0.84 s
 boba-portrait:
-boba-portrait: 554×1200, Vision instances [1], 0.35 s
+boba-portrait: 554×1200, Vision instances [1], 0.43 s
 glasses-against-bottle:
     crop 25% round (0.18,0.54 0.58×0.28): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.18,0.54 0.58×0.28): 1 instances, instance 1 cut by the crop's edge
     crop 25% round (0.63,0.12 0.27×0.72): 1 instances, instance 1 cut by the crop's edge
     crop 60% round (0.63,0.12 0.27×0.72): 1 instances, instance 1 cut by the crop's edge
-glasses-against-bottle: 1200×900, Vision instances [1], 2.38 s
+glasses-against-bottle: 1200×900, Vision instances [1], 2.42 s
 keys-on-remote:
-keys-on-remote: 1200×900, Vision instances [1, 2], 0.58 s
+keys-on-remote: 1200×900, Vision instances [1, 2], 0.37 s
 | case | thing | before (old plan) | after (now) | covers before → after | straight before → after | rectangle | other thing | result |
 |---|---|---|---|---|---|---|---|---|
 | dorayaki-box-right | 冰淇淋 | CLIP [1] to box (0.18,0.34 0.64×0.34) | part of [1] (40672 px) | 100% → 100% | 0% → 0% | no → no | 0% | ok |
