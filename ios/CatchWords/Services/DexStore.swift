@@ -174,8 +174,10 @@ final class DexStore {
             restoreUnsaved()
             loadError = nil
             hasLoaded = true
+            UITestTrace.once("dex read from the server", "words=\(stickers.count)")
             await loadReviews()
             await signPaths(for: rows)
+            UITestTrace.once("picture links signed")
             guard client.userId == uid else { return }
             // Behind the screen: the re-encounter photos the dex squares cycle through, the cut-outs still
             // missing (every picture is cut out, owner 2026-10-11), and the newest pictures put on disk.
@@ -346,6 +348,7 @@ final class DexStore {
         albumPlacements = places
         hasLoaded = true
         restoreUnsaved()
+        UITestTrace.once("dex snapshot restored", "words=\(stickers.count)")
     }
 
     /// Writes the snapshot a moment after the dex changed (many changes in a row are written once).

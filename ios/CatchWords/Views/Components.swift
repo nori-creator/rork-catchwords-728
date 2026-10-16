@@ -200,6 +200,7 @@ struct StickerImage: View {
     }
 
     private func loaded(_ img: UIImage) {
+        UITestTrace.once("first photo on screen")
         onLoad?(img.size)
         // A cut-out that came out (almost) empty: the dex shows the word's photo instead.
         if let path, path.contains("-cutout"), ImageTools.isNearlyBlank(img) { dex?.markBlankCutout(path) }

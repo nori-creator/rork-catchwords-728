@@ -52,6 +52,20 @@ final class FullTourTests: XCTestCase {
         review()
         settings()
         signOutAndBackIn()
+        relaunch()
+    }
+
+    /// A cold start of an account that has used the app before (nothing reset): the home album must come up with its
+    /// photos. The app's trace times it (`UITestTrace.once`: the dex kept on the phone, the first photo on screen), so
+    /// the time from launch to the first photo can be compared run to run.
+    private func relaunch() {
+        app.terminate()
+        app.launchArguments = app.launchArguments.map { $0 == "-uiDemoReset" ? "-uiDemoKeep" : $0 }
+        app.launch()
+        XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 30), "[\(display)/\(learning)] the app did not come back after a relaunch")
+        XCTAssertFalse(app.buttons["aiConsent.accept"].exists, "[\(display)/\(learning)] the AI consent was asked again after a relaunch")
+        settle(3)
+        snap("home-relaunch")
     }
 
     /// The AI consent comes first, once per account (`-uiDemoReset` starts with no answer kept): photographed,
