@@ -12,7 +12,7 @@
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "one Vision instance with thing 2: split where they meet",
+    "note" : "one Vision instance with thing 2: split where they meet; Vision on a crop round its box found it whole",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0,
@@ -34,7 +34,7 @@
       "rectangle" : false,
       "straight" : 0.281437125748503
     },
-    "note" : "one Vision instance with thing 1: split where they meet",
+    "note" : "one Vision instance with thing 1: split where they meet; the instance without what a crop found for thing 1",
     "oldMeasure" : {
       "coverage" : 0.9834890420141678,
       "leak" : 0.0007302131041036903,
@@ -56,7 +56,7 @@
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; the region alone found nothing whole: the whole instance",
+    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; no crop found it whole: the whole instance",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0,
@@ -117,12 +117,12 @@
     ],
     "id" : "dorayaki-box-30-smaller",
     "measure" : {
-      "coverage" : 0.9999927225622403,
+      "coverage" : 0.9999781676867209,
       "leak" : 0,
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; Vision on the region alone found the thing whole",
+    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; Vision on a crop round its box found it whole",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0,
@@ -165,7 +165,7 @@
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "took the instance most present in its box; instance mostly outside its box: kept whole, Vision asked again on the region; Vision on the region alone found the thing whole",
+    "note" : "took the instance most present in its box; instance mostly outside its box: kept whole, Vision asked again on the region; Vision on a crop round its box found it whole",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0,
@@ -187,7 +187,7 @@
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; the region alone found nothing whole: the whole instance",
+    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; no crop found it whole: the whole instance",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0,
@@ -200,16 +200,16 @@
     "after" : "part of [1] (52135 px)",
     "before" : "CLIP [1] to box (0.27,0.01 0.41×0.80)",
     "failures" : [
-      "a straight cut through the thing along 92% of a line"
+
     ],
     "id" : "coffee-cup-saucer-spoon",
     "measure" : {
-      "coverage" : 0.9506610679226012,
-      "leak" : 0.011757801856936265,
+      "coverage" : 0.9830335357203654,
+      "leak" : 0.051444889235378106,
       "rectangle" : false,
-      "straight" : 0.9210526315789473
+      "straight" : 0.08571428571428572
     },
-    "note" : "one Vision instance with thing 2, 3: split where they meet",
+    "note" : "one Vision instance with thing 2, 3: split where they meet; Vision on a crop round its box found it whole",
     "oldMeasure" : {
       "coverage" : 0.9830051637065199,
       "leak" : 0.07924696031199817,
@@ -225,7 +225,7 @@
 
     ],
     "id" : "coffee-cup-saucer-spoon",
-    "note" : "one Vision instance with thing 1, 3: split where they meet",
+    "note" : "one Vision instance with thing 1, 3: split where they meet; Vision on a crop round its box found it whole",
     "thing" : "盤子"
   },
   {
@@ -236,12 +236,12 @@
     ],
     "id" : "coffee-cup-saucer-spoon",
     "measure" : {
-      "coverage" : 0.8300698109994892,
-      "leak" : 0.06262449207234483,
+      "coverage" : 0,
+      "leak" : 0,
       "rectangle" : false,
-      "straight" : 0.41379310344827586
+      "straight" : 0
     },
-    "note" : "one Vision instance with thing 1, 2: split where they meet",
+    "note" : "one Vision instance with thing 1, 2: split where they meet; the instance without what a crop found for thing 1, 2",
     "oldMeasure" : {
       "coverage" : 1,
       "leak" : 0.2523361227336123,
@@ -263,7 +263,7 @@
       "rectangle" : false,
       "straight" : 0.08571428571428572
     },
-    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; the region alone found nothing whole: the whole instance",
+    "note" : "instance mostly outside its box: kept whole, Vision asked again on the region; no crop found it whole: the whole instance",
     "oldMeasure" : {
       "coverage" : 0.9830051637065199,
       "leak" : 0,
@@ -318,16 +318,16 @@
     "after" : "part of [1] (29885 px)",
     "before" : "CLIP [1] to box (0.52,0.66 0.48×0.34)",
     "failures" : [
-      "a straight cut through the thing along 89% of a line"
+      "covers 0% of the thing (< 85%)"
     ],
     "id" : "astronaut-helmet",
     "measure" : {
-      "coverage" : 0.9390267671517671,
+      "coverage" : 0,
       "leak" : 0,
       "rectangle" : false,
-      "straight" : 0.8909090909090909
+      "straight" : 0
     },
-    "note" : "one Vision instance with thing 3: split where they meet",
+    "note" : "one Vision instance with thing 3: split where they meet; the instance without what a crop found for thing 3",
     "oldMeasure" : {
       "coverage" : 0.9927234927234927,
       "leak" : 0,
@@ -349,7 +349,7 @@
       "rectangle" : false,
       "straight" : 0
     },
-    "note" : "no Vision mask inside its box; no cut-out (the region alone found nothing whole either)",
+    "note" : "no Vision mask inside its box; no cut-out (no crop round its box found it either)",
     "oldMeasure" : {
       "coverage" : 0.9747850635185423,
       "leak" : 0,
@@ -365,7 +365,7 @@
 
     ],
     "id" : "astronaut-helmet",
-    "note" : "one Vision instance with thing 1: split where they meet",
+    "note" : "one Vision instance with thing 1: split where they meet; Vision on a crop round its box found it whole",
     "thing" : "太空人"
   },
   {
@@ -397,12 +397,12 @@
     ],
     "id" : "cafe-cup-vase",
     "measure" : {
-      "coverage" : 0,
+      "coverage" : 0.9661109592784914,
       "leak" : 0,
       "rectangle" : false,
-      "straight" : 0
+      "straight" : 0.1951219512195122
     },
-    "note" : "no Vision mask inside its box; no cut-out (the region alone found nothing whole either)",
+    "note" : "no Vision mask inside its box; cut from a crop round its box",
     "oldMeasure" : {
       "coverage" : 0.9793659469800492,
       "leak" : 0,
@@ -418,7 +418,7 @@
 
     ],
     "id" : "cafe-cup-vase",
-    "note" : "no Vision mask inside its box; no cut-out (the region alone found nothing whole either)",
+    "note" : "no Vision mask inside its box; no cut-out (no crop round its box found it either)",
     "thing" : "花"
   },
   {
@@ -449,7 +449,7 @@
 
     ],
     "id" : "cat-and-plant",
-    "note" : "no Vision mask inside its box; no cut-out (the region alone found nothing whole either)",
+    "note" : "no Vision mask inside its box; no cut-out (no crop round its box found it either)",
     "thing" : "植物"
   },
   {
