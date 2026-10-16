@@ -15,7 +15,7 @@
 | coffee-cup-box-small | 杯子 | instance 1 | instance 1 + region | 98% → 98% | 9% → 9% | no → no | 0% | ok |
 | chelsea-fills-frame | 貓 | instance 1 | instance 1 | 99% → 99% | 30% → 30% | no → no | 0% | ok |
 | chelsea-box-small | 貓 | instance 1 | instance 1 | 99% → 99% | 30% → 30% | no → no | 0% | ok |
-| astronaut-helmet | 安全帽 | CLIP [1] to box (0.52,0.66 0.48×0.34) | part of [1] (43013 px) | 99% → 99% | 52% → 52% | no → no | 0% | FAIL: a straight cut through the thing along 52% of a line (column 495 of 512) |
+| astronaut-helmet | 安全帽 | CLIP [1] to box (0.52,0.66 0.48×0.34) | part of [1] (43013 px) | 100% → 100% | 2% → 2% | no → no | 0% | ok |
 | astronaut-helmet | 太空梭 | no mask | no mask, no cut-out (expected: none — Vision has no instance for the model shuttle in the whole photo, and the crop round its box has only one instance, lying mostly outside the box; the old plan cut that crop instance at the crop's edge (a straight cut along 100% of a line). No cut-out is the honest result.) | 97% → 0% | 100% → 0% | no → no | 0% | ok |
 | astronaut-helmet | 太空人 | CLIP [1] to box (0.00,0.00 0.75×1.00) | part of [1] (136781 px) | - → - | - → - | - → - | - | ok |
 | cafe-cup-vase | 咖啡 | instance 1 | instance 1 | 100% → 100% | 0% → 0% | no → no | 0% | ok |

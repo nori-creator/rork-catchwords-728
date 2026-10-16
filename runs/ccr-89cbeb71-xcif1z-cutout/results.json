@@ -346,23 +346,23 @@
     "after" : "part of [1] (43013 px)",
     "before" : "CLIP [1] to box (0.52,0.66 0.48×0.34)",
     "failures" : [
-      "a straight cut through the thing along 52% of a line (column 495 of 512)"
+
     ],
     "id" : "astronaut-helmet",
     "measure" : {
-      "coverage" : 0.9927234927234927,
+      "coverage" : 0.9996283658231697,
       "leak" : 0,
       "rectangle" : false,
-      "straight" : 0.5227272727272727,
-      "straightAt" : "column 495 of 512"
+      "straight" : 0.022727272727272728,
+      "straightAt" : "row 356 of 512"
     },
     "note" : "one Vision instance with thing 3: split where they meet",
     "oldMeasure" : {
-      "coverage" : 0.9927234927234927,
+      "coverage" : 0.9996283658231697,
       "leak" : 0,
       "rectangle" : false,
-      "straight" : 0.5227272727272727,
-      "straightAt" : "column 495 of 512"
+      "straight" : 0.022727272727272728,
+      "straightAt" : "row 356 of 512"
     },
     "thing" : "安全帽"
   },
