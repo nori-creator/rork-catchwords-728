@@ -1,6 +1,1 @@
-CatchWords / test_5_zh_en(): FullTourTests.swift:456: failed - [zh-TW/en] tab.review not found
-CatchWords / test_5_zh_en(): FullTourTests.swift:456: failed - [zh-TW/en] tab.settings not found
-CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.native missing
-CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.target missing
-CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.current missing
-CatchWords / test_5_zh_en(): FullTourTests.swift:375: failed - [zh-TW/en] settings.wheel.goal missing
+
