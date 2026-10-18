@@ -420,10 +420,18 @@ private struct CarouselCardFace: View {
                 // No memory % in the top right corner any more (owner 2026-10-11: 「右上の%消して」).
                 .layoutPriority(1)
             VStack(alignment: .leading, spacing: 4) {
-                DexFitWidth {
-                    ZhuyinWordView(headword: s.word?.headword ?? "", zhuyin: s.word?.readingZhuyin, size: 22, weight: .bold,
-                                   color: Self.ink, readingColor: Self.muted, pinyin: s.word?.pinyin)
+                // Do not feed measured geometry back into @State while this card is entering
+                // in the tab's spring transaction. Choose a fitting, intrinsically sized word
+                // instead: the word and its reflection have no measurement/redraw cycle.
+                ViewThatFits(in: .horizontal) {
+                    cardWord(s, size: 22)
+                    cardWord(s, size: 18)
+                    cardWord(s, size: 15)
+                    cardWord(s, size: 12)
+                    cardWord(s, size: 10)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
                 Text(s.word?.meaningJa ?? "").font(.system(size: 15)).foregroundStyle(Self.ink.opacity(0.9))
                     .lineLimit(1).minimumScaleFactor(0.7)
                     // Shrinks for a long meaning's width only, never for height: its full line is part of the
@@ -450,6 +458,14 @@ private struct CarouselCardFace: View {
         // Top-aligned: should the words still not fit (a tiny card), the date line goes, never the photo's top.
         .frame(width: width, height: h, alignment: .top)
         .background(.white)
+    }
+
+    private func cardWord(_ sticker: Sticker, size: CGFloat) -> some View {
+        ZhuyinWordView(headword: sticker.word?.headword ?? "", zhuyin: sticker.word?.readingZhuyin,
+                       size: size, weight: .bold, color: Self.ink, readingColor: Self.muted,
+                       pinyin: sticker.word?.pinyin)
+            .lineLimit(1)
+            .fixedSize()
     }
 }
 
