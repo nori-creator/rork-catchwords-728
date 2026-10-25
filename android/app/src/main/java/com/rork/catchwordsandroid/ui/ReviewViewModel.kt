@@ -133,6 +133,7 @@ class ReviewViewModel : ViewModel() {
         val correct = choice.headword == card.sticker.word?.headword
         val ms = (System.currentTimeMillis() - shownAt).toInt()
         if (AppGraph.soundsOn) AppGraph.speech.play(if (correct) Speech.Sfx.POP else Speech.Sfx.TICK)
+        if (correct) com.rork.catchwordsandroid.data.Haptics.correct() else com.rork.catchwordsandroid.data.Haptics.wrong()
         AppGraph.speech.speak(card.sticker.word?.headword.orEmpty(), AppGraph.profile.target)
         if (st.isRetry) {
             _ui.update { s ->

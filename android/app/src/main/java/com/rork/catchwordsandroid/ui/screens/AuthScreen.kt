@@ -94,7 +94,7 @@ fun AuthScreen(session: SessionViewModel) {
             Text("CatchWords", fontSize = 34.sp, fontWeight = FontWeight.Black, color = CW.foreground, letterSpacing = (-0.8).sp)
             Text(
                 tr("見つけたものが、単語になる。", "Everything you see becomes a word.", "看見的東西，都會變成單字。"),
-                fontFamily = CW.hand, fontSize = 18.sp, color = CW.muted, textAlign = TextAlign.Center,
+                fontSize = 16.sp, fontWeight = FontWeight.Medium, color = CW.muted, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(26.dp))
 

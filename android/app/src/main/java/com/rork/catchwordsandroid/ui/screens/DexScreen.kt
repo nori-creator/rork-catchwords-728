@@ -1,5 +1,24 @@
 package com.rork.catchwordsandroid.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.unit.IntOffset
+import com.rork.catchwordsandroid.data.Haptics
+import com.rork.catchwordsandroid.ui.components.appear
+import com.rork.catchwordsandroid.ui.components.iosSpring
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -88,14 +107,22 @@ fun DexScreen(onOpenWord: (String) -> Unit, vm: DexViewModel = viewModel()) {
             Row(Modifier.padding(start = 20.dp, end = 16.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("図鑑", "Dex", "圖鑑"), fontSize = 30.sp, fontWeight = FontWeight.Black, color = CW.foreground)
-                    Text(tr("${state.stickers.size} 語", "${state.stickers.size} words", "${state.stickers.size} 個單字"), fontSize = 13.sp, color = CW.muted)
+                    Text(tr("${state.stickers.size} 語", "${state.stickers.size} words", "${state.stickers.size} 個單字"), fontSize = 13.sp, color = CW.muted, style = TextStyle(fontFeatureSettings = "tnum"))
                 }
                 LayoutToggle(layout, vm::setLayout)
             }
             SearchField(query, vm::setQuery, Modifier.padding(horizontal = 16.dp))
-            if (layout == DexLayout.MAP) {
+            // Entrance animation only for what is on screen in the first moment, not for rows scrolled in later.
+            val shownAt = remember { System.currentTimeMillis() }
+            val fresh = System.currentTimeMillis() - shownAt < 900
+            androidx.compose.animation.AnimatedContent(
+                targetState = layout,
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+                label = "layout",
+            ) { mode ->
+            if (mode == DexLayout.MAP) {
                 DexMap(filtered, Modifier.fillMaxSize().padding(top = 10.dp), onOpenWord)
-                return@Column
+                return@AnimatedContent
             }
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
                 when {
@@ -106,13 +133,18 @@ fun DexScreen(onOpenWord: (String) -> Unit, vm: DexViewModel = viewModel()) {
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 110.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        if (layout == DexLayout.GRID) {
-                            items(groups, key = { it.key }) { (key, list) -> CategoryCard(key, list, state, onOpenWord) }
+                        if (mode == DexLayout.GRID) {
+                            itemsIndexed(groups, key = { _, g -> g.key }) { i, (key, list) ->
+                                CategoryCard(key, list, state, onOpenWord, Modifier.appear(delayMs = minOf(i, 8) * 40, enabled = fresh).animateItem())
+                            }
                         } else {
-                            items(filtered, key = { it.id }) { s -> WordRow(s, state, onOpenWord) }
+                            itemsIndexed(filtered, key = { _, s -> s.id }) { i, s ->
+                                WordRow(s, state, onOpenWord, Modifier.appear(delayMs = minOf(i, 8) * 40, enabled = fresh).animateItem())
+                            }
                         }
                     }
                 }
+            }
             }
         }
     }
@@ -120,42 +152,72 @@ fun DexScreen(onOpenWord: (String) -> Unit, vm: DexViewModel = viewModel()) {
 
 @Composable
 private fun LayoutToggle(layout: DexLayout, onChange: (DexLayout) -> Unit) {
-    Row(Modifier.clip(RoundedCornerShape(50)).background(CW.surface2).padding(4.dp)) {
-        listOf(DexLayout.GRID to Icons.Outlined.GridView, DexLayout.LIST to Icons.AutoMirrored.Outlined.List, DexLayout.MAP to Icons.Outlined.Map).forEach { (l, icon) ->
-            val on = l == layout
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(if (on) CW.card else Color.Transparent).pressable { onChange(l) },
-                contentAlignment = Alignment.Center,
-            ) { Icon(icon, null, tint = if (on) CW.foreground else CW.muted, modifier = Modifier.size(20.dp)) }
+    val modes = listOf(DexLayout.GRID to Icons.Outlined.GridView, DexLayout.LIST to Icons.AutoMirrored.Outlined.List, DexLayout.MAP to Icons.Outlined.Map)
+    val idx = modes.indexOfFirst { it.first == layout }.coerceAtLeast(0)
+    val x by animateFloatAsState(idx.toFloat(), iosSpring(0.34f, 0.8f), label = "seg")
+    Box(Modifier.clip(RoundedCornerShape(50)).background(CW.surface2).padding(4.dp)) {
+        // The white thumb slides under the icons like an iOS segmented control.
+        Box(
+            Modifier
+                .offset { IntOffset((40.dp.toPx() * x).roundToInt(), 0) }
+                .size(40.dp)
+                .shadow(3.dp, CircleShape, ambientColor = Color(0x22000000), spotColor = Color(0x22000000))
+                .clip(CircleShape)
+                .background(CW.card),
+        )
+        Row {
+            modes.forEach { (l, icon) ->
+                val on = l == layout
+                val tint by animateColorAsState(if (on) CW.foreground else CW.muted, tween(180), label = "tint")
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).pressable(haptic = false) {
+                        if (!on) { Haptics.selection(); onChange(l) }
+                    },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp)) }
+            }
         }
     }
 }
 
 @Composable
 private fun SearchField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    val border by animateColorAsState(if (focused) CW.primary.copy(alpha = 0.6f) else CW.border, tween(180), label = "border")
+    val icon by animateColorAsState(if (focused) CW.primary else CW.muted, tween(180), label = "icon")
     Row(
-        modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(CW.card).border(1.dp, CW.border, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
+        modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(CW.card)
+            .border(if (focused) 1.5.dp else 1.dp, border, RoundedCornerShape(14.dp)).padding(start = 12.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.Search, null, tint = CW.muted, modifier = Modifier.size(20.dp))
+        Icon(Icons.Outlined.Search, null, tint = icon, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Box(Modifier.weight(1f)) {
             if (value.isEmpty()) Text(tr("単語や意味で探す", "Search words or meanings", "搜尋單字或意思"), color = CW.muted, fontSize = 15.sp)
-            BasicTextField(value, onChange, singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = CW.foreground), cursorBrush = SolidColor(CW.primary), modifier = Modifier.fillMaxWidth())
+            BasicTextField(
+                value, onChange, singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = CW.foreground), cursorBrush = SolidColor(CW.primary),
+                modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
+            )
+        }
+        androidx.compose.animation.AnimatedVisibility(value.isNotEmpty(), enter = scaleIn(iosSpring(0.3f, 0.6f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+            Icon(
+                Icons.Filled.Cancel, tr("クリア", "Clear", "清除"), tint = CW.muted.copy(alpha = 0.7f),
+                modifier = Modifier.size(32.dp).clip(CircleShape).pressable(haptic = false) { onChange("") }.padding(6.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun CategoryCard(key: String, stickers: List<Sticker>, state: DexState, onOpenWord: (String) -> Unit) {
-    SectionCard(padding = 14.dp) {
+private fun CategoryCard(key: String, stickers: List<Sticker>, state: DexState, onOpenWord: (String) -> Unit, modifier: Modifier = Modifier) {
+    SectionCard(modifier, padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(Category.emoji(key), fontSize = 18.sp)
             Spacer(Modifier.width(6.dp))
             Text(Category.label(key), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CW.foreground, modifier = Modifier.weight(1f))
             Box(Modifier.size(8.dp).clip(CircleShape).background(Category.room(key).accent))
             Spacer(Modifier.width(6.dp))
-            Text("${stickers.size}", fontSize = 14.sp, color = CW.muted, fontWeight = FontWeight.SemiBold)
+            Text("${stickers.size}", fontSize = 14.sp, color = CW.muted, fontWeight = FontWeight.SemiBold, style = TextStyle(fontFeatureSettings = "tnum"))
         }
         Spacer(Modifier.height(10.dp))
         stickers.chunked(4).forEach { row ->
@@ -180,10 +242,10 @@ private fun Tile(sticker: Sticker, memory: Int?, modifier: Modifier = Modifier, 
 }
 
 @Composable
-private fun WordRow(sticker: Sticker, state: DexState, onOpenWord: (String) -> Unit) {
+private fun WordRow(sticker: Sticker, state: DexState, onOpenWord: (String) -> Unit, modifier: Modifier = Modifier) {
     val w = sticker.word
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(20.dp), ambientColor = Color(0x10000000), spotColor = Color(0x10000000))
             .clip(RoundedCornerShape(20.dp))
@@ -210,7 +272,7 @@ private fun WordRow(sticker: Sticker, state: DexState, onOpenWord: (String) -> U
 private fun EmptyDex(text: String) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("📖", fontSize = 48.sp)
+            Text("📖", fontSize = 48.sp, modifier = Modifier.appear(rise = 10.dp))
             Spacer(Modifier.height(12.dp))
             Text(text, color = CW.muted, fontSize = 15.sp, textAlign = TextAlign.Center)
         }

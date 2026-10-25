@@ -465,7 +465,7 @@ fun CaughtStage(sticker: Sticker, cutout: Bitmap?, onOpen: () -> Unit, onAgain: 
                         else StickerImage(sticker, Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop, emojiSize = 90)
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text(sticker.word?.headword.orEmpty(), fontFamily = CW.hand, fontSize = 34.sp, color = CW.foreground)
+                    Text(sticker.word?.headword.orEmpty(), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = CW.foreground)
                     Text(readingOf(sticker.word?.readingZhuyin, sticker.word?.pinyin), fontSize = 14.sp, color = CW.primaryInk)
                     sticker.locationName?.let { Text("📍 $it", fontSize = 12.sp, color = CW.muted) }
                 }

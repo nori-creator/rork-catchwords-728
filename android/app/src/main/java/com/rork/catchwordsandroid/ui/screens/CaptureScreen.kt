@@ -140,9 +140,7 @@ fun CaptureScreen(onOpenWord: (String) -> Unit, vm: CaptureViewModel = viewModel
                 is CaptureStep.Caught -> CaughtStage(step.sticker, ui.cutout, onOpen = { onOpenWord(step.sticker.id); vm.finishCaught() }, onAgain = vm::finishCaught)
             }
         }
-        AnimatedVisibility(ui.toast != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp, start = 24.dp, end = 24.dp)) {
-            Toast(ui.toast.orEmpty())
-        }
+        com.rork.catchwordsandroid.ui.components.ToastHost(ui.toast, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp))
     }
 }
 

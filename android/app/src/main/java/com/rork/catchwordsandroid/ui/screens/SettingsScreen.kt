@@ -186,7 +186,7 @@ fun SettingsScreen(session: SessionViewModel, vm: SettingsViewModel = viewModel(
                 ActionRow(tr("アカウントを削除", "Delete account", "刪除帳號"), CW.destructive) { askDelete = true }
             }
         }
-        ui.notice?.let { Toast(it, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp)) }
+        com.rork.catchwordsandroid.ui.components.ToastHost(ui.notice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp))
     }
 
     if (askSignOut) {
@@ -309,7 +309,15 @@ private fun StaticRow(label: String, value: String) {
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CW.foreground, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = CW.primary))
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                com.rork.catchwordsandroid.data.Haptics.selection()
+                if (com.rork.catchwordsandroid.data.AppGraph.soundsOn) com.rork.catchwordsandroid.data.AppGraph.speech.play(com.rork.catchwordsandroid.data.Speech.Sfx.TICK, 0.3f)
+                onChange(it)
+            },
+            colors = SwitchDefaults.colors(checkedTrackColor = CW.primary, uncheckedBorderColor = CW.border, uncheckedTrackColor = CW.surface2),
+        )
     }
 }
 

@@ -69,7 +69,9 @@ import com.rork.catchwordsandroid.ui.components.Chip
 import com.rork.catchwordsandroid.ui.components.MemoryBadge
 import com.rork.catchwordsandroid.ui.components.SectionCard
 import com.rork.catchwordsandroid.ui.components.StickerImage
-import com.rork.catchwordsandroid.ui.components.Toast
+import com.rork.catchwordsandroid.ui.components.appear
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import com.rork.catchwordsandroid.ui.components.pressable
 import com.rork.catchwordsandroid.ui.components.readingOf
 import com.rork.catchwordsandroid.ui.theme.CW
@@ -104,25 +106,30 @@ fun WordDetailScreen(stickerId: String, onClose: () -> Unit, vm: DexViewModel = 
         }
         val w = sticker.word
         val generating = w?.id in state.generating
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().navigationBarsPadding().padding(bottom = 32.dp)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                CloseButton(onClose)
-                Spacer(Modifier.weight(1f))
-                CircleIcon(Icons.Outlined.DeleteOutline, CW.destructive) { confirmDelete = true }
-            }
-            Hero(sticker, state.memoryPercent(sticker))
+        val scroll = rememberScrollState()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        // 0 → 1 as the hero scrolls away: the bar gains its frosted backdrop and the headword title.
+        val barT = with(density) { (scroll.value / 260.dp.toPx()).coerceIn(0f, 1f) }
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).statusBarsPadding().navigationBarsPadding().padding(bottom = 32.dp)) {
+            Spacer(Modifier.height(60.dp))
+            Hero(
+                sticker, state.memoryPercent(sticker),
+                Modifier.graphicsLayer {
+                    // Gentle parallax: the picture drifts slower than the page and settles back.
+                    translationY = scroll.value * 0.35f
+                    val k = 1f - (scroll.value / 3000f).coerceAtMost(0.08f)
+                    scaleX = k; scaleY = k
+                    alpha = 1f - (scroll.value / 900f).coerceIn(0f, 0.6f)
+                },
+            )
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.appear(delayMs = 120)) {
                     Column(Modifier.weight(1f)) {
                         Text(readingOf(w?.readingZhuyin, w?.pinyin), fontSize = 16.sp, color = CW.primaryInk, fontWeight = FontWeight.SemiBold)
                         Text(w?.headword.orEmpty(), fontSize = 44.sp, fontWeight = FontWeight.Black, color = CW.foreground, letterSpacing = 1.sp)
                     }
-                    Box(
-                        Modifier.size(56.dp).shadow(10.dp, CircleShape, spotColor = CW.primary).clip(CircleShape).background(CW.brandGradient)
-                            .pressable { vm.speak(w?.headword.orEmpty()) },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Outlined.VolumeUp, tr("発音を聞く", "Listen", "聆聽發音"), tint = Color.White) }
+                    SpeakButton(tr("発音を聞く", "Listen", "聆聽發音")) { vm.speak(w?.headword.orEmpty()) }
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(w?.meaning?.ifBlank { null } ?: if (generating) tr("解説を作っています…", "Writing the explanation…", "正在產生解說…") else "", fontSize = 19.sp, color = CW.foreground, fontWeight = FontWeight.Medium)
@@ -132,7 +139,7 @@ fun WordDetailScreen(stickerId: String, onClose: () -> Unit, vm: DexViewModel = 
                     w?.partOfSpeech?.let { Chip(it) }
                 }
                 Spacer(Modifier.height(16.dp))
-                CaptionCard(sticker) { editCaption = true }
+                CaptionCard(sticker, Modifier.appear(delayMs = 200)) { editCaption = true }
 
                 val ex = w?.exampleSentence
                 if (!ex.isNullOrBlank()) {
@@ -160,8 +167,26 @@ fun WordDetailScreen(stickerId: String, onClose: () -> Unit, vm: DexViewModel = 
                 )
             }
         }
-        message?.let { Toast(it, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp)) }
+        // Pinned bar: transparent over the hero, frosted paper with the headword once it scrolls away.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(CW.paper.copy(alpha = 0.94f * barT))
+                .statusBarsPadding()
+                .height(60.dp)
+                .padding(horizontal = 16.dp),
+        ) {
+            CloseButton(onClose, Modifier.align(Alignment.CenterStart))
+            Text(
+                w?.headword.orEmpty(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CW.foreground, maxLines = 1,
+                modifier = Modifier.align(Alignment.Center).graphicsLayer { alpha = ((barT - 0.6f) / 0.4f).coerceIn(0f, 1f); translationY = (1f - barT) * 8.dp.toPx() },
+            )
+            Box(Modifier.align(Alignment.CenterEnd)) { CircleIcon(Icons.Outlined.DeleteOutline, CW.destructive) { confirmDelete = true } }
+        }
+        Box(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 60.dp).height(1.dp).background(CW.border.copy(alpha = barT)))
+        com.rork.catchwordsandroid.ui.components.ToastHost(message, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
     }
+    androidx.activity.compose.BackHandler(onBack = onClose)
 
     if (confirmDelete && sticker != null) {
         AlertDialog(
@@ -187,9 +212,9 @@ fun WordDetailScreen(stickerId: String, onClose: () -> Unit, vm: DexViewModel = 
 }
 
 @Composable
-private fun Hero(sticker: Sticker, memory: Int?) {
+private fun Hero(sticker: Sticker, memory: Int?, modifier: Modifier = Modifier) {
     Box(
-        Modifier
+        modifier
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .height(300.dp)
@@ -207,10 +232,32 @@ private fun Hero(sticker: Sticker, memory: Int?) {
     }
 }
 
+/** The brand speak button; every tap sends out a ring that widens and fades (iOS pulse). */
 @Composable
-private fun CaptionCard(sticker: Sticker, onEdit: () -> Unit) {
+private fun SpeakButton(label: String, onSpeak: () -> Unit) {
+    val ring = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
+        Box(
+            Modifier.size(56.dp).graphicsLayer {
+                scaleX = 1f + ring.value * 0.45f; scaleY = scaleX; alpha = (1f - ring.value) * 0.5f
+            }.border(2.dp, CW.primary, CircleShape),
+        )
+        Box(
+            Modifier.size(56.dp).shadow(10.dp, CircleShape, spotColor = CW.primary).clip(CircleShape).background(CW.brandGradient)
+                .pressable {
+                    onSpeak()
+                    scope.launch { ring.snapTo(0f); ring.animateTo(1f, androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) }
+                },
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.AutoMirrored.Outlined.VolumeUp, label, tint = Color.White) }
+    }
+}
+
+@Composable
+private fun CaptionCard(sticker: Sticker, modifier: Modifier = Modifier, onEdit: () -> Unit) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CW.paper)
@@ -221,7 +268,7 @@ private fun CaptionCard(sticker: Sticker, onEdit: () -> Unit) {
     ) {
         Text(
             sticker.caption ?: tr("ひとことを書く", "Add a note", "寫下備註"),
-            fontFamily = CW.hand, fontSize = 18.sp,
+            fontSize = 16.sp, fontWeight = FontWeight.Medium,
             color = if (sticker.caption != null) CW.foreground else CW.muted,
             modifier = Modifier.weight(1f),
         )

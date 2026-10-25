@@ -29,6 +29,7 @@ object AppGraph {
     fun init(context: Context) {
         appContext = context.applicationContext
         L10n.init(context)
+        Haptics.init(context)
         prefs = context.getSharedPreferences("cw.prefs", Context.MODE_PRIVATE)
         client = SupabaseClient(context)
         api = NativeApi(client) { consent }

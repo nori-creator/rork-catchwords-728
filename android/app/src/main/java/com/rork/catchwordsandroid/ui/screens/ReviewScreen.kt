@@ -8,6 +8,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import com.rork.catchwordsandroid.ui.components.appear
+import com.rork.catchwordsandroid.ui.components.iosSpring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +85,7 @@ fun ReviewScreen(onCamera: () -> Unit, onOpenWord: (String) -> Unit, vm: ReviewV
     val ui by vm.ui.collectAsStateWithLifecycle()
     val dex by AppGraph.dex.state.collectAsStateWithLifecycle()
     val total = ui.queue.size.coerceAtLeast(1)
-    val progress by animateFloatAsState(if (ui.queue.isEmpty()) 0.08f else (ui.index + if (ui.picked != null) 1 else 0).toFloat() / total, tween(500), label = "progress")
+    val progress by animateFloatAsState(if (ui.queue.isEmpty()) 0.08f else (ui.index + if (ui.picked != null) 1 else 0).toFloat() / total, iosSpring(0.6f, 0.8f), label = "progress")
 
     AppBackground {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -104,12 +116,19 @@ fun ReviewScreen(onCamera: () -> Unit, onOpenWord: (String) -> Unit, vm: ReviewV
                         tr("単語を撮りに行く", "Go catch words", "去拍單字"), Icons.Outlined.CameraAlt, onCamera,
                     )
                     card == null -> Finished(ui, onRetry = vm::retryMissed, onMore = vm::loadMore)
-                    else -> QuizCard(card, ui, vm::answer)
+                    else -> androidx.compose.animation.AnimatedContent(
+                        targetState = card.sticker.id to ui.index,
+                        transitionSpec = {
+                            (slideInHorizontally(iosSpring(0.45f, 0.86f, IntOffset(1, 1))) { it / 3 } + fadeIn(tween(200))) togetherWith
+                                (slideOutHorizontally(tween(220)) { -it / 4 } + fadeOut(tween(160)))
+                        },
+                        label = "question",
+                    ) { _ -> QuizCard(card, ui, vm::answer) }
                 }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = ui.picked != null && card != null && !ui.grading,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut(),
+                    enter = slideInVertically(iosSpring(0.42f, 0.84f, IntOffset(1, 1))) { it } + fadeIn(tween(160)),
+                    exit = slideOutVertically(tween(200)) { it } + fadeOut(tween(180)),
                     modifier = Modifier.align(Alignment.BottomCenter),
                 ) {
                     if (card != null) AnswerPanel(card, ui.isCorrect == true, onOpen = { onOpenWord(card.sticker.id) }, onNext = vm::next)
@@ -122,10 +141,14 @@ fun ReviewScreen(onCamera: () -> Unit, onOpenWord: (String) -> Unit, vm: ReviewV
 @Composable
 private fun MemoryBar(counts: List<Int>) {
     val total = counts.sum()
-    Row(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(CW.surface2)) {
+    val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(total > 0) { if (total > 0) grow.animateTo(1f, tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(CW.surface2)) {
         if (total > 0) {
-            counts.forEachIndexed { i, n ->
-                if (n > 0) Box(Modifier.weight(n.toFloat()).fillMaxHeight().background(CW.memoryLevels[i]))
+            Row(Modifier.fillMaxWidth(grow.value).fillMaxHeight().clip(CircleShape)) {
+                counts.forEachIndexed { i, n ->
+                    if (n > 0) Box(Modifier.weight(n.toFloat()).fillMaxHeight().background(CW.memoryLevels[i]))
+                }
             }
         }
     }
@@ -157,9 +180,11 @@ private fun QuizCard(card: ReviewCard, ui: ReviewUiState, onAnswer: (QuizChoice)
             )
             ui.gradeError?.let { Text(it, color = CW.destructive, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
             Spacer(Modifier.height(12.dp))
-            ui.choices.chunked(2).forEach { row ->
+            ui.choices.chunked(2).forEachIndexed { r, row ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { c -> ChoiceButton(c, ui, w?.headword.orEmpty(), Modifier.weight(1f)) { onAnswer(c) } }
+                    row.forEachIndexed { k, c ->
+                        ChoiceButton(c, ui, w?.headword.orEmpty(), Modifier.weight(1f).appear(delayMs = 90 + (r * 2 + k) * 45)) { onAnswer(c) }
+                    }
                 }
             }
         }
@@ -170,34 +195,64 @@ private fun QuizCard(card: ReviewCard, ui: ReviewUiState, onAnswer: (QuizChoice)
 private fun ChoiceButton(choice: QuizChoice, ui: ReviewUiState, answer: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val picked = ui.picked
     val isAnswer = choice.headword == answer
+    val isWrongPick = picked != null && picked == choice.headword && !isAnswer
+    val revealed = picked != null && (isAnswer || isWrongPick)
     val bg by animateColorAsState(
         when {
             picked == null -> CW.card
             isAnswer -> CW.ok.copy(alpha = 0.14f)
-            picked == choice.headword -> CW.destructive.copy(alpha = 0.12f)
+            isWrongPick -> CW.destructive.copy(alpha = 0.12f)
             else -> CW.card
         },
-        label = "bg",
+        tween(220), label = "bg",
     )
-    val border = when {
-        picked == null -> CW.border
-        isAnswer -> CW.ok
-        picked == choice.headword -> CW.destructive
-        else -> CW.border
+    val border by animateColorAsState(
+        when {
+            picked == null -> CW.border
+            isAnswer -> CW.ok
+            isWrongPick -> CW.destructive
+            else -> CW.border
+        },
+        tween(220), label = "border",
+    )
+    // Choices that are neither the answer nor the pick step back once the answer is known.
+    val dim by animateFloatAsState(if (picked != null && !revealed) 0.45f else 1f, tween(260), label = "dim")
+    val shake = remember { androidx.compose.animation.core.Animatable(0f) }
+    val pop = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(isWrongPick, picked != null && isAnswer) {
+        if (isWrongPick) {
+            for (x in listOf(-10f, 9f, -7f, 5f, -3f, 0f)) shake.animateTo(x, tween(45))
+        } else if (picked != null && isAnswer) {
+            pop.animateTo(1.06f, tween(110))
+            pop.animateTo(1f, iosSpring(0.35f, 0.5f))
+        }
     }
-    Column(
+    Box(
         modifier
+            .graphicsLayer { translationX = shake.value * density; scaleX = pop.value; scaleY = pop.value; alpha = dim }
             .heightIn(min = 76.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(bg)
-            .border(if (picked != null && (isAnswer || picked == choice.headword)) 2.dp else 1.dp, border, RoundedCornerShape(18.dp))
+            .border(if (revealed) 2.dp else 1.dp, border, RoundedCornerShape(18.dp))
             .pressable(enabled = picked == null && !ui.grading, onClick = onClick)
             .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        contentAlignment = Alignment.Center,
     ) {
-        Text(readingOf(choice.reading, null), fontSize = 11.sp, color = CW.primaryInk, maxLines = 1)
-        Text(choice.headword, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = CW.foreground, maxLines = 1)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(readingOf(choice.reading, null), fontSize = 11.sp, color = CW.primaryInk, maxLines = 1)
+            Text(choice.headword, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = CW.foreground, maxLines = 1)
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = revealed,
+            enter = scaleIn(iosSpring(0.32f, 0.55f), initialScale = 0.3f) + fadeIn(tween(120)),
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Icon(
+                if (isAnswer) Icons.Filled.CheckCircle else Icons.Filled.Cancel, null,
+                tint = if (isAnswer) CW.ok else CW.destructive,
+                modifier = Modifier.size(22.dp).clip(CircleShape).background(Color.White),
+            )
+        }
     }
 }
 
@@ -212,10 +267,15 @@ private fun AnswerPanel(card: ReviewCard, correct: Boolean, onOpen: () -> Unit, 
             .background(CW.card)
             .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 96.dp),
     ) {
-        Text(
-            if (correct) tr("正解！", "Correct!", "答對了！") else tr("おしい！", "Not quite!", "差一點！"),
-            fontSize = 22.sp, fontWeight = FontWeight.Black, color = if (correct) CW.ok else CW.destructive,
-        )
+        Box(Modifier.align(Alignment.CenterHorizontally).padding(bottom = 10.dp).size(width = 40.dp, height = 5.dp).clip(CircleShape).background(CW.border))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.appear(rise = 6.dp)) {
+            Icon(if (correct) Icons.Filled.CheckCircle else Icons.Filled.Cancel, null, tint = if (correct) CW.ok else CW.destructive, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (correct) tr("正解！", "Correct!", "答對了！") else tr("おしい！", "Not quite!", "差一點！"),
+                fontSize = 22.sp, fontWeight = FontWeight.Black, color = if (correct) CW.ok else CW.destructive,
+            )
+        }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -242,21 +302,49 @@ private fun AnswerPanel(card: ReviewCard, correct: Boolean, onOpen: () -> Unit, 
 
 @Composable
 private fun Finished(ui: ReviewUiState, onRetry: () -> Unit, onMore: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        SectionCard(padding = 24.dp) {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🎉", fontSize = 52.sp)
-                Spacer(Modifier.height(8.dp))
-                Text(tr("今日の復習が終わりました", "Today's review is done", "今天的複習完成了"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = CW.foreground)
-                Text(tr("${ui.queue.size}問中 ${ui.correctCount}問 正解", "${ui.correctCount} of ${ui.queue.size} correct", "${ui.queue.size} 題中答對 ${ui.correctCount} 題"), fontSize = 15.sp, color = CW.muted)
-                Spacer(Modifier.height(18.dp))
-                if (ui.missed.isNotEmpty()) {
-                    PrimaryButton(tr("間違えた${ui.missed.size}語をもう一度", "Retry ${ui.missed.size} missed", "再練習答錯的 ${ui.missed.size} 個"), icon = Icons.Outlined.Replay, onClick = onRetry)
-                    Spacer(Modifier.height(8.dp))
+    val total = ui.queue.size.coerceAtLeast(1)
+    val rate = ui.correctCount.toFloat() / total
+    val ring = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        com.rork.catchwordsandroid.data.Haptics.success()
+        if (AppGraph.soundsOn) AppGraph.speech.play(com.rork.catchwordsandroid.data.Speech.Sfx.POP, 0.7f)
+        ring.animateTo(rate, tween(1100, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
+    val shown = (ring.value * total).let { kotlin.math.round(it).toInt() }.coerceAtMost(ui.correctCount)
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            SectionCard(padding = 24.dp, modifier = Modifier.appear()) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(132.dp), contentAlignment = Alignment.Center) {
+                        val track = CW.surface2
+                        val okc = CW.ok
+                        val pc = CW.primary
+                        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                            val st = androidx.compose.ui.graphics.drawscope.Stroke(width = 12.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            drawArc(track, 0f, 360f, false, style = st, topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 6.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), size.height - 12.dp.toPx()))
+                            drawArc(
+                                androidx.compose.ui.graphics.Brush.sweepGradient(listOf(pc, okc, pc)), -90f, 360f * ring.value, false, style = st,
+                                topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 6.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), size.height - 12.dp.toPx()),
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$shown", fontSize = 40.sp, fontWeight = FontWeight.Black, color = CW.foreground, style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"))
+                            Text("/ ${ui.queue.size}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = CW.muted)
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Text(tr("今日の復習が終わりました", "Today's review is done", "今天的複習完成了"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = CW.foreground)
+                    Text(tr("${ui.queue.size}問中 ${ui.correctCount}問 正解", "${ui.correctCount} of ${ui.queue.size} correct", "${ui.queue.size} 題中答對 ${ui.correctCount} 題"), fontSize = 15.sp, color = CW.muted)
+                    Spacer(Modifier.height(18.dp))
+                    if (ui.missed.isNotEmpty()) {
+                        PrimaryButton(tr("間違えた${ui.missed.size}語をもう一度", "Retry ${ui.missed.size} missed", "再練習答錯的 ${ui.missed.size} 個"), icon = Icons.Outlined.Replay, onClick = onRetry)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (ui.moreAvailable) SecondaryButton(tr("もっと復習する", "Review more", "繼續複習"), onClick = onMore)
                 }
-                if (ui.moreAvailable) SecondaryButton(tr("もっと復習する", "Review more", "繼續複習"), onClick = onMore)
             }
         }
+        if (rate >= 0.8f) Confetti(active = true, modifier = Modifier.fillMaxSize())
     }
 }
 

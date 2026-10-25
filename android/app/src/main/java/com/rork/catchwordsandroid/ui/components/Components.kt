@@ -33,15 +33,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import com.rork.catchwordsandroid.data.Haptics
+import kotlin.math.PI
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -83,14 +92,12 @@ fun Modifier.pressable(
 ): Modifier {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
-    val s by animateFloatAsState(if (pressed) pressedScale else 1f, spring(dampingRatio = 0.6f, stiffness = 600f), label = "press")
-    val feedback = LocalHapticFeedback.current
+    // iOS PressableStyle: spring(response 0.28, damping 0.62); the light tap lands as the finger goes down.
+    val s by animateFloatAsState(if (pressed) pressedScale else 1f, iosSpring(0.28f, 0.62f), label = "press")
+    androidx.compose.runtime.LaunchedEffect(pressed) { if (pressed && haptic && enabled) Haptics.press() }
     return this
-        .scale(s)
-        .clickable(interactionSource = source, indication = null, enabled = enabled, role = role) {
-            if (haptic) feedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onClick()
-        }
+        .graphicsLayer { scaleX = s; scaleY = s }
+        .clickable(interactionSource = source, indication = null, enabled = enabled, role = role, onClick = onClick)
 }
 
 @Composable
@@ -100,30 +107,83 @@ fun PrimaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     loading: Boolean = false,
+    sheen: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(16.dp)
+    val alpha by animateFloatAsState(if (enabled) 1f else 0.45f, tween(200), label = "enabled")
     Box(
         modifier
             .fillMaxWidth()
             .heightIn(min = 54.dp)
-            .shadow(if (enabled) 14.dp else 0.dp, RoundedCornerShape(50), ambientColor = CW.primary, spotColor = CW.primary)
-            .clip(RoundedCornerShape(50))
-            .background(if (enabled) CW.brandGradient else Brush.linearGradient(listOf(CW.border, CW.border)))
+            .graphicsLayer { this.alpha = alpha }
+            .shadow(if (enabled) 14.dp else 0.dp, shape, ambientColor = CW.primary.copy(alpha = 0.45f), spotColor = CW.primary.copy(alpha = 0.6f))
+            .clip(shape)
+            .background(CW.brandGradient)
+            .then(if (sheen && enabled) Modifier.sheen() else Modifier)
             .pressable(enabled = enabled && !loading, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (loading) {
-            CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.5.dp)
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                if (icon != null) {
-                    Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
+        androidx.compose.animation.Crossfade(loading, animationSpec = tween(180), label = "loading") { busy ->
+            if (busy) {
+                CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.5.dp)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    if (icon != null) {
+                        Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Text(title, color = if (enabled) Color.White else CW.muted, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+/** A soft white band sweeping across (1.1 s every 3.4 s), the iOS primary button's sheen. */
+@Composable
+fun Modifier.sheen(): Modifier {
+    val t = rememberInfiniteTransition(label = "sheen")
+    val p by t.animateFloat(
+        0f, 1f,
+        infiniteRepeatable(keyframes { durationMillis = 3400; 0f at 0; 0f at 2300 using FastOutSlowInEasing; 1f at 3400 }),
+        label = "p",
+    )
+    return drawWithContent {
+        drawContent()
+        if (p <= 0f || p >= 1f) return@drawWithContent
+        val band = size.width * 0.35f
+        val x = -band + (size.width + band * 2) * p
+        drawRect(
+            Brush.linearGradient(
+                listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent),
+                start = Offset(x - band / 2, 0f), end = Offset(x + band / 2, size.height * 0.33f),
+            ),
+        )
+    }
+}
+
+/** SwiftUI's spring(response:dampingFraction:) in Compose terms. */
+fun <T> iosSpring(response: Float, damping: Float, visibilityThreshold: T? = null) =
+    spring(dampingRatio = damping, stiffness = (2f * PI.toFloat() / response).let { it * it }, visibilityThreshold = visibilityThreshold)
+
+/**
+ * Rises and fades in once, [delayMs] after first composition (lists and cards appearing).
+ * [enabled] false shows it in place at once (items scrolled into view later must not dance).
+ */
+@Composable
+fun Modifier.appear(delayMs: Int = 0, enabled: Boolean = true, rise: Dp = 14.dp): Modifier {
+    val p = remember { Animatable(if (enabled) 0f else 1f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (p.value < 1f) {
+            kotlinx.coroutines.delay(delayMs.toLong())
+            p.animateTo(1f, iosSpring(0.5f, 0.86f))
+        }
+    }
+    return graphicsLayer {
+        alpha = p.value.coerceIn(0f, 1f)
+        translationY = (1f - p.value) * rise.toPx()
     }
 }
 
@@ -198,7 +258,7 @@ fun MemoryBadge(percent: Int, modifier: Modifier = Modifier) {
     ) {
         Box(Modifier.size(6.dp).clip(CircleShape).background(c))
         Spacer(Modifier.width(4.dp))
-        Text("$percent%", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = CW.foreground.copy(alpha = 0.8f))
+        Text("$percent%", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = androidx.compose.ui.graphics.lerp(c, CW.foreground, 0.4f), style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"))
     }
 }
 
@@ -209,13 +269,28 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
         text,
         color = Color.White,
         fontSize = 14.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         modifier = modifier
-            .shadow(10.dp, RoundedCornerShape(50))
-            .clip(RoundedCornerShape(50))
-            .background(CW.toastInk.copy(alpha = 0.92f))
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp)
+            .shadow(10.dp, RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(22.dp))
+            .background(CW.toastInk.copy(alpha = 0.88f))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     )
+}
+
+/** A toast that slides down from the top with a spring and fades away (iOS spring(0.35, 0.85)). */
+@Composable
+fun ToastHost(message: String?, modifier: Modifier = Modifier) {
+    var last by remember { androidx.compose.runtime.mutableStateOf(message.orEmpty()) }
+    if (message != null) last = message
+    androidx.compose.animation.AnimatedVisibility(
+        visible = message != null,
+        enter = androidx.compose.animation.slideInVertically(iosSpring(0.35f, 0.85f)) { -it * 2 } + androidx.compose.animation.fadeIn(tween(160)),
+        exit = androidx.compose.animation.fadeOut(tween(250)) + androidx.compose.animation.scaleOut(tween(250), targetScale = 0.96f),
+        modifier = modifier,
+    ) { Toast(last) }
 }
 
 /** Reading line under a headword: zhuyin by default, pinyin when chosen in settings. */
@@ -227,14 +302,16 @@ fun readingOf(zhuyin: String?, pinyin: String?): String {
 
 @Composable
 fun Chip(text: String, modifier: Modifier = Modifier, selected: Boolean = false, onClick: (() -> Unit)? = null) {
+    val bg by androidx.compose.animation.animateColorAsState(if (selected) CW.primary else CW.surface2, tween(200), label = "chip")
+    val ink by androidx.compose.animation.animateColorAsState(if (selected) Color.White else CW.foreground, tween(200), label = "ink")
     Text(
         text,
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
-        color = if (selected) Color.White else CW.foreground,
+        color = ink,
         modifier = modifier
             .clip(RoundedCornerShape(50))
-            .background(if (selected) CW.primary else CW.surface2)
+            .background(bg)
             .then(if (onClick != null) Modifier.pressable(onClick = onClick) else Modifier)
             .padding(horizontal = 14.dp, vertical = 8.dp),
     )

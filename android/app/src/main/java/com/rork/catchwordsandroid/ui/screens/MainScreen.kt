@@ -5,6 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -56,8 +59,9 @@ fun MainScreen(session: SessionViewModel) {
         NavHost(
             navController = nav,
             startDestination = AppTab.HOME.route,
-            enterTransition = { fadeIn() },
-            exitTransition = { fadeOut() },
+            // Tabs crossfade (iOS MainTabView: plain opacity); the word page rises over them like a sheet.
+            enterTransition = { fadeIn(androidx.compose.animation.core.tween(220)) },
+            exitTransition = { fadeOut(androidx.compose.animation.core.tween(180)) },
         ) {
             composable(AppTab.HOME.route) {
                 HomeScreen(onOpenWord = { nav.openWord(it) }, onCamera = { nav.selectTab(AppTab.CAMERA) })
@@ -77,10 +81,21 @@ fun MainScreen(session: SessionViewModel) {
             composable(
                 "word/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.StringType }),
-                enterTransition = { slideInVertically { it } + fadeIn() },
-                popExitTransition = { slideOutVertically { it } + fadeOut() },
+                enterTransition = {
+                    slideInVertically(com.rork.catchwordsandroid.ui.components.iosSpring(0.42f, 0.9f, IntOffset(1, 1))) { it / 4 } +
+                        scaleIn(com.rork.catchwordsandroid.ui.components.iosSpring(0.42f, 0.9f), initialScale = 0.94f) + fadeIn(androidx.compose.animation.core.tween(180))
+                },
+                exitTransition = { fadeOut(androidx.compose.animation.core.tween(150)) },
+                popEnterTransition = { fadeIn(androidx.compose.animation.core.tween(200)) },
+                popExitTransition = {
+                    slideOutVertically(androidx.compose.animation.core.tween(260, easing = androidx.compose.animation.core.FastOutLinearInEasing)) { it / 3 } +
+                        scaleOut(androidx.compose.animation.core.tween(260), targetScale = 0.94f) + fadeOut(androidx.compose.animation.core.tween(220))
+                },
             ) { back ->
-                WordDetailScreen(stickerId = back.arguments?.getString("id").orEmpty(), onClose = { nav.popBackStack() })
+                WordDetailScreen(stickerId = back.arguments?.getString("id").orEmpty(), onClose = {
+                    pon(open = false)
+                    nav.popBackStack()
+                })
             }
         }
 
@@ -109,5 +124,12 @@ private fun NavHostController.selectTab(tab: AppTab) {
 }
 
 private fun NavHostController.openWord(id: String) {
+    pon(open = true)
     navigate("word/$id") { launchSingleTop = true }
+}
+
+/** The bubble sound and tap of a page opening or closing (iOS SoundService.pon). */
+private fun pon(open: Boolean) {
+    if (AppGraph.soundsOn) AppGraph.speech.play(if (open) com.rork.catchwordsandroid.data.Speech.Sfx.PON_OPEN else com.rork.catchwordsandroid.data.Speech.Sfx.PON_BACK, 0.55f)
+    com.rork.catchwordsandroid.data.Haptics.pon(open)
 }

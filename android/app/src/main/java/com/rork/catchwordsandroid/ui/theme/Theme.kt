@@ -50,7 +50,8 @@ object CW {
 
     val brandGradient: Brush get() = Brush.linearGradient(listOf(primaryBright, primaryDeep))
 
-    val hand = FontFamily(Font(R.font.zen_kurenaido))
+    /** iOS dropped its handwriting face: it had no glyphs for most Traditional Chinese headwords. System font here too. */
+    val hand: FontFamily = FontFamily.Default
     val caveat = FontFamily(Font(R.font.caveat))
 }
 
