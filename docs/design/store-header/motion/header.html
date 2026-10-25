@@ -22,10 +22,12 @@
 <script>
 const W = 3840, H = 1646, FPS = 30, DUR = 12, N = DUR * FPS;          // the layout space: the 21:9 header
 const q = new URLSearchParams(location.search), LANG = q.get('lang') || 'ja';
-// ?fmt=search: the search results asset (3:2, 2880×1920). The same layout, cut from its middle (x 686–3155, the
-// cup, the scooter and the chalkboard) and drawn 1.17× larger, so the tags and words read bigger in the small card.
-const FMT = q.get('fmt') === 'search' ? { cw: 2880, ch: 1920, x0: 686 } : { cw: W, ch: H, x0: 0 };
-FMT.k = FMT.ch / H;
+// ?fmt=search: the search results asset (3:2, 2880×1920). iPhone shows only the top ~60% of it in the search card
+// (App Store Connect preview, owner 2026-10-25), so it uses the header photo extended downward (assets/search/: the
+// same street on top, more table below) at 0.75×: everything that matters stays in the top 46%, iPad sees the rest.
+const SEARCH = q.get('fmt') === 'search';
+const FMT = SEARCH ? { cw: 2880, ch: 1920, x0: 0, k: .75, dir: '../assets/search/', ph: 2560 } : { cw: W, ch: H, x0: 0, k: 1, dir: '../assets/', ph: H };
+const PH = FMT.ph;                                        // the photo's height in the layout space (the header: H)
 // 画面の文字（アプリの strings.json の訳と同じ）。タグの意味・ことばの意味もこの言語
 const L = {
   ja: { scan: '写真をスキャンしています', tap: '覚えたいことばをタップ', caught: '新しいことばをキャッチ！', cat: '飲み物',
@@ -36,7 +38,7 @@ const L = {
 const ZH = { cup: '珍珠奶茶', scooter: '機車', sign: '黑板' };
 const FONT_TC = '"Noto Sans TC", "Noto Sans JP", sans-serif', FONT_UI = 'Inter, "Noto Sans JP", sans-serif';
 const BLUE = '#0083FF', BLUE2 = '#2A9BFF', INK = '#0B121A', MUTED = '#5C646F', BG_APP = '#F9FCFF', LOCKED = '#6CC8FF';
-const PT = 2.0;                                           // アプリの 1px（1080 幅の画面）→ この絵
+const PT = SEARCH ? 2.3 : 2.0;                                           // アプリの 1px（1080 幅の画面）→ この絵
 
 const c = document.getElementById('c'); c.width = FMT.cw; c.height = FMT.ch; const ctx = c.getContext('2d');
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), lerp = (a, b, u) => a + (b - a) * u;
@@ -124,20 +126,20 @@ function cam(t) {
 const toS = (t, x, y) => { const s = cam(t); return [FOC[0] + (x - FOC[0]) * s, FOC[1] + (y - FOC[1]) * s]; };
 
 // the photo, blurred and whitened as the app's backdrop takes over (v6 dGet: blur 40, brightness, BG_APP + a blue pool)
-const SMALL = document.createElement('canvas'); SMALL.width = 960; SMALL.height = 412;
+const SMALL = document.createElement('canvas'); SMALL.width = 960; SMALL.height = Math.round(960 * PH / W);
 function photo(t, melt) {
   const s = cam(t);
   ctx.save(); ctx.translate(FOC[0], FOC[1]); ctx.scale(s, s); ctx.translate(-FOC[0], -FOC[1]);
-  if (melt <= .01) ctx.drawImage(A.photo, 0, 0, W, H);
-  else { ctx.filter = `blur(${40 * melt / 4}px) brightness(${1 + .06 * melt})`; ctx.drawImage(SMALL, -20, -20, W + 40, H + 40); ctx.filter = 'none'; }
+  if (melt <= .01) ctx.drawImage(A.photo, 0, 0, W, PH);
+  else { ctx.filter = `blur(${40 * melt / 4}px) brightness(${1 + .06 * melt})`; ctx.drawImage(SMALL, -20, -20, W + 40, PH + 40); ctx.filter = 'none'; }
   ctx.restore();
 }
 function appBackdrop(melt, sx, sy) {
   if (melt <= 0) return;
-  ctx.save(); ctx.globalAlpha = melt; ctx.fillStyle = BG_APP; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.globalAlpha = melt; ctx.fillStyle = BG_APP; ctx.fillRect(0, 0, W, PH);
   const r = ctx.createRadialGradient(sx, sy + 40, 0, sx, sy + 40, 1100);
   r.addColorStop(0, 'rgba(221,238,255,0.95)'); r.addColorStop(.35, 'rgba(228,241,255,0.7)'); r.addColorStop(.7, 'rgba(240,247,255,0.3)'); r.addColorStop(1, 'rgba(249,252,255,0)');
-  ctx.fillStyle = r; ctx.fillRect(0, 0, W, H); ctx.restore();
+  ctx.fillStyle = r; ctx.fillRect(0, 0, W, PH); ctx.restore();
 }
 
 // ---------- v10: the screen edge glows from the shutter until the names are in ----------
@@ -149,7 +151,7 @@ function edgeGlow(t) {
   }
   ctx.restore();
 }
-function flash(t) { const a = .75 * seg(t, T_CAP - .04, T_CAP) * (1 - seg(t, T_CAP, T_CAP + .28)); if (a > 0) { ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.restore(); } }
+function flash(t) { const a = .75 * seg(t, T_CAP - .04, T_CAP) * (1 - seg(t, T_CAP, T_CAP + .28)); if (a > 0) { ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, PH); ctx.restore(); } }
 
 // ---------- the top pill (the app's: glass capsule, sparkles icon, label) ----------
 function sparkles(x, y, r, color) {
@@ -448,11 +450,11 @@ function draw(f) {
     ctx.restore();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (q.has('safe') && FMT.x0 === 0) { ctx.save(); ctx.strokeStyle = 'rgba(255,0,0,0.8)'; ctx.lineWidth = 4; ctx.setLineDash([20, 14]); ctx.strokeRect(1097, 493, 1646, 661); ctx.restore(); }
+  if (q.has('safe') && !SEARCH) { ctx.save(); ctx.strokeStyle = 'rgba(255,0,0,0.8)'; ctx.lineWidth = 4; ctx.setLineDash([20, 14]); ctx.strokeRect(1097, 493, 1646, 661); ctx.restore(); }
 }
 window.renderFrame = f => draw(f);
 window.ready = (async () => {
-  const [photoI, cut, border, objs] = await Promise.all([loadImg('../assets/photo.jpg'), loadImg('../assets/cup_cut.png'), loadImg('../assets/cup_border.png'), fetch('../assets/objects.json').then(r => r.json())]);
+  const [photoI, cut, border, objs] = await Promise.all([loadImg(FMT.dir + 'photo.jpg'), loadImg(FMT.dir + 'cup_cut.png'), loadImg(FMT.dir + 'cup_border.png'), fetch(FMT.dir + 'objects.json').then(r => r.json())]);
   A.photo = photoI; A.cut = cut; A.border = border; O = objs;
   SMALL.getContext('2d').drawImage(photoI, 0, 0, SMALL.width, SMALL.height);
   for (const s of SLOTS) if (s.img) A['d_' + s.img] = await loadImg(`../assets/dex/${s.img}.png`);

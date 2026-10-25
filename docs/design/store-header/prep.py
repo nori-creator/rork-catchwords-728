@@ -5,6 +5,8 @@ App Store のヘッダー動画（v2: 実写）の材料を、オーナーが作
   python prep.py objects                        カップ・バイク・黒板を切り抜き（rembg の isnet-general-use）、
                                                 assets/objects.json（輪郭・範囲・タグの位置）と、カップの切り抜き
                                                 assets/cup_cut.png・白い縁 assets/cup_border.png を書く
+  python prep.py search EXT.png                 検索結果（3:2）用。写真を上下に広げた画像 EXT.png（5056×3392）から 3:2 を切り出して
+                                                assets/search/photo.jpg（3840×2560）にし、同じ切り抜きを assets/search/ に書く
 
 使う物: opencv-contrib-python-headless・rembg・onnxruntime（rembg は初回に学習済みモデルを GitHub から取る）。
 植木鉢は葉が背景のぼけと混ざって切り抜けないので、アプリの v10 の動画と同じく、光のペンが描くのは 3 つ。
@@ -19,7 +21,14 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "assets")
+SEARCH = os.path.join(OUT, "search")
 W, H = 3840, 1646
+SH = 2560   # 検索結果の写真の高さ（3:2）
+
+# 検索結果の写真: EXT.png の中でヘッダーの写真は 1.32 倍・(-4, 420) の所（テンプレート照合で測った）。
+# iPhone の検索結果は 3:2 の上 約 6 割しか見せないので、物が縦 10〜57% に来るように切り出す（横 1072〜4522・縦 1087〜3387）
+EXT_SCALE, EXT_OFF = 1.32, (-4, 420)
+SCROP = (1072, 1087, 3450, 2300)
 
 # 物ごとの切り抜きの範囲（3840×1646 の写真の座標）。rembg は範囲の中のいちばん目立つ物を返す。
 BOXES = {
@@ -63,13 +72,32 @@ def outline(mask, n=320):
     return [[round(x, 1), round(y, 1)] for x, y in pts], [round(a, 3) for a in ang]
 
 
-def objects():
+def to_search(x, y):
+    """ヘッダーの写真の座標 → 検索結果の写真の座標"""
+    f = W / SCROP[2]
+    return (x * EXT_SCALE + EXT_OFF[0] - SCROP[0]) * f, (y * EXT_SCALE + EXT_OFF[1] - SCROP[1]) * f
+
+
+def search(ext):
+    x, y, w, h = SCROP
+    im = cv2.imread(ext)[y:y + h, x:x + w]
+    os.makedirs(SEARCH, exist_ok=True)
+    cv2.imwrite(os.path.join(SEARCH, "photo.jpg"), cv2.resize(im, (W, SH), interpolation=cv2.INTER_LANCZOS4), [cv2.IMWRITE_JPEG_QUALITY, 90])
+    boxes = {}
+    for k, (x0, y0, x1, y1) in BOXES.items():
+        a, b = to_search(x0, y0)
+        c, d = to_search(x1, y1)
+        boxes[k] = (max(0, round(a)), max(0, round(b)), min(W, round(c)), min(SH, round(d)))
+    objects(SEARCH, SH, boxes)
+
+
+def objects(out=OUT, H=H, boxes=BOXES):
     from rembg import new_session, remove
 
-    im = cv2.imread(os.path.join(OUT, "photo.jpg"))
+    im = cv2.imread(os.path.join(out, "photo.jpg"))
     sess = new_session("isnet-general-use")
     masks = {}
-    for k, (x0, y0, x1, y1) in BOXES.items():
+    for k, (x0, y0, x1, y1) in boxes.items():
         m = np.array(remove(cv2.cvtColor(im[y0:y1, x0:x1], cv2.COLOR_BGR2RGB), session=sess, only_mask=True))
         # 半分透けた所（後ろの物が薄く残る）を捨て、いちばん大きい塊だけ残す
         b = (m > 128).astype(np.uint8)
@@ -94,12 +122,12 @@ def objects():
     x0, y0, x1, y1 = x0 - pad, y0 - pad, x1 + pad, y1 + pad
     a = cv2.GaussianBlur(masks["cup"], (3, 3), 0)[y0:y1, x0:x1]
     cut = np.dstack([im[y0:y1, x0:x1], a])
-    cv2.imwrite(os.path.join(OUT, "cup_cut.png"), cut)
+    cv2.imwrite(os.path.join(out, "cup_cut.png"), cut)
     r = 22
     border = cv2.GaussianBlur(cv2.dilate(masks["cup"], cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))), (5, 5), 0)[y0:y1, x0:x1]
-    cv2.imwrite(os.path.join(OUT, "cup_border.png"), np.dstack([np.full_like(a, 255)] * 3 + [border]))
+    cv2.imwrite(os.path.join(out, "cup_border.png"), np.dstack([np.full_like(a, 255)] * 3 + [border]))
     data["cup"]["tile"] = [x0, y0, x1 - x0, y1 - y0]
-    with open(os.path.join(OUT, "objects.json"), "w") as f:
+    with open(os.path.join(out, "objects.json"), "w") as f:
         json.dump(data, f)
     print({k: v["box"] for k, v in data.items()})
 
@@ -107,5 +135,7 @@ def objects():
 if __name__ == "__main__":
     if sys.argv[1] == "upscale":
         upscale(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "search":
+        search(sys.argv[2])
     else:
         objects()
